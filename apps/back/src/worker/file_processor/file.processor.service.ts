@@ -11,8 +11,9 @@ export class FileProcessorService implements OnModuleInit {
   private readonly logger = new LoggerService(FileProcessorService.name);
 
   async onModuleInit() {
-    await this.queueService.work(QueueName.process_file, async ([job]) => {
+    await this.queueService.work<{ message: string }>(QueueName.process_file, async ([job]) => {
       this.logger.log('Processing file', job);
+      this.logger.log('Message', job.data.message);
       return Promise.resolve().then(() => {
         this.logger.log('Processing file completed');
       });
