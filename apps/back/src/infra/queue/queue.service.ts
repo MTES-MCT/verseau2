@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Queue } from './queue';
-import { PGBOSS } from '../pgboss/pgboss.module';
 import type { PgBoss } from '../pgboss/pgboss';
+import { PGBOSS } from '@pgboss/pgboss.module';
 @Injectable()
 export class QueueService implements Queue<object> {
   constructor(@Inject(PGBOSS) private readonly pgboss: PgBoss<object>) {}

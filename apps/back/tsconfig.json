@@ -20,6 +20,15 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@queue/*": ["src/infra/queue/*"],
+      "@database/*": ["src/infra/database/*"],
+      "@shared/*": ["src/shared/*"],
+      "@worker/*": ["src/worker/*"],
+      "@depot/*": ["src/depot/*"],
+      "@pgboss/*": ["src/infra/pgboss/*"],
+    }
   }
+
 }

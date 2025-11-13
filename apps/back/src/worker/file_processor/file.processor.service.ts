@@ -1,12 +1,17 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { QueueService } from '../../infra/queue/queue.service';
-import { QueueName } from 'src/infra/queue/queue';
-import { LoggerService } from 'src/shared/logger/logger.service';
+import { QueueService } from '@queue/queue.service';
+import { QueueName } from '@queue/queue';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class FileProcessorService implements OnModuleInit {
   constructor(private readonly queueService: QueueService) {
-    this.logger.log('FileProcessorService  with custom logger');
+    this.logger.log(
+      'FileProcessorService with custom logger',
+      { a: 1 },
+      'un autre message',
+      [{ b: 2 }, { c: 3 }],
+    );
   }
   private readonly logger = new LoggerService(FileProcessorService.name);
 

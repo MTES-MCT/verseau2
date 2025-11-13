@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PgbossModule } from '../pgboss/pgboss.module';
+import { PgbossModule } from '@pgboss/pgboss.module';
 import { QueueService } from './queue.service';
 
 @Module({

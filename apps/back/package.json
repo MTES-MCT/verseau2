@@ -12,6 +12,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "start:server:dev": "ts-node src/mainServer.ts",
+    "start:worker:dev": "nodemon --watch src --ext ts --exec ts-node -r tsconfig-paths/register src/mainWorker.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
