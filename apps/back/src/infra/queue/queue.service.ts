@@ -10,10 +10,7 @@ export class QueueService implements Queue<object> {
     return await this.pgboss.send(name, data);
   }
 
-  async work(
-    name: string,
-    handler: (job: object[]) => Promise<unknown>,
-  ): Promise<string> {
+  async work(name: string, handler: (job: object[]) => Promise<unknown>): Promise<string> {
     return await this.pgboss.work(name, handler);
   }
 }

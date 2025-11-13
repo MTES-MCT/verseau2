@@ -10,9 +10,7 @@ export class LoggerService extends ConsoleLogger {
     let logMessage = `${message}`;
     if (optionalParams.length > 0) {
       const separator = ' - ';
-      logMessage += `${separator}${optionalParams
-        .map((param) => JSON.stringify(param))
-        .join(separator)}`;
+      logMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;
     }
     super.log(logMessage);
   }

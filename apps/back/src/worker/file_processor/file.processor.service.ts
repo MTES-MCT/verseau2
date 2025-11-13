@@ -6,12 +6,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 @Injectable()
 export class FileProcessorService implements OnModuleInit {
   constructor(private readonly queueService: QueueService) {
-    this.logger.log(
-      'FileProcessorService with custom logger',
-      { a: 1 },
-      'un autre message',
-      [{ b: 2 }, { c: 3 }],
-    );
+    this.logger.log('FileProcessorService with custom logger', { a: 1 }, 'un autre message', [{ b: 2 }, { c: 3 }]);
   }
   private readonly logger = new LoggerService(FileProcessorService.name);
 

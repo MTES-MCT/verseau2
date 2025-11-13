@@ -8,13 +8,7 @@ import { WorkerModule } from '@worker/worker.module';
 import { SharedModule } from '@shared/shared.module';
 
 @Module({
-  imports: [
-    DepotModule,
-    DatabaseModule,
-    QueueModule,
-    WorkerModule,
-    SharedModule,
-  ],
+  imports: [DepotModule, DatabaseModule, QueueModule, WorkerModule, SharedModule],
   controllers: [AppController],
   providers: [AppService],
 })

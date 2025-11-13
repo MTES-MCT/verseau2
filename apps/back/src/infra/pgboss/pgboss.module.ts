@@ -23,10 +23,7 @@ export class PgbossModule {
               host: configService.get<string>('POSTGRES_HOST', 'localhost'),
               port: configService.get<number>('POSTGRES_PORT', 5432),
               user: configService.get<string>('POSTGRES_USER', 'postgres'),
-              password: configService.get<string>(
-                'POSTGRES_PASSWORD',
-                'postgres',
-              ),
+              password: configService.get<string>('POSTGRES_PASSWORD', 'postgres'),
               database: configService.get<string>('POSTGRES_DB', 'verseau2'),
             };
 
