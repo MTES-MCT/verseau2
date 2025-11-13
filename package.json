@@ -1,0 +1,16 @@
+{
+  "name": "verseau2",
+  "private": false,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
+    "dev:back": "npm run start:dev --workspace=apps/back",
+    "dev:front": "npm run dev --workspace=apps/front"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
