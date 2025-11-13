@@ -1,0 +1,7 @@
+# Check if gitleaks is installed
+if ! command -v gitleaks &> /dev/null; then
+    echo "Error: gitleaks is not installed - https://github.com/gitleaks/gitleaks?tab=readme-ov-file#installing"
+    exit 1
+fi
+
+gitleaks git --verbose --staged

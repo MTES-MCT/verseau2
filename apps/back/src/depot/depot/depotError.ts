@@ -1,0 +1,4 @@
+export enum DepotError {
+  UPLOAD_FAILED = 'UPLOAD_FAILED',
+  ENQUEUE_FAILED = 'ENQUEUE_FAILED',
+}
