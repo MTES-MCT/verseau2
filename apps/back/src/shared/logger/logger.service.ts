@@ -7,7 +7,14 @@ export class LoggerService extends ConsoleLogger {
     super(context);
   }
   log(message: any, ...optionalParams: [...any, string?]): void {
-    super.log(message, ...optionalParams);
+    let logMessage = `${message}`;
+    if (optionalParams.length > 0) {
+      const separator = ' - ';
+      logMessage += `${separator}${optionalParams
+        .map((param) => JSON.stringify(param))
+        .join(separator)}`;
+    }
+    super.log(logMessage);
   }
   customLog() {
     this.log('A custom log');
