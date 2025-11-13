@@ -8,9 +8,11 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
     "dev:back": "npm run start:dev --workspace=apps/back",
-    "dev:front": "npm run dev --workspace=apps/front"
+    "dev:front": "npm run dev --workspace=apps/front",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7"
   }
 }
