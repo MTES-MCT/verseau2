@@ -1,0 +1,17 @@
+name: verseau2-local
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: verseau2-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: verseau2
+    networks:
+      - verseau2-network
+
+networks:
+  verseau2-network:
+    driver: bridge
