@@ -1,8 +1,6 @@
-export interface DepotModel {
-  id: string;
-  nomOriginalFichier: string;
-  tailleFichier: number;
-  type: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { DepotEntity } from './depot.entity';
+
+export type DepotModel = Pick<
+  DepotEntity,
+  'id' | 'nomOriginalFichier' | 'tailleFichier' | 'path' | 'type' | 'createdAt' | 'updatedAt'
+>;

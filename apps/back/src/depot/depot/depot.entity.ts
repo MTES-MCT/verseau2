@@ -9,8 +9,8 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'varchar' })
   nomOriginalFichier: string;
 
-  // @Column({ type: 'varchar' })
-  // path: string;
+  @Column({ type: 'varchar', nullable: true })
+  path?: string;
 
   @Column({ type: 'bigint' })
   tailleFichier: number;
@@ -28,9 +28,4 @@ export class DepotEntity extends BaseEntity {
   setId() {
     this.id = 'dep_' + this.id;
   }
-
-  // constructor(depotEntity: Omit<DepotEntity, 'id' | 'setId'>) {
-  //   super();
-  //   Object.assign(this, depotEntity);
-  // }
 }

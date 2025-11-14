@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DepotRepository } from './depot.repository';
-import { DepotEntity } from './depot.entity';
 import { DepotModel } from './depot.model';
 
 @Injectable()
@@ -17,7 +16,7 @@ export class DepotService {
     return newDepot;
   }
 
-  async findById(id: string): Promise<DepotEntity> {
+  async findById(id: string): Promise<DepotModel> {
     const depot = await this.depotRepository.findDepotById(id);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${id} not found`);
@@ -25,11 +24,11 @@ export class DepotService {
     return depot;
   }
 
-  async findAll(): Promise<DepotEntity[]> {
+  async findAll(): Promise<DepotModel[]> {
     return await this.depotRepository.findAllDepots();
   }
 
-  async update(id: string, updateData: Partial<Omit<DepotEntity, 'id' | 'createdAt'>>): Promise<DepotEntity> {
+  async update(id: string, updateData: Partial<Omit<DepotModel, 'id' | 'createdAt'>>): Promise<DepotModel> {
     const depot = await this.depotRepository.findDepotById(id);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${id} not found`);

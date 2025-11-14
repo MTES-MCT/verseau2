@@ -15,15 +15,15 @@ export class DepotRepository extends Repository<DepotEntity> {
     return { ...savedDepot };
   }
 
-  async findDepotById(id: string): Promise<DepotEntity | null> {
+  async findDepotById(id: string): Promise<DepotModel | null> {
     return await this.findOne({ where: { id } });
   }
 
-  async findAllDepots(): Promise<DepotEntity[]> {
+  async findAllDepots(): Promise<DepotModel[]> {
     return await this.find();
   }
 
-  async updateDepot(id: string, updateData: Partial<DepotEntity>): Promise<DepotEntity | null> {
+  async updateDepot(id: string, updateData: Partial<DepotModel>): Promise<DepotModel | null> {
     await this.update(id, updateData);
     return await this.findDepotById(id);
   }

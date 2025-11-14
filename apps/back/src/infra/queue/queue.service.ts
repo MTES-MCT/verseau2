@@ -6,8 +6,8 @@ import { PGBOSS } from '@pgboss/pgboss.module';
 export class QueueService implements Queue<object> {
   constructor(@Inject(PGBOSS) private readonly pgboss: PgBoss<object>) {}
 
-  async send(name: string, data?: object): Promise<string | null> {
-    return await this.pgboss.send(name, data);
+  async send<TData = object>(name: string, data?: TData): Promise<string | null> {
+    return await this.pgboss.send(name, data as object);
   }
 
   async work<TData>(name: string, handler: (job: QueueJob<TData>[]) => Promise<unknown>): Promise<string> {
