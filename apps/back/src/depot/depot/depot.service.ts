@@ -1,26 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DepotRepository } from './depot.repository';
 import { DepotEntity } from './depot.entity';
-import { QueueName } from '@queue/queue';
-import { QueueService } from '@queue/queue.service';
+import { DepotModel } from './depot.model';
 
 @Injectable()
 export class DepotService {
-  constructor(
-    private readonly depotRepository: DepotRepository,
-    private readonly queueService: QueueService,
-  ) {}
+  constructor(private readonly depotRepository: DepotRepository) {}
 
   async create(
-    depotData: Omit<DepotEntity, 'id' | 'path' | 'createdAt' | 'updatedAt' | 'setId'> & { buffer: string },
-  ): Promise<DepotEntity> {
+    depotData: Omit<DepotModel, 'id' | 'path' | 'createdAt' | 'updatedAt' | 'setId'> & { buffer: string },
+  ): Promise<DepotModel> {
     const newDepot = await this.depotRepository.createDepot({
       ...depotData,
     });
-    await this.queueService.send(QueueName.process_file, {
-      id: newDepot.id,
-      ...depotData,
-    });
+
     return newDepot;
   }
 

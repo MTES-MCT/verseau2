@@ -1,8 +1,8 @@
 import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { QueueService } from '@queue/queue.service';
 import { LoggerService } from '@shared/logger/logger.service';
-import { DepotService } from './depot.service';
+import { DeposerUnFichier } from './usecase/deposerUnFichier';
+import { DepotModel } from './depot.model';
 
 interface MulterFile {
   fieldname: string;
@@ -17,14 +17,11 @@ interface MulterFile {
 export class DepotController {
   private readonly logger = new LoggerService(DepotController.name);
 
-  constructor(
-    private readonly queueService: QueueService,
-    private readonly depotService: DepotService,
-  ) {}
+  constructor(private readonly deposerUnFichier: DeposerUnFichier) {}
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: MulterFile | undefined): Promise<{ jobId: string | null }> {
+  async uploadFile(@UploadedFile() file: MulterFile | undefined): Promise<DepotModel> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -44,8 +41,8 @@ export class DepotController {
       mimetype: file.mimetype,
     });
 
-    const depot = await this.depotService.create({
-      name: file.originalname,
+    const depot = await this.deposerUnFichier.execute({
+      nomOriginalFichier: file.originalname,
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer.toString('base64'),
@@ -53,6 +50,6 @@ export class DepotController {
 
     this.logger.log('Depot created', { depotId: depot.id });
 
-    return { jobId: depot.id };
+    return depot;
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { DepotEntity } from './depot.entity';
+import { DepotModel } from './depot.model';
 
 @Injectable()
 export class DepotRepository extends Repository<DepotEntity> {
@@ -8,9 +9,10 @@ export class DepotRepository extends Repository<DepotEntity> {
     super(DepotEntity, dataSource.createEntityManager());
   }
 
-  async createDepot(depot: Partial<DepotEntity>): Promise<DepotEntity> {
+  async createDepot(depot: Partial<DepotModel>): Promise<DepotModel> {
     const newDepot = this.create(depot);
-    return await this.save(newDepot);
+    const savedDepot = await this.save(newDepot);
+    return { ...savedDepot };
   }
 
   async findDepotById(id: string): Promise<DepotEntity | null> {

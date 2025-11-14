@@ -27,7 +27,8 @@
       "@shared/*": ["src/shared/*"],
       "@worker/*": ["src/worker/*"],
       "@depot/*": ["src/depot/*"],
-      "@pgboss/*": ["src/infra/pgboss/*"]
+      "@pgboss/*": ["src/infra/pgboss/*"],
+      "@s3/*": ["src/infra/s3/*"]
     }
   }
 }

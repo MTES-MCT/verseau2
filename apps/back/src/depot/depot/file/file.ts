@@ -1,6 +1,11 @@
 export interface FichierDeDepot {
-  filename: string;
-  mimetype: string;
+  id: string;
+  filePath: string;
+}
+
+export interface DepotDeFichier {
+  nomOriginalFichier: string;
   size: number;
-  buffer: Buffer;
+  type: string;
+  buffer: string;
 }

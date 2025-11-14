@@ -7,13 +7,13 @@ export class DepotEntity extends BaseEntity {
   declare id: string;
 
   @Column({ type: 'varchar' })
-  name: string;
+  nomOriginalFichier: string;
 
   // @Column({ type: 'varchar' })
   // path: string;
 
   @Column({ type: 'bigint' })
-  size: number;
+  tailleFichier: number;
 
   @Column({ type: 'varchar' })
   type: string;
