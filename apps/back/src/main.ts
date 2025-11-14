@@ -1,8 +1,8 @@
-import { bootstrapServer } from './mainServer';
-import { bootstrapWorker } from './mainWorker';
+// import { bootstrapServer } from './mainServer';
+// import { bootstrapWorker } from './mainWorker';
 
-async function bootstrap() {
-  await bootstrapServer();
-  await bootstrapWorker();
-}
-bootstrap();
+// async function bootstrap() {
+//   await bootstrapServer();
+//   await bootstrapWorker();
+// }
+// bootstrap();

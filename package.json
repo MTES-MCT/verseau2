@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
-    "dev:back": "npm run start:dev --workspace=apps/back",
+    "dev:back": "npm run start --workspace=apps/back",
     "dev:front": "npm run dev --workspace=apps/front",
     "prepare": "husky"
   },
