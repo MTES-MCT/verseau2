@@ -2,12 +2,16 @@ import { FichierDeDepot } from '@depot/depot/file/file';
 import { Injectable } from '@nestjs/common';
 import { FileControl } from '@shared/fileControl';
 import { LoggerService } from '@shared/logger/logger.service';
+import { ReponseSandreRepository } from '@worker/referentiel/sandre/reponseSandre.repository';
 import type { SandreValidationSummary } from '@worker/referentiel/sandre/sandre';
 import { SandreService } from '@worker/referentiel/sandre/sandre.service';
 
 @Injectable()
 export class ControleSandreService implements FileControl<SandreValidationSummary> {
-  constructor(private readonly sandreService: SandreService) {}
+  constructor(
+    private readonly sandreService: SandreService,
+    private readonly reponseSandreService: ReponseSandreRepository,
+  ) {}
 
   private readonly logger = new LoggerService(ControleSandreService.name);
 
@@ -39,6 +43,21 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
       }
 
       this.logger.log('Processing file completed');
+
+      await this.reponseSandreService.createReponseSandre({
+        depotId: fichierDeDepot.id,
+        jeton: validationSummary.jeton,
+        acceptationStatus: validationSummary.acceptationStatus,
+        isConformant: validationSummary.isConformant,
+        codeScenario: validationSummary.codeScenario,
+        versionScenario: validationSummary.versionScenario,
+        errorCode: validationSummary.error?.code,
+        errorMessage: validationSummary.error?.message,
+        errorLocation: validationSummary.error?.location,
+        errorLigne: validationSummary.error?.ligne,
+        errorColonne: validationSummary.error?.colonne,
+        errorSeverite: validationSummary.error?.severite,
+      });
 
       return validationSummary;
     } catch (error) {

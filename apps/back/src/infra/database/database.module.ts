@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DepotEntity } from '@depot/depot/depot.entity';
+import { ReponseSandreEntity } from '@worker/referentiel/sandre/reponseSandre.entity';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { DepotEntity } from '@depot/depot/depot.entity';
         username: configService.get('POSTGRES_USER', 'postgres'),
         password: configService.get('POSTGRES_PASSWORD', 'postgres'),
         database: configService.get('POSTGRES_DB', 'verseau2'),
-        entities: [DepotEntity],
+        entities: [DepotEntity, ReponseSandreEntity],
         synchronize: true,
       }),
       inject: [ConfigService],
