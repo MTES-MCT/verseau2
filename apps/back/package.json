@@ -25,6 +25,9 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "axios": "^1.13.2",
+    "fast-xml-parser": "^5.2.5",
+    "form-data": "^4.0.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "ulid": "^3.0.1"
@@ -75,6 +78,15 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@queue/(.*)$": "<rootDir>/infra/queue/$1",
+      "^@database/(.*)$": "<rootDir>/infra/database/$1",
+      "^@shared/(.*)$": "<rootDir>/shared/$1",
+      "^@worker/(.*)$": "<rootDir>/worker/$1",
+      "^@depot/(.*)$": "<rootDir>/depot/$1",
+      "^@pgboss/(.*)$": "<rootDir>/infra/pgboss/$1",
+      "^@s3/(.*)$": "<rootDir>/infra/s3/$1"
+    }
   }
 }

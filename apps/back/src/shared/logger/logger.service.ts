@@ -14,6 +14,16 @@ export class LoggerService extends ConsoleLogger {
     }
     super.log(logMessage);
   }
+
+  error(message: any, ...optionalParams: [...any, string?, string?]): void {
+    let errorMessage = `${message}`;
+    if (optionalParams.length > 0) {
+      const separator = ' - ';
+      errorMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;
+    }
+    super.error(errorMessage);
+  }
+
   customLog() {
     this.log('A custom log');
   }
