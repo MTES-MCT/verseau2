@@ -148,3 +148,27 @@ export interface SandreAcquittement {
 export interface SandreValidationResult {
   ACQ: SandreAcquittement;
 }
+
+export interface SandreValidationError {
+  code: string;
+  message: string;
+  location: string;
+  ligne: string;
+  colonne: string;
+  severite: string;
+}
+
+export interface SandreValidationSummary {
+  /** Whether the file is conformant */
+  isConformant: boolean;
+  /** The acceptance status */
+  acceptationStatus: AcceptationStatus;
+  /** The token/jeton from the validation */
+  jeton: string;
+  /** The scenario code */
+  codeScenario: string;
+  /** The scenario version */
+  versionScenario: string;
+  /** Error information if validation failed */
+  error?: SandreValidationError;
+}
