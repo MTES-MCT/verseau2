@@ -28,7 +28,8 @@
       "@worker/*": ["src/worker/*"],
       "@depot/*": ["src/depot/*"],
       "@pgboss/*": ["src/infra/pgboss/*"],
-      "@s3/*": ["src/infra/s3/*"]
+      "@s3/*": ["src/infra/s3/*"],
+      "@infra/*": ["src/infra/*"]
     }
   }
 }

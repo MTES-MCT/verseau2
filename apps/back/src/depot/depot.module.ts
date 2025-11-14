@@ -4,13 +4,11 @@ import { DepotController } from './depot/depot.controller';
 import { DepotEntity } from './depot/depot.entity';
 import { DepotRepository } from './depot/depot.repository';
 import { DepotService } from './depot/depot.service';
-import { QueueModule } from '@queue/queue.module';
 import { SharedModule } from '@shared/shared.module';
-import { S3Module } from '@s3/s3.module';
 import { DeposerUnFichier } from './depot/usecase/deposerUnFichier';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DepotEntity]), QueueModule, SharedModule, S3Module.forRootAsync()],
+  imports: [TypeOrmModule.forFeature([DepotEntity]), SharedModule],
   controllers: [DepotController],
   providers: [DepotRepository, DepotService, DeposerUnFichier],
   exports: [DepotService],
