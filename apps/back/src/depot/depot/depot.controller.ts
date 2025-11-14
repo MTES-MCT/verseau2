@@ -1,6 +1,7 @@
 import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
+import { XML_MIME_TYPES, XML_EXTENSION } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
 import { DepotModel } from './depot.model';
 
@@ -27,9 +28,9 @@ export class DepotController {
     }
 
     const isXmlFile =
-      file.mimetype === 'application/xml' ||
-      file.mimetype === 'text/xml' ||
-      file.originalname.toLowerCase().endsWith('.xml');
+      file.mimetype === XML_MIME_TYPES.APPLICATION_XML ||
+      file.mimetype === XML_MIME_TYPES.TEXT_XML ||
+      file.originalname.toLowerCase().endsWith(XML_EXTENSION);
 
     if (!isXmlFile) {
       throw new BadRequestException('File must be an XML file');
