@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { S3 } from './s3';
@@ -10,10 +9,10 @@ export class S3Service implements S3 {
   private readonly bucket: string;
 
   constructor(
+    bucket: string,
     @Inject(S3_CLIENT) private readonly s3Client: S3Client,
-    private readonly configService: ConfigService,
   ) {
-    this.bucket = this.configService.get<string>('OUTSCALE_BUCKET', '');
+    this.bucket = bucket;
   }
 
   async upload(key: string, body: Buffer | Uint8Array | string, contentType?: string): Promise<void> {

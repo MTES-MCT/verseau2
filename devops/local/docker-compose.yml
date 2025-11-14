@@ -14,6 +14,16 @@ services:
     networks:
       - verseau2-network
 
+  s3mock:
+    image: adobe/s3mock:latest
+    container_name: verseau2-s3mock
+    restart: unless-stopped
+    ports:
+      - '9090:9090'
+      - '9191:9191'
+    networks:
+      - verseau2-network
+
 networks:
   verseau2-network:
     driver: bridge
