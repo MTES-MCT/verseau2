@@ -8,8 +8,8 @@ import { createMockS3Client } from './s3.provider.mock';
 
 export const createS3Service = (configService: ConfigService, s3Client: S3Client): S3 => {
   const s3Provider = configService.getOrThrow<string>('S3_PROVIDER');
-  const factoryLogger = new LoggerService('createS3Service');
-  factoryLogger.log(`Provider used : ${s3Provider}`);
+  const logger = new LoggerService('createS3Service');
+  logger.log(`Provider used : ${s3Provider}`);
 
   if (s3Provider === 'outscale') {
     const bucket = configService.getOrThrow<string>('OUTSCALE_BUCKET');
@@ -17,6 +17,7 @@ export const createS3Service = (configService: ConfigService, s3Client: S3Client
   }
 
   if (s3Provider === 'mock') {
+    logger.log('!!!!!! Using Mock S3 Service !!!!!!');
     const bucket = configService.getOrThrow<string>('OUTSCALE_BUCKET');
     return new S3Service(bucket, s3Client);
   }
