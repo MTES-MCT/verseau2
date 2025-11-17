@@ -19,15 +19,12 @@ export class PgbossModule {
         {
           provide: PGBOSS,
           useFactory: async (configService: ConfigService) => {
-            const pgBossConfig = {
-              host: configService.get<string>('POSTGRES_HOST', 'localhost'),
-              port: configService.get<number>('POSTGRES_PORT', 5432),
-              user: configService.get<string>('POSTGRES_USER', 'postgres'),
-              password: configService.get<string>('POSTGRES_PASSWORD', 'postgres'),
-              database: configService.get<string>('POSTGRES_DB', 'verseau2'),
-            };
+            const connectionString = configService.get<string>(
+              'DATABASE_URL',
+              'postgresql://postgres:postgres@localhost:5432/verseau2',
+            );
 
-            const boss = new PgBoss(pgBossConfig);
+            const boss = new PgBoss(connectionString);
 
             await boss.start();
             boss

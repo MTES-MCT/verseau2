@@ -14,11 +14,7 @@ import { ReponseSandreEntity } from '@worker/referentiel/sandre/reponseSandre.en
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('POSTGRES_HOST', 'localhost'),
-        port: configService.get('POSTGRES_PORT', 5432),
-        username: configService.get('POSTGRES_USER', 'postgres'),
-        password: configService.get('POSTGRES_PASSWORD', 'postgres'),
-        database: configService.get('POSTGRES_DB', 'verseau2'),
+        url: configService.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/verseau2'),
         entities: [DepotEntity, ReponseSandreEntity],
         synchronize: true,
       }),
