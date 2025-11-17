@@ -24,6 +24,25 @@ services:
     networks:
       - verseau2-network
 
+  app:
+    build:
+      context: ../..
+      dockerfile: devops/local/Dockerfile
+    environment:
+      NODE_OPTIONS: --max-old-space-size=1024
+    mem_limit: 1024m
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+      - s3mock
+    networks:
+      - verseau2-network
+
 networks:
   verseau2-network:
     driver: bridge

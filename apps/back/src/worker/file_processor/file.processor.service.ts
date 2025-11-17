@@ -6,7 +6,7 @@ import { MemoryMonitorService } from '@shared/memory-monitor/memory-monitor.serv
 import { FichierDeDepot } from '@depot/depot/file/file';
 import { S3 } from '@s3/s3';
 import { ControleSandreService } from './controleSandre';
-const { XMLParser } = require('fast-xml-parser');
+import { XMLParser } from 'fast-xml-parser';
 
 @Injectable()
 export class FileProcessorService implements OnModuleInit {
@@ -46,14 +46,11 @@ export class FileProcessorService implements OnModuleInit {
       const validationStartTime = Date.now();
       const validationSummary = await this.controleSandreService.execute(file, job.data);
       //
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const xmlObj: { FctAssain: { OuvrageDepollution: { Commune: object } } } = new XMLParser().parse(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const xmlObj: { FctAssain: { Scenario: { Emetteur: object } } } = new XMLParser().parse(
         Buffer.from(file.toString('utf-8'), 'base64').toString('utf-8'),
       );
-      this.logger.log(
-        '!!!!!!!!! xmlObj?.FctAssain?.OuvrageDepollution?.Commune',
-        xmlObj?.FctAssain?.OuvrageDepollution?.Commune,
-      );
+      this.logger.log('!!!!!!!!! xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
       const validationDuration = Date.now() - validationStartTime;
       const memoryAfterValidation = this.memoryMonitor.getMemoryUsage();
 
