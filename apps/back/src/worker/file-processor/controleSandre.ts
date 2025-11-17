@@ -7,7 +7,7 @@ import type { SandreValidationSummary } from '@worker/referentiel/sandre/sandre'
 import { SandreService } from '@worker/referentiel/sandre/sandre.service';
 
 @Injectable()
-export class ControleSandreService implements FileControl<SandreValidationSummary> {
+export class ControleSandreService implements FileControl<SandreValidationSummary | null> {
   constructor(
     private readonly sandreService: SandreService,
     private readonly reponseSandreService: ReponseSandreRepository,
@@ -15,9 +15,13 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
 
   private readonly logger = new LoggerService(ControleSandreService.name);
 
-  async execute(file: Buffer, fichierDeDepot: FichierDeDepot): Promise<SandreValidationSummary> {
+  async execute(file: Buffer, fichierDeDepot: FichierDeDepot): Promise<SandreValidationSummary | null> {
+    const hasAlreadyBeenProcessed = await this.reponseSandreService.findByDepotId(fichierDeDepot.id);
+    if (hasAlreadyBeenProcessed.length > 0) {
+      this.logger.log('File has already been processed for this depot', { depotId: fichierDeDepot.id });
+      return null;
+    }
     try {
-      // Validate file with SANDRE
       this.logger.log('Validating file with SANDRE', { filePath: fichierDeDepot.filePath });
       const validationSummary = await this.sandreService.validateFileAndWait({
         xml: file,

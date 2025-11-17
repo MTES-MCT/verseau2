@@ -19,9 +19,10 @@ export class FileProcessorService implements OnModuleInit {
   private readonly logger = new LoggerService(FileProcessorService.name);
 
   async onModuleInit() {
-    // Log initial memory state
     this.memoryMonitor.logMemoryUsage('Service initialized', this.memoryMonitor.getMemoryUsage());
 
+    // TODO : Gérer la logique dans une transacation
+    // ou persister à la fin de tous les contrôles
     await this.queueService.work<FichierDeDepot>(QueueName.process_file, async ([job]) => {
       const startTime = Date.now();
       const memoryBefore = this.memoryMonitor.getMemoryUsage();
@@ -41,13 +42,13 @@ export class FileProcessorService implements OnModuleInit {
       this.memoryMonitor.logMemoryUsage('After download', this.memoryMonitor.getMemoryUsage());
 
       const validationStartTime = Date.now();
-      const validationSummary = await this.controleSandreService.execute(file, job.data);
-      //
+      await this.controleSandreService.execute(file, job.data);
+
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const xmlObj: { FctAssain: { Scenario: { Emetteur: object } } } = new XMLParser().parse(
         Buffer.from(file.toString('utf-8'), 'base64').toString('utf-8'),
       );
-      this.logger.debug('!!!!!!!!! xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
+      this.logger.debug('xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
       const validationDuration = startTime - validationStartTime;
 
       this.logger.log('Validation completed', {
@@ -55,7 +56,7 @@ export class FileProcessorService implements OnModuleInit {
       });
       this.memoryMonitor.logMemoryUsage('After validation', this.memoryMonitor.getMemoryUsage());
 
-      return validationSummary;
+      return null;
     });
   }
 }
