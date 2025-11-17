@@ -17,7 +17,7 @@ export const createS3Service = (configService: ConfigService, s3Client: S3Client
   }
 
   if (s3Provider === 'mock') {
-    logger.log('!!!!!! Using Mock S3 Service !!!!!!');
+    logger.warn('MOCK S3 - Using Mock S3 Service');
     const bucket = configService.getOrThrow<string>('OUTSCALE_BUCKET');
     return new S3Service(bucket, s3Client);
   }

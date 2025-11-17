@@ -14,7 +14,7 @@ const sandreServiceFactory = {
   useFactory: (): SandreService => {
     const useMock = process.env.USE_SANDRE_MOCK === 'true';
     if (useMock) {
-      logger.log('!!!!!! Using SandreMockService !!!!!!');
+      logger.warn('MOCK SANDRE - Using SandreMockService');
       return new SandreMockService() as unknown as SandreService;
     }
     logger.log('Using SandreService');

@@ -36,16 +36,16 @@ export class SandreMockService {
   private readonly defaultBehavior: 'conformant' | 'non-conformant' | 'random';
   private readonly conformantRate: number;
 
-  constructor(options?: SandreMockServiceOptions) {
+  constructor() {
     const envBehavior = process.env.SANDRE_MOCK_BEHAVIOR as 'conformant' | 'non-conformant' | 'random' | undefined;
     const envConformantRate = process.env.SANDRE_MOCK_CONFORMANT_RATE
       ? parseFloat(process.env.SANDRE_MOCK_CONFORMANT_RATE)
       : undefined;
 
-    this.defaultBehavior = options?.defaultBehavior || envBehavior || 'conformant';
-    this.conformantRate = options?.conformantRate ?? envConformantRate ?? 0.5;
+    this.defaultBehavior = envBehavior || 'conformant';
+    this.conformantRate = envConformantRate ?? 0.5;
 
-    this.logger.log('SANDRE Mock Service initialized', {
+    this.logger.debug('SANDRE Mock Service initialized', {
       defaultBehavior: this.defaultBehavior,
       conformantRate: this.conformantRate,
     });

@@ -12,34 +12,31 @@ export class LoggerService extends ConsoleLogger {
     }
   }
 
+  // protected getTimestamp(): string {
+  //   return super.getTimestamp();
+  // }
+
   log(message: any, ...optionalParams: [...any, string?]): void {
-    let logMessage = `${message}`;
-    if (optionalParams.length > 0) {
-      const separator = ' - ';
-      logMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;
-    }
+    const logMessage = this.formatArgs(message, ...optionalParams);
     super.log(logMessage);
   }
 
-  error(message: any, ...optionalParams: [...any, string?, string?]): void {
-    let errorMessage = `${message}`;
-    if (optionalParams.length > 0) {
-      const separator = ' - ';
-      errorMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;
-    }
+  error(message: any, ...optionalParams: [...any, string?]): void {
+    const errorMessage = this.formatArgs(message, ...optionalParams);
     super.error(errorMessage);
   }
 
   debug(message: any, ...optionalParams: [...any, string?]): void {
-    let debugMessage = `${message}`;
-    if (optionalParams.length > 0) {
-      const separator = ' - ';
-      debugMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;
-    }
+    const debugMessage = this.formatArgs(message, ...optionalParams);
     super.debug(debugMessage);
   }
 
-  customLog() {
-    this.log('A custom log');
+  formatArgs(message: any, ...optionalParams: [...any, string?]): string {
+    let formattedMessage = `${message}`;
+    if (optionalParams.length > 0) {
+      const separator = ' - ';
+      formattedMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;
+    }
+    return formattedMessage;
   }
 }

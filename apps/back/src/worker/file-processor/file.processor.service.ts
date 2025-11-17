@@ -15,9 +15,7 @@ export class FileProcessorService implements OnModuleInit {
     @Inject(S3) private readonly s3: S3,
     private readonly controleSandreService: ControleSandreService,
     private readonly memoryMonitor: MemoryMonitorService,
-  ) {
-    this.logger.log('FileProcessorService with custom logger', { a: 1 }, 'un autre message', [{ b: 2 }, { c: 3 }]);
-  }
+  ) {}
   private readonly logger = new LoggerService(FileProcessorService.name);
 
   async onModuleInit() {
@@ -49,7 +47,7 @@ export class FileProcessorService implements OnModuleInit {
       const xmlObj: { FctAssain: { Scenario: { Emetteur: object } } } = new XMLParser().parse(
         Buffer.from(file.toString('utf-8'), 'base64').toString('utf-8'),
       );
-      this.logger.log('!!!!!!!!! xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
+      this.logger.debug('!!!!!!!!! xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
       const validationDuration = startTime - validationStartTime;
 
       this.logger.log('Validation completed', {

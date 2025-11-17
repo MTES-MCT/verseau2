@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { LoggerService } from '../logger/logger.service';
 
 export interface MemoryUsage {
@@ -11,7 +11,9 @@ export interface MemoryUsage {
 
 @Injectable()
 export class MemoryMonitorService {
-  private readonly logger = new LoggerService(MemoryMonitorService.name);
+  constructor(@Inject(LoggerService) private readonly logger: LoggerService) {
+    this.logger.setContext(MemoryMonitorService.name);
+  }
 
   getMemoryUsage(): MemoryUsage {
     const usage = process.memoryUsage();
