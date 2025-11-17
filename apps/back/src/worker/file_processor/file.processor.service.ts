@@ -45,11 +45,15 @@ export class FileProcessorService implements OnModuleInit {
 
       const validationStartTime = Date.now();
       const validationSummary = await this.controleSandreService.execute(file, job.data);
-
+      //
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const xmlObj = new XMLParser().parse(file);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      this.logger.log('XML object', xmlObj.length);
+      const xmlObj: { FctAssain: { OuvrageDepollution: { Commune: object } } } = new XMLParser().parse(
+        Buffer.from(file.toString('utf-8'), 'base64').toString('utf-8'),
+      );
+      this.logger.log(
+        '!!!!!!!!! xmlObj?.FctAssain?.OuvrageDepollution?.Commune',
+        xmlObj?.FctAssain?.OuvrageDepollution?.Commune,
+      );
       const validationDuration = Date.now() - validationStartTime;
       const memoryAfterValidation = this.memoryMonitor.getMemoryUsage();
 
