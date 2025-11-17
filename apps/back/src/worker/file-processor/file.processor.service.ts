@@ -2,7 +2,7 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { QueueService } from '@queue/queue.service';
 import { QueueName } from '@queue/queue';
 import { LoggerService } from '@shared/logger/logger.service';
-import { MemoryMonitorService } from '@shared/memory-monitor/memory-monitor.service';
+import { MemoryMonitorService } from '@shared/memory-monitor/memoryMonitor.service';
 import { FichierDeDepot } from '@depot/depot/file/file';
 import { S3 } from '@s3/s3';
 import { ControleSandreService } from './controleSandre';
@@ -35,13 +35,12 @@ export class FileProcessorService implements OnModuleInit {
       const downloadStartTime = Date.now();
       const file = await this.s3.download(job.data.filePath);
       const downloadDuration = Date.now() - downloadStartTime;
-      const memoryAfterDownload = this.memoryMonitor.getMemoryUsage();
 
       this.logger.log('File downloaded', {
         duration: `${downloadDuration}ms`,
         fileSize: `${Math.round((file.length / 1024 / 1024) * 100) / 100} MB`,
       });
-      this.memoryMonitor.logMemoryUsage('After download', memoryAfterDownload);
+      this.memoryMonitor.logMemoryUsage('After download', this.memoryMonitor.getMemoryUsage());
 
       const validationStartTime = Date.now();
       const validationSummary = await this.controleSandreService.execute(file, job.data);
@@ -51,22 +50,12 @@ export class FileProcessorService implements OnModuleInit {
         Buffer.from(file.toString('utf-8'), 'base64').toString('utf-8'),
       );
       this.logger.log('!!!!!!!!! xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
-      const validationDuration = Date.now() - validationStartTime;
-      const memoryAfterValidation = this.memoryMonitor.getMemoryUsage();
+      const validationDuration = startTime - validationStartTime;
 
       this.logger.log('Validation completed', {
         duration: `${validationDuration}ms`,
       });
-      this.memoryMonitor.logMemoryUsage('After validation', memoryAfterValidation);
-
-      const totalDuration = Date.now() - startTime;
-      const memoryDelta = this.memoryMonitor.calculateMemoryDelta(memoryBefore, memoryAfterValidation);
-
-      this.logger.log('Job processing completed', {
-        jobId: job.id,
-        totalDuration: `${totalDuration}ms`,
-        memoryDelta: this.memoryMonitor.formatMemoryDelta(memoryDelta),
-      });
+      this.memoryMonitor.logMemoryUsage('After validation', this.memoryMonitor.getMemoryUsage());
 
       return validationSummary;
     });
