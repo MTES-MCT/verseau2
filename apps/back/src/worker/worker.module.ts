@@ -6,8 +6,10 @@ import { SharedModule } from '@shared/shared.module';
 import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 
+import { WorkerService } from './worker.service';
+
 @Module({
   imports: [InfraModule, DossierModule, SharedModule, NotificationModule, ReferentielModule],
-  providers: [FileProcessorService],
+  providers: [FileProcessorService, WorkerService],
 })
 export class WorkerModule {}

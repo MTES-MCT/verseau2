@@ -88,7 +88,11 @@
       "^@worker/(.*)$": "<rootDir>/worker/$1",
       "^@depot/(.*)$": "<rootDir>/depot/$1",
       "^@pgboss/(.*)$": "<rootDir>/infra/pgboss/$1",
-      "^@s3/(.*)$": "<rootDir>/infra/s3/$1"
+      "^@s3/(.*)$": "<rootDir>/infra/s3/$1",
+      "^@dossier/(.*)$": "<rootDir>/dossier/$1",
+      "^@referentiel/(.*)$": "<rootDir>/referentiel/$1",
+      "^@notification/(.*)$": "<rootDir>/notification/$1",
+      "^@infra/(.*)$": "<rootDir>/infra/$1"
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Queue, QueueJob } from './queue';
+import { Queue, QueueJob, QueueOptions } from './queue';
 import type { PgBoss } from '../pgboss/pgboss';
 import { PGBOSS } from '@pgboss/pgboss.module';
 @Injectable()
@@ -10,7 +10,11 @@ export class QueueService implements Queue<object> {
     return await this.pgboss.send(name, data as object);
   }
 
-  async work<TData>(name: string, handler: (job: QueueJob<TData>[]) => Promise<unknown>): Promise<string> {
-    return await this.pgboss.work(name, handler);
+  async work<TData>(
+    name: string,
+    options: QueueOptions,
+    handler: (job: QueueJob<TData>[]) => Promise<unknown>,
+  ): Promise<string> {
+    return await this.pgboss.work(name, options, handler);
   }
 }

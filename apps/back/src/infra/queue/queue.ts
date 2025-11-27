@@ -1,6 +1,6 @@
 export interface Queue<TData = object> {
   send(name: string, data?: TData): Promise<string | null>;
-  work(name: string, handler: ([job]: TData[]) => Promise<unknown>): Promise<string>;
+  work(name: string, options: QueueOptions, handler: ([job]: TData[]) => Promise<unknown>): Promise<string>;
 }
 
 export interface QueueJob<TData = object> {
@@ -12,4 +12,8 @@ export interface QueueJob<TData = object> {
 export enum QueueName {
   process_file = 'process_file',
   email = 'email',
+}
+
+export interface QueueOptions {
+  batchSize: number;
 }
