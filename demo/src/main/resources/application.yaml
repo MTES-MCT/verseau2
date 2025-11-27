@@ -1,0 +1,34 @@
+server:
+    port: ${PORT}
+spring:
+  config:
+    import: "optional:classpath:local.yaml"
+  application:
+    name: demo
+  
+  servlet:
+    multipart:
+      max-file-size: ${MAX_FILE_SIZE:1000MB}
+      max-request-size: ${MAX_REQUEST_SIZE:1000MB}
+  
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+    url: ${JDBC_DATABASE_URL}
+    username: ${JDBC_DATABASE_USERNAME}
+    password: ${JDBC_DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+
+aws:
+  s3:
+    endpoint: ${OUTSCALE_ENDPOINT}
+    region: ${OUTSCALE_REGION}
+    bucket: ${OUTSCALE_BUCKET}
+    access-key: ${OUTSCALE_ACCESS_KEY}
+    secret-key: ${OUTSCALE_SECRET_KEY}

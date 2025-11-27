@@ -1,0 +1,2 @@
+web: java -Dserver.port=$PORT $JAVA_OPTS -Xmx500m -jar build/libs/demo-0.0.1-SNAPSHOT.jar --spring.profiles.active=web
+worker: java $JAVA_OPTS -Xmx500m -jar build/libs/demo-0.0.1-SNAPSHOT.jar --spring.profiles.active=worker

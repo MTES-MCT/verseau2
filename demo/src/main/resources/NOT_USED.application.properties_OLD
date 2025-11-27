@@ -1,0 +1,25 @@
+spring.application.name=demo
+
+# File upload configuration
+spring.servlet.multipart.max-file-size=1000MB
+spring.servlet.multipart.max-request-size=1000MB
+
+# S3 Configuration
+aws.s3.endpoint=http://192.168.147.3:9090
+aws.s3.region=us-east-1
+aws.s3.bucket=verseau2-recette
+aws.s3.access-key=test
+aws.s3.secret-key=test
+
+# Datasource Configuration
+spring.datasource.url=jdbc:postgresql://192.168.147.2PPPPPPPP:5432/verseau2-spring-PPPPPPPPPPP
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+
+# Jobrunr Configuration (default: disabled, enable via profiles)
+org.jobrunr.background-job-server.enabled=false
+org.jobrunr.dashboard.enabled=false
+org.jobrunr.dashboard.port=8000
