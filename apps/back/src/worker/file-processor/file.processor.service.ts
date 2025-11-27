@@ -3,9 +3,9 @@ import { QueueService } from '@queue/queue.service';
 import { QueueName } from '@queue/queue';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MemoryMonitorService } from '@shared/memory-monitor/memoryMonitor.service';
-import { FichierDeDepot } from '@depot/depot/file/file';
+import { FichierDeDepot } from '@dossier/depot/file/file';
 import { S3 } from '@s3/s3';
-import { ControleSandreService } from './controleSandre';
+import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
 import { XMLParser } from 'fast-xml-parser';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 

@@ -1,5 +1,5 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, BeforeInsert } from 'typeorm';
+import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('depot')
 export class DepotEntity extends BaseEntity {

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import {
-  SandreUploadParams,
-  SandreTokenResponse,
-  SandreValidationResult,
   AcceptationStatus,
+  SandreTokenResponse,
+  SandreUploadParams,
+  SandreValidationResult,
   SandreValidationSummary,
 } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';

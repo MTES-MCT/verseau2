@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { S3 } from './s3';
 export const S3_CLIENT = Symbol('S3_CLIENT');

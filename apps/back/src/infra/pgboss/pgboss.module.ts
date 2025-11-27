@@ -19,9 +19,7 @@ export class PgbossModule {
         {
           provide: PGBOSS,
           useFactory: async (configService: ConfigService) => {
-            const connectionString = configService.getOrThrow<string>(
-              'DATABASE_URL',
-            );
+            const connectionString = configService.getOrThrow<string>('DATABASE_URL');
 
             const boss = new PgBoss(connectionString);
 

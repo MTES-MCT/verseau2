@@ -6,12 +6,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BeforeInsert,
-  ManyToOne,
   JoinColumn,
   OneToOne,
 } from 'typeorm';
 import { AcceptationStatus } from './sandre';
-import { DepotEntity } from '@depot/depot/depot.entity';
+import { DepotEntity } from '@dossier/depot/depot.entity';
 
 @Entity('reponse_sandre')
 export class ReponseSandreEntity extends BaseEntity {

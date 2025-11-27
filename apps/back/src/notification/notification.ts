@@ -14,6 +14,4 @@ export interface EmailWithMessage extends EmailParams {
   message: string;
 }
 
-export enum EmailTemplate {
-  //
-}
+export enum EmailTemplate {}

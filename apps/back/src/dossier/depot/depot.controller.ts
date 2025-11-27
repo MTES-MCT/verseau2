@@ -1,7 +1,7 @@
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
-import { XML_MIME_TYPES, XML_EXTENSION } from '@shared/constants/mimeTypes';
+import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
 import { DepotModel } from './depot.model';
 

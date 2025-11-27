@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ReponseSandreEntity } from './reponseSandre.entity';
 import { ReponseSandreCreateModel, ReponseSandreModel } from './reponseSandre.model';
 import { AcceptationStatus } from './sandre';
-import { DepotRepository } from '@depot/depot/depot.repository';
+import { DepotRepository } from '@dossier/depot/depot.repository';
 
 @Injectable()
 export class ReponseSandreRepository extends Repository<ReponseSandreEntity> {

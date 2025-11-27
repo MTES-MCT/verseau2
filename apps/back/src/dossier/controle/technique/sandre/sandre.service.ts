@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import {
-  SandreUploadParams,
-  SandreTokenResponse,
-  SandreValidationResult,
   AcceptationStatus,
+  SandreTokenResponse,
+  SandreUploadParams,
+  SandreValidationResult,
   SandreValidationSummary,
 } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -135,7 +135,9 @@ export class SandreService {
       this.logger.error('Failed to fetch validation result', error);
       if (axios.isAxiosError(error)) {
         throw new Error(
-          `SANDRE validation fetch failed: ${error.message}${error.response ? ` - Status: ${error.response.status}` : ''}`,
+          `SANDRE validation fetch failed: ${error.message}${
+            error.response ? ` - Status: ${error.response.status}` : ''
+          }`,
         );
       }
       throw error;

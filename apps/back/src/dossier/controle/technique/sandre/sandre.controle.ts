@@ -1,10 +1,10 @@
-import { FichierDeDepot } from '@depot/depot/file/file';
+import { FichierDeDepot } from '@dossier/depot/file/file';
 import { Injectable } from '@nestjs/common';
 import { FileControl } from '@shared/fileControl';
 import { LoggerService } from '@shared/logger/logger.service';
-import { ReponseSandreRepository } from '@worker/referentiel/sandre/reponseSandre.repository';
-import type { SandreValidationSummary } from '@worker/referentiel/sandre/sandre';
-import { SandreService } from '@worker/referentiel/sandre/sandre.service';
+import { ReponseSandreRepository } from './reponseSandre.repository';
+import type { SandreValidationSummary } from './sandre';
+import { SandreService } from './sandre.service';
 
 @Injectable()
 export class ControleSandreService implements FileControl<SandreValidationSummary | null> {

@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('itv', { schema: 'custom_ingestion_lanceleau', synchronize: false })
 export class ItvEntity {

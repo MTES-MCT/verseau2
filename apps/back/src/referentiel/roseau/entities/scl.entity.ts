@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('scl', { schema: 'custom_ingestion_roseau', synchronize: false })
 export class SclEntity {

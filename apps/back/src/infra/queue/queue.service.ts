@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { QueueJob, Queue } from './queue';
+import { Queue, QueueJob } from './queue';
 import type { PgBoss } from '../pgboss/pgboss';
 import { PGBOSS } from '@pgboss/pgboss.module';
 @Injectable()

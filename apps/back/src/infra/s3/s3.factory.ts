@@ -6,15 +6,14 @@ import { S3 } from './s3';
 import { customizeMockS3Client } from './s3.provider.mock';
 
 export const createS3Service = (configService: ConfigService, s3Client: S3Client): S3 => {
-    const bucket = configService.getOrThrow<string>('S3_BUCKET');
-    return new S3Service(bucket, s3Client);
+  const bucket = configService.getOrThrow<string>('S3_BUCKET');
+  return new S3Service(bucket, s3Client);
 };
 
 export const createS3Providers = () => [
   {
     provide: S3_CLIENT,
     useFactory: async (configService: ConfigService) => {
-
       const s3Client = new S3Client({
         endpoint: configService.getOrThrow<string>('S3_ENDPOINT'),
         region: configService.getOrThrow<string>('S3_REGION'),
@@ -37,7 +36,7 @@ export const createS3Providers = () => [
 
       if (s3Provider === 'outscale' || s3Provider === undefined) {
         return s3Client;
-      } 
+      }
 
       throw new Error(`Invalid S3 provider: ${s3Provider}`);
     },
