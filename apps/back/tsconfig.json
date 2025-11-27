@@ -32,7 +32,10 @@
       "@s3/*": ["src/infra/s3/*"],
       "@infra/*": ["src/infra/*"],
       "@notification/*": ["src/notification/*"],
-      "@referentiel/*": ["src/referentiel/*"]
+      "@referentiel/*": ["src/referentiel/*"],
     }
-  }
+  },
+  "references": [
+  { "path": "../../packages/parser" }
+]
 }
