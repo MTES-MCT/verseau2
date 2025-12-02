@@ -33,6 +33,7 @@
       "@infra/*": ["src/infra/*"],
       "@notification/*": ["src/notification/*"],
       "@referentiel/*": ["src/referentiel/*"],
+      "@authentication/*": ["src/authentication/*"],
     }
   },
   "references": [

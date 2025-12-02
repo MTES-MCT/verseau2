@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { LoggerService } from '@shared/logger/logger.service';
 import { MemoryMonitorService } from '@shared/memory-monitor/memoryMonitor.service';
@@ -10,7 +10,7 @@ import { AsyncTask } from '@worker/asyncTask';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 
 @Injectable()
-export class FileProcessorService implements OnModuleInit, AsyncTask<FichierDeDepot> {
+export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   constructor(
     @Inject(S3) private readonly s3: S3,
     private readonly controleSandreService: ControleSandreService,
@@ -19,13 +19,6 @@ export class FileProcessorService implements OnModuleInit, AsyncTask<FichierDeDe
     private readonly lanceleauGateway: LanceleauGateway,
   ) {}
   private readonly logger = new LoggerService(FileProcessorService.name);
-
-  async onModuleInit() {
-    // TODO : supprimer après test
-    const res = await this.lanceleauGateway.findItvById('6');
-    console.log('this.lanceleauGateway.findItvById(6): ', res);
-    this.memoryMonitor.logMemoryUsage('Service initialized', this.memoryMonitor.getMemoryUsage());
-  }
 
   async process(fichierDeDepot: FichierDeDepot) {
     // TODO : Gérer la logique dans une transacation
@@ -49,7 +42,6 @@ export class FileProcessorService implements OnModuleInit, AsyncTask<FichierDeDe
     const validationStartTime = Date.now();
     await this.controleSandreService.execute(file, fichierDeDepot);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const xmlObj = await parseScenarioAssainissementXml(file.toString());
     this.logger.debug('xmlObj?.scenario?.emetteur', xmlObj?.scenario?.emetteur);
     const validationDuration = startTime - validationStartTime;
