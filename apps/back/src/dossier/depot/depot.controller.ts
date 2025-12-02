@@ -1,9 +1,14 @@
-import { BadRequestException, Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
 import { DepotModel } from './depot.model';
+import { AuthenticationGuard } from '@authentication/authentication.guard';
+import { AuthenticatedUserDecorator } from '@authentication/authenticated-user.decorator';
+import type { AuthenticatedUser } from '@authentication/authentication';
+import { DepotService } from './depot.service';
+import { UserService } from '@user/user.service';
 
 interface MulterFile {
   fieldname: string;
@@ -18,7 +23,11 @@ interface MulterFile {
 export class DepotController {
   private readonly logger = new LoggerService(DepotController.name);
 
-  constructor(private readonly deposerUnFichier: DeposerUnFichier) {}
+  constructor(
+    private readonly deposerUnFichier: DeposerUnFichier,
+    private readonly depotService: DepotService,
+    private readonly userService: UserService,
+  ) {}
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -46,5 +55,12 @@ export class DepotController {
     this.logger.log('Depot created', { depotId: depot.id });
 
     return depot;
+  }
+
+  @Get()
+  @UseGuards(AuthenticationGuard)
+  async listMyDepots(@AuthenticatedUserDecorator() user: AuthenticatedUser): Promise<DepotModel[]> {
+    const userEntity = await this.userService.findBySub(user.sub);
+    return this.depotService.findByUserId(userEntity.id);
   }
 }

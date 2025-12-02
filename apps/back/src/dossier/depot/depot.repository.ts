@@ -27,4 +27,8 @@ export class DepotRepository extends Repository<DepotEntity> {
     await this.update(id, updateData);
     return await this.findDepotById(id);
   }
+
+  async findByUserId(userId: string): Promise<DepotModel[]> {
+    return await this.find({ where: { userId } });
+  }
 }

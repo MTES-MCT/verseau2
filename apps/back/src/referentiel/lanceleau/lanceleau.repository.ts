@@ -18,4 +18,8 @@ export class LanceleauRepository implements LanceleauGateway {
   async findItvById(id: string): Promise<ItvEntity | null> {
     return this.itvRepository.findOne({ where: { itvCdn: id } });
   }
+
+  async findByItvCdn(itvCdn: string): Promise<ItvEntity | null> {
+    return this.itvRepository.findOne({ where: { itvCdn } });
+  }
 }

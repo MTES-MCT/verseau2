@@ -6,7 +6,7 @@ import { AuthenticationModule } from '@authentication/authentication.module';
 
 @Global()
 @Module({
-  imports: [S3Module.forRootAsync(), QueueModule, DatabaseModule, AuthenticationModule.forRootAsync()],
+  imports: [S3Module.forRootAsync(), QueueModule, DatabaseModule, AuthenticationModule],
   exports: [S3Module, QueueModule, DatabaseModule, AuthenticationModule],
 })
 export class InfraModule {}

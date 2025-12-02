@@ -26,6 +26,10 @@ export class DepotService {
     return await this.depotRepository.findAllDepots();
   }
 
+  async findByUserId(userId: string): Promise<DepotModel[]> {
+    return await this.depotRepository.findByUserId(userId);
+  }
+
   async update(id: string, updateData: Partial<Omit<DepotModel, 'id' | 'createdAt'>>): Promise<DepotModel> {
     const depot = await this.depotRepository.findDepotById(id);
     if (!depot) {

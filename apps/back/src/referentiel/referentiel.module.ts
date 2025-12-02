@@ -13,9 +13,10 @@ import { ReferentielGateway } from './referentiel.gateway';
 import { ReferentielRepository } from './referentiel.repository';
 import { ReferentielService } from './referentiel.service';
 import { ReferentielController } from './referentiel.controller';
+import { SharedModule } from '@shared/shared.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AgaEntity, SclEntity, SteuEntity, CxnadmEntity, ItvEntity])],
+  imports: [TypeOrmModule.forFeature([AgaEntity, SclEntity, SteuEntity, CxnadmEntity, ItvEntity]), SharedModule],
   controllers: [ReferentielController],
   providers: [
     { provide: RoseauGateway, useClass: RoseauRepository },

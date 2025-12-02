@@ -34,6 +34,7 @@
       "@notification/*": ["src/notification/*"],
       "@referentiel/*": ["src/referentiel/*"],
       "@authentication/*": ["src/authentication/*"],
+      "@user/*": ["src/user/*"],
     }
   },
   "references": [

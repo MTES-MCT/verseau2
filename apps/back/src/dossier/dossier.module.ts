@@ -13,6 +13,7 @@ import { ReponseSandreEntity } from './controle/technique/sandre/reponseSandre.e
 import { ReponseSandreRepository } from './controle/technique/sandre/reponseSandre.repository';
 import { ControleSandreService } from './controle/technique/sandre/sandre.controle';
 import { LoggerService } from '@shared/logger/logger.service';
+import { UserModule } from '@user/user.module';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -29,7 +30,7 @@ const sandreServiceFactory = {
 };
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity]), SharedModule, InfraModule],
+  imports: [TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity]), SharedModule, InfraModule, UserModule],
   controllers: [DepotController],
   providers: [
     // Depot
