@@ -2,5 +2,5 @@
   "watch": ["src", "../../packages/parser/dist"],
   "ext": "ts,js,json",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "ts-node -r tsconfig-paths/register src/mainWorker.ts"
+  "exec": "nest start --debug --watch worker"
 }
