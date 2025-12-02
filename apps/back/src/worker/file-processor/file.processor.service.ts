@@ -1,16 +1,13 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 
-import { QueueJob, QueueName } from '@queue/queue';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MemoryMonitorService } from '@shared/memory-monitor/memoryMonitor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { S3 } from '@s3/s3';
 import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
-import { XMLParser } from 'fast-xml-parser';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { AsyncTask } from '@worker/asyncTask';
-
-
+import { parseScenarioAssainissementXml } from '@lib/parser';
 
 @Injectable()
 export class FileProcessorService implements OnModuleInit, AsyncTask<FichierDeDepot> {
@@ -20,7 +17,7 @@ export class FileProcessorService implements OnModuleInit, AsyncTask<FichierDeDe
     private readonly memoryMonitor: MemoryMonitorService,
     @Inject(LanceleauGateway)
     private readonly lanceleauGateway: LanceleauGateway,
-  ) { }
+  ) {}
   private readonly logger = new LoggerService(FileProcessorService.name);
 
   async onModuleInit() {
@@ -53,14 +50,13 @@ export class FileProcessorService implements OnModuleInit, AsyncTask<FichierDeDe
     await this.controleSandreService.execute(file, fichierDeDepot);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const xmlObj: { FctAssain: { Scenario: { Emetteur: object } } } = new XMLParser().parse(file);
-    this.logger.debug('xmlObj?.FctAssain?.Scenario?.Emetteur', xmlObj?.FctAssain?.Scenario?.Emetteur);
+    const xmlObj = await parseScenarioAssainissementXml(file.toString());
+    this.logger.debug('xmlObj?.scenario?.emetteur', xmlObj?.scenario?.emetteur);
     const validationDuration = startTime - validationStartTime;
 
     this.logger.log('Validation completed', {
       duration: `${validationDuration}ms`,
     });
     this.memoryMonitor.logMemoryUsage('After validation', this.memoryMonitor.getMemoryUsage());
-
   }
 }
