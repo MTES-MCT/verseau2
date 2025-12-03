@@ -40,4 +40,8 @@ export class RoseauRepository implements RoseauGateway {
   async findSteuById(id: string): Promise<SteuEntity | null> {
     return this.steuRepository.findOne({ where: { steuCdn: id } });
   }
+
+  async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
+    return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
+  }
 }

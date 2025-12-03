@@ -14,6 +14,8 @@ import { ReponseSandreRepository } from './controle/technique/sandre/reponseSand
 import { ControleSandreService } from './controle/technique/sandre/sandre.controle';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserModule } from '@user/user.module';
+import { ReferentielModule } from '@referentiel/referentiel.module';
+import { ControleV1Service } from './controle/isov1/controlev1.service';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -30,7 +32,13 @@ const sandreServiceFactory = {
 };
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity]), SharedModule, InfraModule, UserModule],
+  imports: [
+    TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity]),
+    SharedModule,
+    InfraModule,
+    UserModule,
+    ReferentielModule,
+  ],
   controllers: [DepotController],
   providers: [
     // Depot
@@ -41,7 +49,9 @@ const sandreServiceFactory = {
     sandreServiceFactory,
     ReponseSandreRepository,
     ControleSandreService,
+    // ISO V1 control
+    ControleV1Service,
   ],
-  exports: [DepotService, ControleSandreService, ReponseSandreRepository],
+  exports: [DepotService, ControleSandreService, ReponseSandreRepository, ControleV1Service],
 })
 export class DossierModule {}

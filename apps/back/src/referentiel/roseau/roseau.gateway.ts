@@ -9,6 +9,7 @@ export interface RoseauGateway {
   findAgaById(id: string): Promise<AgaEntity | null>;
   findSclById(id: string): Promise<SclEntity | null>;
   findSteuById(id: string): Promise<SteuEntity | null>;
+  findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

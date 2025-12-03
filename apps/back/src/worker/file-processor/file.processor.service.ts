@@ -8,6 +8,7 @@ import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { AsyncTask } from '@worker/asyncTask';
 import { parseScenarioAssainissementXml } from '@lib/parser';
+import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 
 @Injectable()
 export class FileProcessorService implements AsyncTask<FichierDeDepot> {
@@ -15,8 +16,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     @Inject(S3) private readonly s3: S3,
     private readonly controleSandreService: ControleSandreService,
     private readonly memoryMonitor: MemoryMonitorService,
-    @Inject(LanceleauGateway)
-    private readonly lanceleauGateway: LanceleauGateway,
+    private readonly controleV1Service: ControleV1Service,
   ) {}
   private readonly logger = new LoggerService(FileProcessorService.name);
 
@@ -24,31 +24,26 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     // TODO : Gérer la logique dans une transacation
     // ou persister à la fin de tous les contrôles
     const startTime = Date.now();
-    const memoryBefore = this.memoryMonitor.getMemoryUsage();
-
-    this.memoryMonitor.logMemoryUsage('Before processing', memoryBefore);
 
     this.logger.log('Downloading file', fichierDeDepot.filePath);
-    const downloadStartTime = Date.now();
     const file = await this.s3.download(fichierDeDepot.filePath);
-    const downloadDuration = Date.now() - downloadStartTime;
 
     this.logger.log('File downloaded', {
-      duration: `${downloadDuration}ms`,
       fileSize: `${Math.round((file.length / 1024 / 1024) * 100) / 100} MB`,
     });
-    this.memoryMonitor.logMemoryUsage('After download', this.memoryMonitor.getMemoryUsage());
 
-    const validationStartTime = Date.now();
-    await this.controleSandreService.execute(file, fichierDeDepot);
+    // await this.controleSandreService.execute(file, fichierDeDepot);
 
     const xmlObj = await parseScenarioAssainissementXml(file.toString());
-    this.logger.debug('xmlObj?.scenario?.emetteur', xmlObj?.scenario?.emetteur);
-    const validationDuration = startTime - validationStartTime;
+    // Controle V1
+    const validationResult = await this.controleV1Service.execute(xmlObj);
+    console.log('validationResult', validationResult);
+    if (!validationResult.success) {
+      this.logger.error('Validation failed', { errors: validationResult.errors });
+    }
 
     this.logger.log('Validation completed', {
-      duration: `${validationDuration}ms`,
+      duration: `${Date.now() - startTime}ms`,
     });
-    this.memoryMonitor.logMemoryUsage('After validation', this.memoryMonitor.getMemoryUsage());
   }
 }
