@@ -1,5 +1,5 @@
 export interface FichierDeDepot {
-  id: string;
+  depotId: string;
   filePath: string;
 }
 

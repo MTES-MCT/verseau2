@@ -16,9 +16,9 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
   private readonly logger = new LoggerService(ControleSandreService.name);
 
   async execute(file: Buffer, fichierDeDepot: FichierDeDepot): Promise<SandreValidationSummary | null> {
-    const hasAlreadyBeenProcessed = await this.reponseSandreService.findByDepotId(fichierDeDepot.id);
+    const hasAlreadyBeenProcessed = await this.reponseSandreService.findByDepotId(fichierDeDepot.depotId);
     if (hasAlreadyBeenProcessed.length > 0) {
-      this.logger.log('File has already been processed for this depot', { depotId: fichierDeDepot.id });
+      this.logger.log('File has already been processed for this depot', { depotId: fichierDeDepot.depotId });
       return null;
     }
     try {
@@ -49,7 +49,7 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
       this.logger.log('Processing file completed');
 
       await this.reponseSandreService.createReponseSandre({
-        depotId: fichierDeDepot.id,
+        depotId: fichierDeDepot.depotId,
         jeton: validationSummary.jeton,
         acceptationStatus: validationSummary.acceptationStatus,
         isConformant: validationSummary.isConformant,

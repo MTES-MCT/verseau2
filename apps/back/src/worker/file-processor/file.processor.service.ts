@@ -5,10 +5,10 @@ import { MemoryMonitorService } from '@shared/memory-monitor/memoryMonitor.servi
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { S3 } from '@s3/s3';
 import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { AsyncTask } from '@worker/asyncTask';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
+import { ControleIndividuel } from '@lib/controle';
 
 @Injectable()
 export class FileProcessorService implements AsyncTask<FichierDeDepot> {
@@ -36,14 +36,11 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
 
     const xmlObj = await parseScenarioAssainissementXml(file.toString());
     // Controle V1
-    const validationResult = await this.controleV1Service.execute(xmlObj);
-    console.log('validationResult', validationResult);
-    if (!validationResult.success) {
-      this.logger.error('Validation failed', { errors: validationResult.errors });
-    }
 
-    this.logger.log('Validation completed', {
-      duration: `${Date.now() - startTime}ms`,
-    });
+    const validationResult: ControleIndividuel[] = await this.controleV1Service.execute(fichierDeDepot.depotId, xmlObj);
+    console.log('validationResult', validationResult);
+    if (!validationResult.every((controle) => controle.success)) {
+      this.logger.error('Validation failed', { errors: validationResult.flatMap((controle) => controle.errors) });
+    }
   }
 }

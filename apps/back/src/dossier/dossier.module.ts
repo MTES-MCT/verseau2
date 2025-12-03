@@ -16,6 +16,9 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserModule } from '@user/user.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 import { ControleV1Service } from './controle/isov1/controlev1.service';
+import { ControleEntity } from './controle/controle.entity';
+import { ControleRepository } from './controle/controle.repository';
+import { ControleGateway } from './controle/controle.gateway';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -33,7 +36,7 @@ const sandreServiceFactory = {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity]),
+    TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity, ControleEntity]),
     SharedModule,
     InfraModule,
     UserModule,
@@ -51,6 +54,7 @@ const sandreServiceFactory = {
     ControleSandreService,
     // ISO V1 control
     ControleV1Service,
+    { provide: ControleGateway, useClass: ControleRepository },
   ],
   exports: [DepotService, ControleSandreService, ReponseSandreRepository, ControleV1Service],
 })

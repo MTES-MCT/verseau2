@@ -29,6 +29,9 @@ export class DepotRepository extends Repository<DepotEntity> {
   }
 
   async findByUserId(userId: string): Promise<DepotModel[]> {
-    return await this.find({ where: { userId } });
+    return await this.find({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
   }
 }

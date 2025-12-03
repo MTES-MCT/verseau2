@@ -1,25 +1,32 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { FctAssainissement } from '@lib/parser';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
-import { ControleResult, ControleError } from '@lib/controle/src/controleResult';
-import { ErrorCode } from '@lib/controle';
+import { ControleIndividuel, ControleError } from '@lib/controle';
+import { ControleName, ErrorCode } from '@lib/controle';
+import { ControleGateway } from '../controle.gateway';
 
 @Injectable()
 export class ControleV1Service {
-  constructor(@Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway) {}
+  constructor(
+    @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
+  ) {}
 
-  async execute(fctAssainissement: FctAssainissement): Promise<ControleResult> {
-    console.log('fctAssainissement', fctAssainissement);
+  async execute(depotId: string, fctAssainissement: FctAssainissement): Promise<ControleIndividuel[]> {
     const tousControles = Promise.all([this.verifySteuExists(fctAssainissement)]);
     const tousControlesResult = (await tousControles).flat();
-    return {
-      success: tousControlesResult.length === 0,
-      errors: tousControlesResult,
-    };
+    await this.controleGateway.createControles(
+      tousControlesResult.map((controleResult) => ({
+        depotId: depotId,
+        name: controleResult.name,
+        error: controleResult.errors[0]?.code,
+      })),
+    );
+    return tousControlesResult;
   }
 
   // CTL002: Vérification que l'ouvrage de dépollution (STEU) existe bien dans la table STEU de Roseau
-  async verifySteuExists(fctAssainissement: FctAssainissement): Promise<ControleError[]> {
+  async verifySteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -40,6 +47,10 @@ export class ControleV1Service {
       }
     }
 
-    return errors;
+    return {
+      success: errors.length === 0,
+      name: ControleName.CTL002,
+      errors: errors,
+    };
   }
 }

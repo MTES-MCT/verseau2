@@ -62,7 +62,7 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
 
     try {
       await this.queueService.send<FichierDeDepot>(QueueName.process_file, {
-        id: depotId,
+        depotId: depotId,
         filePath: filePath,
       });
     } catch (error) {
