@@ -1,22 +1,19 @@
 {
   "name": "verseau2",
   "private": false,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "build": "npm run build --workspace=apps/back",
-    "start": "npm run start --workspace=apps/back",
-    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
-    "dev:back": "npm run dev --workspace=apps/back",
-    "dev:front": "npm run dev --workspace=apps/front",
+    "build": "pnpm --filter back build",
+    "start": "pnpm --filter back start",
+    "dev": "concurrently \"pnpm dev:back\" \"pnpm dev:front\"",
+    "dev:back": "pnpm --filter back dev",
+    "dev:front": "pnpm --filter front dev",
     "prepare": "husky",
-    "clean": "npm run clean --workspace=apps/back && npm run clean --workspace=apps/front && rm -rf node_modules"
+    "clean": "pnpm --filter back clean && pnpm --filter front clean && rm -rf node_modules"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
     "husky": "^9.1.7",
     "typescript": "^5.7.3"
-  }
+  },
+  "version": "0.0.0"
 }
