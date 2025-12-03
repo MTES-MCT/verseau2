@@ -2,6 +2,9 @@
 
 FROM node:22-alpine
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Create app directory
 WORKDIR /usr/src/app
 
@@ -9,9 +12,9 @@ WORKDIR /usr/src/app
 COPY apps/back ./
 
 # Install production dependencies
-RUN npm install
+RUN pnpm install
 
-RUN npm run build
+RUN pnpm build
 
 # Dev environment + default heap cap (docker-compose also sets this)
 ENV NODE_ENV=development
