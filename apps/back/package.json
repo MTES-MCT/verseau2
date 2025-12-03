@@ -9,7 +9,7 @@
     "build": "tsc --build && nest build",
     "start": "node dist/mainServer.js & node dist/mainWorker.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "dev": "concurrently \"npm run start:server:dev\" \"npm run start:worker:dev\"",
+    "dev": "concurrently \"pnpm start:server:dev\" \"pnpm start:worker:dev\"",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "start:server:dev": "nodemon --config nodemon-server.json",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.931.0",
-    "@lib/parser": "*",
+    "@lib/parser": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
