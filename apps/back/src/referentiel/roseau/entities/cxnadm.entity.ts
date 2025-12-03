@@ -10,5 +10,7 @@ export class CxnadmEntity {
 
   @Column({ name: 'steu_itv_cdn', nullable: true })
   steuItvCdn: string;
-}
 
+  @Column({ name: 'exp_steu_cdn', nullable: true })
+  expSteuCdn: string;
+}

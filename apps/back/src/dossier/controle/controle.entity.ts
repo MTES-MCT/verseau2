@@ -11,11 +11,14 @@ export class ControleEntity extends BaseEntity {
   @Column({ type: 'varchar' })
   name: ControleName;
 
-  @Column({ type: 'varchar', nullable: true })
-  status?: string;
+  @Column({ type: 'boolean', nullable: true })
+  success?: boolean;
 
   @Column({ type: 'varchar', nullable: true })
   error?: ErrorCode;
+
+  @Column({ type: 'varchar', nullable: true })
+  errorParam?: string;
 
   @Column({ type: 'varchar', nullable: true })
   depotId?: string;

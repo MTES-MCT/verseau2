@@ -5,6 +5,10 @@ import { RoseauGateway } from './roseau.gateway';
 import { AgaEntity } from './entities/aga.entity';
 import { SclEntity } from './entities/scl.entity';
 import { SteuEntity } from './entities/steu.entity';
+import { CxnadmEntity } from './entities/cxnadm.entity';
+import { PmoEntity } from './entities/pmo.entity';
+import { TlrefEntity } from './entities/tlref.entity';
+import { CxntechEntity } from './entities/cxntech.entity';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -15,6 +19,14 @@ export class RoseauRepository implements RoseauGateway {
     private readonly sclRepository: Repository<SclEntity>,
     @InjectRepository(SteuEntity)
     private readonly steuRepository: Repository<SteuEntity>,
+    @InjectRepository(CxnadmEntity)
+    private readonly cxnadmRepository: Repository<CxnadmEntity>,
+    @InjectRepository(PmoEntity)
+    private readonly pmoRepository: Repository<PmoEntity>,
+    @InjectRepository(TlrefEntity)
+    private readonly tlrefRepository: Repository<TlrefEntity>,
+    @InjectRepository(CxntechEntity)
+    private readonly cxntechRepository: Repository<CxntechEntity>,
   ) {}
 
   async findAga(): Promise<AgaEntity[]> {
@@ -43,5 +55,25 @@ export class RoseauRepository implements RoseauGateway {
 
   async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
+  }
+
+  async findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null> {
+    return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: itvCdn } });
+  }
+
+  async findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null> {
+    return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
+  }
+
+  async findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null> {
+    return this.pmoRepository.findOne({ where: { steuCdn: steuCdn, pmoNo: pmoNo } });
+  }
+
+  async findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null> {
+    return this.tlrefRepository.findOne({ where: { trlRfa: trlRfa, tlrefEltCda: tlrefEltCda } });
+  }
+
+  async findCxnTechBySclAndAga(sclCdn: string, agaZgcCdn: string): Promise<CxntechEntity | null> {
+    return this.cxntechRepository.findOne({ where: { avalSclCdn: sclCdn, amontZgcCdn: agaZgcCdn } });
   }
 }
