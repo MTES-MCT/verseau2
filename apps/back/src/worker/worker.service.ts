@@ -27,9 +27,18 @@ export class WorkerService implements OnModuleInit {
 
       switch (queueName) {
         case QueueName.process_file:
-          await this.queueService.work<FichierDeDepot>(queueName, options, ([job]) => {
+          await this.queueService.work<FichierDeDepot>(queueName, options, async ([job]) => {
             this.logger.log('Processing jobId', job.id);
-            return this.fileProcessorService.process(job.data);
+            try {
+              return await this.fileProcessorService.process(job.data);
+            } catch (error) {
+              this.logger.error('Job processing failed', {
+                jobId: job.id,
+                error: error instanceof Error ? error.message : (error as string),
+                stack: error instanceof Error ? error.stack : undefined,
+              });
+              throw error; // Re-throw so pg-boss still marks it as failed for retry
+            }
           });
           break;
         case QueueName.email:
