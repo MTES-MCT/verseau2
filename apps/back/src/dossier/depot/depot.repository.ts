@@ -13,7 +13,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   async createDepot(depot: Partial<DepotModel>): Promise<DepotModel> {
     const newDepot = this.create(depot);
     const savedDepot = await this.save(newDepot);
-    return { ...savedDepot };
+    return savedDepot;
   }
 
   async findDepotById(id: string): Promise<DepotModel | null> {

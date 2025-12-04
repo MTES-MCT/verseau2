@@ -8,13 +8,13 @@ export class ControleEntity extends BaseEntity {
   @PrimaryColumn()
   declare id: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'enum', enum: ControleName })
   name: ControleName;
 
   @Column({ type: 'boolean', nullable: true })
   success?: boolean;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'enum', enum: ErrorCode, nullable: true })
   error?: ErrorCode;
 
   @Column({ type: 'varchar', nullable: true, name: 'error_params', array: true })

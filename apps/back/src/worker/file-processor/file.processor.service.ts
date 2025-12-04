@@ -36,7 +36,6 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     // Controle V1
 
     const validationResult = await this.controleV1Service.execute(fichierDeDepot.depotId, xmlObj);
-    console.log(validationResult);
     if (!validationResult.every((controle) => controle.success)) {
       this.logger.log(`Validation failed for depot: ${fichierDeDepot.depotId}`, {
         errors: validationResult
