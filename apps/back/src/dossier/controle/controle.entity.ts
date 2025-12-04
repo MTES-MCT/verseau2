@@ -1,5 +1,5 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { BeforeInsert, Column, CreateDateColumn, Entity, ManyToOne, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 import { ControleName, ErrorCode } from '@lib/controle';
 
@@ -17,20 +17,15 @@ export class ControleEntity extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   error?: ErrorCode;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true, name: 'error_param' })
   errorParam?: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', nullable: true, name: 'depot_id' })
   depotId?: string;
 
   @ManyToOne(() => DepotEntity, (depot) => depot.controles)
+  @JoinColumn({ name: 'depot_id' })
   depot?: DepotEntity;
-
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp' })
-  updatedAt: Date;
 
   @BeforeInsert()
   setId() {

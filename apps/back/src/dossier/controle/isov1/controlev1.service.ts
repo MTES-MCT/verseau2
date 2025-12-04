@@ -14,6 +14,9 @@ export class ControleV1Service {
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
   ) {}
 
+  // Première implémentation naïve des contrôles v1
+  // Acceptable pour un MVP
+  // TODO : Améliorer les performances des contrôles en réduisant les requêtes SQL
   async execute(depotId: string, fctAssainissement: FctAssainissement): Promise<ControleIndividuel[]> {
     const tousControles = Promise.all([
       this.verifySteuExists(fctAssainissement),

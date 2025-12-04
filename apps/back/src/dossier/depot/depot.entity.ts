@@ -1,14 +1,5 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import {
-  BeforeInsert,
-  Column,
-  CreateDateColumn,
-  Entity,
-  ManyToOne,
-  OneToMany,
-  PrimaryColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 
@@ -17,13 +8,13 @@ export class DepotEntity extends BaseEntity {
   @PrimaryColumn()
   declare id: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', name: 'nom_original_fichier' })
   nomOriginalFichier: string;
 
   @Column({ type: 'varchar', nullable: true })
   path?: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', name: 'taille_fichier' })
   tailleFichier: number;
 
   @Column({ type: 'varchar' })
@@ -33,16 +24,11 @@ export class DepotEntity extends BaseEntity {
   error?: string;
 
   @ManyToOne(() => UserEntity, (user) => user.depots)
+  @JoinColumn({ name: 'user_id' })
   user?: UserEntity;
 
   @OneToMany(() => ControleEntity, (controle) => controle.depot)
   controles?: ControleEntity[];
-
-  @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp' })
-  updatedAt: Date;
 
   @BeforeInsert()
   setId() {

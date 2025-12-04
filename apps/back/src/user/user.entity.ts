@@ -1,5 +1,5 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { Column, CreateDateColumn, Entity, Index, OneToMany, UpdateDateColumn } from 'typeorm';
+import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 
 @Entity('user')
@@ -13,10 +13,4 @@ export class UserEntity extends BaseEntity {
 
   @OneToMany(() => DepotEntity, (depot) => depot.user)
   depots: DepotEntity[];
-
-  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
-  updatedAt: Date;
 }
