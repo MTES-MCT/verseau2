@@ -2,8 +2,11 @@ import { ErrorCode } from './error';
 
 export interface ControleError {
   code: ErrorCode; // e.g., "E2.003"
-  message: string; // Formatted error message
-  field?: string; // CdOuvrageDepollution value
+  params: string[]; // CdOuvrageDepollution value
+}
+
+export interface ControleErrorDto extends ControleError {
+  message: string;
 }
 
 export interface ControleIndividuel {

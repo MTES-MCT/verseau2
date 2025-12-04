@@ -5,4 +5,4 @@ export type ControleModel = Pick<
   'id' | 'name' | 'success' | 'error' | 'depot' | 'createdAt' | 'updatedAt'
 >;
 
-export type CreateControleModel = Pick<ControleEntity, 'name' | 'error' | 'depotId'>;
+export type CreateControleModel = Pick<ControleEntity, 'name' | 'success' | 'error' | 'depotId' | 'errorParams'>;

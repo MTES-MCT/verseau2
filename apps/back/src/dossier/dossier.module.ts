@@ -19,6 +19,7 @@ import { ControleV1Service } from './controle/isov1/controlev1.service';
 import { ControleEntity } from './controle/controle.entity';
 import { ControleRepository } from './controle/controle.repository';
 import { ControleGateway } from './controle/controle.gateway';
+import { ControleMapper } from './controle/isov1/controle.mapper';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -55,6 +56,7 @@ const sandreServiceFactory = {
     // ISO V1 control
     ControleV1Service,
     { provide: ControleGateway, useClass: ControleRepository },
+    ControleMapper,
   ],
   exports: [DepotService, ControleSandreService, ReponseSandreRepository, ControleV1Service],
 })

@@ -5,6 +5,7 @@ import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { ControleIndividuel, ControleError } from '@lib/controle';
 import { ControleName, ErrorCode } from '@lib/controle';
 import { ControleGateway } from '../controle.gateway';
+import { ControleMapper } from './controle.mapper';
 
 @Injectable()
 export class ControleV1Service {
@@ -12,6 +13,7 @@ export class ControleV1Service {
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
+    private readonly controleMapper: ControleMapper,
   ) {}
 
   // Première implémentation naïve des contrôles v1
@@ -56,14 +58,11 @@ export class ControleV1Service {
       this.verifyTypeAppareilMesureExists(fctAssainissement),
     ]);
     const tousControlesResult = (await tousControles).flat();
-    await this.controleGateway.createControles(
-      tousControlesResult.map((controleResult) => ({
-        depotId: depotId,
-        name: controleResult.name,
-        success: controleResult.success,
-        error: controleResult.errors[0]?.code,
-      })),
+    const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
+      depotId,
+      tousControlesResult,
     );
+    await this.controleGateway.createControles(createControles);
     return tousControlesResult;
   }
 
@@ -83,8 +82,7 @@ export class ControleV1Service {
       if (!steu) {
         errors.push({
           code: ErrorCode.E2_003,
-          message: `Le code ouvrage ${cdOuvrageDepollution} n'existe pas dans la base de données Roseau ! Veuillez vérifier son exactitude ou le créer dans Roseau.`,
-          field: cdOuvrageDepollution,
+          params: [cdOuvrageDepollution],
         });
       }
     }
@@ -115,8 +113,7 @@ export class ControleV1Service {
       if (!itv) {
         errors.push({
           code: ErrorCode.E2_004,
-          message: `Le maître d'ouvrage ${cdIntervenant} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`,
-          field: cdIntervenant,
+          params: [cdIntervenant],
         });
         continue;
       }
@@ -125,8 +122,7 @@ export class ControleV1Service {
       if (!cxnadm) {
         errors.push({
           code: ErrorCode.E2_004,
-          message: `Le maître d'ouvrage ${cdIntervenant} n'est pas rattaché à l'ouvrage ${cdOuvrageDepollution} dans Roseau !`,
-          field: cdIntervenant,
+          params: [cdIntervenant, cdOuvrageDepollution],
         });
       }
     }
@@ -157,8 +153,7 @@ export class ControleV1Service {
       if (!itv) {
         errors.push({
           code: ErrorCode.E2_005,
-          message: `L'exploitant ${cdIntervenant} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`,
-          field: cdIntervenant,
+          params: [cdIntervenant],
         });
         continue;
       }
@@ -167,8 +162,7 @@ export class ControleV1Service {
       if (!cxnadm) {
         errors.push({
           code: ErrorCode.E2_005,
-          message: `L'exploitant ${cdIntervenant} n'est pas rattaché à l'ouvrage ${cdOuvrageDepollution} dans Roseau !`,
-          field: cdIntervenant,
+          params: [cdIntervenant, cdOuvrageDepollution],
         });
       }
     }
@@ -199,8 +193,7 @@ export class ControleV1Service {
         if (!pmoEntity) {
           errors.push({
             code: ErrorCode.E2_033,
-            message: `Le point de mesure N° ${numeroPointMesure} est inconnu pour l'ouvrage ${cdOuvrageDepollution} ! Veuillez contacter le service gestionnaire de l'ouvrage.`,
-            field: pmo.numeroPointMesure,
+            params: [pmo.numeroPointMesure, cdOuvrageDepollution],
           });
         }
       }
@@ -225,8 +218,7 @@ export class ControleV1Service {
             if (!sup) {
               errors.push({
                 code: ErrorCode.E2_006,
-                message: `Le code support ${prlvt.cdSupport} est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: prlvt.cdSupport,
+                params: [prlvt.cdSupport],
               });
             }
           }
@@ -254,8 +246,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_007,
-                  message: `Le code lieu d'analyse ${analyse.inSituAnalyse} est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.inSituAnalyse,
+                  params: [analyse.inSituAnalyse],
                 });
               }
             }
@@ -284,8 +275,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_008,
-                  message: `Le code statut du résultat d'analyse ${analyse.statutRsAnalyse} est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.statutRsAnalyse,
+                  params: [analyse.statutRsAnalyse],
                 });
               }
             }
@@ -314,8 +304,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_009,
-                  message: `Le code qualification de l'acquisition du résultat d'analyse ${analyse.qualRsAnalyse} est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.qualRsAnalyse,
+                  params: [analyse.qualRsAnalyse],
                 });
               }
             }
@@ -344,8 +333,7 @@ export class ControleV1Service {
               if (!fan) {
                 errors.push({
                   code: ErrorCode.E2_010,
-                  message: `Le code qualification de l'acquisition du résultat d'analyse ${analyse.cdFractionAnalysee} est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.cdFractionAnalysee,
+                  params: [analyse.cdFractionAnalysee],
                 });
               }
             }
@@ -374,8 +362,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_011,
-                  message: `Le code Sandre ${analyse.cdMethode} de la méthode d'analyse utilisée est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.cdMethode,
+                  params: [analyse.cdMethode],
                 });
               }
             }
@@ -404,8 +391,7 @@ export class ControleV1Service {
               if (!par) {
                 errors.push({
                   code: ErrorCode.E2_012,
-                  message: `Le code Sandre ${analyse.cdParametre} du paramètre est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.cdParametre,
+                  params: [analyse.cdParametre],
                 });
               }
             }
@@ -434,8 +420,7 @@ export class ControleV1Service {
               if (!urf) {
                 errors.push({
                   code: ErrorCode.E2_013,
-                  message: `Le code Sandre ${analyse.cdUniteMesure} de l'unité de référence est inconnu ou ne correspond pas au paramètre ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.cdUniteMesure,
+                  params: [analyse.cdUniteMesure],
                 });
               }
             }
@@ -475,8 +460,7 @@ export class ControleV1Service {
       if (!itv) {
         errors.push({
           code: ErrorCode.E2_014,
-          message: `Le code intervenant ${cdIntervenant} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`,
-          field: cdIntervenant,
+          params: [cdIntervenant],
         });
       }
     }
@@ -501,8 +485,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_015,
-                  message: `Le code Sandre ${analyse.finalite} de la finalité de l'analyse est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.finalite,
+                  params: [analyse.finalite],
                 });
               }
             }
@@ -531,8 +514,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_016,
-                  message: `Le code Sandre ${analyse.accreAna} de l'accréditation de l'analyse est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.accreAna,
+                  params: [analyse.accreAna],
                 });
               }
             }
@@ -560,8 +542,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_017,
-                message: `Le code Sandre ${boue.periodeCalcul} de la période de calcul est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.periodeCalcul,
+                params: [boue.periodeCalcul],
               });
             }
           }
@@ -588,8 +569,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_018,
-                message: `Le code Sandre ${boue.typeOuvrageAval} du type d'ouvrage aval est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.typeOuvrageAval,
+                params: [boue.typeOuvrageAval],
               });
             }
           }
@@ -616,8 +596,7 @@ export class ControleV1Service {
             if (!steu) {
               errors.push({
                 code: ErrorCode.E2_019,
-                message: `Le code Sandre ${boue.cdOuvrageAval} de l'ouvrage aval est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.cdOuvrageAval,
+                params: [boue.cdOuvrageAval],
               });
             }
           }
@@ -644,8 +623,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_020,
-                message: `Le code Sandre ${evt.typeEvenement} du type d'évènement est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: evt.typeEvenement,
+                params: [evt.typeEvenement],
               });
             }
           }
@@ -673,8 +651,7 @@ export class ControleV1Service {
               if (!tlref) {
                 errors.push({
                   code: ErrorCode.E2_021,
-                  message: `Le code Sandre ${analyse.cdRemarque} de la remarque est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                  field: analyse.cdRemarque,
+                  params: [analyse.cdRemarque],
                 });
               }
             }
@@ -700,8 +677,7 @@ export class ControleV1Service {
       if (!tlref) {
         errors.push({
           code: ErrorCode.E2_022,
-          message: `Le code Sandre ${typeContact} du type de contact est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-          field: typeContact,
+          params: [typeContact],
         });
       }
     }
@@ -725,8 +701,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_023,
-                message: `Le code Sandre ${boue.typeFiliereBoues} du type de filière boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.typeFiliereBoues,
+                params: [boue.typeFiliereBoues],
               });
             }
           }
@@ -753,8 +728,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_024,
-                message: `Le code Sandre ${boue.destinationBoues} de la destination des boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.destinationBoues,
+                params: [boue.destinationBoues],
               });
             }
           }
@@ -781,8 +755,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_025,
-                message: `Le code Sandre ${boue.typeTraitementBoues} du type de traitement des boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.typeTraitementBoues,
+                params: [boue.typeTraitementBoues],
               });
             }
           }
@@ -809,8 +782,7 @@ export class ControleV1Service {
             if (!tlref) {
               errors.push({
                 code: ErrorCode.E2_026,
-                message: `Le code Sandre ${boue.uniteFiliereBoues} de l'unité de la filière boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-                field: boue.uniteFiliereBoues,
+                params: [boue.uniteFiliereBoues],
               });
             }
           }
@@ -835,8 +807,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_027,
-            message: `Le code Sandre ${scl.typeReseau} du type de réseau est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: scl.typeReseau,
+            params: [scl.typeReseau],
           });
         }
       }
@@ -859,8 +830,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_028,
-            message: `Le code Sandre ${scl.typeSystemeCollecte} du type de système de collecte est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: scl.typeSystemeCollecte,
+            params: [scl.typeSystemeCollecte],
           });
         }
       }
@@ -883,8 +853,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_029,
-            message: `Le code Sandre ${ouvrage.typeRejet} du type de rejet est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: ouvrage.typeRejet,
+            params: [ouvrage.typeRejet],
           });
         }
       }
@@ -907,8 +876,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_030,
-            message: `Le code Sandre ${ouvrage.typeMilieuRejet} du type de milieu de rejet est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: ouvrage.typeMilieuRejet,
+            params: [ouvrage.typeMilieuRejet],
           });
         }
       }
@@ -931,8 +899,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_031,
-            message: `Le code Sandre ${ouvrage.zoneSensible} de la zone sensible est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: ouvrage.zoneSensible,
+            params: [ouvrage.zoneSensible],
           });
         }
       }
@@ -955,8 +922,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_032,
-            message: `Le code Sandre ${ouvrage.masseEauRejet} de la masse d'eau de rejet est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: ouvrage.masseEauRejet,
+            params: [ouvrage.masseEauRejet],
           });
         }
       }
@@ -979,8 +945,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_033,
-            message: `Le code Sandre ${scl.typePompeRelave} du type de pompe de relève est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: scl.typePompeRelave,
+            params: [scl.typePompeRelave],
           });
         }
       }
@@ -1003,8 +968,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_034,
-            message: `Le code Sandre ${scl.typeDeversoirOrage} du type de déversoir d'orage est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: scl.typeDeversoirOrage,
+            params: [scl.typeDeversoirOrage],
           });
         }
       }
@@ -1027,8 +991,7 @@ export class ControleV1Service {
         if (!tlref) {
           errors.push({
             code: ErrorCode.E2_035,
-            message: `Le code Sandre ${scl.typeBassinOrage} du type de bassin d'orage est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-            field: scl.typeBassinOrage,
+            params: [scl.typeBassinOrage],
           });
         }
       }
@@ -1052,8 +1015,7 @@ export class ControleV1Service {
           if (!tlref) {
             errors.push({
               code: ErrorCode.E2_036,
-              message: `Le code Sandre ${pmo.typeAppareilMesure} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-              field: pmo.typeAppareilMesure,
+              params: [pmo.typeAppareilMesure],
             });
           }
         }
@@ -1067,8 +1029,7 @@ export class ControleV1Service {
           if (!tlref) {
             errors.push({
               code: ErrorCode.E2_036,
-              message: `Le code Sandre ${pmo.typeAppareilMesure} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`,
-              field: pmo.typeAppareilMesure,
+              params: [pmo.typeAppareilMesure],
             });
           }
         }
