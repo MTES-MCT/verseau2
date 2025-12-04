@@ -63,4 +63,10 @@ export class DepotController {
     const userEntity = await this.userService.findBySub(user.sub);
     return this.depotService.findByUserId(userEntity.id);
   }
+
+  @Get('admin')
+  @UseGuards(AuthenticationGuard)
+  async listAllDepots(): Promise<DepotModel[]> {
+    return this.depotService.findAllByAdmin();
+  }
 }

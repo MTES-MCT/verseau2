@@ -1,21 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ReponseSandreEntity } from './reponseSandre.entity';
 import { ReponseSandreCreateModel, ReponseSandreModel } from './reponseSandre.model';
 import { AcceptationStatus } from './sandre';
-import { DepotRepository } from '@dossier/depot/depot.repository';
+import { DepotGateway } from '@dossier/depot/depot.gateway';
 
 @Injectable()
 export class ReponseSandreRepository extends Repository<ReponseSandreEntity> {
   constructor(
     private dataSource: DataSource,
-    private depotRepository: DepotRepository,
+    @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
   ) {
     super(ReponseSandreEntity, dataSource.createEntityManager());
   }
 
   async createReponseSandre(data: Partial<ReponseSandreCreateModel>): Promise<ReponseSandreModel> {
-    const depot = await this.depotRepository.findDepotById(data.depotId!);
+    const depot = await this.depotGateway.findDepotById(data.depotId!);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${data.depotId} not found`);
     }

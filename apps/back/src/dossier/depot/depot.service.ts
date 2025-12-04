@@ -1,13 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DepotRepository } from './depot.repository';
 import { DepotModel } from './depot.model';
+import { DepotGateway } from './depot.gateway';
 
 @Injectable()
 export class DepotService {
-  constructor(private readonly depotRepository: DepotRepository) {}
+  constructor(@Inject(DepotGateway) private readonly depotGateway: DepotGateway) {}
 
   async create(depotData: Omit<DepotModel, 'id' | 'path' | 'createdAt' | 'updatedAt' | 'setId'>): Promise<DepotModel> {
-    const newDepot = await this.depotRepository.createDepot({
+    const newDepot = await this.depotGateway.createDepot({
       ...depotData,
     });
 
@@ -15,27 +16,27 @@ export class DepotService {
   }
 
   async findById(id: string): Promise<DepotModel> {
-    const depot = await this.depotRepository.findDepotById(id);
+    const depot = await this.depotGateway.findDepotById(id);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${id} not found`);
     }
     return depot;
   }
 
-  async findAll(): Promise<DepotModel[]> {
-    return await this.depotRepository.findAllDepots();
+  async findAllByAdmin(): Promise<DepotModel[]> {
+    return await this.depotGateway.findAllDepotsByAdmin();
   }
 
   async findByUserId(userId: string): Promise<DepotModel[]> {
-    return await this.depotRepository.findByUserId(userId);
+    return await this.depotGateway.findByUserId(userId);
   }
 
   async update(id: string, updateData: Partial<Omit<DepotModel, 'id' | 'createdAt'>>): Promise<DepotModel> {
-    const depot = await this.depotRepository.findDepotById(id);
+    const depot = await this.depotGateway.findDepotById(id);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${id} not found`);
     }
-    const updatedDepot = await this.depotRepository.updateDepot(id, updateData);
+    const updatedDepot = await this.depotGateway.updateDepot(id, updateData);
     if (!updatedDepot) {
       throw new NotFoundException(`Depot with id ${id} not found`);
     }

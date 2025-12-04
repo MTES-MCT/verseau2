@@ -20,6 +20,8 @@ import { ControleEntity } from './controle/controle.entity';
 import { ControleRepository } from './controle/controle.repository';
 import { ControleGateway } from './controle/controle.gateway';
 import { ControleMapper } from './controle/isov1/controle.mapper';
+import { DepotAdminController } from './depot/depotAdmin.controller';
+import { DepotGateway } from './depot/depot.gateway';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -43,10 +45,10 @@ const sandreServiceFactory = {
     UserModule,
     ReferentielModule,
   ],
-  controllers: [DepotController],
+  controllers: [DepotController, DepotAdminController],
   providers: [
     // Depot
-    DepotRepository,
+    { provide: DepotGateway, useClass: DepotRepository },
     DepotService,
     DeposerUnFichier,
     // Sandre control
