@@ -32,6 +32,14 @@ export class PgbossModule {
               .catch((error) => {
                 logger.error(error);
               });
+            boss
+              .createQueue(QueueName.send_to_sftp)
+              .then(() => {
+                logger.log('Queue send_to_sftp created');
+              })
+              .catch((error) => {
+                logger.error(error);
+              });
 
             return boss;
           },

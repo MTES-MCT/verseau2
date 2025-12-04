@@ -8,8 +8,9 @@ import { LoggerService } from '@shared/logger/logger.service';
 @Injectable()
 export class WorkerService implements OnModuleInit {
   private readonly queueConfig: Record<QueueName, QueueOptions> = {
-    [QueueName.process_file]: { batchSize: 1 },
+    [QueueName.process_file]: { batchSize: 5 },
     [QueueName.email]: { batchSize: 10 },
+    [QueueName.send_to_sftp]: { batchSize: 5 },
   };
 
   constructor(

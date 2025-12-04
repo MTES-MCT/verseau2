@@ -18,8 +18,12 @@ export class AuthenticationService implements Authentication {
     }
 
     return {
-      sub: introspection.sub,
-      ...introspection,
+      cerbereId: introspection.sub,
+      login: introspection.username || '',
+      nom: (introspection.name as string) || '',
+      prenom: (introspection.given_name as string) || '',
+      mel: (introspection.email as string) || '',
+      matricule: introspection.sub,
     };
   }
 }

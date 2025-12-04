@@ -30,8 +30,12 @@ export class DepotController {
   ) {}
 
   @Post('upload')
+  @UseGuards(AuthenticationGuard)
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: MulterFile | undefined): Promise<DepotModel> {
+  async uploadFile(
+    @UploadedFile() file: MulterFile | undefined,
+    @AuthenticatedUserDecorator() user: AuthenticatedUser,
+  ): Promise<DepotModel> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -50,6 +54,10 @@ export class DepotController {
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer,
+      utilisateur: {
+        nom: user.nom,
+        prenom: user.prenom,
+      },
     });
 
     this.logger.log('Depot created', { depotId: depot.id });
@@ -60,13 +68,7 @@ export class DepotController {
   @Get()
   @UseGuards(AuthenticationGuard)
   async listMyDepots(@AuthenticatedUserDecorator() user: AuthenticatedUser): Promise<DepotModel[]> {
-    const userEntity = await this.userService.findBySub(user.sub);
+    const userEntity = await this.userService.findBySub(user.cerbereId);
     return this.depotService.findByUserId(userEntity.id);
-  }
-
-  @Get('admin')
-  @UseGuards(AuthenticationGuard)
-  async listAllDepots(): Promise<DepotModel[]> {
-    return this.depotService.findAllByAdmin();
   }
 }

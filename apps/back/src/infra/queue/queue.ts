@@ -12,6 +12,7 @@ export interface QueueJob<TData = object> {
 export enum QueueName {
   process_file = 'process_file',
   email = 'email',
+  send_to_sftp = 'send_to_sftp',
 }
 
 export interface QueueOptions {

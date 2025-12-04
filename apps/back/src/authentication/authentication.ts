@@ -3,8 +3,12 @@ export interface Authentication {
 }
 
 export interface AuthenticatedUser {
-  sub: string;
-  [key: string]: unknown;
+  cerbereId: string; // Identifiant Cerbere interne
+  login: string;
+  nom: string;
+  prenom: string;
+  mel: string;
+  matricule: string;
 }
 
 export const Authentication = Symbol('Authentication');

@@ -7,6 +7,7 @@ import { ControleName, ErrorCode } from '@lib/controle';
 import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class ControleV1Service {
@@ -15,7 +16,10 @@ export class ControleV1Service {
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly controleMapper: ControleMapper,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger = new LoggerService(ControleV1Service.name);
+  }
 
   // Première implémentation naïve des contrôles v1
   // Acceptable pour un MVP
@@ -64,6 +68,18 @@ export class ControleV1Service {
       tousControlesResult,
     );
     const createdControles = await this.controleGateway.createControles(createControles);
+    if (!createdControles.every((controle) => controle.success)) {
+      this.logger.log(`Validation failed for depot: ${depotId}`, {
+        errors: createdControles
+          .filter((controle) => !controle.success)
+          .map((controle) => ({
+            code: controle.error,
+            params: controle.errorParams,
+          })),
+      });
+    } else {
+      this.logger.log(`Validation succeeded for depot: ${depotId}`);
+    }
     return createdControles;
   }
 

@@ -10,14 +10,12 @@ export class AuthenticationMockService implements Authentication {
 
     return new Promise<AuthenticatedUser>((resolve) => {
       resolve({
-        sub: 'test-user-id',
-        email: 'dev@example.com',
-        email_verified: true,
-        name: 'Test User',
-        given_name: 'Test',
-        family_name: 'User',
-        roles: ['admin'],
-        active: true,
+        cerbereId: 'test-user-id',
+        login: 'test-user-login',
+        nom: 'Test',
+        prenom: 'User',
+        mel: 'dev@example.com',
+        matricule: '1234567890',
       });
     });
   }

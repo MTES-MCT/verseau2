@@ -64,6 +64,10 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
       await this.queueService.send<FichierDeDepot>(QueueName.process_file, {
         depotId: depotId,
         filePath: filePath,
+        utilisateur: {
+          nom: depotData.utilisateur.nom,
+          prenom: depotData.utilisateur.prenom,
+        },
       });
     } catch (error) {
       this.logger.error('Failed to enqueue file', (error as Error).message);
