@@ -22,4 +22,3 @@ export class UserRepository extends Repository<UserEntity> implements UserGatewa
     return await this.save(newUser);
   }
 }
-

@@ -2,32 +2,37 @@ import { ControleError, ControleIndividuel } from '@lib/controle';
 import { Injectable } from '@nestjs/common';
 import { CreateControleModel } from '../controle.model';
 
+export type ControleIndividuelWithoutSuccess = Omit<ControleIndividuel, 'success'>;
 @Injectable()
 export class ControleMapper {
   constructor() {}
 
   mapControlesIndividuelsToCreateControleModel(
     depotId: string,
-    controlesIndividuels: ControleIndividuel[],
+    controlesIndividuels: ControleIndividuelWithoutSuccess[],
   ): CreateControleModel[] {
     return controlesIndividuels
-      .map((controleIndividuel: ControleIndividuel) => {
-        const controlesWithoutError: CreateControleModel = {
-          depotId: depotId,
-          name: controleIndividuel.name,
-          success: controleIndividuel.success,
-        };
-        const controlesWithError: CreateControleModel[] = controleIndividuel.errors.map((error: ControleError) => {
+      .map((controleIndividuel: ControleIndividuelWithoutSuccess) => {
+        if (controleIndividuel.errors.length === 0) {
           return {
             depotId: depotId,
             name: controleIndividuel.name,
-            success: controleIndividuel.success,
-            error: error.code,
-            errorParams: error.params,
+            success: controleIndividuel.errors.length === 0,
           };
-        });
-        const controles = [controlesWithoutError, ...controlesWithError];
-        return controles;
+        } else {
+          const controlesWithError: CreateControleModel[] = controleIndividuel.errors
+            .filter((error: ControleError) => !!error)
+            .map((error: ControleError) => {
+              return {
+                depotId: depotId,
+                name: controleIndividuel.name,
+                success: controleIndividuel.errors.length === 0,
+                error: error.code,
+                errorParams: error.params,
+              };
+            });
+          return controlesWithError;
+        }
       })
       .flat();
   }

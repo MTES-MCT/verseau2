@@ -17,7 +17,7 @@ export class ControleEntity extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   error?: ErrorCode;
 
-  @Column({ type: 'varchar', nullable: true, name: 'error_params' })
+  @Column({ type: 'varchar', nullable: true, name: 'error_params', array: true })
   errorParams?: string[];
 
   @Column({ type: 'varchar', nullable: true, name: 'depot_id' })

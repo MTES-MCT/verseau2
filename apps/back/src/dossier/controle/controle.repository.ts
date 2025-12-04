@@ -25,7 +25,8 @@ export class ControleRepository extends Repository<ControleEntity> implements Co
   async createControles(controles: CreateControleModel[]): Promise<ControleModel[]> {
     const newControles = this.create(controles);
     const savedControles = await this.save(newControles);
-    return { ...savedControles };
+    // return { ...savedControles };
+    return [...savedControles];
   }
 
   async findById(id: string): Promise<ControleModel | null> {

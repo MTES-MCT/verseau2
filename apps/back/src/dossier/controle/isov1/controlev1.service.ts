@@ -2,10 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { FctAssainissement } from '@lib/parser';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { ControleIndividuel, ControleError } from '@lib/controle';
+import { ControleError } from '@lib/controle';
 import { ControleName, ErrorCode } from '@lib/controle';
 import { ControleGateway } from '../controle.gateway';
-import { ControleMapper } from './controle.mapper';
+import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
+import { ControleModel } from '../controle.model';
 
 @Injectable()
 export class ControleV1Service {
@@ -19,7 +20,7 @@ export class ControleV1Service {
   // Première implémentation naïve des contrôles v1
   // Acceptable pour un MVP
   // TODO : Améliorer les performances des contrôles en réduisant les requêtes SQL
-  async execute(depotId: string, fctAssainissement: FctAssainissement): Promise<ControleIndividuel[]> {
+  async execute(depotId: string, fctAssainissement: FctAssainissement): Promise<ControleModel[]> {
     const tousControles = Promise.all([
       this.verifySteuExists(fctAssainissement),
       this.verifyMoSteuExists(fctAssainissement),
@@ -62,12 +63,12 @@ export class ControleV1Service {
       depotId,
       tousControlesResult,
     );
-    await this.controleGateway.createControles(createControles);
-    return tousControlesResult;
+    const createdControles = await this.controleGateway.createControles(createControles);
+    return createdControles;
   }
 
   // CTL002: Vérification que l'ouvrage de dépollution (STEU) existe bien dans la table STEU de Roseau
-  async verifySteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifySteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -88,14 +89,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL002,
       errors: errors,
     };
   }
 
   // CTL003: Vérification que le maître d'ouvrage de l'ouvrage de dépollution (STEU) existe bien en BdD
-  async verifyMoSteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyMoSteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -128,14 +128,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL003,
       errors: errors,
     };
   }
 
   // CTL004: Vérification que l'exploitant de l'ouvrage de dépollution (STEU) existe bien en BdD
-  async verifyExpSteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyExpSteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -168,14 +167,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL004,
       errors: errors,
     };
   }
 
   // CTL005: Vérification de l'existence du point de mesure en BdD
-  async verifyPmoExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyPmoExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -200,14 +198,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL005,
       errors: errors,
     };
   }
 
   // CTL006: Vérification de l'existence du support en BdD
-  async verifySupExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifySupExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -227,14 +224,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL006,
       errors: errors,
     };
   }
 
   // CTL007: Vérification de l'existence du lieu d'analyse en BdD
-  async verifyLieuAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyLieuAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -256,14 +252,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL007,
       errors: errors,
     };
   }
 
   // CTL008: Vérification de l'existence du statut de l'analyse en BdD
-  async verifyStatutAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyStatutAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -285,14 +280,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL008,
       errors: errors,
     };
   }
 
   // CTL009: Vérification de l'existence de la qualification de l'analyse en BdD
-  async verifyQualAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyQualAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -314,14 +308,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL009,
       errors: errors,
     };
   }
 
   // CTL010: Vérification de l'existence de la fraction analysée en BdD
-  async verifyFanExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyFanExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -343,14 +336,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL010,
       errors: errors,
     };
   }
 
   // CTL011: Vérification de l'existence de la méthode d'analyse en BdD
-  async verifyMethodeAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyMethodeAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -372,14 +364,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL011,
       errors: errors,
     };
   }
 
   // CTL012: Vérification de l'existence du paramètre en BdD
-  async verifyParametreExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyParametreExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -401,14 +392,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL012,
       errors: errors,
     };
   }
 
   // CTL013: Vérification de l'existence de l'unité du paramètre en BdD
-  async verifyUniteMesureExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyUniteMesureExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -430,14 +420,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL013,
       errors: errors,
     };
   }
 
   // CTL014: Vérification de l'existance de l'intervenant en BdD
-  async verifyIntervenantExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyIntervenantExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     const intervenantsToCheck = new Set<string>();
@@ -466,14 +455,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL014,
       errors: errors,
     };
   }
 
   // CTL015: Vérification de l'existence de la finalité de l'analyse en BdD
-  async verifyFinaliteAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyFinaliteAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -495,14 +483,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL015,
       errors: errors,
     };
   }
 
   // CTL016: Vérification de l'existence de l'accréditation de l'analyse en BdD
-  async verifyAccreAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyAccreAnalyseExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -524,14 +511,15 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL016,
       errors: errors,
     };
   }
 
   // CTL017: Vérification de l'existence de la période de calcul des boues en BdD
-  async verifyPeriodeCalculBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyPeriodeCalculBouesExists(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -551,14 +539,15 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL017,
       errors: errors,
     };
   }
 
   // CTL018: Vérification de l'existence du type d'ouvrage aval des boues en BdD
-  async verifyTypeOuvrageAvalBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeOuvrageAvalBouesExists(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -578,14 +567,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL018,
       errors: errors,
     };
   }
 
   // CTL019: Vérification de l'existence de l'ouvrage aval des boues en BdD
-  async verifyOuvrageAvalBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyOuvrageAvalBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -605,14 +593,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL019,
       errors: errors,
     };
   }
 
   // CTL020: Vérification de l'existence du type d'évènement en BdD
-  async verifyTypeEvenementExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeEvenementExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -632,14 +619,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL020,
       errors: errors,
     };
   }
 
   // CTL021: Vérification de l'existence du code remarque en BdD
-  async verifyCodeRemarqueExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyCodeRemarqueExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -661,14 +647,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL021,
       errors: errors,
     };
   }
 
   // CTL022: Vérification de l'existence du type de contact en BdD
-  async verifyTypeContactExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeContactExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     if (fctAssainissement.scenario.emetteur?.contact?.typeContact) {
@@ -683,14 +668,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL022,
       errors: errors,
     };
   }
 
   // CTL023: Vérification de l'existence du type de filière boues en BdD
-  async verifyTypeFiliereBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeFiliereBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -710,14 +694,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL023,
       errors: errors,
     };
   }
 
   // CTL024: Vérification de l'existence de la destination des boues en BdD
-  async verifyDestinationBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyDestinationBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -737,14 +720,15 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL024,
       errors: errors,
     };
   }
 
   // CTL025: Vérification de l'existence du type de traitement des boues en BdD
-  async verifyTypeTraitementBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeTraitementBouesExists(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -764,14 +748,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL025,
       errors: errors,
     };
   }
 
   // CTL026: Vérification de l'existence de l'unité de la filière boues en BdD
-  async verifyUniteFiliereBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyUniteFiliereBouesExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -791,14 +774,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL026,
       errors: errors,
     };
   }
 
   // CTL027: Vérification de l'existence du type de réseau en BdD
-  async verifyTypeReseauExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeReseauExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const scl of fctAssainissement.systemesCollecte) {
@@ -814,14 +796,15 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL027,
       errors: errors,
     };
   }
 
   // CTL028: Vérification de l'existence du type de système de collecte en BdD
-  async verifyTypeSystemeCollecteExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeSystemeCollecteExists(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const scl of fctAssainissement.systemesCollecte) {
@@ -837,14 +820,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL028,
       errors: errors,
     };
   }
 
   // CTL029: Vérification de l'existence du type de rejet en BdD
-  async verifyTypeRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -860,14 +842,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL029,
       errors: errors,
     };
   }
 
   // CTL030: Vérification de l'existence du type de milieu de rejet en BdD
-  async verifyTypeMilieuRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeMilieuRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -883,14 +864,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL030,
       errors: errors,
     };
   }
 
   // CTL031: Vérification de l'existence de la zone sensible en BdD
-  async verifyZoneSensibleExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyZoneSensibleExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -906,14 +886,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL031,
       errors: errors,
     };
   }
 
   // CTL032: Vérification de l'existence de la masse d'eau de rejet en BdD
-  async verifyMasseEauRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyMasseEauRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -929,14 +908,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL032,
       errors: errors,
     };
   }
 
   // CTL033: Vérification de l'existence du type de pompe de relève en BdD
-  async verifyTypePompeRelaveExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypePompeRelaveExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const scl of fctAssainissement.systemesCollecte) {
@@ -952,14 +930,15 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL033,
       errors: errors,
     };
   }
 
   // CTL034: Vérification de l'existence du type de déversoir d'orage en BdD
-  async verifyTypeDeversoirOrageExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeDeversoirOrageExists(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const scl of fctAssainissement.systemesCollecte) {
@@ -975,14 +954,13 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL034,
       errors: errors,
     };
   }
 
   // CTL035: Vérification de l'existence du type de bassin d'orage en BdD
-  async verifyTypeBassinOrageExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeBassinOrageExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const scl of fctAssainissement.systemesCollecte) {
@@ -998,14 +976,15 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL035,
       errors: errors,
     };
   }
 
   // CTL036: Vérification de l'existence du type d'appareil de mesure en BdD
-  async verifyTypeAppareilMesureExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuel> {
+  async verifyTypeAppareilMesureExists(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -1037,7 +1016,6 @@ export class ControleV1Service {
     }
 
     return {
-      success: errors.length === 0,
       name: ControleName.CTL036,
       errors: errors,
     };

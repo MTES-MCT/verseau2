@@ -8,7 +8,6 @@ import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre
 import { AsyncTask } from '@worker/asyncTask';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
-import { ControleIndividuel } from '@lib/controle';
 
 @Injectable()
 export class FileProcessorService implements AsyncTask<FichierDeDepot> {
@@ -23,7 +22,6 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   async process(fichierDeDepot: FichierDeDepot) {
     // TODO : Gérer la logique dans une transacation
     // ou persister à la fin de tous les contrôles
-    const startTime = Date.now();
 
     this.logger.log('Downloading file', fichierDeDepot.filePath);
     const file = await this.s3.download(fichierDeDepot.filePath);
@@ -37,11 +35,16 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     const xmlObj = await parseScenarioAssainissementXml(file.toString());
     // Controle V1
 
-    const validationResult: ControleIndividuel[] = await this.controleV1Service.execute(fichierDeDepot.depotId, xmlObj);
-    console.log('validationResult', validationResult);
+    const validationResult = await this.controleV1Service.execute(fichierDeDepot.depotId, xmlObj);
+    console.log(validationResult);
     if (!validationResult.every((controle) => controle.success)) {
       this.logger.log(`Validation failed for depot: ${fichierDeDepot.depotId}`, {
-        errors: validationResult.flatMap((controle) => controle.errors),
+        errors: validationResult
+          .filter((controle) => !controle.success)
+          .map((controle) => ({
+            code: controle.error,
+            params: controle.errorParams,
+          })),
       });
     } else {
       this.logger.log(`Validation succeeded for depot: ${fichierDeDepot.depotId}`);

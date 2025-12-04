@@ -1,5 +1,4 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { DepotRepository } from './depot.repository';
 import { DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
 

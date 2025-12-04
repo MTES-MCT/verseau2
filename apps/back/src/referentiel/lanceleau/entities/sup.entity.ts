@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('sup', { schema: 'custom_ingestion_lanceleau', synchronize: false })
 export class SupEntity {

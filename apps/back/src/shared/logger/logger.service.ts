@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any , @typescript-eslint/no-unsafe-argument */
 import { Injectable, Scope } from '@nestjs/common';
 import { ConsoleLogger } from '@nestjs/common';
 import { getLogLevels } from './logConfig';
