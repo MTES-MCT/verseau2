@@ -1,9 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { QueueService } from '@queue/queue.service';
 import { QueueName, QueueOptions } from '@queue/queue';
 import { FileProcessorService } from './file-processor/file.processor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
+import { SftpProcessorService } from './sftp/sftp.processor.service';
 
 @Injectable()
 export class WorkerService implements OnModuleInit {
@@ -16,6 +17,7 @@ export class WorkerService implements OnModuleInit {
   constructor(
     private readonly queueService: QueueService,
     private readonly fileProcessorService: FileProcessorService,
+    private readonly sftpProcessorService: SftpProcessorService,
     private readonly logger: LoggerService,
   ) {
     this.logger = new LoggerService(WorkerService.name);
@@ -44,6 +46,21 @@ export class WorkerService implements OnModuleInit {
           break;
         case QueueName.email:
           // TODO: Implement email worker
+          break;
+        case QueueName.send_to_sftp:
+          await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
+            this.logger.log('Processing jobId', job.id);
+            try {
+              return await this.sftpProcessorService.process(job.data);
+            } catch (error) {
+              this.logger.error('Job processing failed', {
+                jobId: job.id,
+                error: error instanceof Error ? error.message : (error as string),
+                stack: error instanceof Error ? error.stack : undefined,
+              });
+              throw error; // Re-throw so pg-boss still marks it as failed for retry
+            }
+          });
           break;
         default:
           break;

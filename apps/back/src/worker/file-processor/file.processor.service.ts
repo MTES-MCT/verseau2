@@ -39,7 +39,6 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     // Controle V1
     await this.controleV1Service.execute(fichierDeDepot.depotId, xmlObj);
 
-    // Envoi du fichier dans SFTP
     await this.queueService.send(QueueName.send_to_sftp, {
       depotId: fichierDeDepot.depotId,
       filePath: fichierDeDepot.filePath,

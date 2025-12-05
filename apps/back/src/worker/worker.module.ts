@@ -7,9 +7,10 @@ import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 
 import { WorkerService } from './worker.service';
+import { SftpProcessorService } from './sftp/sftp.processor.service';
 
 @Module({
   imports: [InfraModule, DossierModule, SharedModule, NotificationModule, ReferentielModule],
-  providers: [FileProcessorService, WorkerService],
+  providers: [FileProcessorService, WorkerService, SftpProcessorService],
 })
 export class WorkerModule {}
