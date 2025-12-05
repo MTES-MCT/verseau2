@@ -8,6 +8,7 @@ import { DepotModel } from '../depot.model';
 import { UseCase } from '@shared/useCase';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotError } from '../depotError';
+import { DepotStep, DepotStatus } from '@lib/dossier';
 
 @Injectable()
 export class DeposerUnFichier implements UseCase<DepotModel> {
@@ -48,6 +49,8 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
       this.logger.error('Failed to upload file to S3', (error as Error).message);
       await this.depotService.update(depotId, {
         error: DepotError.UPLOAD_FAILED,
+        status: DepotStatus.FAILED,
+        step: DepotStep.UPLOADING_TO_S3,
       });
       throw error;
     }
@@ -73,6 +76,8 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
       this.logger.error('Failed to enqueue file', (error as Error).message);
       await this.depotService.update(depotId, {
         error: DepotError.ENQUEUE_FAILED,
+        status: DepotStatus.FAILED,
+        step: DepotStep.CONTROLE_FAILED,
       });
     }
   }

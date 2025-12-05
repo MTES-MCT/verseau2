@@ -5,12 +5,15 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { ReponseSandreRepository } from './reponseSandre.repository';
 import type { SandreValidationSummary } from './sandre';
 import { SandreService } from './sandre.service';
+import { DepotService } from '@dossier/depot/depot.service';
+import { DepotStep, DepotStatus } from '@lib/dossier';
 
 @Injectable()
 export class ControleSandreService implements FileControl<SandreValidationSummary | null> {
   constructor(
     private readonly sandreService: SandreService,
     private readonly reponseSandreService: ReponseSandreRepository,
+    private readonly depotService: DepotService,
   ) {}
 
   private readonly logger = new LoggerService(ControleSandreService.name);
@@ -21,6 +24,11 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
       this.logger.log('File has already been processed for this depot', { depotId: fichierDeDepot.depotId });
       return null;
     }
+    await this.depotService.update(fichierDeDepot.depotId, {
+      status: DepotStatus.PROCESSING,
+      step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
+    });
+
     try {
       this.logger.log('Validating file with SANDRE', { filePath: fichierDeDepot.filePath });
       const validationSummary = await this.sandreService.validateFileAndWait({
@@ -44,6 +52,11 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
           codeScenario: validationSummary.codeScenario,
           error: validationSummary.error,
         });
+
+        await this.depotService.update(fichierDeDepot.depotId, {
+          status: DepotStatus.FAILED,
+          step: DepotStep.CONTROLE_FAILED,
+        });
       }
 
       this.logger.log('Processing file completed');
@@ -66,6 +79,10 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
       return validationSummary;
     } catch (error) {
       this.logger.error('Processing file failed', error);
+      await this.depotService.update(fichierDeDepot.depotId, {
+        status: DepotStatus.FAILED,
+        step: DepotStep.CONTROLE_FAILED,
+      });
       throw error;
     }
   }

@@ -3,7 +3,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
-import { DepotModel } from './depot.model';
 import { AuthenticationGuard } from '@authentication/authentication.guard';
 import { AuthenticatedUserDecorator } from '@authentication/authenticated-user.decorator';
 import type { AuthenticatedUser } from '@authentication/authentication';

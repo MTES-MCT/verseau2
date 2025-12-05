@@ -1,12 +1,12 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { DepotModel } from './depot.model';
+import { CreateDepotModel, DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
 
 @Injectable()
 export class DepotService {
   constructor(@Inject(DepotGateway) private readonly depotGateway: DepotGateway) {}
 
-  async create(depotData: Omit<DepotModel, 'id' | 'path' | 'createdAt' | 'updatedAt' | 'setId'>): Promise<DepotModel> {
+  async create(depotData: CreateDepotModel): Promise<DepotModel> {
     const newDepot = await this.depotGateway.createDepot({
       ...depotData,
     });
