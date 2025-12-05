@@ -1,7 +1,7 @@
 import { BaseEntity } from '@shared/repository/base-entity';
 import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import { ControleName, ErrorCode } from '@lib/controle';
+import { ControleName, ErrorCode } from '@lib/dossier';
 
 @Entity('controle')
 export class ControleEntity extends BaseEntity {

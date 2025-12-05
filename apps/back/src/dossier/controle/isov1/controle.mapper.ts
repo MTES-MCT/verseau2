@@ -1,4 +1,4 @@
-import { ControleError, ControleIndividuel } from '@lib/controle';
+import { ControleError, ControleIndividuel } from '@lib/dossier';
 import { Injectable } from '@nestjs/common';
 import { CreateControleModel } from '../controle.model';
 
