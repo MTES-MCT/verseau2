@@ -17,7 +17,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   }
 
   async findDepotById(id: string): Promise<DepotModel | null> {
-    return await this.findOne({ where: { id } });
+    return await this.findOne({ where: { id }, relations: ['user'] });
   }
 
   async findAllDepotsByAdmin(): Promise<DepotModel[]> {

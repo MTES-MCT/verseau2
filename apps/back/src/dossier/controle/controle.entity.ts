@@ -12,7 +12,7 @@ export class ControleEntity extends BaseEntity {
   name: ControleName;
 
   @Column({ type: 'boolean', nullable: true })
-  success?: boolean;
+  success: boolean;
 
   @Column({ type: 'enum', enum: ErrorCode, nullable: true })
   error?: ErrorCode;

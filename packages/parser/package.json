@@ -8,7 +8,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
     "sax": "^1.4.3"

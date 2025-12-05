@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ControleEntity } from './controle.entity';
-import { ControleModel, CreateControleModel } from './controle.model';
+import { ControleModel, ControleModelWithoutDepot, CreateControleModel } from './controle.model';
 import { ControleGateway } from './controle.gateway';
 
 @Injectable()
@@ -33,10 +33,9 @@ export class ControleRepository extends Repository<ControleEntity> implements Co
     return await this.findOne({ where: { id } });
   }
 
-  async findByDepotId(depotId: string): Promise<ControleModel[]> {
+  async findByDepotId(depotId: string): Promise<ControleModelWithoutDepot[]> {
     return await this.find({
       where: { depot: { id: depotId } },
-      relations: ['depot'],
     });
   }
 

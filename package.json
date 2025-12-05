@@ -12,7 +12,7 @@
     "dev:back": "npm run dev --workspace=apps/back",
     "dev:front": "npm run dev --workspace=apps/front",
     "prepare": "husky",
-    "clean": "npm run clean --workspace=apps/back && npm run clean --workspace=apps/front && rm -rf node_modules"
+    "clean": "npm run clean --workspace=apps/back && npm run clean --workspace=apps/front && rm -rf node_modules && npm run clean --workspace=packages/parser && npm run clean --workspace=packages/dossier"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

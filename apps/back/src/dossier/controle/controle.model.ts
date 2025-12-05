@@ -5,4 +5,6 @@ export type ControleModel = Pick<
   'id' | 'name' | 'success' | 'error' | 'errorParams' | 'depot' | 'createdAt' | 'updatedAt'
 >;
 
+export type ControleModelWithoutDepot = Omit<ControleModel, 'depot'>;
+
 export type CreateControleModel = Pick<ControleEntity, 'name' | 'success' | 'error' | 'depotId' | 'errorParams'>;

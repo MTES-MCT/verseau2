@@ -12,7 +12,7 @@ export class DepotEntity extends BaseEntity {
   nomOriginalFichier: string;
 
   @Column({ type: 'varchar', nullable: true })
-  path?: string;
+  path: string;
 
   @Column({ type: 'bigint', name: 'taille_fichier' })
   tailleFichier: number;

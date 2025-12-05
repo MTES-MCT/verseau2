@@ -38,6 +38,7 @@
     }
   },
   "references": [
-  { "path": "../../packages/parser" }
+  { "path": "../../packages/parser" },
+  { "path": "../../packages/dossier" }
 ]
 }

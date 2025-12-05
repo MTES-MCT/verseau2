@@ -9,6 +9,7 @@ import { AuthenticatedUserDecorator } from '@authentication/authenticated-user.d
 import type { AuthenticatedUser } from '@authentication/authentication';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
+import { DepotDto } from '@lib/dossier';
 
 interface MulterFile {
   fieldname: string;
@@ -35,7 +36,7 @@ export class DepotController {
   async uploadFile(
     @UploadedFile() file: MulterFile | undefined,
     @AuthenticatedUserDecorator() user: AuthenticatedUser,
-  ): Promise<DepotModel> {
+  ): Promise<DepotDto> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -67,7 +68,7 @@ export class DepotController {
 
   @Get()
   @UseGuards(AuthenticationGuard)
-  async listMyDepots(@AuthenticatedUserDecorator() user: AuthenticatedUser): Promise<DepotModel[]> {
+  async listMyDepots(@AuthenticatedUserDecorator() user: AuthenticatedUser): Promise<DepotDto[]> {
     const userEntity = await this.userService.findBySub(user.cerbereId);
     return this.depotService.findByUserId(userEntity.id);
   }
