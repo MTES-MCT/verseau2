@@ -3,9 +3,11 @@
   "rootDir": "..",
   "testEnvironment": "node",
   "testMatch": ["<rootDir>/test/**/*.e2e-spec.ts"],
+  "testTimeout": 60000,
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "transformIgnorePatterns": ["node_modules/(?!(openid-client|oauth4webapi|jose)/)"],
   "moduleNameMapper": {
     "^@queue/(.*)$": "<rootDir>/src/infra/queue/$1",
     "^@database/(.*)$": "<rootDir>/src/infra/database/$1",

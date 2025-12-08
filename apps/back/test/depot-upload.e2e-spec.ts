@@ -24,6 +24,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserService } from '@user/user.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
+import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 
 class S3Mock implements S3 {
   uploads: Array<{ key: string; body: Buffer | Uint8Array | string; contentType?: string }> = [];
@@ -108,11 +109,13 @@ describe('Depot upload (e2e)', () => {
     process.env.S3_PROVIDER = 'mock';
     process.env.SFTP_PROVIDER = 'mock';
 
+    await startPostgresContainer();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         TypeOrmModule.forRoot({
-          type: 'better-sqlite3',
-          database: ':memory:',
+          type: 'postgres',
+          url: getPostgresConnectionUri(),
           dropSchema: true,
           entities: [DepotEntity, UserEntity, ControleEntity],
           synchronize: true,
@@ -149,6 +152,7 @@ describe('Depot upload (e2e)', () => {
 
   afterAll(async () => {
     await app?.close();
+    await stopPostgresContainer();
   });
 
   it('uploads an XML file and enqueues processing', async () => {
