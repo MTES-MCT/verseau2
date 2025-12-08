@@ -23,7 +23,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@lib/dossier": ["../../packages/dossier/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

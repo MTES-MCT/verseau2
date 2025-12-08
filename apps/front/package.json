@@ -11,9 +11,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@codegouvfr/react-dsfr": "0.57.2",
+    "@lib/parser": "*",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "@lib/parser": "*"
+    "react-router-dom": "^7.10.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
