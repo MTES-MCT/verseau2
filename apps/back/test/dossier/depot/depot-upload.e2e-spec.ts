@@ -24,7 +24,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserService } from '@user/user.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
-import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
+import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 
 class S3Mock implements S3 {
   uploads: Array<{ key: string; body: Buffer | Uint8Array | string; contentType?: string }> = [];
