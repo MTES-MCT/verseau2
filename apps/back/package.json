@@ -99,6 +99,16 @@
       "^@referentiel/(.*)$": "<rootDir>/referentiel/$1",
       "^@notification/(.*)$": "<rootDir>/notification/$1",
       "^@infra/(.*)$": "<rootDir>/infra/$1"
-    }
+    },
+    "coveragePathIgnorePatterns": [
+      "/dist/",
+      "/infra/",
+      "/referentiel/",
+      "/notification/",
+      ".*\\.module\\.ts",
+      ".*\\.mock\\.ts",
+      ".*\\.factory\\.ts",
+      ".*\\.entity\\.ts"
+    ]
   }
 }
