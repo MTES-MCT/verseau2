@@ -1,9 +1,26 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "rootDir": "..",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "testMatch": ["<rootDir>/test/**/*.e2e-spec.ts"],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@queue/(.*)$": "<rootDir>/src/infra/queue/$1",
+    "^@database/(.*)$": "<rootDir>/src/infra/database/$1",
+    "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@worker/(.*)$": "<rootDir>/src/worker/$1",
+    "^@depot/(.*)$": "<rootDir>/src/dossier/depot/$1",
+    "^@pgboss/(.*)$": "<rootDir>/src/infra/pgboss/$1",
+    "^@s3/(.*)$": "<rootDir>/src/infra/s3/$1",
+    "^@dossier/(.*)$": "<rootDir>/src/dossier/$1",
+    "^@referentiel/(.*)$": "<rootDir>/src/referentiel/$1",
+    "^@notification/(.*)$": "<rootDir>/src/notification/$1",
+    "^@infra/(.*)$": "<rootDir>/src/infra/$1",
+    "^@authentication/(.*)$": "<rootDir>/src/authentication/$1",
+    "^@user/(.*)$": "<rootDir>/src/user/$1",
+    "^@lib/(.*)$": "<rootDir>/../../packages/$1",
+    "^pg-boss$": "<rootDir>/test/mocks/pg-boss.mock.ts"
   }
 }
