@@ -7,7 +7,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@lib/dossier': path.resolve(__dirname, '../../packages/dossier/src/index.ts'),
+      '@lib/parser': path.resolve(__dirname, '../../packages/parser/src/index.ts'),
     },
+  },
+  optimizeDeps: {
+    include: ['@lib/parser'],
   },
 });

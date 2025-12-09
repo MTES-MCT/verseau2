@@ -25,7 +25,8 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@lib/dossier": ["../../packages/dossier/src/index.ts"]
+      "@lib/dossier": ["../../packages/dossier/src/index.ts"],
+      "@lib/parser": ["../../packages/parser/src/index.ts"]
     }
   },
   "include": ["src"]

@@ -1,5 +1,5 @@
 {
-  "watch": ["src", "../../packages/parser/dist"],
+  "watch": ["src", "../../packages/parser/dist", ".env.local"],
   "ext": "ts,js,json",
   "ignore": ["src/**/*.spec.ts"],
   "exec": "nest start --debug --watch api"

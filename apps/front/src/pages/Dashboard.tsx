@@ -7,7 +7,6 @@ import type { Depot, DepotStatus } from '../types/depot'
 import { fetchDepots, ApiError } from '../api/depot'
 import { StatCard } from '../components/StatCard'
 import { fr } from '@codegouvfr/react-dsfr'
-import { Button } from "@codegouvfr/react-dsfr/Button";
 
 
 function getStatusBadge(status: DepotStatus) {
@@ -96,15 +95,12 @@ export function Dashboard() {
               </h2>
             </div>
             <div className="fr-col-auto">
-               <Button
-                    type="button"
-                    iconId="ri-upload-2-line"
-                >
+              <Link
+                to="/depot/upload"
+                className="fr-btn fr-btn--secondary fr-btn--icon-left fr-icon-upload-2-line"
+              >
                 Déposer vos données d'autosurveillance
-
-                </Button>
-              {/* <button className="fr-btn fr-btn--secondary fr-icon-upload-line fr-btn--icon-left">
-              </button> */}
+              </Link>
             </div>
           </div>
         </div>
