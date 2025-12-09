@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "react-dsfr update-icons",
     "build": "tsc -b && vite build",
+    "prebuild": "react-dsfr update-icons",
     "lint": "eslint .",
     "preview": "vite preview",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@codegouvfr/react-dsfr": "0.57.2",
+    "@codegouvfr/react-dsfr": "^1.29.0",
     "@lib/parser": "*",
     "@tanstack/react-query": "^5.90.12",
     "react": "^19.2.1",

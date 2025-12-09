@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { startReactDsfr } from '@codegouvfr/react-dsfr/spa'
 import '@codegouvfr/react-dsfr/dsfr/dsfr.main.css'
+import '@codegouvfr/react-dsfr/dsfr/utility/icons/icons.min.css'
 import './index.css'
 import App from './App.tsx'
 

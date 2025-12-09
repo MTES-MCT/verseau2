@@ -1,10 +1,14 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Table } from '@codegouvfr/react-dsfr/Table'
 import { Badge } from '@codegouvfr/react-dsfr/Badge'
 import { Alert } from '@codegouvfr/react-dsfr/Alert'
 import type { Depot, DepotStatus } from '../types/depot'
 import { fetchDepots, ApiError } from '../api/depot'
+import { StatCard } from '../components/StatCard'
+import { fr } from '@codegouvfr/react-dsfr'
+import { Button } from "@codegouvfr/react-dsfr/Button";
+
 
 function getStatusBadge(status: DepotStatus) {
   switch (status) {
@@ -80,22 +84,58 @@ export function Dashboard() {
   ])
 
   return (
-    <div className="fr-container fr-py-6w">
-      <h1>Suivi des bilans déposés</h1>
-      
-      <div className="fr-mb-2w">
-        <p className="fr-text--sm">
-          Affichage de {depots.length} entrée{depots.length > 1 ? 's' : ''}
-        </p>
+    <>
+      <div className="fr-mb-4w">
+        <div style={{ backgroundColor: 'var(--background-action-high-blue-france)', height: '40px' }} className="fr-mb-1w"></div>
+        <div className="fr-container">
+          <div className="fr-grid-row fr-grid-row--middle fr-mb-2w" style={{ borderBottom: '2px solid black', paddingBottom: '1rem' }}>
+            <div className="fr-col">
+              <h2 className="fr-h4 fr-mb-0">
+                <span className={fr.cx("ri-dashboard-2-line")} aria-hidden="true"></span>
+                Autosurveillance des systèmes d'assainissement — Tableau de bord
+              </h2>
+            </div>
+            <div className="fr-col-auto">
+               <Button
+                    type="button"
+                    iconId="ri-upload-2-line"
+                >
+                Déposer vos données d'autosurveillance
+
+                </Button>
+              {/* <button className="fr-btn fr-btn--secondary fr-icon-upload-line fr-btn--icon-left">
+              </button> */}
+            </div>
+          </div>
+        </div>
+
+        <div className="fr-container fr-mb-4w">
+          <div className="fr-grid-row fr-grid-row--gutters">
+            
+            <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx("ri-folder-2-line")} />
+            
+            <StatCard count="1" label="Bilans en attente" icon={fr.cx("ri-hourglass-line")} />
+
+            <StatCard count="1" label="Bilans écartés par le SPE" icon={fr.cx("ri-prohibited-2-line")} />
+          </div>
+        </div>
       </div>
 
-      <Table
-        caption="Liste des dépôts d'auto-surveillance"
-        noCaption
-        bordered
-        headers={['#', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
-        data={tableData}
-      />
-    </div>
+      <div className="fr-container fr-py-2w">
+        <div className="fr-mb-2w">
+          <p className="fr-text--sm">
+            Affichage de {depots.length} entrée{depots.length > 1 ? 's' : ''}
+          </p>
+        </div>
+
+        <Table
+          caption="Liste des dépôts d'auto-surveillance"
+          noCaption
+          bordered
+          headers={['#', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
+          data={tableData}
+        />
+      </div>
+    </>
   )
 }
