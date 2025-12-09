@@ -4,6 +4,7 @@ import { Stepper } from '@codegouvfr/react-dsfr/Stepper'
 import { Upload } from '@codegouvfr/react-dsfr/Upload'
 import { Alert } from '@codegouvfr/react-dsfr/Alert'
 import { Button } from '@codegouvfr/react-dsfr/Button'
+import { RecapCard } from './depot-upload-recap/components'
 
 const steps = [
   'Sélection du flux et fichier',
@@ -62,7 +63,7 @@ export function DepotUploadPage() {
         />
       </div>
 
-      <section className="fr-card fr-card--no-border fr-p-4w">
+      <RecapCard>
         <h2 className="fr-h5 fr-mb-2w">Étape 1 – Choix du flux et du fichier XML</h2>
         <p className="fr-mb-2w">
           Sélectionnez le type de flux que vous souhaitez déposer, puis choisissez le fichier de
@@ -113,7 +114,7 @@ export function DepotUploadPage() {
             </Button>
           </div>
         </div>
-      </section>
+      </RecapCard>
     </div>
   )
 }

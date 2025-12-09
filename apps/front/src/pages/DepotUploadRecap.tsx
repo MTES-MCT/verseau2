@@ -45,25 +45,27 @@ export function DepotUploadRecapPage() {
   }
 
   return (
-    <div className="fr-container fr-py-6w">
-      <RecapHeader steps={steps} currentStep={2} subtitle="Étape 2 : récapitulatif du dépôt" />
+    <div className="fr-background-alt--grey fr-pt-6w fr-pb-8w">
+      <div className="fr-container">
+        <RecapHeader steps={steps} currentStep={2} subtitle="Étape 2 : récapitulatif du dépôt" />
 
-      <RecapSummaryCard
-        systemName={parsedData?.scenario?.emetteur?.nomIntervenant}
-        systemCode={parsedData?.scenario?.emetteur?.cdIntervenant}
-        fileName={fileName || 'Non renseigné'}
-        totalAnalyses={totalAnalyses}
-      />
+        <RecapSummaryCard
+          systemName={parsedData?.scenario?.emetteur?.nomIntervenant}
+          systemCode={parsedData?.scenario?.emetteur?.cdIntervenant}
+          fileName={fileName || 'Non renseigné'}
+          totalAnalyses={totalAnalyses}
+        />
 
-      <ParamsTags params={params} />
+        <ParamsTags params={params} />
 
-      <ChecksList />
+        <ChecksList />
 
-      <FooterActions
-        onBack={handleReturn}
-        onFinalize={handleFinalize}
-        finalizeDisabled={uploadMutation.isPending}
-      />
+        <FooterActions
+          onBack={handleReturn}
+          onFinalize={handleFinalize}
+          finalizeDisabled={uploadMutation.isPending}
+        />
+      </div>
     </div>
   )
 }

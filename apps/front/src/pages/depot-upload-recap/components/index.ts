@@ -6,3 +6,4 @@ export * from './RecapSummaryCard';
 export * from './ParamsTags';
 export * from './ChecksList';
 export * from './FooterActions';
+export * from './RecapCard';
