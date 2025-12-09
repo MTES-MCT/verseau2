@@ -13,6 +13,7 @@
   "dependencies": {
     "@codegouvfr/react-dsfr": "0.57.2",
     "@lib/parser": "*",
+    "@tanstack/react-query": "^5.90.12",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.10.1"

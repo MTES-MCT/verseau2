@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Table } from '@codegouvfr/react-dsfr/Table'
 import { Badge } from '@codegouvfr/react-dsfr/Badge'
 import { Alert } from '@codegouvfr/react-dsfr/Alert'
@@ -14,35 +14,23 @@ function getResultBadge(success: boolean) {
 
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>()
-  const [controles, setControles] = useState<Controle[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: controles = [],
+    isLoading,
+    error,
+  } = useQuery<Controle[], ApiError>({
+    queryKey: ['controles', depotId],
+    queryFn: () => fetchControles(depotId!),
+    enabled: Boolean(depotId),
+  })
 
-  useEffect(() => {
-    async function loadControles() {
-      if (!depotId) return
+  const errorMessage = error
+    ? error instanceof ApiError
+      ? `Erreur ${error.status}: ${error.message}`
+      : 'Une erreur est survenue lors du chargement des contrôles'
+    : null
 
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchControles(depotId)
-        setControles(data)
-      } catch (err) {
-        if (err instanceof ApiError) {
-          setError(`Erreur ${err.status}: ${err.message}`)
-        } else {
-          setError('Une erreur est survenue lors du chargement des contrôles')
-        }
-        console.error('Error loading controles:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadControles()
-  }, [depotId])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="fr-container fr-py-6w">
         <p>Chargement des contrôles...</p>
@@ -50,7 +38,7 @@ export function ControlePage() {
     )
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="fr-container fr-py-6w">
         <Link to="/" className="fr-link fr-mb-2w" style={{ display: 'inline-block' }}>
@@ -59,7 +47,7 @@ export function ControlePage() {
         <Alert
           severity="error"
           title="Erreur"
-          description={error}
+          description={errorMessage}
         />
       </div>
     )

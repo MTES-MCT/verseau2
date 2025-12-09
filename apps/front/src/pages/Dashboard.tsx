@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Table } from '@codegouvfr/react-dsfr/Table'
 import { Badge } from '@codegouvfr/react-dsfr/Badge'
 import { Alert } from '@codegouvfr/react-dsfr/Alert'
@@ -33,33 +33,22 @@ function formatDate(date: Date | string): string {
 }
 
 export function Dashboard() {
-  const [depots, setDepots] = useState<Depot[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: depots = [],
+    isLoading,
+    error,
+  } = useQuery<Depot[], ApiError>({
+    queryKey: ['depots'],
+    queryFn: fetchDepots,
+  })
 
-  useEffect(() => {
-    async function loadDepots() {
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchDepots()
-        setDepots(data)
-      } catch (err) {
-        if (err instanceof ApiError) {
-          setError(`Erreur ${err.status}: ${err.message}`)
-        } else {
-          setError('Une erreur est survenue lors du chargement des dépôts')
-        }
-        console.error('Error loading depots:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
+  const errorMessage = error
+    ? error instanceof ApiError
+      ? `Erreur ${error.status}: ${error.message}`
+      : 'Une erreur est survenue lors du chargement des dépôts'
+    : null
 
-    loadDepots()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="fr-container fr-py-6w">
         <p>Chargement des dépôts...</p>
@@ -67,19 +56,19 @@ export function Dashboard() {
     )
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="fr-container fr-py-6w">
         <Alert
           severity="error"
           title="Erreur"
-          description={error}
+          description={errorMessage}
         />
       </div>
     )
   }
 
-  const tableData = depots.map((depot) => [
+  const tableData = depots.map((depot: Depot) => [
     depot.id,
     depot.nomOriginalFichier,
     getStatusBadge(depot.status),
