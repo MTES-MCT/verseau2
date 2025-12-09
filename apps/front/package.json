@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "predev": "react-dsfr update-icons",
-    "build": "tsc -b && vite build",
+    "build": "tsc --build && vite build",
     "prebuild": "react-dsfr update-icons",
     "lint": "eslint .",
     "preview": "vite preview",
