@@ -6,7 +6,7 @@ import { join } from 'node:path';
  * Les fichiers statiques sont servis par le serveur NestJS de façon temporaire.
  */
 
-const FRONT_DIST_PATH = join(__dirname, '..', '..', 'front', 'dist');
+const FRONT_DIST_PATH = join(process.cwd(), 'apps', 'front', 'dist');
 
 @Module({
   imports: [
