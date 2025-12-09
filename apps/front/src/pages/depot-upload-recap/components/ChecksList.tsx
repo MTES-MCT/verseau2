@@ -1,0 +1,28 @@
+export function ChecksList() {
+  return (
+    <section className="fr-card fr-card--no-border fr-p-4w fr-mb-0">
+      <h3 className="fr-h5 fr-mb-2w">Principales vérifications effectuées</h3>
+      <p className="fr-mb-3w">Les contrôles suivants ont été appliqués au fichier :</p>
+      <div className="fr-mb-3w fr-text-default--grey">
+        <p className="fr-mb-1v">
+          <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
+          Format du fichier — validation XML et schéma attendu.
+        </p>
+        <p className="fr-mb-1v">
+          <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
+          Structure des données — cohérence des identifiants et correspondance au système.
+        </p>
+        <p className="fr-mb-1v">
+          <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
+          Droits de dépôt — habilitations du déposant vérifiées.
+        </p>
+        <p className="fr-mb-1v">
+          <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
+          Règles métiers — contrôle de cohérence des valeurs et complétude.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+

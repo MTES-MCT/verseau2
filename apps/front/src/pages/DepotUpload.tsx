@@ -71,14 +71,15 @@ export function DepotUploadPage() {
 
         <div className="fr-mb-3w">
           <p className="fr-text--sm fr-mb-1w">Étapes du dépôt</p>
-          <ul className="fr-ml-1w fr-pl-2w">
+          <div className="fr-ml-1w fr-pl-2w">
             {steps.map((step, index) => (
-              <li key={step}>
+              <p key={step} className="fr-mb-0">
                 Étape {index + 1} — {step}
-              </li>
+              </p>
             ))}
-          </ul>
+          </div>
         </div>
+
 
         <Upload
           label="Fichier de données XML"
