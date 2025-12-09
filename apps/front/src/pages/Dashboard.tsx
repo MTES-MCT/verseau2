@@ -8,6 +8,7 @@ import { fetchDepots, ApiError } from '../api/depot'
 import { StatCard } from '../components/StatCard'
 import { fr } from '@codegouvfr/react-dsfr'
 
+const DEPOT_POLLING_INTERVAL_MS = 2000
 
 function getStatusBadge(status: DepotStatus) {
   switch (status) {
@@ -43,6 +44,13 @@ export function Dashboard() {
   } = useQuery<Depot[], ApiError>({
     queryKey: ['depots'],
     queryFn: fetchDepots,
+    refetchInterval: ({ state }) => {
+      const hasPendingOrProcessing = state.data?.some(
+        (depot: Depot) => depot.status === 'PROCESSING' || depot.status === 'PENDING'
+      )
+
+      return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false
+    },
   })
 
   const errorMessage = error
