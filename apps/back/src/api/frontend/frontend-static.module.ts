@@ -12,7 +12,7 @@ const FRONT_DIST_PATH = join(process.cwd(), 'apps', 'front', 'dist');
   imports: [
     ServeStaticModule.forRoot({
       rootPath: FRONT_DIST_PATH,
-      renderPath: '*',
+      renderPath: '/{*wildcard}',
       exclude: ['/api/{*wildcard}'],
     }),
   ],
