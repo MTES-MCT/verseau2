@@ -1,5 +1,5 @@
 import * as sax from 'sax';
-import { SandreTags } from './sandreConstants';
+import { SandreScenarioCode, SandreScenarioVersion, SandreTags } from './sandreConstants';
 import {
   Analyse,
   Emetteur,
@@ -170,6 +170,12 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
     const nomContactIndent = contactIndent + '  ';
     return `${p1}${p2}\n${contactIndent}<Contact>\n${nomContactIndent}<NomContact>${nomContact}</NomContact>\n${contactIndent}</Contact>${p3}${p4}`;
   });
+}
+
+export function checkScenarioCodeAndVersion(scenario: Scenario): boolean {
+  return (
+    scenario.codeScenario === SandreScenarioCode.FCT_ASSAIN && scenario.versionScenario === SandreScenarioVersion.V4
+  );
 }
 
 function mapScenario(raw: any): Scenario {

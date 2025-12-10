@@ -1,3 +1,5 @@
+import { SandreScenarioCode, SandreScenarioVersion } from './sandreConstants';
+
 export interface FctAssainissement {
   scenario: Scenario;
   ouvrages: OuvrageDepollution[];
@@ -5,8 +7,8 @@ export interface FctAssainissement {
 }
 
 export interface Scenario {
-  codeScenario: string;
-  versionScenario: string;
+  codeScenario: SandreScenarioCode;
+  versionScenario: SandreScenarioVersion;
   emetteur: Emetteur;
 }
 

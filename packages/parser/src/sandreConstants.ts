@@ -51,3 +51,11 @@ export enum SandreTags {
   CdSystemeCollecte = 'CdSystemeCollecte',
   LbSystemeCollecte = 'LbSystemeCollecte',
 }
+
+export enum SandreScenarioCode {
+  FCT_ASSAIN = 'FCT_ASSAIN',
+}
+
+export enum SandreScenarioVersion {
+  V4 = '4',
+}

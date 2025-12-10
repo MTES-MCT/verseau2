@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { type UseMutationResult, useMutation } from '@tanstack/react-query';
-import { parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
+import { checkScenarioCodeAndVersion, parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
 import { uploadDepot } from '../../api/depot';
 
 type LocationState = {
@@ -28,7 +28,13 @@ export function useDepotRecap(): UseDepotRecapResult {
   const { fileName, fileContent } = (location.state ?? {}) as LocationState;
 
   const parseMutation = useMutation({
-    mutationFn: async (xml: string) => parseScenarioAssainissementXml(xml),
+    mutationFn: async (xml: string) => {
+      const parsed = await parseScenarioAssainissementXml(xml);
+      if (!parsed.scenario || !checkScenarioCodeAndVersion(parsed.scenario)) {
+        throw new Error('Le fichier doit être un scénario FCT_ASSAIN version 4');
+      }
+      return parsed;
+    },
   });
 
   const uploadMutation = useMutation({
