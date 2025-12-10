@@ -30,21 +30,10 @@ export class SandreService {
     });
 
     const formData = new FormData();
-
-    // Handle XML file - can be Buffer or file path
-    if (Buffer.isBuffer(params.xml)) {
-      formData.append('XML', params.xml, {
-        filename: 'file.xml',
-        contentType: 'application/xml',
-      });
-    } else {
-      // If it's a file path, we need to read it
-      // For now, assume it's already a Buffer or handle as string
-      formData.append('XML', params.xml, {
-        filename: 'file.xml',
-        contentType: 'application/xml',
-      });
-    }
+    formData.append('XML', params.xml, {
+      filename: 'file.xml',
+      contentType: 'application/xml',
+    });
 
     // Required fields
     formData.append('XSD', params.xsd);

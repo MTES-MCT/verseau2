@@ -54,7 +54,6 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       //   });
       //   return;
       // }
-
       // Controle SANDRE
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Parser SANDRE en cours`);
       const sandreControle = await this.controleSandreService.execute(file, fichierDeDepot);

@@ -73,3 +73,5 @@ tsconfig.tsbuildinfo
 
 # test
 coverage
+
+script/

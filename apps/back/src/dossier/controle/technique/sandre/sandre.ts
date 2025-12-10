@@ -2,7 +2,7 @@ import { SandreAcceptationStatus } from '@lib/dossier';
 
 export interface SandreUploadParams {
   /** File to validate (ZIP or XML) - can be Buffer or file path */
-  xml: Buffer | string;
+  xml: Buffer;
   /** Scenario code and version in format "SCENARIO;VERSION" (e.g., "LABO_DEST;1") */
   xsd: string;
   /** Name of the client system */

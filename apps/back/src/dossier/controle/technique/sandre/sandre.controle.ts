@@ -33,7 +33,7 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
       this.logger.log('Validating file with SANDRE', { filePath: fichierDeDepot.filePath });
       const validationSummary = await this.sandreService.validateFileAndWait({
         xml: file,
-        xsd: process.env.SANDRE_XSD || 'LABO_DEST;1',
+        xsd: process.env.SANDRE_XSD || 'FCT_ASSAIN;4',
         nomSI: process.env.SANDRE_NOM_SI || 'Verseau2',
         versionSI: process.env.SANDRE_VERSION_SI || '1.0',
       });
