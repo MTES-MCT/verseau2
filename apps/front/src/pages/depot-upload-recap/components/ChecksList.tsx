@@ -8,19 +8,19 @@ export function ChecksList() {
       <div className="fr-mb-3w fr-text-default--grey">
         <p className="fr-mb-1v">
           <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
-          Format du fichier — validation XML et schéma attendu.
+          TODO: Format du fichier — validation XML et schéma attendu.
         </p>
         <p className="fr-mb-1v">
           <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
-          Structure des données — cohérence des identifiants et correspondance au système.
+          TODO: Structure des données — cohérence des identifiants et correspondance au système.
         </p>
         <p className="fr-mb-1v">
           <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
-          Droits de dépôt — habilitations du déposant vérifiées.
+          TODO: Droits de dépôt — habilitations du déposant vérifiées.
         </p>
         <p className="fr-mb-1v">
           <span className="fr-icon-checkbox-circle-line fr-text--success fr-mr-1w" aria-hidden="true" />
-          Règles métiers — contrôle de cohérence des valeurs et complétude.
+          TODO: Règles métiers — contrôle de cohérence des valeurs et complétude.
         </p>
       </div>
     </RecapCard>

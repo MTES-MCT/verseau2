@@ -63,8 +63,8 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
           status: DepotStatus.FAILED,
           step: DepotStep.PARSER_SANDRE_FAILED,
         });
-        this.logger.log(`Depot ${fichierDeDepot.depotId} - Parser SANDRE result`, {
-          acceptationStatus: sandreControle?.acceptationStatus,
+        this.logger.error(`Depot ${fichierDeDepot.depotId} - Parser SANDRE result`, {
+          sandreControle,
         });
         return;
       }

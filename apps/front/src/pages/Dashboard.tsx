@@ -118,9 +118,9 @@ export function Dashboard() {
             
             <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx("ri-folder-2-line")} />
             
-            <StatCard count="1" label="Bilans en attente" icon={fr.cx("ri-hourglass-line")} />
+            <StatCard count={depots.filter((depot: DepotDto) => depot.status === 'PENDING').length} label="Bilans en attente" icon={fr.cx("ri-hourglass-line")} />
 
-            <StatCard count="1" label="Bilans écartés par le SPE" icon={fr.cx("ri-prohibited-2-line")} />
+            <StatCard count={depots.filter((depot: DepotDto) => depot.status === 'FAILED').length} label="Bilans écartés par le SPE" icon={fr.cx("ri-prohibited-2-line")} />
           </div>
         </div>
       </div>
