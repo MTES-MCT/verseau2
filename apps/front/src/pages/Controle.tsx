@@ -6,6 +6,7 @@ import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
 import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
 import { ControleGroup } from '../components/ControleGroup';
 import { mapSandreControles } from './controle.mappers';
+import { fr } from '@codegouvfr/react-dsfr';
 
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>();
@@ -89,11 +90,13 @@ export function ControlePage() {
       </div>
 
       {/* Accordion pour les contrôles V1 */}
-      {controlesV1.length > 0 && <ControleGroup title="Contrôle V1" controles={controlesV1} />}
+      {controlesV1.length > 0 &&  <div className={fr.cx("fr-mb-4w")}> <ControleGroup title="Contrôle V1" controles={controlesV1} /></div>}
 
       {/* Accordion pour les contrôles Sandre */}
       {sandreControlesMapped.length > 0 && (
-        <ControleGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
+        <div className={fr.cx("fr-mb-4w")}>
+          <ControleGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
+        </div>
       )}
 
       {/* Afficher un message si aucun contrôle n'est trouvé */}

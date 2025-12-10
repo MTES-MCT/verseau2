@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Table } from '@codegouvfr/react-dsfr/Table'
 import { Badge } from '@codegouvfr/react-dsfr/Badge'
 import { Alert } from '@codegouvfr/react-dsfr/Alert'
-import type { Depot, DepotStatus } from '../types/depot'
+import type { DepotDto, DepotStatus } from '@lib/dossier'
 import { fetchDepots, ApiError } from '../api/depot'
 import { StatCard } from '../components/StatCard'
 import { fr } from '@codegouvfr/react-dsfr'
@@ -41,12 +41,12 @@ export function Dashboard() {
     data: depots = [],
     isLoading,
     error,
-  } = useQuery<Depot[], ApiError>({
+  } = useQuery<DepotDto[], ApiError>({
     queryKey: ['depots'],
     queryFn: fetchDepots,
     refetchInterval: ({ state }) => {
       const hasPendingOrProcessing = state.data?.some(
-        (depot: Depot) => depot.status === 'PROCESSING' || depot.status === 'PENDING'
+        (depot: DepotDto) => depot.status === 'PROCESSING' || depot.status === 'PENDING'
       )
 
       return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false
@@ -79,7 +79,7 @@ export function Dashboard() {
     )
   }
 
-  const tableData = depots.map((depot: Depot) => [
+  const tableData = depots.map((depot: DepotDto) => [
     depot.id,
     depot.nomOriginalFichier,
     getStatusBadge(depot.status),
