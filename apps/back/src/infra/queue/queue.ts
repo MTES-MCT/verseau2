@@ -13,6 +13,8 @@ export enum QueueName {
   process_file = 'process_file',
   email = 'email',
   send_to_sftp = 'send_to_sftp',
+  controle_v1 = 'controle_v1',
+  controle_sandre = 'controle_sandre',
 }
 
 export interface QueueOptions {

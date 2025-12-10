@@ -24,6 +24,7 @@ import { ControleMapper } from './controle/isov1/controle.mapper';
 import { DepotAdminController } from './depot/depotAdmin.controller';
 import { DepotGateway } from './depot/depot.gateway';
 import { ControleController } from './controle/controle.controller';
+import { DepotCoordinatorService } from './depot/depotCoordinator.service';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -52,6 +53,7 @@ const sandreServiceFactory = {
     // Depot
     { provide: DepotGateway, useClass: DepotRepository },
     DepotService,
+    DepotCoordinatorService,
     DeposerUnFichier,
     // Sandre control
     sandreServiceFactory,
@@ -62,6 +64,6 @@ const sandreServiceFactory = {
     { provide: ControleGateway, useClass: ControleRepository },
     ControleMapper,
   ],
-  exports: [DepotService, ControleSandreService, ReponseSandreGateway, ControleV1Service],
+  exports: [DepotService, DepotCoordinatorService, ControleSandreService, ReponseSandreGateway, ControleV1Service],
 })
 export class DossierModule {}

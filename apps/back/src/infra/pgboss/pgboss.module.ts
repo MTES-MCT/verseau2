@@ -40,6 +40,30 @@ export class PgbossModule {
               .catch((error) => {
                 logger.error(error);
               });
+            boss
+              .createQueue(QueueName.controle_v1)
+              .then(() => {
+                logger.log('Queue controle_v1 created');
+              })
+              .catch((error) => {
+                logger.error(error);
+              });
+            boss
+              .createQueue(QueueName.controle_sandre)
+              .then(() => {
+                logger.log('Queue controle_sandre created');
+              })
+              .catch((error) => {
+                logger.error(error);
+              });
+            boss
+              .createQueue(QueueName.email)
+              .then(() => {
+                logger.log('Queue email created');
+              })
+              .catch((error) => {
+                logger.error(error);
+              });
 
             return boss;
           },

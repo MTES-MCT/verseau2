@@ -10,6 +10,8 @@ export type DepotModel = Pick<
   | 'error'
   | 'step'
   | 'status'
+  | 'controleV1Status'
+  | 'controleSandreStatus'
   | 'user'
   | 'createdAt'
   | 'updatedAt'
