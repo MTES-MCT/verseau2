@@ -11,6 +11,7 @@ import { SandreService } from './controle/technique/sandre/sandre.service';
 import { SandreMockService } from './controle/technique/sandre/sandre.mock.service';
 import { ReponseSandreEntity } from './controle/technique/sandre/reponseSandre.entity';
 import { ReponseSandreRepository } from './controle/technique/sandre/reponseSandre.repository';
+import { ReponseSandreGateway } from './controle/technique/sandre/reponseSandre.gateway';
 import { ControleSandreService } from './controle/technique/sandre/sandre.controle';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserModule } from '@user/user.module';
@@ -54,13 +55,13 @@ const sandreServiceFactory = {
     DeposerUnFichier,
     // Sandre control
     sandreServiceFactory,
-    ReponseSandreRepository,
+    { provide: ReponseSandreGateway, useClass: ReponseSandreRepository },
     ControleSandreService,
     // ISO V1 control
     ControleV1Service,
     { provide: ControleGateway, useClass: ControleRepository },
     ControleMapper,
   ],
-  exports: [DepotService, ControleSandreService, ReponseSandreRepository, ControleV1Service],
+  exports: [DepotService, ControleSandreService, ReponseSandreGateway, ControleV1Service],
 })
 export class DossierModule {}

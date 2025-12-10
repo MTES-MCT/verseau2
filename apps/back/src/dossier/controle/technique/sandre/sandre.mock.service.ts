@@ -1,16 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import {
-  AcceptationStatus,
-  SandreTokenResponse,
-  SandreUploadParams,
-  SandreValidationResult,
-  SandreValidationSummary,
-} from './sandre';
+import { SandreAcceptationStatus } from '@lib/dossier';
+import { SandreTokenResponse, SandreUploadParams, SandreValidationResult, SandreValidationSummary } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
 interface MockValidationData {
   jeton: string;
-  acceptationStatus: AcceptationStatus;
+  acceptationStatus: SandreAcceptationStatus;
   isConformant: boolean;
   codeScenario: string;
   versionScenario: string;
@@ -71,7 +66,9 @@ export class SandreMockService {
 
     // Determine validation result based on configured behavior
     const isConformant = this.determineConformity();
-    const acceptationStatus = isConformant ? AcceptationStatus.CONFORMANT : AcceptationStatus.NON_CONFORMANT;
+    const acceptationStatus = isConformant
+      ? SandreAcceptationStatus.CONFORMANT
+      : SandreAcceptationStatus.NON_CONFORMANT;
 
     // Store validation result for later retrieval
     const validationData: MockValidationData = {
@@ -231,8 +228,8 @@ export class SandreMockService {
     // Immediately get validation result (no polling)
     const validationResult = this.getValidationResult(tokenResponse.jeton);
 
-    const acceptationStatus = parseInt(validationResult.ACQ.AccuseReception.Acceptation, 10) as AcceptationStatus;
-    const isConformant = acceptationStatus === AcceptationStatus.CONFORMANT;
+    const acceptationStatus = parseInt(validationResult.ACQ.AccuseReception.Acceptation, 10) as SandreAcceptationStatus;
+    const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
 
     // Extract error information if present
     const error = validationResult.ACQ.AccuseReception.Erreur

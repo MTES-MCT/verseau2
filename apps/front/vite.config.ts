@@ -8,9 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@lib/parser': path.resolve(__dirname, '../../packages/parser/src/index.ts'),
+      '@lib/dossier': path.resolve(__dirname, '../../packages/dossier/src/index.ts'),
     },
   },
   optimizeDeps: {
     include: ['@lib/parser'],
+    exclude: ['@lib/dossier'],
   },
 });

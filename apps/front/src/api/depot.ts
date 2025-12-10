@@ -1,4 +1,4 @@
-import type { Depot, Controle } from '../types/depot';
+import type { DepotDto, ControleDto, ControleSandreDto } from '@lib/dossier';
 import { getCurrentFakeToken } from '../temp/fakeAuth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
@@ -20,7 +20,7 @@ const getToken = () => {
   return getCurrentFakeToken();
 };
 
-export async function fetchDepots(): Promise<Depot[]> {
+export async function fetchDepots(): Promise<DepotDto[]> {
   const response = await fetch(`${API_BASE_URL}/admin/depot`, {
     method: 'GET',
     headers: {
@@ -37,7 +37,7 @@ export async function fetchDepots(): Promise<Depot[]> {
   return response.json();
 }
 
-export async function fetchControles(depotId: string): Promise<Controle[]> {
+export async function fetchControles(depotId: string): Promise<ControleDto[]> {
   const response = await fetch(`${API_BASE_URL}/depot/${depotId}/controle`, {
     method: 'GET',
     headers: {
@@ -49,6 +49,27 @@ export async function fetchControles(depotId: string): Promise<Controle[]> {
 
   if (!response.ok) {
     throw new ApiError(`Failed to fetch controles: ${response.statusText}`, response.status, response.statusText);
+  }
+
+  return response.json();
+}
+
+export async function fetchControlesSandre(depotId: string): Promise<ControleSandreDto[]> {
+  const response = await fetch(`${API_BASE_URL}/depot/${depotId}/controle/sandre`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new ApiError(
+      `Failed to fetch SANDRE controles: ${response.statusText}`,
+      response.status,
+      response.statusText,
+    );
   }
 
   return response.json();

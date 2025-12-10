@@ -1,13 +1,4 @@
-/**
- * SANDRE Parseur V5 Webservice Types
- */
-
-export enum AcceptationStatus {
-  WAITING = 3,
-  PROCESSING = 0,
-  CONFORMANT = 1,
-  NON_CONFORMANT = 2,
-}
+import { SandreAcceptationStatus } from '@lib/dossier';
 
 export interface SandreUploadParams {
   /** File to validate (ZIP or XML) - can be Buffer or file path */
@@ -162,7 +153,7 @@ export interface SandreValidationSummary {
   /** Whether the file is conformant */
   isConformant: boolean;
   /** The acceptance status */
-  acceptationStatus: AcceptationStatus;
+  acceptationStatus: SandreAcceptationStatus;
   /** The token/jeton from the validation */
   jeton: string;
   /** The scenario code */

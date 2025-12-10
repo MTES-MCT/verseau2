@@ -2,11 +2,12 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { ReponseSandreEntity } from './reponseSandre.entity';
 import { ReponseSandreCreateModel, ReponseSandreModel } from './reponseSandre.model';
-import { AcceptationStatus } from './sandre';
+import { SandreAcceptationStatus } from '@lib/dossier';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
+import { ReponseSandreGateway } from './reponseSandre.gateway';
 
 @Injectable()
-export class ReponseSandreRepository extends Repository<ReponseSandreEntity> {
+export class ReponseSandreRepository extends Repository<ReponseSandreEntity> implements ReponseSandreGateway {
   constructor(
     private dataSource: DataSource,
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
@@ -44,7 +45,7 @@ export class ReponseSandreRepository extends Repository<ReponseSandreEntity> {
     return await this.find({ where: { depot: { id: depotId } }, relations: ['depot'] });
   }
 
-  async findByStatus(status: AcceptationStatus): Promise<ReponseSandreModel[]> {
+  async findByStatus(status: SandreAcceptationStatus): Promise<ReponseSandreModel[]> {
     return await this.find({ where: { acceptationStatus: status } });
   }
 }

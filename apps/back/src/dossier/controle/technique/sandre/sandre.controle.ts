@@ -1,25 +1,25 @@
 import { FichierDeDepot } from '@dossier/depot/file/file';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { FileControl } from '@shared/fileControl';
 import { LoggerService } from '@shared/logger/logger.service';
-import { ReponseSandreRepository } from './reponseSandre.repository';
 import type { SandreValidationSummary } from './sandre';
 import { SandreService } from './sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus } from '@lib/dossier';
+import { ReponseSandreGateway } from './reponseSandre.gateway';
 
 @Injectable()
 export class ControleSandreService implements FileControl<SandreValidationSummary | null> {
   constructor(
     private readonly sandreService: SandreService,
-    private readonly reponseSandreService: ReponseSandreRepository,
+    @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     private readonly depotService: DepotService,
   ) {}
 
   private readonly logger = new LoggerService(ControleSandreService.name);
 
   async execute(file: Buffer, fichierDeDepot: FichierDeDepot): Promise<SandreValidationSummary | null> {
-    const hasAlreadyBeenProcessed = await this.reponseSandreService.findByDepotId(fichierDeDepot.depotId);
+    const hasAlreadyBeenProcessed = await this.reponseSandreGateway.findByDepotId(fichierDeDepot.depotId);
     if (hasAlreadyBeenProcessed.length > 0) {
       this.logger.log('File has already been processed for this depot', { depotId: fichierDeDepot.depotId });
       return null;
@@ -61,7 +61,7 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
 
       this.logger.log('Processing file completed');
 
-      await this.reponseSandreService.createReponseSandre({
+      await this.reponseSandreGateway.createReponseSandre({
         depotId: fichierDeDepot.depotId,
         jeton: validationSummary.jeton,
         acceptationStatus: validationSummary.acceptationStatus,

@@ -1,22 +1,11 @@
 import { useParams, Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import type { Controle } from '../types/depot';
-import { fetchControles, ApiError } from '../api/depot';
-
-function getResultBadge(success: boolean) {
-  return success ? (
-    <Badge severity="success" small>
-      Succès
-    </Badge>
-  ) : (
-    <Badge severity="error" small>
-      Échec
-    </Badge>
-  );
-}
+import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
+import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
+import { ControleGroup } from '../components/ControleGroup';
+import { mapSandreControles } from './controle.mappers';
 
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>();
@@ -24,9 +13,19 @@ export function ControlePage() {
     data: controles = [],
     isLoading,
     error,
-  } = useQuery<Controle[], ApiError>({
+  } = useQuery<ControleDto[], ApiError>({
     queryKey: ['controles', depotId],
     queryFn: () => fetchControles(depotId!),
+    enabled: Boolean(depotId),
+  });
+
+  const {
+    data: sandreControles = [],
+    isLoading: isLoadingSandre,
+    error: errorSandre,
+  } = useQuery<ControleSandreDto[], ApiError>({
+    queryKey: ['controles-sandre', depotId],
+    queryFn: () => fetchControlesSandre(depotId!),
     enabled: Boolean(depotId),
   });
 
@@ -36,7 +35,13 @@ export function ControlePage() {
       : 'Une erreur est survenue lors du chargement des contrôles'
     : null;
 
-  if (isLoading) {
+  const errorSandreMessage = errorSandre
+    ? errorSandre instanceof ApiError
+      ? `Erreur ${errorSandre.status}: ${errorSandre.message}`
+      : 'Une erreur est survenue lors du chargement des contrôles SANDRE'
+    : null;
+
+  if (isLoading || isLoadingSandre) {
     return (
       <div className="fr-container fr-py-6w">
         <p>Chargement des contrôles...</p>
@@ -44,30 +49,29 @@ export function ControlePage() {
     );
   }
 
-  if (errorMessage) {
+  if (errorMessage || errorSandreMessage) {
     return (
       <div className="fr-container fr-py-6w">
         <Link to="/" className="fr-link fr-mb-2w" style={{ display: 'inline-block' }}>
           ← Retour au dashboard
         </Link>
-        <Alert severity="error" title="Erreur" description={errorMessage} />
+        {errorMessage && <Alert severity="error" title="Erreur" description={errorMessage} />}
+        {errorSandreMessage && (
+          <Alert severity="error" title="Erreur" description={errorSandreMessage} className="fr-mt-2w" />
+        )}
       </div>
     );
   }
 
-  const successCount = controles.filter((c) => c.success).length;
-  const failCount = controles.length - successCount;
+  const controlesV1 = controles;
 
-  const tableData = controles.map((controle) => [
-    controle.name,
-    getResultBadge(controle.success),
-    controle.error || '-',
-    controle.errorParams?.join(', ') || '-',
-  ]);
+  const successCount = controlesV1.filter((c) => c.success).length;
+  const failCount = controlesV1.length - successCount;
+
+  const sandreControlesMapped = mapSandreControles(sandreControles);
 
   return (
     <div className="fr-container fr-py-6w">
-
       <Link to="/" className="fr-link fr-mb-2w" style={{ display: 'inline-block' }}>
         ← Retour au dashboard
       </Link>
@@ -75,7 +79,7 @@ export function ControlePage() {
       <h1>Contrôles du dépôt</h1>
       <p className="fr-text--lead">{depotId}</p>
 
-      <div className="fr-mb-2w">
+      <div className="fr-mb-4w">
         <Badge severity="success" className="fr-mr-1w">
           {successCount} succès
         </Badge>
@@ -84,14 +88,22 @@ export function ControlePage() {
         </Badge>
       </div>
 
-      <Table
-        caption="Liste des contrôles"
-        noCaption
-        bordered
-        headers={['Contrôle', 'Résultat', 'Code erreur', 'Paramètres']}
-        data={tableData}
-        fixed={true}
-      />
+      {/* Accordion pour les contrôles V1 */}
+      {controlesV1.length > 0 && <ControleGroup title="Contrôle V1" controles={controlesV1} />}
+
+      {/* Accordion pour les contrôles Sandre */}
+      {sandreControlesMapped.length > 0 && (
+        <ControleGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
+      )}
+
+      {/* Afficher un message si aucun contrôle n'est trouvé */}
+      {controlesV1.length === 0 && sandreControlesMapped.length === 0 && (
+        <Alert
+          severity="info"
+          title="Aucun contrôle trouvé"
+          description="Aucun contrôle n'a été trouvé pour ce dépôt."
+        />
+      )}
     </div>
   );
 }

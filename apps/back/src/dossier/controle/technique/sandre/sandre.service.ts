@@ -1,13 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
-import {
-  AcceptationStatus,
-  SandreTokenResponse,
-  SandreUploadParams,
-  SandreValidationResult,
-  SandreValidationSummary,
-} from './sandre';
+import { SandreAcceptationStatus } from '@lib/dossier';
+import { SandreTokenResponse, SandreUploadParams, SandreValidationResult, SandreValidationSummary } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
@@ -174,13 +169,15 @@ export class SandreService {
     // Poll for validation result
     let validationResult: SandreValidationResult | null = null;
     for (let i = 0; i < maxAttempts; i++) {
-      validationResult = await this.getValidationResult(tokenResponse.jeton);
-      const acceptationStatus = parseInt(validationResult.ACQ.AccuseReception.Acceptation, 10) as AcceptationStatus;
+      const validation = await this.getValidationResult(tokenResponse.jeton);
+      const acceptationStatus = Number(validation.ACQ.AccuseReception.Acceptation) as SandreAcceptationStatus;
+
+      validationResult = validation;
 
       // Check if validation is complete (not waiting or processing)
       if (
-        acceptationStatus === AcceptationStatus.CONFORMANT ||
-        acceptationStatus === AcceptationStatus.NON_CONFORMANT
+        acceptationStatus === SandreAcceptationStatus.CONFORMANT ||
+        acceptationStatus === SandreAcceptationStatus.NON_CONFORMANT
       ) {
         break;
       }
@@ -193,8 +190,8 @@ export class SandreService {
       throw new Error('Failed to get validation result from SANDRE');
     }
 
-    const acceptationStatus = parseInt(validationResult.ACQ.AccuseReception.Acceptation, 10) as AcceptationStatus;
-    const isConformant = acceptationStatus === AcceptationStatus.CONFORMANT;
+    const acceptationStatus = Number(validationResult.ACQ.AccuseReception.Acceptation) as SandreAcceptationStatus;
+    const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
 
     // Extract error information if present
     const error = validationResult.ACQ.AccuseReception.Erreur

@@ -15,7 +15,7 @@ import { QueueService } from '@infra/queue/queue.service';
 import { QueueName } from '@infra/queue/queue';
 import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
-import { AcceptationStatus } from '@dossier/controle/technique/sandre/sandre';
+import { SandreAcceptationStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
@@ -75,11 +75,11 @@ class QueueServiceMock {
 
 // Mock ControleSandreService
 class ControleSandreMock {
-  acceptationStatus: AcceptationStatus = AcceptationStatus.CONFORMANT;
+  acceptationStatus: SandreAcceptationStatus = SandreAcceptationStatus.CONFORMANT;
 
   async execute() {
     return {
-      isConformant: this.acceptationStatus === AcceptationStatus.CONFORMANT,
+      isConformant: this.acceptationStatus === SandreAcceptationStatus.CONFORMANT,
       acceptationStatus: this.acceptationStatus,
       jeton: 'mock-jeton',
       codeScenario: '2A',
@@ -177,7 +177,7 @@ describe('Worker Service (e2e)', () => {
 
       // Reset mocks
       queueMock.calls = [];
-      sandreMock.acceptationStatus = AcceptationStatus.CONFORMANT;
+      sandreMock.acceptationStatus = SandreAcceptationStatus.CONFORMANT;
 
       // Process file
       await fileProcessorService.process({
@@ -221,7 +221,7 @@ describe('Worker Service (e2e)', () => {
 
       // Reset mocks
       queueMock.calls = [];
-      sandreMock.acceptationStatus = AcceptationStatus.NON_CONFORMANT;
+      sandreMock.acceptationStatus = SandreAcceptationStatus.NON_CONFORMANT;
 
       // Process file
       await fileProcessorService.process({

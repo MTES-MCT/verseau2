@@ -1,6 +1,6 @@
 import { BaseEntity } from '@shared/repository/base-entity';
 import { Entity, PrimaryColumn, Column, BeforeInsert, JoinColumn, OneToOne } from 'typeorm';
-import { AcceptationStatus } from './sandre';
+import { SandreAcceptationStatus } from '@lib/dossier';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 
 @Entity('reponse_sandre')
@@ -12,7 +12,7 @@ export class ReponseSandreEntity extends BaseEntity {
   jeton: string;
 
   @Column({ type: 'int', name: 'acceptation_status' })
-  acceptationStatus: AcceptationStatus;
+  acceptationStatus: SandreAcceptationStatus;
 
   @Column({ type: 'boolean', name: 'is_conformant' })
   isConformant: boolean;

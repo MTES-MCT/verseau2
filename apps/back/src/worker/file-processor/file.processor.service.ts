@@ -10,8 +10,7 @@ import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { QueueService } from '@queue/queue.service';
 import { QueueName } from '@queue/queue';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus } from '@lib/dossier';
-import { AcceptationStatus } from '@dossier/controle/technique/sandre/sandre';
+import { DepotStep, DepotStatus, SandreAcceptationStatus } from '@lib/dossier';
 
 @Injectable()
 export class FileProcessorService implements AsyncTask<FichierDeDepot> {
@@ -59,7 +58,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       // Controle SANDRE
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Parser SANDRE en cours`);
       const sandreControle = await this.controleSandreService.execute(file, fichierDeDepot);
-      if (sandreControle?.acceptationStatus === AcceptationStatus.NON_CONFORMANT) {
+      if (sandreControle?.acceptationStatus === SandreAcceptationStatus.NON_CONFORMANT) {
         await this.depotService.update(fichierDeDepot.depotId, {
           status: DepotStatus.FAILED,
           step: DepotStep.PARSER_SANDRE_FAILED,
