@@ -31,27 +31,20 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     });
 
     try {
-      this.logger.log('Downloading file', fichierDeDepot.filePath);
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Downloading file`, fichierDeDepot.filePath);
       const file = await this.s3.download(fichierDeDepot.filePath);
-
-      this.logger.log('File downloaded', {
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - File downloaded`, {
         fileSize: `${Math.round((file.length / 1024 / 1024) * 100) / 100} MB`,
       });
-
-      // Controle SANDRE
-      const sandreControle = await this.controleSandreService.execute(file, fichierDeDepot);
-      if (sandreControle?.acceptationStatus === AcceptationStatus.NON_CONFORMANT) {
-        await this.depotService.update(fichierDeDepot.depotId, {
-          status: DepotStatus.FAILED,
-          step: DepotStep.PARSER_SANDRE_FAILED,
-        });
-        return;
-      }
 
       const xmlObj = await parseScenarioAssainissementXml(file.toString());
 
       // Controle V1
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Controle V1 en cours`);
       const controles = await this.controleV1Service.execute(fichierDeDepot.depotId, xmlObj);
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Controle V1 result`, {
+        success: controles.every((controle) => controle.success),
+      });
 
       //TODO : Voir les cas d'erreur bloquante
       // const hasFailedControle = controles.some((controle) => controle.success === false);
@@ -62,6 +55,23 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       //   });
       //   return;
       // }
+
+      // Controle SANDRE
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Parser SANDRE en cours`);
+      const sandreControle = await this.controleSandreService.execute(file, fichierDeDepot);
+      if (sandreControle?.acceptationStatus === AcceptationStatus.NON_CONFORMANT) {
+        await this.depotService.update(fichierDeDepot.depotId, {
+          status: DepotStatus.FAILED,
+          step: DepotStep.PARSER_SANDRE_FAILED,
+        });
+        this.logger.log(`Depot ${fichierDeDepot.depotId} - Parser SANDRE result`, {
+          acceptationStatus: sandreControle?.acceptationStatus,
+        });
+        return;
+      }
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Parser SANDRE result`, {
+        acceptationStatus: sandreControle?.acceptationStatus,
+      });
 
       await this.depotService.update(fichierDeDepot.depotId, {
         status: DepotStatus.PROCESSING,

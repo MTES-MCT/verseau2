@@ -22,7 +22,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
 
   async findAllDepotsByAdmin(): Promise<DepotModel[]> {
     return await this.find({
-      relations: ['user', 'controles'],
+      relations: ['user'],
       order: {
         createdAt: 'DESC',
       },
