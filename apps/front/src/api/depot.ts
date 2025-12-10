@@ -1,4 +1,5 @@
 import type { Depot, Controle } from '../types/depot';
+import { getCurrentFakeToken } from '../temp/fakeAuth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -14,11 +15,17 @@ export class ApiError extends Error {
   }
 }
 
+const getToken = () => {
+  // TODO: Supprimer le getCurrentFakeToken quand OIDC est disponible
+  return getCurrentFakeToken();
+};
+
 export async function fetchDepots(): Promise<Depot[]> {
   const response = await fetch(`${API_BASE_URL}/admin/depot`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
     },
     credentials: 'include',
   });
@@ -35,6 +42,7 @@ export async function fetchControles(depotId: string): Promise<Controle[]> {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
     },
     credentials: 'include',
   });
@@ -53,6 +61,9 @@ export async function uploadDepot(file: File): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/depot/upload`, {
     method: 'POST',
     body: formData,
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+    },
     credentials: 'include',
   });
 

@@ -8,7 +8,9 @@ import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.
 export class ControleController {
   constructor(@Inject(ControleGateway) private readonly controleGateway: ControleGateway) {}
 
-  @UseGuards(AuthenticationGuard, HasUserAccessToDepotGuard)
+  // TODO: Ajouter le guard HasUserAccessToDepotGuard
+  // @UseGuards(AuthenticationGuard, HasUserAccessToDepotGuard)
+  @UseGuards(AuthenticationGuard)
   @Get(':depotId/controle')
   async getControle(@Param('depotId') depotId: string): Promise<ControleDto[]> {
     return this.controleGateway.findByDepotId(depotId);

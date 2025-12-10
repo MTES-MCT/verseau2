@@ -9,8 +9,8 @@ export const createAuthenticationService = (configuration: Configuration): Authe
   return new AuthenticationService(configuration);
 };
 
-export const createAuthenticationMockService = (): Authentication => {
-  return new AuthenticationMockService();
+export const createAuthenticationMockService = (configService: ConfigService): Authentication => {
+  return new AuthenticationMockService(configService);
 };
 const logger = new LoggerService('AuthenticationFactory');
 export const createAuthenticationProviders = () => [
@@ -34,7 +34,7 @@ export const createAuthenticationProviders = () => [
       const useMock = configService.get<string>('OIDC_MOCK') === 'true';
       if (useMock) {
         logger.warn('MOCK AUTHENTICATION SERVICE IN USE');
-        return createAuthenticationMockService();
+        return createAuthenticationMockService(configService);
       }
       return createAuthenticationService(configuration);
     },
