@@ -1,4 +1,4 @@
-import sax = require('sax');
+import * as sax from 'sax';
 import { SandreTags } from './sandreConstants';
 import {
   Analyse,

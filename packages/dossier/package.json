@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
