@@ -3,6 +3,7 @@ import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus } from '
 
 export interface DepotDto extends BaseEntity {
   id: string;
+  numeroDepotVerseau1?: number;
   nomOriginalFichier: string;
   path?: string;
   tailleFichier: number;

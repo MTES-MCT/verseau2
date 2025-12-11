@@ -9,6 +9,9 @@ export class DepotEntity extends BaseEntity {
   @PrimaryColumn()
   declare id: string;
 
+  @Column({ type: 'int', name: 'numero_depot_verseau_1', nullable: true })
+  numeroDepotVerseau1?: number;
+
   @Column({ type: 'varchar', name: 'nom_original_fichier' })
   nomOriginalFichier: string;
 

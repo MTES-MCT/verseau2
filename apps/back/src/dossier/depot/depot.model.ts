@@ -3,6 +3,7 @@ import { DepotEntity } from './depot.entity';
 export type DepotModel = Pick<
   DepotEntity,
   | 'id'
+  | 'numeroDepotVerseau1'
   | 'nomOriginalFichier'
   | 'tailleFichier'
   | 'path'
