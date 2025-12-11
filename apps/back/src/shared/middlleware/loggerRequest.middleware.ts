@@ -10,14 +10,13 @@ export class LoggerRequestMiddleware implements NestMiddleware {
   }
   use(req: CustomRequest, res: Response, next: NextFunction) {
     const { method, originalUrl } = req;
-    const userAgent = req.get('user-agent') || '';
     const now = Date.now();
 
     res.on('finish', () => {
       const { statusCode } = res;
       const responseTime = Date.now() - now;
       this.logger.log(
-        `cid: ${req.correlationId} - userId: ${req.user?.id} - ${method} ${originalUrl} - ${statusCode} - ${responseTime}ms - ${userAgent}`,
+        `cid: ${req.correlationId} - userId: ${req.user?.id} - ${method} ${originalUrl} - ${statusCode} - ${responseTime}ms`,
       );
     });
     next();
