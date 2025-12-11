@@ -12,7 +12,7 @@ export function TemporaryFakeTokenInput({ className }: Props) {
     <div className={className}>
       <div className="fr-input-group">
         <label className="fr-label" htmlFor="fake-token-input">
-          Jeton temporaire (OIDC_FAKE_TOKEN)
+          Jeton temporaire
         </label>
         <input
           id="fake-token-input"
@@ -22,10 +22,6 @@ export function TemporaryFakeTokenInput({ className }: Props) {
           value={fakeToken}
           onChange={(event) => setFakeToken(event.target.value)}
         />
-        <p className="fr-hint-text">
-          Le jeton est enregistré dans le stockage local ({FAKE_TOKEN_STORAGE_KEY}) le temps de la session et sera
-          envoyé en en-tête Authorization.
-        </p>
       </div>
     </div>
   );

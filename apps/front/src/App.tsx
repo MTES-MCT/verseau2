@@ -3,26 +3,26 @@ import { Dashboard } from './pages/Dashboard';
 import { ControlePage } from './pages/Controle';
 import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
-import { TemporaryFakeTokenInput } from './components/TemporaryFakeTokenInput';
+import { AppHeader } from './components/Header';
+import { Breadcrumb } from './components/Breadcrumb';
 import './App.css';
+import { fr } from '@codegouvfr/react-dsfr';
 
 function App() {
   return (
     <BrowserRouter>
-      <header className="fr-container fr-my-2w">
-        <div className="fr-grid-row fr-grid-row--middle">
-          <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
-            {/* TODO: Supprimer le component TemporaryFakeTokenInput quand OIDC est disponible */}
-            <TemporaryFakeTokenInput />
-          </div>
-        </div>
-      </header>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/controle/:depotId" element={<ControlePage />} />
-        <Route path="/depot/upload" element={<DepotUploadPage />} />
-        <Route path="/depot/upload/recap" element={<DepotUploadRecapPage />} />
-      </Routes>
+      <AppHeader />
+      <div className={fr.cx('fr-container')}>
+        <Breadcrumb />
+        <main className={fr.cx('fr-py-4w', 'fr-px-0')}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/controle/:depotId" element={<ControlePage />} />
+            <Route path="/depot/upload" element={<DepotUploadPage />} />
+            <Route path="/depot/upload/recap" element={<DepotUploadRecapPage />} />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   );
 }

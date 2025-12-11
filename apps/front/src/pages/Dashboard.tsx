@@ -104,53 +104,25 @@ export function Dashboard() {
 
   return (
     <>
-      <div className="fr-mb-4w">
-        <div
-          style={{
-            backgroundColor: 'var(--background-action-high-blue-france)',
-            height: '40px',
-          }}
-          className="fr-mb-1w"
-        ></div>
-        <div className="fr-container">
-          <div
-            className="fr-grid-row fr-grid-row--middle fr-mb-2w"
-            style={{ borderBottom: '2px solid black', paddingBottom: '1rem' }}
-          >
-            <div className="fr-col">
-              <h2 className="fr-h4 fr-mb-0">
-                <span className={fr.cx('ri-dashboard-2-line')} aria-hidden="true"></span>
-                Autosurveillance des systèmes d'assainissement — Tableau de bord
-              </h2>
-            </div>
-            <div className="fr-col-auto">
-              <Link to="/depot/upload" className="fr-btn fr-btn--secondary fr-btn--icon-left fr-icon-upload-2-line">
-                Déposer vos données d'autosurveillance
-              </Link>
-            </div>
-          </div>
-        </div>
+      <div>
+        <div className="fr-grid-row fr-grid-row--gutters">
+          <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
 
-        <div className="fr-container fr-mb-4w">
-          <div className="fr-grid-row fr-grid-row--gutters">
-            <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
+          <StatCard
+            count={depots.filter((depot: DepotDto) => depot.status === 'PENDING').length}
+            label="Bilans en attente"
+            icon={fr.cx('ri-hourglass-line')}
+          />
 
-            <StatCard
-              count={depots.filter((depot: DepotDto) => depot.status === 'PENDING').length}
-              label="Bilans en attente"
-              icon={fr.cx('ri-hourglass-line')}
-            />
-
-            <StatCard
-              count={depots.filter((depot: DepotDto) => depot.status === 'FAILED').length}
-              label="Bilans écartés par le SPE"
-              icon={fr.cx('ri-prohibited-2-line')}
-            />
-          </div>
+          <StatCard
+            count={depots.filter((depot: DepotDto) => depot.status === 'FAILED').length}
+            label="Bilans écartés par le SPE"
+            icon={fr.cx('ri-prohibited-2-line')}
+          />
         </div>
       </div>
 
-      <div className="fr-container fr-py-2w">
+      <div className={fr.cx('fr-py-2w')}>
         <div className="fr-mb-2w">
           <p className="fr-text--sm">
             Affichage de {depots.length} entrée{depots.length > 1 ? 's' : ''}
@@ -163,6 +135,7 @@ export function Dashboard() {
           bordered
           headers={['#', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
           data={tableData}
+          noScroll={false}
         />
       </div>
     </>
