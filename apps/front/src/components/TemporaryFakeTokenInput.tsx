@@ -1,5 +1,5 @@
 // Temporary component to capture the shared fake token while OIDC is offline.
-import { FAKE_TOKEN_STORAGE_KEY, useFakeToken } from '../temp/fakeAuth';
+import { useFakeToken } from '../temp/fakeAuth';
 
 type Props = {
   className?: string;
