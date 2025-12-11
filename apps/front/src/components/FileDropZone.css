@@ -1,0 +1,66 @@
+.drop-zone {
+  border: 2px dashed var(--border-default-grey);
+  background-color: var(--background-default-grey);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease-in-out;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.drop-zone:hover {
+  background-color: var(--background-alt-blue-ecume);
+  border-color: var(--border-active-blue-france);
+}
+
+.drop-zone.is-dragged-over {
+  border: 2px dashed var(--border-active-blue-france);
+  background-color: var(--background-alt-blue-ecume);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.drop-zone .fr-upload-group {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.drop-zone .fr-upload-group .fr-hint-text {
+  color: var(--text-default-grey);
+  font-size: 0.875rem;
+}
+
+.drop-zone.is-dragged-over .fr-upload-group .fr-hint-text {
+  color: var(--text-action-high-blue-france);
+}
+
+.drop-zone-instruction {
+  color: var(--text-default-grey);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.drop-zone.is-dragged-over .drop-zone-instruction {
+  color: var(--text-action-high-blue-france);
+  font-weight: 600;
+}
+
+/* Masquer le texte "No file chosen" par défaut du navigateur */
+.drop-zone .fr-upload-group input[type="file"] {
+  color: transparent;
+}
+
+.drop-zone .fr-upload-group input[type="file"]::-webkit-file-upload-button {
+  color: initial;
+}
+
+/* Pour Firefox */
+.drop-zone .fr-upload-group input[type="file"]::file-selector-button {
+  color: initial;
+}
