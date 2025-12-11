@@ -23,11 +23,10 @@ export function TemporaryFakeTokenInput({ className }: Props) {
           onChange={(event) => setFakeToken(event.target.value)}
         />
         <p className="fr-hint-text">
-          Le jeton est enregistré dans le stockage local ({FAKE_TOKEN_STORAGE_KEY}) le temps de la
-          session et sera envoyé en en-tête Authorization.
+          Le jeton est enregistré dans le stockage local ({FAKE_TOKEN_STORAGE_KEY}) le temps de la session et sera
+          envoyé en en-tête Authorization.
         </p>
       </div>
     </div>
   );
 }
-

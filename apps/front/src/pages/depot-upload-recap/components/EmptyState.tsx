@@ -1,9 +1,9 @@
-import { Alert } from '@codegouvfr/react-dsfr/Alert'
-import { Button } from '@codegouvfr/react-dsfr/Button'
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 
 type EmptyStateProps = {
-  onBack: () => void
-}
+  onBack: () => void;
+};
 
 export function EmptyState({ onBack }: EmptyStateProps) {
   return (
@@ -19,7 +19,5 @@ export function EmptyState({ onBack }: EmptyStateProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }
-
-

@@ -1,15 +1,15 @@
-import { Badge } from '@codegouvfr/react-dsfr/Badge'
-import { RecapCard } from './RecapCard'
+import { Badge } from '@codegouvfr/react-dsfr/Badge';
+import { RecapCard } from './RecapCard';
 
 type RecapSummaryCardProps = {
-  systemName?: string
-  systemCode?: string
-  fileName: string
-  totalAnalyses: number
-}
+  systemName?: string;
+  systemCode?: string;
+  fileName: string;
+  totalAnalyses: number;
+};
 
 export function RecapSummaryCard({ systemName, systemCode, fileName, totalAnalyses }: RecapSummaryCardProps) {
-  const hasAnalyses = totalAnalyses > 0
+  const hasAnalyses = totalAnalyses > 0;
 
   return (
     <RecapCard className="fr-mb-4w" tone="muted">
@@ -25,8 +25,8 @@ export function RecapSummaryCard({ systemName, systemCode, fileName, totalAnalys
       </div>
 
       <p className="fr-mb-4w fr-text-default--grey">
-        Voici les informations principales concernant le dépôt que vous venez d&apos;effectuer. Vous pouvez vérifier
-        les détails avant de finaliser ou revenir à l&apos;étape précédente.
+        Voici les informations principales concernant le dépôt que vous venez d&apos;effectuer. Vous pouvez vérifier les
+        détails avant de finaliser ou revenir à l&apos;étape précédente.
       </p>
 
       <div className="fr-grid-row fr-grid-row--gutters">
@@ -47,7 +47,5 @@ export function RecapSummaryCard({ systemName, systemCode, fileName, totalAnalys
         </div>
       </div>
     </RecapCard>
-  )
+  );
 }
-
-

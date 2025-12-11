@@ -1,8 +1,8 @@
-import { RecapCard } from './RecapCard'
+import { RecapCard } from './RecapCard';
 
 type ParamsTagsProps = {
-  params: string[]
-}
+  params: string[];
+};
 
 export function ParamsTags({ params }: ParamsTagsProps) {
   return (
@@ -21,7 +21,5 @@ export function ParamsTags({ params }: ParamsTagsProps) {
         )}
       </div>
     </RecapCard>
-  )
+  );
 }
-
-

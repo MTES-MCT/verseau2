@@ -90,11 +90,16 @@ export function ControlePage() {
       </div>
 
       {/* Accordion pour les contrôles V1 */}
-      {controlesV1.length > 0 &&  <div className={fr.cx("fr-mb-4w")}> <ControleGroup title="Contrôle V1" controles={controlesV1} /></div>}
+      {controlesV1.length > 0 && (
+        <div className={fr.cx('fr-mb-4w')}>
+          {' '}
+          <ControleGroup title="Contrôle V1" controles={controlesV1} />
+        </div>
+      )}
 
       {/* Accordion pour les contrôles Sandre */}
       {sandreControlesMapped.length > 0 && (
-        <div className={fr.cx("fr-mb-4w")}>
+        <div className={fr.cx('fr-mb-4w')}>
           <ControleGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
         </div>
       )}

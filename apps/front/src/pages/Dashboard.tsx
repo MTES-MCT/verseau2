@@ -1,39 +1,55 @@
-import { Link } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
-import { Table } from '@codegouvfr/react-dsfr/Table'
-import { Badge } from '@codegouvfr/react-dsfr/Badge'
-import { Alert } from '@codegouvfr/react-dsfr/Alert'
-import type { DepotDto, DepotStatus } from '@lib/dossier'
-import { fetchDepots, ApiError } from '../api/depot'
-import { StatCard } from '../components/StatCard'
-import { fr } from '@codegouvfr/react-dsfr'
+import { Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Badge } from '@codegouvfr/react-dsfr/Badge';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import type { DepotDto, DepotStatus } from '@lib/dossier';
+import { fetchDepots, ApiError } from '../api/depot';
+import { StatCard } from '../components/StatCard';
+import { fr } from '@codegouvfr/react-dsfr';
 
-const DEPOT_POLLING_INTERVAL_MS = 2000
+const DEPOT_POLLING_INTERVAL_MS = 2000;
 
 function getStatusBadge(status: DepotStatus) {
   switch (status) {
     case 'SUCCESS':
-      return <Badge severity="success" small>Valide</Badge>
+      return (
+        <Badge severity="success" small>
+          Valide
+        </Badge>
+      );
     case 'FAILED':
-      return <Badge severity="error" small>Écarte</Badge>
+      return (
+        <Badge severity="error" small>
+          Écarte
+        </Badge>
+      );
     case 'PROCESSING':
-      return <Badge severity="info" small>En cours</Badge>
+      return (
+        <Badge severity="info" small>
+          En cours
+        </Badge>
+      );
     case 'PENDING':
-      return <Badge severity="warning" small>En attente</Badge>
+      return (
+        <Badge severity="warning" small>
+          En attente
+        </Badge>
+      );
     default:
-      return <Badge small>{status}</Badge>
+      return <Badge small>{status}</Badge>;
   }
 }
 
 function formatDate(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  })
+  });
 }
 
 export function Dashboard() {
@@ -46,37 +62,33 @@ export function Dashboard() {
     queryFn: fetchDepots,
     refetchInterval: ({ state }) => {
       const hasPendingOrProcessing = state.data?.some(
-        (depot: DepotDto) => depot.status === 'PROCESSING' || depot.status === 'PENDING'
-      )
+        (depot: DepotDto) => depot.status === 'PROCESSING' || depot.status === 'PENDING',
+      );
 
-      return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false
+      return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false;
     },
-  })
+  });
 
   const errorMessage = error
     ? error instanceof ApiError
       ? `Erreur ${error.status}: ${error.message}`
       : 'Une erreur est survenue lors du chargement des dépôts'
-    : null
+    : null;
 
   if (isLoading) {
     return (
       <div className="fr-container fr-py-6w">
         <p>Chargement des dépôts...</p>
       </div>
-    )
+    );
   }
 
   if (errorMessage) {
     return (
       <div className="fr-container fr-py-6w">
-        <Alert
-          severity="error"
-          title="Erreur"
-          description={errorMessage}
-        />
+        <Alert severity="error" title="Erreur" description={errorMessage} />
       </div>
-    )
+    );
   }
 
   const tableData = depots.map((depot: DepotDto) => [
@@ -87,26 +99,32 @@ export function Dashboard() {
     depot.createdAt ? formatDate(depot.createdAt) : '-',
     <Link to={`/controle/${depot.id}`} className="fr-btn fr-btn--sm fr-btn--tertiary-no-outline">
       Voir
-    </Link>
-  ])
+    </Link>,
+  ]);
 
   return (
     <>
       <div className="fr-mb-4w">
-        <div style={{ backgroundColor: 'var(--background-action-high-blue-france)', height: '40px' }} className="fr-mb-1w"></div>
+        <div
+          style={{
+            backgroundColor: 'var(--background-action-high-blue-france)',
+            height: '40px',
+          }}
+          className="fr-mb-1w"
+        ></div>
         <div className="fr-container">
-          <div className="fr-grid-row fr-grid-row--middle fr-mb-2w" style={{ borderBottom: '2px solid black', paddingBottom: '1rem' }}>
+          <div
+            className="fr-grid-row fr-grid-row--middle fr-mb-2w"
+            style={{ borderBottom: '2px solid black', paddingBottom: '1rem' }}
+          >
             <div className="fr-col">
               <h2 className="fr-h4 fr-mb-0">
-                <span className={fr.cx("ri-dashboard-2-line")} aria-hidden="true"></span>
+                <span className={fr.cx('ri-dashboard-2-line')} aria-hidden="true"></span>
                 Autosurveillance des systèmes d'assainissement — Tableau de bord
               </h2>
             </div>
             <div className="fr-col-auto">
-              <Link
-                to="/depot/upload"
-                className="fr-btn fr-btn--secondary fr-btn--icon-left fr-icon-upload-2-line"
-              >
+              <Link to="/depot/upload" className="fr-btn fr-btn--secondary fr-btn--icon-left fr-icon-upload-2-line">
                 Déposer vos données d'autosurveillance
               </Link>
             </div>
@@ -115,12 +133,19 @@ export function Dashboard() {
 
         <div className="fr-container fr-mb-4w">
           <div className="fr-grid-row fr-grid-row--gutters">
-            
-            <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx("ri-folder-2-line")} />
-            
-            <StatCard count={depots.filter((depot: DepotDto) => depot.status === 'PENDING').length} label="Bilans en attente" icon={fr.cx("ri-hourglass-line")} />
+            <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
 
-            <StatCard count={depots.filter((depot: DepotDto) => depot.status === 'FAILED').length} label="Bilans écartés par le SPE" icon={fr.cx("ri-prohibited-2-line")} />
+            <StatCard
+              count={depots.filter((depot: DepotDto) => depot.status === 'PENDING').length}
+              label="Bilans en attente"
+              icon={fr.cx('ri-hourglass-line')}
+            />
+
+            <StatCard
+              count={depots.filter((depot: DepotDto) => depot.status === 'FAILED').length}
+              label="Bilans écartés par le SPE"
+              icon={fr.cx('ri-prohibited-2-line')}
+            />
           </div>
         </div>
       </div>
@@ -141,5 +166,5 @@ export function Dashboard() {
         />
       </div>
     </>
-  )
+  );
 }

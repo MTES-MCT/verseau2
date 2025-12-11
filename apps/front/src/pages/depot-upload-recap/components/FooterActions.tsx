@@ -1,10 +1,10 @@
-import { Button } from '@codegouvfr/react-dsfr/Button'
+import { Button } from '@codegouvfr/react-dsfr/Button';
 
 type FooterActionsProps = {
-  onBack: () => void
-  onFinalize: () => void
-  finalizeDisabled?: boolean
-}
+  onBack: () => void;
+  onFinalize: () => void;
+  finalizeDisabled?: boolean;
+};
 
 export function FooterActions({ onBack, onFinalize, finalizeDisabled }: FooterActionsProps) {
   return (
@@ -16,18 +16,11 @@ export function FooterActions({ onBack, onFinalize, finalizeDisabled }: FooterAc
           </Button>
         </div>
         <div className="fr-col-auto">
-          <Button
-            iconId="ri-arrow-right-line"
-            iconPosition="right"
-            onClick={onFinalize}
-            disabled={finalizeDisabled}
-          >
+          <Button iconId="ri-arrow-right-line" iconPosition="right" onClick={onFinalize} disabled={finalizeDisabled}>
             Étape 3 finaliser le dépôt
           </Button>
         </div>
       </div>
     </section>
-  )
+  );
 }
-
-

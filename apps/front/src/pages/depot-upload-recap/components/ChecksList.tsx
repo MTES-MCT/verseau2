@@ -1,4 +1,4 @@
-import { RecapCard } from './RecapCard'
+import { RecapCard } from './RecapCard';
 
 export function ChecksList() {
   return (
@@ -24,7 +24,5 @@ export function ChecksList() {
         </p>
       </div>
     </RecapCard>
-  )
+  );
 }
-
-

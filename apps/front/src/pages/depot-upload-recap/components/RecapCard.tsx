@@ -1,12 +1,12 @@
-import { cx } from '@codegouvfr/react-dsfr/tools/cx'
-import type { ReactNode } from 'react'
-import './RecapCard.css'
+import { cx } from '@codegouvfr/react-dsfr/tools/cx';
+import type { ReactNode } from 'react';
+import './RecapCard.css';
 
 type RecapCardProps = {
-  children: ReactNode
-  className?: string
-  tone?: 'default' | 'muted'
-}
+  children: ReactNode;
+  className?: string;
+  tone?: 'default' | 'muted';
+};
 
 export function RecapCard({ children, className = '', tone = 'default' }: RecapCardProps) {
   return (
@@ -22,6 +22,5 @@ export function RecapCard({ children, className = '', tone = 'default' }: RecapC
     >
       {children}
     </section>
-  )
+  );
 }
-

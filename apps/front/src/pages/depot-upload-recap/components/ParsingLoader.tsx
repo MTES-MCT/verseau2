@@ -1,8 +1,8 @@
-import { RecapHeader } from './RecapHeader'
+import { RecapHeader } from './RecapHeader';
 
 type ParsingLoaderProps = {
-  steps: string[]
-}
+  steps: string[];
+};
 
 export function ParsingLoader({ steps }: ParsingLoaderProps) {
   return (
@@ -15,7 +15,5 @@ export function ParsingLoader({ steps }: ParsingLoaderProps) {
         <p className="fr-mb-0 fr-text--sm fr-text-default--grey">Nous préparons le récapitulatif.</p>
       </div>
     </div>
-  )
+  );
 }
-
-

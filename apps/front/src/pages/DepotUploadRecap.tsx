@@ -7,14 +7,10 @@ import {
   ParsingLoader,
   RecapHeader,
   RecapSummaryCard,
-} from './depot-upload-recap/components'
-import { useDepotRecap } from './depot-upload-recap/useDepotRecap'
+} from './depot-upload-recap/components';
+import { useDepotRecap } from './depot-upload-recap/useDepotRecap';
 
-const steps = [
-  'Sélection du flux et fichier',
-  'Récapitulatif',
-  'Envoi du fichier',
-]
+const steps = ['Sélection du flux et fichier', 'Récapitulatif', 'Envoi du fichier'];
 
 export function DepotUploadRecapPage() {
   const {
@@ -27,21 +23,21 @@ export function DepotUploadRecapPage() {
     uploadMutation,
     handleReturn,
     handleFinalize,
-  } = useDepotRecap()
+  } = useDepotRecap();
 
   if (!hasFile) {
-    return <EmptyState onBack={handleReturn} />
+    return <EmptyState onBack={handleReturn} />;
   }
 
   if (parseMutation.isPending || (!parseMutation.data && !parseMutation.isError)) {
-    return <ParsingLoader steps={steps} />
+    return <ParsingLoader steps={steps} />;
   }
 
   if (parseMutation.isError) {
     const errorMessage = `Le fichier n'a pas pu être parsé. Revenez à l'étape 1 pour sélectionner un fichier XML valide.${
       parseMutation.error instanceof Error ? ` ${parseMutation.error.message}` : ''
-    }`
-    return <ErrorState message={errorMessage} onBack={handleReturn} />
+    }`;
+    return <ErrorState message={errorMessage} onBack={handleReturn} />;
   }
 
   return (
@@ -60,12 +56,8 @@ export function DepotUploadRecapPage() {
 
         <ChecksList />
 
-        <FooterActions
-          onBack={handleReturn}
-          onFinalize={handleFinalize}
-          finalizeDisabled={uploadMutation.isPending}
-        />
+        <FooterActions onBack={handleReturn} onFinalize={handleFinalize} finalizeDisabled={uploadMutation.isPending} />
       </div>
     </div>
-  )
+  );
 }

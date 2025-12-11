@@ -1,13 +1,13 @@
-import { Stepper } from '@codegouvfr/react-dsfr/Stepper'
+import { Stepper } from '@codegouvfr/react-dsfr/Stepper';
 
 type RecapHeaderProps = {
-  steps: string[]
-  currentStep: number
-  subtitle: string
-}
+  steps: string[];
+  currentStep: number;
+  subtitle: string;
+};
 
 export function RecapHeader({ steps, currentStep, subtitle }: RecapHeaderProps) {
-  const nextTitle = steps[currentStep] ?? steps[currentStep - 1]
+  const nextTitle = steps[currentStep] ?? steps[currentStep - 1];
 
   return (
     <header className="fr-mb-4w">
@@ -24,7 +24,5 @@ export function RecapHeader({ steps, currentStep, subtitle }: RecapHeaderProps) 
         />
       </div>
     </header>
-  )
+  );
 }
-
-

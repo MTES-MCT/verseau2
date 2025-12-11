@@ -1,10 +1,10 @@
-import { Alert } from '@codegouvfr/react-dsfr/Alert'
-import { Button } from '@codegouvfr/react-dsfr/Button'
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 
 type ErrorStateProps = {
-  message: string
-  onBack: () => void
-}
+  message: string;
+  onBack: () => void;
+};
 
 export function ErrorState({ message, onBack }: ErrorStateProps) {
   return (
@@ -16,7 +16,5 @@ export function ErrorState({ message, onBack }: ErrorStateProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }
-
-
