@@ -75,3 +75,5 @@ tsconfig.tsbuildinfo
 coverage
 
 script/
+
+.npmrc
