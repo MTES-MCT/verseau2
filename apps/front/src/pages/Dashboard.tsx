@@ -3,12 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import type { DepotDto, DepotStatus } from '@lib/dossier';
 import { fetchDepots, ApiError } from '../api/depot';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
+import { usePagination } from '../hooks/usePagination';
 
 const DEPOT_POLLING_INTERVAL_MS = 2000;
+const PAGE_SIZE = 10;
 
 function getStatusBadge(status: DepotStatus) {
   switch (status) {
@@ -69,6 +72,8 @@ export function Dashboard() {
     },
   });
 
+  const { currentPage, totalPages, paginatedData, getPageLinkProps } = usePagination(depots, PAGE_SIZE, 1);
+
   const errorMessage = error
     ? error instanceof ApiError
       ? `Erreur ${error.status}: ${error.message}`
@@ -91,7 +96,7 @@ export function Dashboard() {
     );
   }
 
-  const tableData = depots.map((depot: DepotDto) => [
+  const tableData = paginatedData.map((depot: DepotDto) => [
     depot.id,
     depot.nomOriginalFichier,
     getStatusBadge(depot.status),
@@ -125,7 +130,8 @@ export function Dashboard() {
       <div className={fr.cx('fr-py-2w')}>
         <div className="fr-mb-2w">
           <p className="fr-text--sm">
-            Affichage de {depots.length} entrée{depots.length > 1 ? 's' : ''}
+            Affichage de {(currentPage - 1) * PAGE_SIZE + 1} à {Math.min(currentPage * PAGE_SIZE, depots.length)} sur{' '}
+            {depots.length} entrée{depots.length > 1 ? 's' : ''}
           </p>
         </div>
 
@@ -137,6 +143,17 @@ export function Dashboard() {
           data={tableData}
           noScroll={false}
         />
+
+        {totalPages > 1 && (
+          <div className="fr-mt-4w">
+            <Pagination
+              count={totalPages}
+              defaultPage={currentPage}
+              getPageLinkProps={getPageLinkProps}
+              showFirstLast={true}
+            />
+          </div>
+        )}
       </div>
     </>
   );
