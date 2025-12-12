@@ -1,8 +1,9 @@
 import { fr } from '@codegouvfr/react-dsfr';
-import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import type { ControleDto } from '@lib/dossier';
+import { useState } from 'react';
 import './ControleGroup.css';
 
 type ControleGroupProps = {
@@ -25,7 +26,9 @@ function getResultBadge(success: boolean) {
   );
 }
 
-export function ControleGroup({ title, controles, defaultExpanded = false }: ControleGroupProps) {
+export function ControleGroup({ title, controles }: ControleGroupProps) {
+  const [showSuccess, setShowSuccess] = useState(false);
+
   if (controles.length === 0) {
     return null;
   }
@@ -33,35 +36,37 @@ export function ControleGroup({ title, controles, defaultExpanded = false }: Con
   const successCount = controles.filter((controle) => controle.success).length;
   const failCount = controles.length - successCount;
 
+  const filteredControles = showSuccess ? controles : controles.filter((controle) => !controle.success);
+
   return (
-    <Accordion
-      label={
-        <div className="fr-flex fr-justify-content-between fr-align-items-center fr-width-full">
-          <span>{title}</span>
-          <div>
-            <Badge severity="success" className="fr-mr-1w">
-              {successCount} succès
-            </Badge>
-            <Badge severity="error">
-              {failCount} échec{failCount > 1 ? 's' : ''}
-            </Badge>
-          </div>
+    <div className="controle-group">
+      <div className="fr-flex fr-justify-content-between fr-align-items-center fr-width-full fr-mb-2w">
+        <span>{title}</span>
+        <div>
+          <Badge severity="success" className="fr-mr-1w">
+            {successCount} succès
+          </Badge>
+          <Badge severity="error">
+            {failCount} échec{failCount > 1 ? 's' : ''}
+          </Badge>
         </div>
-      }
-      defaultExpanded={defaultExpanded}
-      classes={{
-        collapse: fr.cx('fr-p-0', 'fr-m-0'),
-      }}
-    >
+      </div>
+      <Button priority="secondary" onClick={() => setShowSuccess(!showSuccess)} className="fr-mb-2w">
+        {showSuccess ? 'Masquer les succès' : 'Tout afficher'}
+      </Button>
       <Table
         caption={`Liste des contrôles ${title}`}
         noCaption
         bordered
         headers={['Contrôle', 'Résultat', 'Message']}
-        data={controles.map((controle) => [controle.name, getResultBadge(controle.success), controle.message || '-'])}
+        data={filteredControles.map((controle) => [
+          controle.name,
+          getResultBadge(controle.success),
+          controle.message || '-',
+        ])}
         className={`${fr.cx('fr-p-0', 'fr-m-0')} table-no-margin-and-padding`}
       />
-    </Accordion>
+    </div>
   );
 }
 

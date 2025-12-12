@@ -1,6 +1,5 @@
 import { useParams, Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
 import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
@@ -67,32 +66,16 @@ export function ControlePage() {
   const controlesV1 = mapControlesV1ToView(controles);
   const sandreControlesMapped = mapSandreControlesToView(sandreControles);
 
-  const successCount = controlesV1.filter((c) => c.success).length;
-  const failCount = controlesV1.length - successCount;
-
   return (
-    <div className="fr-container fr-py-6w">
-      <Link to="/" className="fr-link fr-mb-2w" style={{ display: 'inline-block' }}>
-        ← Retour au dashboard
-      </Link>
-
-      <h1>Contrôles du dépôt</h1>
-      <p className="fr-text--lead">{depotId}</p>
-
-      <div className="fr-mb-4w">
-        <Badge severity="success" className="fr-mr-1w">
-          {successCount} succès
-        </Badge>
-        <Badge severity="error">
-          {failCount} échec{failCount > 1 ? 's' : ''}
-        </Badge>
+    <div className="fr-container">
+      <div className={fr.cx('fr-container')}>
+        <h1>Contrôles du dépôt numéro</h1>
+        <p className={fr.cx('fr-text--lead')}>{depotId}</p>
       </div>
-
       {/* Accordion pour les contrôles V1 */}
       {controlesV1.length > 0 && (
         <div className={fr.cx('fr-mb-4w')}>
-          {' '}
-          <ControleGroup title="Contrôle V1" controles={controlesV1} />
+          <ControleGroup title="Contrôles métiers V1" controles={controlesV1} />
         </div>
       )}
 
