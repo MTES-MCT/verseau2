@@ -22,9 +22,20 @@ import { AuthenticationGuard, REQUEST_USER_KEY } from '@authentication/authentic
 import { AuthenticationMockService } from '@authentication/authentication.mock.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserService } from '@user/user.service';
+import { ConfigService } from '@nestjs/config';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
+import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
+
+class ConfigServiceMock {
+  get(key: string) {
+    if (key === 'OIDC_FAKE_TOKEN') {
+      return 'test-token';
+    }
+    return null;
+  }
+}
 
 class S3Mock implements S3 {
   uploads: Array<{ key: string; body: Buffer | Uint8Array | string; contentType?: string }> = [];
@@ -97,6 +108,15 @@ class AuthenticationGuardMock extends AuthenticationGuard {
   }
 }
 
+class RoseauGatewayMock {
+  findSteuBySandreCda() {
+    return Promise.resolve(null);
+  }
+  findCxnAdmBySteuAndItv() {
+    return Promise.resolve(null);
+  }
+}
+
 describe('Depot upload (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -135,6 +155,8 @@ describe('Depot upload (e2e)', () => {
         { provide: Authentication, useClass: AuthenticationMockService },
         { provide: AuthenticationGuard, useClass: AuthenticationGuardMock },
         { provide: UserService, useClass: UserServiceMock },
+        { provide: RoseauGateway, useClass: RoseauGatewayMock },
+        { provide: ConfigService, useClass: ConfigServiceMock },
       ],
     }).compile();
 

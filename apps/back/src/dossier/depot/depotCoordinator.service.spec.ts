@@ -4,10 +4,20 @@ import { DepotService } from './depot.service';
 import { QueueService } from '@queue/queue.service';
 import { QueueName } from '@queue/queue';
 import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus, DepotDto } from '@lib/dossier';
+import { LoggerService } from '@shared/logger/logger.service';
 
 jest.mock('pg-boss', () => ({}));
 jest.mock('@queue/queue.service', () => ({
   QueueService: jest.fn(),
+}));
+
+jest.mock('@shared/logger/logger.service', () => ({
+  LoggerService: jest.fn().mockImplementation(() => ({
+    log: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  })),
 }));
 
 describe('DepotCoordinatorService', () => {

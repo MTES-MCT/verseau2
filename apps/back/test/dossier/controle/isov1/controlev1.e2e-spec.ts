@@ -198,8 +198,8 @@ describe('ControleV1Service (e2e)', () => {
     it('should pass when MO connection exists', async () => {
       // Seed data
       await seedSteu(dataSource, 'STEU001', '0600000001');
-      await seedItv(dataSource, 'ITV001', 'SIRET123');
-      await seedCxnadm(dataSource, 'CXNADM001', 'STEU001', 'ITV001');
+      await seedItv(dataSource, '1001', 'SIRET123');
+      await seedCxnadm(dataSource, 'CXNADM001', 'STEU001', '1001');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_003');

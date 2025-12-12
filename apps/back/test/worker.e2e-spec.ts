@@ -20,6 +20,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseSandre.entity';
+import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 import type { App } from 'supertest/types';
 
@@ -30,6 +31,7 @@ class S3Mock implements S3 {
   async upload(key: string, body: Buffer | Uint8Array | string): Promise<void> {
     const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
     this.files.set(key, buffer);
+    await Promise.resolve();
   }
 
   async download(key: string): Promise<Buffer> {
@@ -37,6 +39,7 @@ class S3Mock implements S3 {
     if (!file) {
       throw new Error(`File not found: ${key}`);
     }
+    await Promise.resolve();
     return file;
   }
 
@@ -56,19 +59,26 @@ class SftpMock implements Sftp {
       throw new Error('SFTP send failed');
     }
     this.calls.push({ file, depotId });
+    await Promise.resolve();
   }
 }
 
 // Mock QueueService
 class QueueServiceMock {
   calls: Array<{ name: string; data?: object }> = [];
+  shouldFail = false;
 
   async send<TData = object>(name: string, data?: TData): Promise<string | null> {
+    if (this.shouldFail) {
+      throw new Error('Queue send failed');
+    }
     this.calls.push({ name, data: data as object });
+    await Promise.resolve();
     return 'job-id';
   }
 
   async work(): Promise<string> {
+    await Promise.resolve();
     throw new Error('Not implemented in mock');
   }
 }
@@ -78,6 +88,7 @@ class ControleSandreMock {
   acceptationStatus: SandreAcceptationStatus = SandreAcceptationStatus.CONFORMANT;
 
   async execute() {
+    await Promise.resolve();
     return {
       isConformant: this.acceptationStatus === SandreAcceptationStatus.CONFORMANT,
       acceptationStatus: this.acceptationStatus,
@@ -91,7 +102,18 @@ class ControleSandreMock {
 // Mock ControleV1Service
 class ControleV1Mock {
   async execute() {
+    await Promise.resolve();
     return [];
+  }
+}
+
+// Mock RoseauGateway
+class RoseauGatewayMock {
+  findSteuBySandreCda() {
+    return Promise.resolve(null);
+  }
+  findCxnAdmBySteuAndItv() {
+    return Promise.resolve(null);
   }
 }
 
@@ -131,6 +153,7 @@ describe('Worker Service (e2e)', () => {
         { provide: QueueService, useClass: QueueServiceMock },
         { provide: ControleSandreService, useClass: ControleSandreMock },
         { provide: ControleV1Service, useClass: ControleV1Mock },
+        { provide: RoseauGateway, useClass: RoseauGatewayMock },
       ],
     }).compile();
 
@@ -191,54 +214,28 @@ describe('Worker Service (e2e)', () => {
         where: { id: depot.id },
       });
       expect(updatedDepot.status).toBe(DepotStatus.PROCESSING);
-      expect(updatedDepot.step).toBe(DepotStep.READY_FOR_SFTP);
+      expect(updatedDepot.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
 
-      // Verify SFTP job enqueued
-      expect(queueMock.calls).toHaveLength(1);
-      expect(queueMock.calls[0]).toMatchObject({
-        name: QueueName.send_to_sftp,
-        data: {
-          depotId: depot.id,
-          filePath: 'test_file.xml',
-        },
-      });
-    });
-
-    it('should fail when Sandre validation returns NON_CONFORMANT', async () => {
-      // Create depot
-      const depot = await dataSource.getRepository(DepotEntity).save({
-        id: 'dep_test_002',
-        path: 'invalid_file.xml',
-        nomOriginalFichier: 'invalid_file.xml',
-        type: 'application/xml',
-        tailleFichier: 1024,
-        status: DepotStatus.PENDING,
-        step: DepotStep.UPLOADING_TO_S3,
-      });
-
-      // Seed S3 with XML file
-      s3Mock.seed('invalid_file.xml', '<root></root>');
-
-      // Reset mocks
-      queueMock.calls = [];
-      sandreMock.acceptationStatus = SandreAcceptationStatus.NON_CONFORMANT;
-
-      // Process file
-      await fileProcessorService.process({
-        depotId: depot.id,
-        filePath: 'invalid_file.xml',
-        utilisateur: { nom: 'Test', prenom: 'User' },
-      });
-
-      // Verify depot status updated to FAILED
-      const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depot.id },
-      });
-      expect(updatedDepot.status).toBe(DepotStatus.FAILED);
-      expect(updatedDepot.step).toBe(DepotStep.PARSER_SANDRE_FAILED);
-
-      // Verify NO SFTP job enqueued
-      expect(queueMock.calls).toHaveLength(0);
+      // Verify jobs enqueued
+      expect(queueMock.calls).toHaveLength(2);
+      expect(queueMock.calls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: QueueName.controle_v1,
+            data: {
+              depotId: depot.id,
+              filePath: 'test_file.xml',
+            },
+          }),
+          expect.objectContaining({
+            name: QueueName.controle_sandre,
+            data: {
+              depotId: depot.id,
+              filePath: 'test_file.xml',
+            },
+          }),
+        ]),
+      );
     });
 
     it('should handle processing errors gracefully', async () => {
@@ -254,6 +251,7 @@ describe('Worker Service (e2e)', () => {
       });
 
       // Don't seed S3 - file will not be found
+      queueMock.shouldFail = true;
 
       // Process file (should throw)
       await expect(

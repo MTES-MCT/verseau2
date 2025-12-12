@@ -31,9 +31,7 @@ describe('Sandre Parser', () => {
   it('should read the provided XML correctly', async () => {
     const xmlPath = path.join(__dirname, 'xml', '18.6_MO_anonymized.xml');
     const xml = fs.readFileSync(xmlPath, 'utf-8');
-    console.log('Heap memory usage: ', process.memoryUsage().heapUsed / 1024 / 1024, 'MB');
     const result = await parseScenarioAssainissementXml(xml);
-    console.log('Heap memory usage: ', process.memoryUsage().heapUsed / 1024 / 1024, 'MB');
     expect(result).toBeDefined();
   });
 
