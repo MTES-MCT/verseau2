@@ -1,5 +1,6 @@
 import type { ControleDto, ControleSandreDto, ControleName } from '@lib/dossier';
-import { ErrorCode, SandreAcceptationStatus } from '@lib/dossier';
+import { ErrorCode, SandreAcceptationStatus, buildMessage } from '@lib/dossier';
+import type { ControleView } from '../components/ControleGroup';
 
 const acceptationLabel: Record<SandreAcceptationStatus, string> = {
   [SandreAcceptationStatus.WAITING]: 'Acceptation: En attente',
@@ -30,4 +31,21 @@ export function mapSandreControles(controles: ControleSandreDto[]): ControleDto[
       updatedAt: controle.updatedAt,
     };
   });
+}
+
+export function mapControlesV1ToView(controles: ControleDto[]): ControleView[] {
+  return controles.map((controle) => ({
+    name: controle.name,
+    success: controle.success,
+    message: controle.error ? buildMessage(controle.error, controle.errorParams ?? []) : '-',
+  }));
+}
+
+export function mapSandreControlesToView(controles: ControleSandreDto[]): ControleView[] {
+  const dtos = mapSandreControles(controles);
+  return dtos.map((controle) => ({
+    name: controle.name,
+    success: controle.success,
+    message: controle.error ? `${controle.error} - ${controle.errorParams?.join(', ') || ''}` : '-',
+  }));
 }

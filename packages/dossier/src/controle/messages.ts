@@ -1,6 +1,6 @@
 import { ErrorCode } from './error';
 
-export function buildMessage(error: ErrorCode, ...params: string[]): string {
+export function buildMessage(error: ErrorCode | undefined, params: string[]): string {
   switch (error) {
     case ErrorCode.E2_003:
       return `Le code ouvrage ${params[0]} n'existe pas dans la base de données Roseau ! Veuillez vérifier son exactitude ou le créer dans Roseau.`;

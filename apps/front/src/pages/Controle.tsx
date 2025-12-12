@@ -5,7 +5,7 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
 import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
 import { ControleGroup } from '../components/ControleGroup';
-import { mapSandreControles } from './controle.mappers';
+import { mapControlesV1ToView, mapSandreControlesToView } from './controle.mappers';
 import { fr } from '@codegouvfr/react-dsfr';
 
 export function ControlePage() {
@@ -64,12 +64,11 @@ export function ControlePage() {
     );
   }
 
-  const controlesV1 = controles;
+  const controlesV1 = mapControlesV1ToView(controles);
+  const sandreControlesMapped = mapSandreControlesToView(sandreControles);
 
   const successCount = controlesV1.filter((c) => c.success).length;
   const failCount = controlesV1.length - successCount;
-
-  const sandreControlesMapped = mapSandreControles(sandreControles);
 
   return (
     <div className="fr-container fr-py-6w">

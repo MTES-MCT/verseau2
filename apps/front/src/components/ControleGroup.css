@@ -1,0 +1,3 @@
+.table-no-margin-and-padding > table {
+    display: grid;
+}

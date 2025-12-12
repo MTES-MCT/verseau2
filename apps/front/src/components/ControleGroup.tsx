@@ -1,13 +1,17 @@
+import { fr } from '@codegouvfr/react-dsfr';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import type { ControleDto } from '@lib/dossier';
+import './ControleGroup.css';
 
 type ControleGroupProps = {
   title: string;
-  controles: ControleDto[];
+  controles: ControleView[];
   defaultExpanded?: boolean;
 };
+
+export type ControleView = Pick<ControleDto, 'name' | 'success'> & { message: string };
 
 function getResultBadge(success: boolean) {
   return success ? (
@@ -45,19 +49,17 @@ export function ControleGroup({ title, controles, defaultExpanded = false }: Con
         </div>
       }
       defaultExpanded={defaultExpanded}
+      classes={{
+        collapse: fr.cx('fr-p-0', 'fr-m-0'),
+      }}
     >
       <Table
         caption={`Liste des contrôles ${title}`}
         noCaption
         bordered
-        headers={['Contrôle', 'Résultat', 'Code erreur', 'Paramètres']}
-        data={controles.map((controle) => [
-          controle.name,
-          getResultBadge(controle.success),
-          controle.error || '-',
-          controle.errorParams?.join(', ') || '-',
-        ])}
-        fixed
+        headers={['Contrôle', 'Résultat', 'Message']}
+        data={controles.map((controle) => [controle.name, getResultBadge(controle.success), controle.message || '-'])}
+        className={`${fr.cx('fr-p-0', 'fr-m-0')} table-no-margin-and-padding`}
       />
     </Accordion>
   );
