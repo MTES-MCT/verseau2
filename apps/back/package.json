@@ -99,7 +99,9 @@
       "^@dossier/(.*)$": "<rootDir>/dossier/$1",
       "^@referentiel/(.*)$": "<rootDir>/referentiel/$1",
       "^@notification/(.*)$": "<rootDir>/notification/$1",
-      "^@infra/(.*)$": "<rootDir>/infra/$1"
+      "^@infra/(.*)$": "<rootDir>/infra/$1",
+      "^@lib/dossier$": "<rootDir>/../../../packages/dossier/src/index.ts",
+      "^@lib/parser$": "<rootDir>/../../../packages/parser/src/index.ts"
     },
     "coveragePathIgnorePatterns": [
       "/dist/",
