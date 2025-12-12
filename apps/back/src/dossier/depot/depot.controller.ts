@@ -1,4 +1,13 @@
-import { BadRequestException, Controller, Get, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
@@ -70,5 +79,16 @@ export class DepotController {
   async listMyDepots(@AuthenticatedUserDecorator() user: AuthenticatedUser): Promise<DepotDto[]> {
     const userEntity = await this.userService.findBySub(user.cerbereId);
     return this.depotService.findByUserId(userEntity.id);
+  }
+
+  @Get('droits-de-depot')
+  @UseGuards(AuthenticationGuard)
+  async checkDroitsDeDepot(
+    @Query('cdOuvrage') cdOuvrage: string,
+    @AuthenticatedUserDecorator() user: AuthenticatedUser,
+  ): Promise<{ authorized: boolean }> {
+    const userEntity = await this.userService.findBySub(user.cerbereId);
+    const authorized = await this.depotService.checkDroitsDeDepot(cdOuvrage, userEntity.itvCdn);
+    return { authorized };
   }
 }

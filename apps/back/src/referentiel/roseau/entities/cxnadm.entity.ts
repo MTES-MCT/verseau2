@@ -9,7 +9,7 @@ export class CxnadmEntity {
   moSteuCdn: string;
 
   @Column({ name: 'steu_itv_cdn', nullable: true })
-  steuItvCdn: string;
+  steuItvCdn: number;
 
   @Column({ name: 'exp_steu_cdn', nullable: true })
   expSteuCdn: string;

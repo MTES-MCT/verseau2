@@ -58,11 +58,11 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null> {
-    return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: itvCdn } });
+    return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: parseInt(itvCdn, 10) } });
   }
 
   async findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null> {
-    return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
+    return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: parseInt(itvCdn, 10) } });
   }
 
   async findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null> {
