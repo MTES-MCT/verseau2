@@ -4,7 +4,7 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
 import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
 import { ControleGroup } from '../components/ControleGroup';
-import { mapControlesV1ToView, mapSandreControlesToView } from './controle.mappers';
+import { mapControlesV1ToView, mapSandreControlesToView } from './controleMapper';
 import { fr } from '@codegouvfr/react-dsfr';
 
 export function ControlePage() {
