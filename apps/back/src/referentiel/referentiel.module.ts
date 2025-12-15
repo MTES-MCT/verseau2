@@ -21,6 +21,7 @@ import { SupEntity } from './lanceleau/entities/sup.entity';
 import { FanEntity } from './lanceleau/entities/fan.entity';
 import { ParEntity } from './lanceleau/entities/par.entity';
 import { UrfEntity } from './lanceleau/entities/urf.entity';
+import { ParametreGateway } from './parametre/parametre.gateway';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UrfEntity } from './lanceleau/entities/urf.entity';
     { provide: LanceleauGateway, useClass: LanceleauRepository },
     { provide: ReferentielGateway, useClass: ReferentielRepository },
     ReferentielService,
+    ParametreGateway,
   ],
   exports: [RoseauGateway, LanceleauGateway],
 })
