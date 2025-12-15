@@ -11,8 +11,7 @@ import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.servic
 import { SftpProcessorService } from '@worker/sftp/sftpProcessor.service';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
-import { QueueService } from '@infra/queue/queue.service';
-import { QueueName } from '@infra/queue/queue';
+import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { SandreAcceptationStatus } from '@lib/dossier';
@@ -150,7 +149,7 @@ describe('Worker Service (e2e)', () => {
         { provide: DepotGateway, useExisting: DepotRepository },
         { provide: S3, useClass: S3Mock },
         { provide: Sftp, useClass: SftpMock },
-        { provide: QueueService, useClass: QueueServiceMock },
+        { provide: QueueGateway, useClass: QueueServiceMock },
         { provide: ControleSandreService, useClass: ControleSandreMock },
         { provide: ControleV1Service, useClass: ControleV1Mock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
@@ -163,7 +162,7 @@ describe('Worker Service (e2e)', () => {
     dataSource = moduleFixture.get(DataSource);
     s3Mock = moduleFixture.get<S3>(S3) as S3Mock;
     sftpMock = moduleFixture.get<Sftp>(Sftp) as SftpMock;
-    queueMock = moduleFixture.get<QueueServiceMock>(QueueService);
+    queueMock = moduleFixture.get<QueueServiceMock>(QueueGateway);
     sandreMock = moduleFixture.get<ControleSandreMock>(ControleSandreService);
     fileProcessorService = moduleFixture.get(FileProcessorService);
     sftpProcessorService = moduleFixture.get(SftpProcessorService);

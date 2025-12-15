@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DepotService } from '../depot.service';
 import { DepotDeFichier, FichierDeDepot } from '../file/file';
-import { QueueService } from '@queue/queue.service';
+import { QueueGateway, QueueName } from '@queue/queue';
+import type { Queue } from '@queue/queue';
 import { S3 } from '@s3/s3';
-import { QueueName } from '@queue/queue';
 import { DepotModel } from '../depot.model';
 import { UseCase } from '@shared/useCase';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -14,7 +14,7 @@ import { DepotStep, DepotStatus } from '@lib/dossier';
 export class DeposerUnFichier implements UseCase<DepotModel> {
   constructor(
     private readonly depotService: DepotService,
-    private readonly queueService: QueueService,
+    @Inject(QueueGateway) private readonly queueService: Queue,
     @Inject(S3) private readonly s3: S3,
   ) {}
 

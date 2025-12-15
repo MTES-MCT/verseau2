@@ -64,6 +64,6 @@ const sandreServiceFactory = {
     { provide: ControleGateway, useClass: ControleRepository },
     ControleMapper,
   ],
-  exports: [DepotService, DepotCoordinatorService, ControleSandreService, ReponseSandreGateway, ControleV1Service],
+  exports: [DepotService, DepotCoordinatorService, ControleSandreService, ControleV1Service],
 })
 export class DossierModule {}

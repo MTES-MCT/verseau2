@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 
 import { LoggerService } from '@shared/logger/logger.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
-import { QueueService } from '@queue/queue.service';
-import { QueueName } from '@queue/queue';
+import { QueueGateway, QueueName } from '@queue/queue';
+import type { Queue } from '@queue/queue';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, ControleSandreStatus, ControleV1Status } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
@@ -11,7 +11,7 @@ import { AsyncTask } from '@worker/asyncTask';
 @Injectable()
 export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   constructor(
-    private readonly queueService: QueueService,
+    @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly depotService: DepotService,
   ) {}
   private readonly logger = new LoggerService(FileProcessorService.name);

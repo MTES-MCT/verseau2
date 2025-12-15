@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { QueueService } from '@queue/queue.service';
-import { QueueName, QueueOptions } from '@queue/queue';
+import { QueueGateway, QueueName, QueueOptions } from '@queue/queue';
+import type { Queue } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -19,7 +19,7 @@ export class WorkerService implements OnModuleInit {
   };
 
   constructor(
-    private readonly queueService: QueueService,
+    @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly fileProcessorService: FileProcessorService,
     private readonly sftpProcessorService: SftpProcessorService,
     private readonly controleV1ProcessorService: ControleV1ProcessorService,

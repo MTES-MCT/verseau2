@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { DepotService } from './depot.service';
-import { QueueService } from '@queue/queue.service';
-import { QueueName } from '@queue/queue';
+import { QueueGateway, QueueName } from '@queue/queue';
+import type { Queue } from '@queue/queue';
 import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 
@@ -11,7 +11,7 @@ export class DepotCoordinatorService {
 
   constructor(
     private readonly depotService: DepotService,
-    private readonly queueService: QueueService,
+    @Inject(QueueGateway) private readonly queueService: Queue,
   ) {}
 
   async checkControlesCompletion(depotId: string): Promise<void> {

@@ -12,11 +12,10 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotStep, DepotStatus } from '@lib/dossier';
-import { QueueName } from '@infra/queue/queue';
+import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { SftpProviderMock } from '@infra/sftp/sftp.provider.mock';
-import { QueueService } from '@infra/queue/queue.service';
 import { Authentication } from '@authentication/authentication';
 import { AuthenticationGuard, REQUEST_USER_KEY } from '@authentication/authentication.guard';
 import { AuthenticationMockService } from '@authentication/authentication.mock.service';
@@ -149,7 +148,7 @@ describe('Depot upload (e2e)', () => {
         DepotService,
         DepotRepository,
         { provide: DepotGateway, useExisting: DepotRepository },
-        { provide: QueueService, useClass: QueueServiceMock },
+        { provide: QueueGateway, useClass: QueueServiceMock },
         { provide: S3, useClass: S3Mock },
         { provide: Sftp, useClass: SftpProviderMock },
         { provide: Authentication, useClass: AuthenticationMockService },
@@ -169,7 +168,7 @@ describe('Depot upload (e2e)', () => {
 
     dataSource = moduleFixture.get(DataSource);
     s3Mock = moduleFixture.get<S3>(S3) as S3Mock;
-    queueMock = moduleFixture.get<QueueServiceMock>(QueueService);
+    queueMock = moduleFixture.get<QueueServiceMock>(QueueGateway);
   });
 
   afterAll(async () => {

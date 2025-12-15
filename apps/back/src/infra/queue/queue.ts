@@ -1,6 +1,10 @@
-export interface Queue<TData = object> {
-  send(name: string, data?: TData): Promise<string | null>;
-  work(name: string, options: QueueOptions, handler: ([job]: TData[]) => Promise<unknown>): Promise<string>;
+export interface Queue {
+  send<T = object>(name: string, data?: T): Promise<string | null>;
+  work<T = object>(
+    name: string,
+    options: QueueOptions,
+    handler: (job: QueueJob<T>[]) => Promise<unknown>,
+  ): Promise<string>;
 }
 
 export interface QueueJob<TData = object> {
@@ -20,3 +24,6 @@ export enum QueueName {
 export interface QueueOptions {
   batchSize: number;
 }
+
+export const QueueGateway = Symbol('QUEUE');
+export const PGBOSS = Symbol('PGBOSS');

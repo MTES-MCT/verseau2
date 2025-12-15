@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Queue, QueueJob, QueueOptions } from './queue';
-import type { PgBoss } from '../pgboss/pgboss';
-import { PGBOSS } from '@pgboss/pgboss.module';
+import { Queue, QueueJob, QueueOptions, PGBOSS } from './queue';
+import type { PgBoss } from './pgboss';
+
 @Injectable()
-export class QueueService implements Queue<object> {
+export class QueueService implements Queue {
   constructor(@Inject(PGBOSS) private readonly pgboss: PgBoss<object>) {}
 
   async send<TData = object>(name: string, data?: TData): Promise<string | null> {

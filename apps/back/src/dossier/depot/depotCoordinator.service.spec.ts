@@ -1,10 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DepotCoordinatorService } from './depotCoordinator.service';
 import { DepotService } from './depot.service';
-import { QueueService } from '@queue/queue.service';
-import { QueueName } from '@queue/queue';
+import { QueueName, QueueGateway } from '@queue/queue';
 import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus, DepotDto } from '@lib/dossier';
-import { LoggerService } from '@shared/logger/logger.service';
 
 jest.mock('pg-boss', () => ({}));
 jest.mock('@queue/queue.service', () => ({
@@ -39,13 +37,13 @@ describe('DepotCoordinatorService', () => {
       providers: [
         DepotCoordinatorService,
         { provide: DepotService, useValue: mockDepotService },
-        { provide: QueueService, useValue: mockQueueService },
+        { provide: QueueGateway, useValue: mockQueueService },
       ],
     }).compile();
 
     service = module.get<DepotCoordinatorService>(DepotCoordinatorService);
     depotService = module.get<typeof mockDepotService>(DepotService);
-    queueService = module.get<typeof mockQueueService>(QueueService);
+    queueService = module.get<typeof mockQueueService>(QueueGateway);
 
     jest.clearAllMocks();
   });
