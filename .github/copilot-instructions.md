@@ -13,8 +13,8 @@ Verseau2 is a wastewater monitoring file submission system (French government pr
 
 ### Critical: Dual Backend Architecture
 Backend runs as TWO separate Node processes:
-1. **Server** ([apps/back/src/mainServer.ts](../apps/back/src/mainServer.ts)): HTTP API on port 3000
-2. **Worker** ([apps/back/src/mainWorker.ts](../apps/back/src/mainWorker.ts)): Background job processor
+1. **Server** ([apps/back/src/mainServer.ts](../apps/back/src/mainServer)): HTTP API on port 3000
+2. **Worker** ([apps/back/src/mainWorker.ts](../apps/back/src/mainWorker)): Background job processor
 
 Both connect to the same PostgreSQL database and use `pg-boss` for queue management. Start both in dev with `npm run dev:back` (uses concurrent nodemon configs).
 
@@ -84,8 +84,8 @@ Critical env vars (see `apps/back/example.env`):
 Always use mock providers in tests. Real providers require external services.
 
 ### Testing Patterns
-- E2E tests use `@testcontainers/postgresql` (see [apps/back/test/testcontainer.config.ts](../apps/back/test/testcontainer.config.ts))
-- E2E tests mock `pg-boss` via `moduleNameMapper` in `apps/back/test/jest-e2e.json` (maps `pg-boss` to [apps/back/test/mocks/pg-boss.mock.ts](../apps/back/test/mocks/pg-boss.mock.ts))
+- E2E tests use `@testcontainers/postgresql` (see [apps/back/test/testcontainer.config.ts](../apps/back/test/testcontainer.config))
+- E2E tests mock `pg-boss` via `moduleNameMapper` in `apps/back/test/jest-e2e.json` (maps `pg-boss` to [apps/back/test/mocks/pg-boss.mock.ts](../apps/back/test/mocks/pg-boss.mock))
 - Some unit tests also stub `pg-boss` with `jest.mock('pg-boss', ...)` when they don’t need real queue behavior
 - E2E timeout: 60s (defined in `jest-e2e.json`)
 - Shared test helpers in [apps/back/test/](../apps/back/test) (depot.helper.ts, createReferentielDataset.ts)
