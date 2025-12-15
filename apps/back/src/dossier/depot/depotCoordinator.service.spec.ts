@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DepotCoordinatorService } from './depotCoordinator.service';
 import { DepotService } from './depot.service';
 import { QueueName, QueueGateway } from '@queue/queue';
-import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus, DepotDto } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus, DepotDto } from '@lib/dossier';
 
 jest.mock('pg-boss', () => ({}));
 jest.mock('@queue/queue.service', () => ({
@@ -82,7 +82,7 @@ describe('DepotCoordinatorService', () => {
     it('should return early if controls are still pending', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleV1Status.PENDING,
+        controleV1Status: ControleStatus.PENDING,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
       } as DepotDto);
 
@@ -96,7 +96,7 @@ describe('DepotCoordinatorService', () => {
       const depot = {
         id: depotId,
         path: '/path/to/file',
-        controleV1Status: ControleV1Status.SUCCESS,
+        controleV1Status: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
       } as DepotDto;
       depotService.findById.mockResolvedValue(depot);
@@ -116,7 +116,7 @@ describe('DepotCoordinatorService', () => {
     it('should fail the depot if Controle V1 fails', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleV1Status.FAILED,
+        controleV1Status: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
       } as DepotDto);
 
@@ -124,7 +124,7 @@ describe('DepotCoordinatorService', () => {
 
       expect(depotService.update).toHaveBeenCalledWith(depotId, {
         status: DepotStatus.FAILED,
-        step: DepotStep.CONTROLE_V1_FAILED,
+        step: DepotStep.CONTROLE_FAILED,
       });
       expect(queueService.send).not.toHaveBeenCalled();
     });
@@ -132,7 +132,7 @@ describe('DepotCoordinatorService', () => {
     it('should fail the depot if Controle Sandre fails', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleV1Status.SUCCESS,
+        controleV1Status: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.FAILED,
       } as DepotDto);
 
@@ -148,7 +148,7 @@ describe('DepotCoordinatorService', () => {
     it('should prioritize V1 failure over Sandre failure if both fail', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleV1Status.FAILED,
+        controleV1Status: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
       } as DepotDto);
 
@@ -156,7 +156,7 @@ describe('DepotCoordinatorService', () => {
 
       expect(depotService.update).toHaveBeenCalledWith(depotId, {
         status: DepotStatus.FAILED,
-        step: DepotStep.CONTROLE_V1_FAILED,
+        step: DepotStep.CONTROLE_FAILED,
       });
     });
   });

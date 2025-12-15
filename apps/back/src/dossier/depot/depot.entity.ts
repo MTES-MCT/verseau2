@@ -2,7 +2,7 @@ import { BaseEntity } from '@shared/repository/base-entity';
 import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
-import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 
 @Entity('depot')
 export class DepotEntity extends BaseEntity {
@@ -33,10 +33,10 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'enum', enum: DepotStatus, default: 'PENDING' })
   status: DepotStatus;
 
-  @Column({ type: 'enum', enum: ControleV1Status, nullable: true, default: null })
-  controleV1Status?: ControleV1Status;
+  @Column({ type: 'enum', enum: ControleStatus, nullable: true, default: null, name: 'controle_status' })
+  controleStatus?: ControleStatus;
 
-  @Column({ type: 'enum', enum: ControleSandreStatus, nullable: true, default: null })
+  @Column({ type: 'enum', enum: ControleSandreStatus, nullable: true, default: null, name: 'controle_sandre_status' })
   controleSandreStatus?: ControleSandreStatus;
 
   @ManyToOne(() => UserEntity, (user) => user.depots)

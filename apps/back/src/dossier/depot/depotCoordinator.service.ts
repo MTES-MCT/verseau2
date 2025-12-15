@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DepotService } from './depot.service';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
-import { DepotStep, DepotStatus, ControleV1Status, ControleSandreStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
@@ -31,20 +31,20 @@ export class DepotCoordinatorService {
       return;
     }
 
-    const v1Complete: boolean = Boolean(depot.controleV1Status && depot.controleV1Status !== ControleV1Status.PENDING);
+    const v1Complete: boolean = Boolean(depot.controleStatus && depot.controleStatus !== ControleStatus.PENDING);
     const sandreComplete: boolean = Boolean(
       depot.controleSandreStatus && depot.controleSandreStatus !== ControleSandreStatus.PENDING,
     );
 
     if (!v1Complete || !sandreComplete) {
       this.logger.log(`Depot ${depotId} - Controls not yet complete`, {
-        controleV1Status: depot.controleV1Status ?? null,
+        controleV1Status: depot.controleStatus ?? null,
         controleSandreStatus: depot.controleSandreStatus ?? null,
       });
       return;
     }
 
-    const v1Success: boolean = depot.controleV1Status === ControleV1Status.SUCCESS;
+    const v1Success: boolean = depot.controleStatus === ControleStatus.SUCCESS;
     const sandreSuccess: boolean = depot.controleSandreStatus === ControleSandreStatus.SUCCESS;
 
     if (v1Success && sandreSuccess) {
@@ -59,10 +59,10 @@ export class DepotCoordinatorService {
         filePath: depot.path ?? '',
       });
     } else {
-      const failedStep: DepotStep = !v1Success ? DepotStep.CONTROLE_V1_FAILED : DepotStep.CONTROLE_SANDRE_FAILED;
+      const failedStep: DepotStep = !v1Success ? DepotStep.CONTROLE_FAILED : DepotStep.CONTROLE_SANDRE_FAILED;
 
       this.logger.error(`Depot ${depotId} - Control failed`, {
-        controleV1Status: depot.controleV1Status ?? null,
+        controleV1Status: depot.controleStatus ?? null,
         controleSandreStatus: depot.controleSandreStatus ?? null,
         failedStep,
       });

@@ -5,7 +5,7 @@ import { FichierDeDepot } from '@dossier/depot/file/file';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, ControleSandreStatus, ControleV1Status } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleSandreStatus, ControleStatus } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 
 @Injectable()
@@ -20,7 +20,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     await this.depotService.update(fichierDeDepot.depotId, {
       status: DepotStatus.PROCESSING,
       step: DepotStep.CONTROLE_IN_PROGRESS,
-      controleV1Status: ControleV1Status.PENDING,
+      controleStatus: ControleStatus.PENDING,
       controleSandreStatus: ControleSandreStatus.PENDING,
     });
 
