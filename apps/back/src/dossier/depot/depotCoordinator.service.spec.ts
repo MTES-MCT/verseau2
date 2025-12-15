@@ -82,7 +82,7 @@ describe('DepotCoordinatorService', () => {
     it('should return early if controls are still pending', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleStatus.PENDING,
+        controleStatus: ControleStatus.PENDING,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
       } as DepotDto);
 
@@ -96,7 +96,7 @@ describe('DepotCoordinatorService', () => {
       const depot = {
         id: depotId,
         path: '/path/to/file',
-        controleV1Status: ControleStatus.SUCCESS,
+        controleStatus: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
       } as DepotDto;
       depotService.findById.mockResolvedValue(depot);
@@ -116,7 +116,7 @@ describe('DepotCoordinatorService', () => {
     it('should fail the depot if Controle V1 fails', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleStatus.FAILED,
+        controleStatus: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
       } as DepotDto);
 
@@ -132,7 +132,7 @@ describe('DepotCoordinatorService', () => {
     it('should fail the depot if Controle Sandre fails', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleStatus.SUCCESS,
+        controleStatus: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.FAILED,
       } as DepotDto);
 
@@ -148,7 +148,7 @@ describe('DepotCoordinatorService', () => {
     it('should prioritize V1 failure over Sandre failure if both fail', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleV1Status: ControleStatus.FAILED,
+        controleStatus: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
       } as DepotDto);
 

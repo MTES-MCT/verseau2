@@ -11,6 +11,6 @@ export interface DepotDto extends BaseEntity {
   error?: string;
   step: DepotStep;
   status: DepotStatus;
-  controleV1Status?: ControleStatus;
+  controleStatus?: ControleStatus;
   controleSandreStatus?: ControleSandreStatus;
 }
