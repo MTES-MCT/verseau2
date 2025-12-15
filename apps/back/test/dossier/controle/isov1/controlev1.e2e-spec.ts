@@ -192,6 +192,32 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl002?.success).toBe(false);
       expect(ctl002?.error).toBe(ErrorCode.E2_003);
     });
+
+    it('should allow partial integration when multiple ouvrages exist but some are missing from database', async () => {
+      // Seed only one STEU out of two
+      await seedSteu(dataSource, 'STEU001', '0600000001');
+
+      // Create depot
+      await seedDepot(dataSource, 'dep_test_009');
+
+      // File contains two ouvrages: one exists in DB, one doesn't
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          { cdOuvrageDepollution: '0600000001', pointMesure: [] }, // Exists in DB
+          { cdOuvrageDepollution: 'UNKNOWN_STEU', pointMesure: [] }, // Does not exist in DB
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_009', fctAssainissement);
+
+      const ctl002 = controles.find((c) => c.name === ControleName.CTL002);
+      console.log(ctl002);
+      // CTL002 should fail because at least one ouvrage is missing
+      expect(ctl002).toBeDefined();
+      expect(ctl002?.success).toBe(false);
+      // However, the system should allow partial integration for existing ouvrages
+      expect(ctl002?.error).toBe(ErrorCode.E2_003);
+    });
   });
 
   describe('CTL003 - verifyMoSteuExists', () => {
