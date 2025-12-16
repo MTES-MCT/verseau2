@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { type UseMutationResult, useMutation } from '@tanstack/react-query';
+import { type UseMutationResult, type UseQueryResult, useMutation, useQuery } from '@tanstack/react-query';
 import { checkScenarioCodeAndVersion, parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
-import { uploadDepot } from '../../api/depot';
+import { checkDroitsDeDepot, type DroitsDeDepotResponse, uploadDepot } from '../../api/depot';
 
 type LocationState = {
   fileName?: string;
@@ -14,10 +14,13 @@ type UseDepotRecapResult = {
   fileContent?: string;
   hasFile: boolean;
   parsedData: FctAssainissement | undefined;
+  cdOuvrage?: string;
   params: string[];
   totalAnalyses: number;
   parseMutation: UseMutationResult<FctAssainissement, unknown, string>;
   uploadMutation: UseMutationResult<unknown, unknown, File>;
+  droitsDeDepotQuery: UseQueryResult<DroitsDeDepotResponse, unknown>;
+  droitsDeDepotStatus: 'error' | 'loading' | 'authorized' | 'unauthorized';
   handleReturn: () => void;
   handleFinalize: () => void;
 };
@@ -26,7 +29,6 @@ export function useDepotRecap(): UseDepotRecapResult {
   const navigate = useNavigate();
   const location = useLocation();
   const { fileName, fileContent } = (location.state ?? {}) as LocationState;
-
   const parseMutation = useMutation({
     mutationFn: async (xml: string) => {
       const parsed = await parseScenarioAssainissementXml(xml);
@@ -36,6 +38,7 @@ export function useDepotRecap(): UseDepotRecapResult {
       return parsed;
     },
   });
+  const { mutate } = parseMutation;
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => uploadDepot(file),
@@ -43,13 +46,35 @@ export function useDepotRecap(): UseDepotRecapResult {
 
   useEffect(() => {
     if (fileContent) {
-      parseMutation.mutate(fileContent);
+      mutate(fileContent);
     }
-  }, [fileContent]);
+  }, [fileContent, mutate]);
 
   const parsedData = parseMutation.data;
+  const cdOuvrage = useMemo(() => parsedData?.ouvrages?.[0]?.cdOuvrageDepollution, [parsedData]);
+
+  const droitsDeDepotQuery = useQuery({
+    queryKey: ['depot', 'droits-de-depot', cdOuvrage],
+    queryFn: () => checkDroitsDeDepot(cdOuvrage!),
+    enabled: Boolean(cdOuvrage) && parseMutation.isSuccess,
+    retry: false,
+  });
+
   const totalAnalyses = useMemo(() => (parsedData ? countAnalyses(parsedData) : 0), [parsedData]);
   const params = useMemo(() => (parsedData ? extractParams(parsedData) : []), [parsedData]);
+
+  const droitsDeDepotStatus = useMemo(() => {
+    if (!cdOuvrage) {
+      return 'error';
+    }
+    if (droitsDeDepotQuery.isLoading) {
+      return 'loading';
+    }
+    if (droitsDeDepotQuery.isError) {
+      return 'error';
+    }
+    return droitsDeDepotQuery.data?.authorized ? 'authorized' : 'unauthorized';
+  }, [cdOuvrage, droitsDeDepotQuery.isLoading, droitsDeDepotQuery.isError, droitsDeDepotQuery.data?.authorized]);
 
   const handleReturn = () => navigate('/depot/upload');
 
@@ -67,10 +92,13 @@ export function useDepotRecap(): UseDepotRecapResult {
     fileContent,
     hasFile: Boolean(fileName && fileContent),
     parsedData,
+    cdOuvrage,
     params,
     totalAnalyses,
     parseMutation,
     uploadMutation,
+    droitsDeDepotQuery,
+    droitsDeDepotStatus,
     handleReturn,
     handleFinalize,
   };

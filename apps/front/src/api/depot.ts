@@ -20,6 +20,10 @@ const getToken = () => {
   return getCurrentFakeToken();
 };
 
+export type DroitsDeDepotResponse = {
+  authorized: boolean;
+};
+
 export async function fetchDepots(): Promise<DepotDto[]> {
   const response = await fetch(`${API_BASE_URL}/admin/depot`, {
     method: 'GET',
@@ -92,4 +96,29 @@ export async function uploadDepot(file: File): Promise<void> {
     const message = await response.text().catch(() => response.statusText);
     throw new ApiError(`Échec de l'envoi: ${message}`, response.status, response.statusText);
   }
+}
+
+export async function checkDroitsDeDepot(cdOuvrage: string): Promise<DroitsDeDepotResponse> {
+  const url = new URL(`${API_BASE_URL}/depot/droits-de-depot`);
+  url.searchParams.set('cdOuvrage', cdOuvrage);
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new ApiError(
+      `Échec de la vérification des droits de dépôt: ${message}`,
+      response.status,
+      response.statusText,
+    );
+  }
+
+  return response.json();
 }

@@ -21,6 +21,7 @@ export function DepotUploadRecapPage() {
     totalAnalyses,
     parseMutation,
     uploadMutation,
+    droitsDeDepotStatus,
     handleReturn,
     handleFinalize,
   } = useDepotRecap();
@@ -54,7 +55,7 @@ export function DepotUploadRecapPage() {
 
         <ParamsTags params={params} />
 
-        <ChecksList />
+        <ChecksList droitsDeDepotStatus={droitsDeDepotStatus} />
 
         <FooterActions onBack={handleReturn} onFinalize={handleFinalize} finalizeDisabled={uploadMutation.isPending} />
       </div>

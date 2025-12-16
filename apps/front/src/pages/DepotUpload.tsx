@@ -35,9 +35,9 @@ export function DepotUploadPage() {
   };
 
   return (
-    <div className="fr-container fr-py-6w">
+    <div className="fr-container">
       <header className="fr-mb-4w">
-        <p className="fr-badge fr-badge--new fr-mb-1w">Assistant de dépôt · VERSEAU 2.0</p>
+        <p className="fr-badge fr-badge--new ">Assistant de dépôt · VERSEAU 2.0</p>
         <h1 className="fr-h3 fr-mb-1w">Dépôt d&apos;un fichier de données SANDRE XML</h1>
         <p className="fr-text--lead fr-mb-0">Étape 1 : sélection du type de flux et du fichier de données</p>
       </header>

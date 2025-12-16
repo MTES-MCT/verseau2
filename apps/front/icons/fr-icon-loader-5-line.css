@@ -1,0 +1,16 @@
+.fr-icon-loader-5-line::before,
+.fr-icon-loader-5-line::after {
+  -webkit-mask-image: url("./loader-5-line.svg");
+  mask-image: url("./loader-5-line.svg");
+  transform-origin: center;
+  animation: checkslist-spin 1s linear infinite;
+}
+
+@keyframes checkslist-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

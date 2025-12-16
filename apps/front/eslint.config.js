@@ -28,6 +28,7 @@ export default defineConfig([
   {
     rules: {
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
+      'react-hooks/exhaustive-deps': 'warn',
     },
     settings: {
       'prettier/prettier': {
