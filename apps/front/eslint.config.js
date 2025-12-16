@@ -28,7 +28,7 @@ export default defineConfig([
   {
     rules: {
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
-      'react-hooks/exhaustive-deps': 'warn',
+      curly: ['error', 'all'],
     },
     settings: {
       'prettier/prettier': {

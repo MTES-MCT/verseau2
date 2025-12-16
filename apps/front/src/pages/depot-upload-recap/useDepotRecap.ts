@@ -79,7 +79,9 @@ export function useDepotRecap(): UseDepotRecapResult {
   const handleReturn = () => navigate('/depot/upload');
 
   const handleFinalize = () => {
-    if (!fileName || !fileContent) return;
+    if (!fileName || !fileContent) {
+      return;
+    }
     const file = buildFileFromContent(fileContent, fileName);
     uploadMutation.mutate(file, {
       onSuccess: () => navigate('/'),
@@ -138,7 +140,9 @@ function extractParams(parsed: FctAssainissement): string[] {
       item.pointMesure?.forEach((pm) => {
         pm.prelevement?.forEach((prlv) => {
           prlv.analyse?.forEach((a) => {
-            if (a.cdParametre) params.add(a.cdParametre);
+            if (a.cdParametre) {
+              params.add(a.cdParametre);
+            }
           });
         });
       });
@@ -149,7 +153,9 @@ function extractParams(parsed: FctAssainissement): string[] {
     sc.pointMesure?.forEach((pm) => {
       pm.prelevement?.forEach((prlv) => {
         prlv.analyse?.forEach((a) => {
-          if (a.cdParametre) params.add(a.cdParametre);
+          if (a.cdParametre) {
+            params.add(a.cdParametre);
+          }
         });
       });
     });

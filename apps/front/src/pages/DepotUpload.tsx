@@ -18,7 +18,9 @@ export function DepotUploadPage() {
     setSelectedFile(file);
   };
   const handleNext = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      return;
+    }
     setError(null);
     try {
       const content = await selectedFile.text();
