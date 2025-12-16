@@ -14,7 +14,7 @@ export class WorkerService implements OnModuleInit {
     [QueueName.process_file]: { batchSize: 5 },
     [QueueName.email]: { batchSize: 10 },
     [QueueName.send_to_sftp]: { batchSize: 5 },
-    [QueueName.controle_v1]: { batchSize: 5 },
+    [QueueName.controle_metier]: { batchSize: 5 },
     [QueueName.controle_sandre]: { batchSize: 5 },
   };
 
@@ -68,7 +68,7 @@ export class WorkerService implements OnModuleInit {
             }
           });
           break;
-        case QueueName.controle_v1:
+        case QueueName.controle_metier:
           await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
             this.logger.log('Processing jobId', job.id);
             try {

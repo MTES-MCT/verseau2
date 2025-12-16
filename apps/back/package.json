@@ -21,7 +21,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate:run": "typeorm migration:run -d ./src/infra/database/migrationDatasource.ts",
+    "migrate:run": "typeorm migration:run -d ./src/infra/database/migrationDatasource.js",
     "migrate:generate": "typeorm migration:generate -d ./src/infra/database/migrationDatasource.ts",
     "migrate:create": "typeorm migration:create"
   },

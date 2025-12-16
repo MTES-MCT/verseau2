@@ -220,7 +220,7 @@ describe('Worker Service (e2e)', () => {
       expect(queueMock.calls).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            name: QueueName.controle_v1,
+            name: QueueName.controle_metier,
             data: {
               depotId: depot.id,
               filePath: 'test_file.xml',

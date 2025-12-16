@@ -17,7 +17,7 @@ export enum QueueName {
   process_file = 'process_file',
   email = 'email',
   send_to_sftp = 'send_to_sftp',
-  controle_v1 = 'controle_v1',
+  controle_metier = 'controle_metier',
   controle_sandre = 'controle_sandre',
 }
 

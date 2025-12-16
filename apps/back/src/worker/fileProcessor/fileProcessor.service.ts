@@ -29,7 +29,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
 
       // Dispatch to both control queues
       await Promise.all([
-        this.queueService.send(QueueName.controle_v1, {
+        this.queueService.send(QueueName.controle_metier, {
           depotId: fichierDeDepot.depotId,
           filePath: fichierDeDepot.filePath,
         }),

@@ -5,6 +5,9 @@ import { MigrationService } from './infra/database/migration.service';
 async function bootstrapServer() {
   const app = await NestFactory.create(ApiModule);
 
+  // Enable Nest lifecycle hooks on shutdown signals (SIGTERM, SIGINT)
+  app.enableShutdownHooks();
+
   // Run migrations before starting the server (with advisory lock for multi-instance safety)
   const migrationService = app.get(MigrationService);
   try {

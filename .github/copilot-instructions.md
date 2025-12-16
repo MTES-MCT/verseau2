@@ -58,7 +58,7 @@ npm run test:e2e --workspace=apps/back  # E2E with testcontainers
 1. User uploads file → `DepotController` saves to S3
 2. Server enqueues job to `QueueName.process_file` (pg-boss)
 3. Worker picks up job → `FileProcessorService` dispatches control jobs
-4. Runs `controle_sandre` and `controle_v1` in parallel; when both succeed, enqueues `send_to_sftp` (coordination in `DepotCoordinatorService`)
+4. Runs `controle_sandre` and `controle_metier` in parallel; when both succeed, enqueues `send_to_sftp` (coordination in `DepotCoordinatorService`)
 5. Worker processors execute the controls + SFTP export
 6. Frontend polls depot status via API
 

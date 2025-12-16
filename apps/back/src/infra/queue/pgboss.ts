@@ -30,6 +30,7 @@ export type WorkHandler<ReqData> = (job: ReqData[]) => Promise<unknown>;
 export interface PgBoss<TData = object> {
   createQueue(name: string): Promise<void>;
   send(name: string, data?: TData, options?: SendOptions): Promise<string | null>;
-  work<ReqData = TData>(name: string, handler: WorkHandler<ReqData>): Promise<string>;
   work<ReqData = TData>(name: string, options: WorkOptions, handler: WorkHandler<ReqData>): Promise<string>;
+  start(): Promise<void>;
+  stop(): Promise<void>;
 }

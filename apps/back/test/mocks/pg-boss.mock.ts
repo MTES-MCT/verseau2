@@ -6,6 +6,10 @@ export default class PgBoss {
     // no-op
   }
 
+  async stop(): Promise<void> {
+    // no-op
+  }
+
   async createQueue(name: string): Promise<void> {
     // no-op
   }
