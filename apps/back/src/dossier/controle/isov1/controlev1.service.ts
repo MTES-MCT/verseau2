@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { FctAssainissement } from '@lib/parser';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { ControleError, ControleName, ErrorCode } from '@lib/dossier';
+import { ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
 import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
@@ -50,13 +50,13 @@ export class ControleV1Service {
       this.verifyDestinationBouesExists(fctAssainissement),
       this.verifyTypeTraitementBouesExists(fctAssainissement),
       this.verifyUniteFiliereBouesExists(fctAssainissement),
-      this.verifyTypeReseauExists(fctAssainissement),
-      this.verifyTypeSystemeCollecteExists(fctAssainissement),
-      this.verifyTypeRejetExists(fctAssainissement),
-      this.verifyTypeMilieuRejetExists(fctAssainissement),
-      this.verifyZoneSensibleExists(fctAssainissement),
-      this.verifyMasseEauRejetExists(fctAssainissement),
-      this.verifyTypePompeRelaveExists(fctAssainissement),
+      // this.verifyTypeReseauExists(fctAssainissement),
+      // this.verifyTypeSystemeCollecteExists(fctAssainissement),
+      // this.verifyTypeRejetExists(fctAssainissement),
+      // this.verifyTypeMilieuRejetExists(fctAssainissement),
+      // this.verifyZoneSensibleExists(fctAssainissement),
+      // this.verifyMasseEauRejetExists(fctAssainissement),
+      // this.verifyTypePompeRelaveExists(fctAssainissement),
       this.verifyTypeDeversoirOrageExists(fctAssainissement),
       this.verifyTypeBassinOrageExists(fctAssainissement),
       this.verifyTypeAppareilMesureExists(fctAssainissement),
@@ -74,6 +74,7 @@ export class ControleV1Service {
           .map((controle) => ({
             code: controle.error,
             params: controle.errorParams,
+            evenementType: controle.evenementType,
           })),
       });
     } else {
@@ -99,6 +100,7 @@ export class ControleV1Service {
         errors.push({
           code: ErrorCode.E2_003,
           params: [cdOuvrageDepollution],
+          evenementType: EvenementType.ERREUR,
         });
       }
     }
@@ -231,6 +233,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_006,
                 params: [prlvt.cdSupport],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -258,6 +261,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_007,
                   params: [analyse.inSituAnalyse],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -286,6 +290,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_008,
                   params: [analyse.statutRsAnalyse],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -314,6 +319,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_009,
                   params: [analyse.qualRsAnalyse],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -342,6 +348,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_010,
                   params: [analyse.cdFractionAnalysee],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -370,6 +377,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_011,
                   params: [analyse.cdMethode],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -398,6 +406,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_012,
                   params: [analyse.cdParametre],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -426,6 +435,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_013,
                   params: [analyse.cdUniteMesure],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -465,6 +475,7 @@ export class ControleV1Service {
         errors.push({
           code: ErrorCode.E2_014,
           params: [cdIntervenant],
+          evenementType: EvenementType.ERREUR,
         });
       }
     }
@@ -489,6 +500,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_015,
                   params: [analyse.finalite],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -517,6 +529,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_016,
                   params: [analyse.accreAna],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -546,6 +559,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_017,
                 params: [boue.periodeCalcul],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -574,6 +588,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_018,
                 params: [boue.typeOuvrageAval],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -600,6 +615,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_019,
                 params: [boue.cdOuvrageAval],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -626,6 +642,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_020,
                 params: [evt.typeEvenement],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -653,6 +670,7 @@ export class ControleV1Service {
                 errors.push({
                   code: ErrorCode.E2_021,
                   params: [analyse.cdRemarque],
+                  evenementType: EvenementType.ERREUR,
                 });
               }
             }
@@ -727,6 +745,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_024,
                 params: [boue.destinationBoues],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -755,6 +774,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_025,
                 params: [boue.typeTraitementBoues],
+                evenementType: EvenementType.ERREUR,
               });
             }
           }
@@ -781,6 +801,7 @@ export class ControleV1Service {
               errors.push({
                 code: ErrorCode.E2_026,
                 params: [boue.uniteFiliereBoues],
+                evenementType: EvenementType.AVERTISSEMENT,
               });
             }
           }
@@ -794,161 +815,161 @@ export class ControleV1Service {
     };
   }
 
-  // CTL027: Vérification de l'existence du type de réseau en BdD
-  async verifyTypeReseauExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL027: Vérification de l'existence du type de réseau en BdD
+  // async verifyTypeReseauExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const scl of fctAssainissement.systemesCollecte) {
-      if (scl.typeReseau) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_04', scl.typeReseau);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_027,
-            params: [scl.typeReseau],
-          });
-        }
-      }
-    }
+  //   for (const scl of fctAssainissement.systemesCollecte) {
+  //     if (scl.typeReseau) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_04', scl.typeReseau);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_027,
+  //           params: [scl.typeReseau],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL027,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL027,
+  //     errors: errors,
+  //   };
+  // }
 
-  // CTL028: Vérification de l'existence du type de système de collecte en BdD
-  async verifyTypeSystemeCollecteExists(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL028: Vérification de l'existence du type de système de collecte en BdD
+  // async verifyTypeSystemeCollecteExists(
+  //   fctAssainissement: FctAssainissement,
+  // ): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const scl of fctAssainissement.systemesCollecte) {
-      if (scl.typeSystemeCollecte) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_05', scl.typeSystemeCollecte);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_028,
-            params: [scl.typeSystemeCollecte],
-          });
-        }
-      }
-    }
+  //   for (const scl of fctAssainissement.systemesCollecte) {
+  //     if (scl.typeSystemeCollecte) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_05', scl.typeSystemeCollecte);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_028,
+  //           params: [scl.typeSystemeCollecte],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL028,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL028,
+  //     errors: errors,
+  //   };
+  // }
 
-  // CTL029: Vérification de l'existence du type de rejet en BdD
-  async verifyTypeRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL029: Vérification de l'existence du type de rejet en BdD
+  // async verifyTypeRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (ouvrage.typeRejet) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_07', ouvrage.typeRejet);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_029,
-            params: [ouvrage.typeRejet],
-          });
-        }
-      }
-    }
+  //   for (const ouvrage of fctAssainissement.ouvrages) {
+  //     if (ouvrage.typeRejet) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_07', ouvrage.typeRejet);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_029,
+  //           params: [ouvrage.typeRejet],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL029,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL029,
+  //     errors: errors,
+  //   };
+  // }
 
-  // CTL030: Vérification de l'existence du type de milieu de rejet en BdD
-  async verifyTypeMilieuRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL030: Vérification de l'existence du type de milieu de rejet en BdD
+  // async verifyTypeMilieuRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (ouvrage.typeMilieuRejet) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_06', ouvrage.typeMilieuRejet);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_030,
-            params: [ouvrage.typeMilieuRejet],
-          });
-        }
-      }
-    }
+  //   for (const ouvrage of fctAssainissement.ouvrages) {
+  //     if (ouvrage.typeMilieuRejet) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_06', ouvrage.typeMilieuRejet);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_030,
+  //           params: [ouvrage.typeMilieuRejet],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL030,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL030,
+  //     errors: errors,
+  //   };
+  // }
 
-  // CTL031: Vérification de l'existence de la zone sensible en BdD
-  async verifyZoneSensibleExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL031: Vérification de l'existence de la zone sensible en BdD
+  // async verifyZoneSensibleExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (ouvrage.zoneSensible) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_08', ouvrage.zoneSensible);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_031,
-            params: [ouvrage.zoneSensible],
-          });
-        }
-      }
-    }
+  //   for (const ouvrage of fctAssainissement.ouvrages) {
+  //     if (ouvrage.zoneSensible) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_08', ouvrage.zoneSensible);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_031,
+  //           params: [ouvrage.zoneSensible],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL031,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL031,
+  //     errors: errors,
+  //   };
+  // }
 
-  // CTL032: Vérification de l'existence de la masse d'eau de rejet en BdD
-  async verifyMasseEauRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL032: Vérification de l'existence de la masse d'eau de rejet en BdD
+  // async verifyMasseEauRejetExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (ouvrage.masseEauRejet) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_09', ouvrage.masseEauRejet);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_032,
-            params: [ouvrage.masseEauRejet],
-          });
-        }
-      }
-    }
+  //   for (const ouvrage of fctAssainissement.ouvrages) {
+  //     if (ouvrage.masseEauRejet) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_09', ouvrage.masseEauRejet);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_032,
+  //           params: [ouvrage.masseEauRejet],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL032,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL032,
+  //     errors: errors,
+  //   };
+  // }
 
-  // CTL033: Vérification de l'existence du type de pompe de relève en BdD
-  async verifyTypePompeRelaveExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
-    const errors: ControleError[] = [];
+  // // CTL033: Vérification de l'existence du type de pompe de relève en BdD
+  // async verifyTypePompeRelaveExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  //   const errors: ControleError[] = [];
 
-    for (const scl of fctAssainissement.systemesCollecte) {
-      if (scl.typePompeRelave) {
-        const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_10', scl.typePompeRelave);
-        if (!tlref) {
-          errors.push({
-            code: ErrorCode.E2_033,
-            params: [scl.typePompeRelave],
-          });
-        }
-      }
-    }
+  //   for (const scl of fctAssainissement.systemesCollecte) {
+  //     if (scl.typePompeRelave) {
+  //       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_10', scl.typePompeRelave);
+  //       if (!tlref) {
+  //         errors.push({
+  //           code: ErrorCode.E2_033,
+  //           params: [scl.typePompeRelave],
+  //         });
+  //       }
+  //     }
+  //   }
 
-    return {
-      name: ControleName.CTL033,
-      errors: errors,
-    };
-  }
+  //   return {
+  //     name: ControleName.CTL033,
+  //     errors: errors,
+  //   };
+  // }
 
   // CTL034: Vérification de l'existence du type de déversoir d'orage en BdD
   async verifyTypeDeversoirOrageExists(
@@ -985,6 +1006,7 @@ export class ControleV1Service {
           errors.push({
             code: ErrorCode.E2_035,
             params: [scl.typeBassinOrage],
+            evenementType: EvenementType.ERREUR,
           });
         }
       }
@@ -1010,6 +1032,7 @@ export class ControleV1Service {
             errors.push({
               code: ErrorCode.E2_036,
               params: [pmo.typeAppareilMesure],
+              evenementType: EvenementType.ERREUR,
             });
           }
         }
@@ -1024,6 +1047,7 @@ export class ControleV1Service {
             errors.push({
               code: ErrorCode.E2_036,
               params: [pmo.typeAppareilMesure],
+              evenementType: EvenementType.ERREUR,
             });
           }
         }

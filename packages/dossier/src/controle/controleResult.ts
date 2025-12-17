@@ -1,8 +1,9 @@
-import { ErrorCode } from './error';
+import { ErrorCode, EvenementType } from './evenement';
 
 export interface ControleError {
   code: ErrorCode; // e.g., "E2.003"
   params: string[]; // CdOuvrageDepollution value
+  evenementType?: EvenementType;
 }
 
 export interface ControleErrorDto extends ControleError {

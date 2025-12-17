@@ -1,6 +1,6 @@
 import { BaseEntity } from '../baseEntity';
 import { ControleName } from './controleResult';
-import { ErrorCode } from './error';
+import { ErrorCode } from './evenement';
 
 export interface ControleDto extends BaseEntity {
   id: string;

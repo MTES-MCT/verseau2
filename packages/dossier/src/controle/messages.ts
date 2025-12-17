@@ -1,4 +1,4 @@
-import { ErrorCode } from './error';
+import { ErrorCode } from './evenement';
 
 export function buildMessage(error: ErrorCode | undefined, params: string[]): string {
   switch (error) {

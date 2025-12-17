@@ -2,7 +2,7 @@ import { ControleEntity } from './controle.entity';
 
 export type ControleModel = Pick<
   ControleEntity,
-  'id' | 'name' | 'success' | 'error' | 'errorParams' | 'depot' | 'createdAt' | 'updatedAt'
+  'id' | 'name' | 'success' | 'error' | 'errorParams' | 'depot' | 'evenementType' | 'createdAt' | 'updatedAt'
 >;
 
 export type ControleModelWithoutDepot = Omit<ControleModel, 'depot'>;

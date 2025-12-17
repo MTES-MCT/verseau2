@@ -34,3 +34,13 @@ export enum ErrorCode {
   E2_035 = 'E2.035',
   E2_036 = 'E2.036',
 }
+
+export enum AvertissmentCode {
+  A2_001 = 'A2.001',
+  A2_002 = 'A2.002',
+}
+
+export enum EvenementType {
+  ERREUR = 'ERREUR',
+  AVERTISSEMENT = 'AVERTISSEMENT',
+}
