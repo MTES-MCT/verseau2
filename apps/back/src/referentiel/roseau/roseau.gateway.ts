@@ -18,6 +18,11 @@ export interface RoseauGateway {
   findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null>;
   findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null>;
   findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null>;
+  findPmoBySteuNumeroAndLocPoint(
+    cdOuvrageDepollution: string,
+    numeroPointMesure: number,
+    codeLocPoint: string,
+  ): Promise<PmoEntity | null>;
   findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null>;
   findCxnTechBySclAndAga(sclCdn: string, agaZgcCdn: string): Promise<CxntechEntity | null>;
   isSystemeCollecteLinkedToAgglomeration(

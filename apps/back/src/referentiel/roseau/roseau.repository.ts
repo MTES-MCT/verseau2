@@ -9,6 +9,7 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
+import { constrainedMemory } from 'process';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -71,6 +72,27 @@ export class RoseauRepository implements RoseauGateway {
 
   async findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null> {
     return this.pmoRepository.findOne({ where: { steuCdn: steuCdn, pmoNo: pmoNo } });
+  }
+
+  async findPmoBySteuNumeroAndLocPoint(
+    cdOuvrageDepollution: string,
+    numeroPointMesure: number,
+    codeLocPoint: string,
+  ): Promise<PmoEntity | null> {
+    const query = this.pmoRepository
+      .createQueryBuilder('pmo')
+      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
+      .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+      .where('steu.steu_sandre_cda = :cdOuvrageDepollution', { cdOuvrageDepollution })
+      .andWhere('pmo.pmo_no = :numeroPointMesure', { numeroPointMesure })
+      .andWhere('t16.tlref_elt_cda = :codeLocPoint', { codeLocPoint });
+
+    const row = await query.getOne();
+
+    // TODO : suppprimer ce log après debug
+    console.log('!!!!!!!!!!PMO Query:', query);
+
+    return row;
   }
 
   async findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null> {

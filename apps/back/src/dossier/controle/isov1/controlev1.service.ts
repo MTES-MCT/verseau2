@@ -194,18 +194,22 @@ export class ControleV1Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const steu = await this.roseauGateway.findSteuBySandreCda(cdOuvrageDepollution);
-      if (!steu) continue;
-
       for (const pmo of ouvrage.pointMesure) {
         const numeroPointMesure = parseInt(pmo.numeroPointMesure, 10);
+        const codeLocPoint = pmo.locGlobalePointMesure;
 
-        const pmoEntity = await this.roseauGateway.findPmoBySteuAndNumero(steu.steuCdn, numeroPointMesure);
+        if (!codeLocPoint) continue;
+
+        const pmoEntity = await this.roseauGateway.findPmoBySteuNumeroAndLocPoint(
+          cdOuvrageDepollution,
+          numeroPointMesure,
+          codeLocPoint,
+        );
 
         if (!pmoEntity) {
           errors.push({
             code: ErrorCode.E2_033,
-            params: [pmo.numeroPointMesure, cdOuvrageDepollution],
+            params: [pmo.numeroPointMesure, codeLocPoint, cdOuvrageDepollution],
             evenementType: EvenementType.ERREUR,
           });
         }
