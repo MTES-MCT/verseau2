@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleAsyncOptions, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MigrationService } from './migration.service';
 import path from 'path';
@@ -23,7 +23,7 @@ const getDdlSync = (configService: ConfigService) => {
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const migrationsPath = path.join(__dirname, '../migrations/**/*{.js, .ts}');
-        return {
+        const config: TypeOrmModuleOptions = {
           type: 'postgres',
           url: configService.getOrThrow('DATABASE_URL'),
           autoLoadEntities: true,
@@ -31,6 +31,7 @@ const getDdlSync = (configService: ConfigService) => {
           poolSize: 10, // TODO: à gérer selon l'environnement, web: PROCESS_TYPE=api node apps/back/dist/mainServer.js
           migrations: [migrationsPath],
         };
+        return config;
       },
       inject: [ConfigService],
     }),

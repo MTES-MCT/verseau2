@@ -49,6 +49,10 @@ export class RoseauRepository implements RoseauGateway {
     return this.sclRepository.findOne({ where: { sclCdn: id } });
   }
 
+  async findSclBySandreCda(sandreCda: string): Promise<SclEntity | null> {
+    return this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
+  }
+
   async findSteuById(id: string): Promise<SteuEntity | null> {
     return this.steuRepository.findOne({ where: { steuCdn: id } });
   }
@@ -75,5 +79,26 @@ export class RoseauRepository implements RoseauGateway {
 
   async findCxnTechBySclAndAga(sclCdn: string, agaZgcCdn: string): Promise<CxntechEntity | null> {
     return this.cxntechRepository.findOne({ where: { avalSclCdn: sclCdn, amontZgcCdn: agaZgcCdn } });
+  }
+
+  async isSystemeCollecteLinkedToAgglomeration(
+    cdSystemeCollecte: string,
+    cdAgglomerationAssainissement: string,
+  ): Promise<boolean> {
+    const row = await this.sclRepository
+      .createQueryBuilder('scl')
+      .select('scl.scl_cdn', 'scl_cdn')
+      .innerJoin(AgaEntity, 'aga', 'aga.aga_sandre_cda = :cdAgglo', {
+        cdAgglo: cdAgglomerationAssainissement,
+      })
+      .innerJoin(
+        CxntechEntity,
+        'cxntech',
+        'cxntech.aval_scl_cdn = scl.scl_cdn AND cxntech.amont_zgc_cdn = aga.zgc_cdn AND cxntech.cxntech_retrait_dt IS NULL',
+      )
+      .where('scl.scl_sandre_cda = :cdScl', { cdScl: cdSystemeCollecte })
+      .getRawOne<{ scl_cdn: string }>();
+
+    return Boolean(row);
   }
 }

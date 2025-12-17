@@ -1,14 +1,18 @@
 import * as sax from 'sax';
 import { SandreScenarioCode, SandreScenarioVersion, SandreTags } from './sandreConstants';
 import {
+  AgglomerationAssainissement,
   Analyse,
+  Destination,
   Emetteur,
+  EvenOuvrageAssainissement,
   FctAssainissement,
   OuvrageDepollution,
   PointMesure,
   Prelevement,
   Scenario,
   SystemeCollecte,
+  ValeurCaracteristiqueRejet,
 } from './scenarioAssainissement';
 
 export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAssainissement> {
@@ -183,6 +187,8 @@ function mapScenario(raw: any): Scenario {
     codeScenario: raw[SandreTags.CodeScenario],
     versionScenario: raw[SandreTags.VersionScenario],
     emetteur: mapEmetteur(raw[SandreTags.Emetteur]),
+    dateDebutReference: raw[SandreTags.DateDebutReference],
+    dateFinReference: raw[SandreTags.DateFinReference],
   };
 }
 
@@ -198,7 +204,30 @@ function mapOuvrage(raw: any): OuvrageDepollution {
     cdOuvrageDepollution: raw[SandreTags.CdOuvrageDepollution],
     typeOuvrageDepollution: raw[SandreTags.TypeOuvrageDepollution],
     nomOuvrageDepollution: raw[SandreTags.NomOuvrageDepollution],
+    natureSystTraitementEauxUsees: raw[SandreTags.NatureSystTraitementEauxUsees],
     pointMesure: mapPointMesureList(raw[SandreTags.PointMesure]),
+    evenOuvragesAssainissement: mapEvenOuvrageAssainissementList(raw[SandreTags.EvenOuvrageAssainissement]),
+    valeurCaracteristiqueRejets: mapValeurCaracteristiqueRejetList(raw[SandreTags.ValeurCaracteristiqueRejet]),
+  };
+}
+
+function mapValeurCaracteristiqueRejetList(raw: any): ValeurCaracteristiqueRejet[] {
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list.map(mapValeurCaracteristiqueRejet);
+}
+
+function mapValeurCaracteristiqueRejet(raw: any): ValeurCaracteristiqueRejet {
+  return {
+    destination: mapDestination(raw[SandreTags.Destination]),
+    periodeCalcul: raw[SandreTags.PeriodeCalcul],
+  };
+}
+
+function mapDestination(raw: any): Destination {
+  return {
+    cdOuvrageAval: raw[SandreTags.CdOuvrageAval],
+    typeOuvrageAval: raw[SandreTags.TypeOuvrageAval],
   };
 }
 
@@ -207,6 +236,17 @@ function mapSystemeCollecte(raw: any): SystemeCollecte {
     cdSystemeCollecte: raw[SandreTags.CdSystemeCollecte],
     lbSystemeCollecte: raw[SandreTags.LbSystemeCollecte],
     pointMesure: mapPointMesureList(raw[SandreTags.PointMesure]),
+    agglomerationAssainissement: mapAgglomerationAssainissement(raw[SandreTags.AgglomerationAssainissement]),
+    evenOuvragesAssainissement: mapEvenOuvrageAssainissementList(raw[SandreTags.EvenOuvrageAssainissement]),
+  };
+}
+
+function mapAgglomerationAssainissement(raw: any): AgglomerationAssainissement | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  return {
+    cdAgglomerationAssainissement: raw[SandreTags.CdAgglomerationAssainissement],
   };
 }
 
@@ -220,6 +260,7 @@ function mapPointMesure(raw: any): PointMesure {
   return {
     numeroPointMesure: raw[SandreTags.NumeroPointMesure],
     prelevement: mapPrelevementList(raw[SandreTags.Prlvt]),
+    locGlobalePointMesure: raw[SandreTags.LocGlobalePointMesure],
   };
 }
 
@@ -231,7 +272,10 @@ function mapPrelevementList(raw: any): Prelevement[] {
 
 function mapPrelevement(raw: any): Prelevement {
   return {
+    cdSupport: raw[SandreTags.Support]?.[SandreTags.CdSupport],
+    conformitePrlvt: raw[SandreTags.ConformitePrlvt],
     analyse: mapAnalyseList(raw[SandreTags.Analyse]),
+    accrePrlvt: raw[SandreTags.AccrePrlvt],
   };
 }
 
@@ -244,5 +288,27 @@ function mapAnalyseList(raw: any): Analyse[] {
 function mapAnalyse(raw: any): Analyse {
   return {
     rsAnalyse: raw[SandreTags.RsAnalyse],
+    accreAna: raw[SandreTags.RsAnalyse],
+    inSituAnalyse: raw[SandreTags.InSituAnalyse],
+    statutRsAnalyse: raw[SandreTags.StatutRsAnalyse],
+    qualRsAnalyse: raw[SandreTags.QualRsAnalyse],
+    cdFractionAnalysee: raw[SandreTags.FractionAnalysee]?.[SandreTags.CdFractionAnalysee],
+    cdMethode: raw[SandreTags.MethodeAna]?.[SandreTags.CdMethode],
+    cdParametre: raw[SandreTags.Parametre]?.[SandreTags.CdParametre],
+    cdUniteMesure: raw[SandreTags.UniteMesure]?.[SandreTags.CdUniteMesure],
+    finalite: raw[SandreTags.FinaliteAnalyse],
+    cdRemAnalyse: raw[SandreTags.CdRemAnalyse],
+  };
+}
+
+function mapEvenOuvrageAssainissementList(raw: any): EvenOuvrageAssainissement[] {
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list.map(mapEvenOuvrageAssainissement);
+}
+
+function mapEvenOuvrageAssainissement(raw: any): EvenOuvrageAssainissement {
+  return {
+    typeEvenOuvrageAssainissement: raw[SandreTags.TypeEvenOuvrageAssainissement],
   };
 }

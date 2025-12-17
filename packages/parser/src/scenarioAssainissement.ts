@@ -9,6 +9,8 @@ export interface FctAssainissement {
 export interface Scenario {
   codeScenario: SandreScenarioCode;
   versionScenario: SandreScenarioVersion;
+  dateDebutReference: string;
+  dateFinReference: string;
   emetteur: Emetteur;
 }
 
@@ -22,15 +24,16 @@ export interface OuvrageDepollution {
   cdOuvrageDepollution: string;
   typeOuvrageDepollution: string;
   nomOuvrageDepollution: string;
+  natureSystTraitementEauxUsees?: string;
   maitreOuvrage?: Intervenant;
   exploitant?: Intervenant;
   pointMesure: PointMesure[];
-  boues?: Boues[];
-  evenements?: Evenement[];
   typeRejet?: string;
   typeMilieuRejet?: string;
   zoneSensible?: string;
   masseEauRejet?: string;
+  evenOuvragesAssainissement?: EvenOuvrageAssainissement[];
+  valeurCaracteristiqueRejets?: ValeurCaracteristiqueRejet[];
 }
 
 export interface Intervenant {
@@ -40,53 +43,58 @@ export interface Intervenant {
 export interface SystemeCollecte {
   cdSystemeCollecte: string;
   lbSystemeCollecte: string;
-  typeReseau?: string;
-  typeSystemeCollecte?: string;
-  typePompeRelave?: string;
-  typeDeversoirOrage?: string;
-  typeBassinOrage?: string;
   pointMesure: PointMesure[];
+  agglomerationAssainissement?: AgglomerationAssainissement;
+  evenOuvragesAssainissement?: EvenOuvrageAssainissement[];
+  valeurCaracteristiqueRejets?: ValeurCaracteristiqueRejet[];
+}
+
+export interface ValeurCaracteristiqueRejet {
+  destination: Destination;
+  periodeCalcul: string;
+}
+
+export interface Destination {
+  cdOuvrageAval: string;
+  typeOuvrageAval?: string;
 }
 
 export interface PointMesure {
   numeroPointMesure: string;
   typeAppareilMesure?: string;
+  locGlobalePointMesure?: string;
   prelevement: Prelevement[];
 }
 
 export interface Prelevement {
   cdSupport?: string;
+  conformitePrlvt?: string;
+  accrePrlvt?: string;
   analyse: Analyse[];
 }
 
 export interface Analyse {
   rsAnalyse: string;
-  inSituAnalyse?: string;
-  statutRsAnalyse?: string;
-  qualRsAnalyse?: string;
+  inSituAnalyse: string;
+  statutRsAnalyse: string;
+  qualRsAnalyse: string;
   cdFractionAnalysee?: string;
-  cdMethode?: string;
-  cdParametre?: string;
-  cdUniteMesure?: string;
-  finalite?: string;
-  accreAna?: string;
-  cdRemarque?: string;
-}
-
-export interface Boues {
-  periodeCalcul?: string;
-  typeOuvrageAval?: string;
-  cdOuvrageAval?: string;
-  typeFiliereBoues?: string;
-  destinationBoues?: string;
-  typeTraitementBoues?: string;
-  uniteFiliereBoues?: string;
-}
-
-export interface Evenement {
-  typeEvenement?: string;
+  cdMethode: string;
+  cdParametre: string;
+  cdUniteMesure: string;
+  finalite: string;
+  accreAna: string;
+  cdRemAnalyse: string;
 }
 
 export interface Contact {
   typeContact?: string;
+}
+
+export interface AgglomerationAssainissement {
+  cdAgglomerationAssainissement: string;
+}
+
+export interface EvenOuvrageAssainissement {
+  typeEvenOuvrageAssainissement?: string;
 }

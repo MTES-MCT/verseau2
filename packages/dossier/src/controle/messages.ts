@@ -23,7 +23,7 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
     case ErrorCode.E2_009:
       return `Le code qualification de l'acquisition du résultat d'analyse ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_010:
-      return `Le code qualification de l'acquisition du résultat d'analyse ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code fraction analysée ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_011:
       return `Le code Sandre ${params[0]} de la méthode d'analyse utilisée est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_012:
@@ -47,36 +47,21 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
     case ErrorCode.E2_021:
       return `Le code Sandre ${params[0]} de la remarque est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_022:
-      return `Le code Sandre ${params[0]} du type de contact est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code du système de collecte ${params[0]} est inconnu ! Veuillez le saisir dans Roseau.`;
     case ErrorCode.E2_023:
-      return `Le code Sandre ${params[0]} du type de filière boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code agglomération ${params[0]} ne peut pas recevoir de données du système de collecte ${params[1]} !`;
     case ErrorCode.E2_024:
-      return `Le code Sandre ${params[0]} de la destination des boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code Sandre ${params[0]} du type d'ouvrage de dépollution est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_025:
-      return `Le code Sandre ${params[0]} du type de traitement des boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code Sandre ${params[0]} de la nature du système de traitement des eaux usées est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_026:
-      return `Le code Sandre ${params[0]} de l'unité de la filière boues est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_027:
-      return `Le code Sandre ${params[0]} du type de réseau est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_028:
-      return `Le code Sandre ${params[0]} du type de système de collecte est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_029:
-      return `Le code Sandre ${params[0]} du type de rejet est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_030:
-      return `Le code Sandre ${params[0]} du type de milieu de rejet est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_031:
-      return `Le code Sandre ${params[0]} de la zone sensible est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_032:
-      return `Le code Sandre ${params[0]} de la masse d'eau de rejet est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code de l'émetteur ${params[0]} des données est inconnu. Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
     case ErrorCode.E2_033:
-      if (params.length === 2) {
-        return `Le point de mesure N° ${params[0]} est inconnu pour l'ouvrage ${params[1]} ! Veuillez contacter le service gestionnaire de l'ouvrage.`;
-      }
-      return `Le code Sandre ${params[0]} du type de pompe de relève est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le point de mesure N° ${params[0]} est inconnu pour l'ouvrage ${params[1]} ! Veuillez contacter le service gestionnaire de l'ouvrage.`;
     case ErrorCode.E2_034:
       return `Le code Sandre ${params[0]} du type de déversoir d'orage est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_035:
-      return `Le code Sandre ${params[0]} du type de bassin d'orage est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `Le code de la conformité du prélèvement ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_036:
       return `Le code Sandre ${params[0]} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     default:

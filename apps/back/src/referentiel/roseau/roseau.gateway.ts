@@ -12,6 +12,7 @@ export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
   findAgaById(id: string): Promise<AgaEntity | null>;
   findSclById(id: string): Promise<SclEntity | null>;
+  findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
   findSteuById(id: string): Promise<SteuEntity | null>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
   findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null>;
@@ -19,6 +20,10 @@ export interface RoseauGateway {
   findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null>;
   findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null>;
   findCxnTechBySclAndAga(sclCdn: string, agaZgcCdn: string): Promise<CxntechEntity | null>;
+  isSystemeCollecteLinkedToAgglomeration(
+    cdSystemeCollecte: string,
+    cdAgglomerationAssainissement: string,
+  ): Promise<boolean>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');
