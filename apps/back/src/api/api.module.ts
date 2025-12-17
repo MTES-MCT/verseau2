@@ -7,9 +7,11 @@ import { SharedModule } from '@shared/shared.module';
 import { FrontendStaticModule } from './frontend/frontend-static.module';
 import { CorrelationIdMiddleware } from '@shared/middlleware/correlationId.middleware';
 import { LoggerRequestMiddleware } from '@shared/middlleware/loggerRequest.middleware';
+import { VersionController } from './version.controller';
 
 @Module({
   imports: [FrontendStaticModule, DossierModule, InfraModule, SharedModule, NotificationModule, ReferentielModule],
+  controllers: [VersionController],
 })
 export class ApiModule {
   configure(consumer: MiddlewareConsumer) {
