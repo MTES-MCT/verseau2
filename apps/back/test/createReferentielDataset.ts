@@ -67,6 +67,15 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
+  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.tlref CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE custom_ingestion_roseau.tlref (
+      tlref_cdn VARCHAR PRIMARY KEY,
+      trl_rfa VARCHAR,
+      tlref_elt_cda VARCHAR
+    )
+  `);
+
   await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.cxnadm CASCADE`);
   await dataSource.query(`
     CREATE TABLE custom_ingestion_roseau.cxnadm (
@@ -143,6 +152,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
   await dataSource.query(`DELETE FROM custom_ingestion_roseau.steu`);
   await dataSource.query(`DELETE FROM custom_ingestion_roseau.cxnadm`);
   await dataSource.query(`DELETE FROM custom_ingestion_roseau.pmo`);
+  await dataSource.query(`DELETE FROM custom_ingestion_roseau.tlref`);
   await dataSource.query(`DELETE FROM custom_ingestion_lanceleau.itv`);
 }
 
@@ -191,5 +201,20 @@ export async function seedPmo(dataSource: DataSource, pmoCdn: string, steuCdn: s
     VALUES ($1, $2, $3)
   `,
     [pmoCdn, steuCdn, pmoNo],
+  );
+}
+
+export async function seedTlref(
+  dataSource: DataSource,
+  tlrefCdn: string,
+  trlRfa: string,
+  tlrefEltCda: string,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO custom_ingestion_roseau.tlref (tlref_cdn, trl_rfa, tlref_elt_cda)
+    VALUES ($1, $2, $3)
+  `,
+    [tlrefCdn, trlRfa, tlrefEltCda],
   );
 }

@@ -288,7 +288,7 @@ function mapAnalyseList(raw: any): Analyse[] {
 function mapAnalyse(raw: any): Analyse {
   return {
     rsAnalyse: raw[SandreTags.RsAnalyse],
-    accreAna: raw[SandreTags.RsAnalyse],
+    accreAna: raw[SandreTags.AccreAna],
     inSituAnalyse: raw[SandreTags.InSituAnalyse],
     statutRsAnalyse: raw[SandreTags.StatutRsAnalyse],
     qualRsAnalyse: raw[SandreTags.QualRsAnalyse],

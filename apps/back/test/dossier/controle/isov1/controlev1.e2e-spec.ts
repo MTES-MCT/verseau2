@@ -36,9 +36,11 @@ import {
   seedItv,
   seedCxnadm,
   seedPmo,
+  seedTlref,
 } from '../../../createReferentielDataset';
 import { seedDepot, clearDepots } from '../../../depot.helper';
-import type { Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
+import type { Analyse, Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
+import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
 
 type PartialFctAssainissement = {
   scenario?: {
@@ -56,9 +58,10 @@ function createTestFctAssainissement(overrides: PartialFctAssainissement = {}): 
   return {
     scenario: {
       emetteur: {},
-      destinataire: {},
-      codeScenario: '2A',
-      versionScenario: '2024.1',
+      codeScenario: SandreScenarioCode.FCT_ASSAIN,
+      versionScenario: SandreScenarioVersion.V4,
+      dateDebutReference: '',
+      dateFinReference: '',
     },
     ouvrages: [],
     systemesCollecte: [],
@@ -368,6 +371,72 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl014).toBeDefined();
       expect(ctl014?.success).toBe(false);
       expect(ctl014?.error).toBe(ErrorCode.E2_014);
+    });
+  });
+
+  describe('CTL016 - verifyAccreAnalyseExists', () => {
+    it('should pass when accreditation code exists in TLREF (LREF_44)', async () => {
+      await seedSteu(dataSource, 'STEU001', '0600000001');
+      await seedPmo(dataSource, 'PMO001', 'STEU001', 1);
+      await seedTlref(dataSource, 'TLREF001', 'LREF_44', 'ACC001');
+
+      await seedDepot(dataSource, 'dep_test_016_001');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ accreAna: 'ACC001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_016_001', fctAssainissement);
+
+      const ctl016 = controles.find((c) => c.name === ControleName.CTL016);
+      expect(ctl016).toBeDefined();
+      expect(ctl016?.success).toBe(true);
+    });
+
+    it('should fail when accreditation code does not exist in TLREF (LREF_44)', async () => {
+      await seedSteu(dataSource, 'STEU001', '0600000001');
+      await seedPmo(dataSource, 'PMO001', 'STEU001', 1);
+
+      await seedDepot(dataSource, 'dep_test_016_002');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ accreAna: 'UNKNOWN_ACCREDITATION' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_016_002', fctAssainissement);
+
+      const ctl016 = controles.find((c) => c.name === ControleName.CTL016);
+      expect(ctl016).toBeDefined();
+      expect(ctl016?.success).toBe(false);
+      expect(ctl016?.error).toBe(ErrorCode.E2_016);
     });
   });
 });
