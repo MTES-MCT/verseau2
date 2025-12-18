@@ -27,14 +27,14 @@ export default function CallbackPage() {
 
       try {
         await authService.handleCallback(code, state);
-        
+
         // Redirect to the intended page or home
         const returnTo = sessionStorage.getItem('auth_return_to');
         sessionStorage.removeItem('auth_return_to');
         navigate(returnTo || '/', { replace: true });
       } catch (err) {
         console.error('Callback error:', err);
-        setError(err instanceof Error ? err.message : 'Échec de l\'authentification');
+        setError(err instanceof Error ? err.message : "Échec de l'authentification");
       }
     };
 
@@ -82,4 +82,3 @@ export default function CallbackPage() {
     </div>
   );
 }
-

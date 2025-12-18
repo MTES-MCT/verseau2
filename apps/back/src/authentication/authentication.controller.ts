@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Query,
   Body,
   Inject,
   UnauthorizedException,
@@ -19,7 +18,7 @@ export class AuthenticationController {
   constructor(@Inject(Authentication) private readonly authService: Authentication) {}
 
   @Get('login')
-  async login() {
+  login() {
     // Return OIDC configuration for frontend to build authorization URL
     return this.authService.getOIDCConfiguration();
   }
@@ -78,7 +77,7 @@ export class AuthenticationController {
   }
 
   @Post('logout')
-  async logout(@Body('idToken') idToken: string) {
+  logout(@Body('idToken') idToken: string) {
     if (!idToken) {
       throw new BadRequestException('Missing ID token');
     }
@@ -89,7 +88,7 @@ export class AuthenticationController {
 
   @Get('me')
   @UseGuards(AuthenticationGuard)
-  async me(@AuthenticatedUserDecorator() user: AuthenticatedUser) {
+  me(@AuthenticatedUserDecorator() user: AuthenticatedUser) {
     return user;
   }
 }
