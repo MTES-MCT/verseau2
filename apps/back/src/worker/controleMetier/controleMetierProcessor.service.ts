@@ -8,6 +8,7 @@ import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, ControleStatus } from '@lib/dossier';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ControleMetierProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
@@ -15,6 +16,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
   constructor(
     @Inject(S3) private readonly s3: S3,
+    private readonly dataSource: DataSource,
     private readonly controleMetierV2Service: ControleMetierV2Service,
     private readonly controleV1Service: ControleV1Service,
     private readonly depotService: DepotService,
@@ -36,12 +38,18 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
       const xmlObj = await parseScenarioAssainissementXml(file.toString());
 
-      this.logger.log(`Depot ${depotId} - Controles Métier (V1 & V2) en cours`);
+      this.logger.log(`Depot ${depotId} - Controles Métier (V1 & V2) en cours (Transactional)`);
 
-      const resultsV1 = await this.controleV1Service.execute(depotId, xmlObj);
-      const resultsV2 = await this.controleMetierV2Service.execute(depotId, xmlObj);
+      // No stable transactional decorator library found
+      // For the moment, we use the DataSource transaction method
+      const { allSuccess, resultsV1, resultsV2 } = await this.dataSource.transaction(async (manager) => {
+        const resultsV1 = await this.controleV1Service.execute(depotId, xmlObj, manager);
+        const resultsV2 = await this.controleMetierV2Service.execute(depotId, xmlObj, manager);
 
-      const allSuccess = [...resultsV1, ...resultsV2].every((controle) => controle.success);
+        const allSuccess = [...resultsV1, ...resultsV2].every((controle) => controle.success);
+
+        return { allSuccess, resultsV1, resultsV2 };
+      });
 
       this.logger.log(`Depot ${depotId} - Controles Métier result`, {
         success: allSuccess,

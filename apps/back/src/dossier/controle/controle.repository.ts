@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { ControleEntity } from './controle.entity';
 import { ControleModel, ControleModelWithoutDepot, CreateControleModel } from './controle.model';
 import { ControleGateway } from './controle.gateway';
@@ -22,10 +22,10 @@ export class ControleRepository extends Repository<ControleEntity> implements Co
     return { ...savedControle };
   }
 
-  async createControles(controles: CreateControleModel[]): Promise<ControleModel[]> {
-    const newControles = this.create(controles);
-    const savedControles = await this.save(newControles);
-    // return { ...savedControles };
+  async createControles(controles: CreateControleModel[], manager?: EntityManager): Promise<ControleModel[]> {
+    const m = manager || this.manager;
+    const newControles = m.create(ControleEntity, controles);
+    const savedControles = await m.save(newControles);
     return [...savedControles];
   }
 

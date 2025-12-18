@@ -90,7 +90,7 @@ export class RoseauRepository implements RoseauGateway {
     const row = await query.getOne();
 
     // TODO : suppprimer ce log après debug
-    console.log('!!!!!!!!!!PMO Query:', query);
+    // console.log('!!!!!!!!!!PMO Query:', query);
 
     return row;
   }

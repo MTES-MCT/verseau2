@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
 import type { FctAssainissement } from '@lib/parser';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
@@ -23,7 +24,11 @@ export class ControleV1Service {
   // Première implémentation naïve des contrôles v1
   // Acceptable pour un MVP
   // TODO : Améliorer les performances des contrôles en réduisant les requêtes SQL
-  async execute(depotId: string, fctAssainissement: FctAssainissement): Promise<ControleModel[]> {
+  async execute(
+    depotId: string,
+    fctAssainissement: FctAssainissement,
+    manager?: EntityManager,
+  ): Promise<ControleModel[]> {
     const tousControles = Promise.all([
       this.verifySteuExists(fctAssainissement),
       this.verifyMoSteuExists(fctAssainissement),
@@ -59,7 +64,7 @@ export class ControleV1Service {
       depotId,
       tousControlesResult,
     );
-    const createdControles = await this.controleGateway.createControles(createControles);
+    const createdControles = await this.controleGateway.createControles(createControles, manager);
     if (!createdControles.every((controle) => controle.success)) {
       this.logger.log(`Validation failed for depot: ${depotId}`, {
         errors: createdControles
