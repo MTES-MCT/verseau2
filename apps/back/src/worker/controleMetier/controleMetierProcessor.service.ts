@@ -3,7 +3,8 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { parseScenarioAssainissementXml } from '@lib/parser';
-import { ControleMetierService } from '@dossier/controle/metier/controleMetier.service';
+import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
+import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, ControleStatus } from '@lib/dossier';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
@@ -14,7 +15,8 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
   constructor(
     @Inject(S3) private readonly s3: S3,
-    private readonly controleMetierService: ControleMetierService,
+    private readonly controleMetierV2Service: ControleMetierV2Service,
+    private readonly controleV1Service: ControleV1Service,
     private readonly depotService: DepotService,
     private readonly depotCoordinatorService: DepotCoordinatorService,
   ) {}
@@ -26,23 +28,28 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     });
 
     try {
-      this.logger.log(`Depot ${depotId} - Downloading file for Metier control`, filePath);
+      this.logger.log(`Depot ${depotId} - Downloading file for Business controls (V1 & V2)`, filePath);
       const file = await this.s3.download(filePath);
-      this.logger.log(`Depot ${depotId} - File downloaded for Metier control`, {
+      this.logger.log(`Depot ${depotId} - File downloaded for Business controls`, {
         fileSize: `${Math.round((file.length / 1024 / 1024) * 100) / 100} MB`,
       });
 
       const xmlObj = await parseScenarioAssainissementXml(file.toString());
 
-      this.logger.log(`Depot ${depotId} - Controle Metier en cours`);
-      const controles = await this.controleMetierService.execute(depotId, xmlObj);
-      const allSuccess = controles.every((controle) => controle.success);
+      this.logger.log(`Depot ${depotId} - Controles Métier (V1 & V2) en cours`);
 
-      this.logger.log(`Depot ${depotId} - Controle Metier result`, {
+      const resultsV1 = await this.controleV1Service.execute(depotId, xmlObj);
+      const resultsV2 = await this.controleMetierV2Service.execute(depotId, xmlObj);
+
+      const allSuccess = [...resultsV1, ...resultsV2].every((controle) => controle.success);
+
+      this.logger.log(`Depot ${depotId} - Controles Métier result`, {
         success: allSuccess,
+        v1Count: resultsV1.length,
+        v2Count: resultsV2.length,
       });
 
-      // Update depot with Metier control result
+      // Update depot with Business controls result
       await this.depotService.update(depotId, {
         controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
         step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
@@ -51,7 +58,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       // Check if all controls are complete and coordinate next step
       await this.depotCoordinatorService.checkControlesCompletion(depotId);
     } catch (error) {
-      this.logger.error(`Depot ${depotId} - Controle Metier failed`, error);
+      this.logger.error(`Depot ${depotId} - Controles Métier failed`, error);
       await this.depotService.update(depotId, {
         status: DepotStatus.FAILED,
         step: DepotStep.CONTROLE_FAILED,

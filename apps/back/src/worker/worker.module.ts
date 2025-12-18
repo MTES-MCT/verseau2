@@ -8,8 +8,9 @@ import { ReferentielModule } from '@referentiel/referentiel.module';
 
 import { WorkerService } from './worker.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
-import { ControleV1ProcessorService } from './controleV1/controleV1Processor.service';
+import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
+import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 
 @Module({
   imports: [InfraModule, DossierModule, SharedModule, NotificationModule, ReferentielModule],
@@ -17,7 +18,8 @@ import { ControleSandreProcessorService } from './controleSandre/controle-sandre
     FileProcessorService,
     WorkerService,
     SftpProcessorService,
-    ControleV1ProcessorService,
+    ControleMetierProcessorService,
+    ControleMetierV2Service,
     ControleSandreProcessorService,
   ],
 })

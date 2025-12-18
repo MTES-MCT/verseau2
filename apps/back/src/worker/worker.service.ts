@@ -5,7 +5,7 @@ import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
-import { ControleV1ProcessorService } from './controleV1/controleV1Processor.service';
+import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class WorkerService implements OnModuleInit {
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly fileProcessorService: FileProcessorService,
     private readonly sftpProcessorService: SftpProcessorService,
-    private readonly controleV1ProcessorService: ControleV1ProcessorService,
+    private readonly controleMetierProcessorService: ControleMetierProcessorService,
     private readonly controleSandreProcessorService: ControleSandreProcessorService,
     private readonly logger: LoggerService,
   ) {
@@ -72,7 +72,7 @@ export class WorkerService implements OnModuleInit {
           await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
             this.logger.log('Processing jobId', job.id);
             try {
-              return await this.controleV1ProcessorService.process(job.data);
+              return await this.controleMetierProcessorService.process(job.data);
             } catch (error) {
               this.logger.error('Job processing failed', {
                 jobId: job.id,

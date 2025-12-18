@@ -46,6 +46,7 @@ export class ReferentielController {
     return { code };
   }
 
+  //TODO: Ajouter Guard
   @Get('parametres-to-codes')
   findCodesByParametres(@Query('parametres') parametres: string | string[]): { codes: (number | null)[] } {
     if (!parametres) {
@@ -58,6 +59,7 @@ export class ReferentielController {
     return { codes };
   }
 
+  //TODO: Ajouter Guard
   @Get('codes-to-parametres')
   findParametresByCodes(@Query('codes') codes: string | string[]): { parametres: (string | null)[] } {
     if (!codes) {
