@@ -7,4 +7,7 @@ export type ControleModel = Pick<
 
 export type ControleModelWithoutDepot = Omit<ControleModel, 'depot'>;
 
-export type CreateControleModel = Pick<ControleEntity, 'name' | 'success' | 'error' | 'depotId' | 'errorParams'>;
+export type CreateControleModel = Pick<
+  ControleEntity,
+  'name' | 'success' | 'error' | 'depotId' | 'evenementType' | 'errorParams'
+>;

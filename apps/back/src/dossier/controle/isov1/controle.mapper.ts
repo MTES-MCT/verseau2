@@ -29,6 +29,7 @@ export class ControleMapper {
                 success: controleIndividuel.errors.length === 0,
                 error: error.code,
                 errorParams: error.params,
+                evenementType: error.evenementType,
               };
             });
           return controlesWithError;
