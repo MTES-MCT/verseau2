@@ -8,11 +8,7 @@ export class AuthenticationMockService implements Authentication {
 
   async validateToken(token: string): Promise<AuthenticatedUser> {
     const providedToken = token?.trim();
-    const expectedToken = this.configService.get<string>('OIDC_FAKE_TOKEN')?.trim();
-
-    if (!expectedToken) {
-      throw new Error('OIDC_FAKE_TOKEN is not configured');
-    }
+    const expectedToken = 'mock-token';
 
     if (!providedToken || providedToken !== expectedToken) {
       throw new Error('Invalid or missing fake token');
@@ -31,7 +27,7 @@ export class AuthenticationMockService implements Authentication {
   }
 
   async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }> {
-    const fakeToken = this.configService.get<string>('OIDC_FAKE_TOKEN') || 'mock-token';
+    const fakeToken = 'mock-token';
     return {
       accessToken: fakeToken,
       idToken: fakeToken,
@@ -46,7 +42,7 @@ export class AuthenticationMockService implements Authentication {
   }
 
   async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
-    const fakeToken = this.configService.get<string>('OIDC_FAKE_TOKEN') || 'mock-token';
+    const fakeToken = 'mock-token';
     return {
       accessToken: fakeToken,
       idToken: fakeToken,

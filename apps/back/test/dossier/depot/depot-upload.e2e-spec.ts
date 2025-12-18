@@ -29,7 +29,7 @@ import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri
 
 class ConfigServiceMock {
   get(key: string) {
-    if (key === 'OIDC_FAKE_TOKEN') {
+    if (key === 'FAKE_TOKEN_STORAGE_KEY') {
       return 'test-token';
     }
     return null;
