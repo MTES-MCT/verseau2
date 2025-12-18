@@ -1,5 +1,4 @@
 import { Header } from '@codegouvfr/react-dsfr/Header';
-import { TemporaryFakeTokenInput } from './TemporaryFakeTokenInput';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useLocation } from 'react-router';
 
@@ -20,10 +19,6 @@ export function AppHeader() {
         serviceTitle="Autosurveillance des systèmes d'assainissement"
         homeLinkProps={{ href: '/', title: 'Accueil' }}
         quickAccessItems={[
-          <div className={fr.cx('fr-col-12', 'fr-pr-10v')}>
-            {/* TODO: Supprimer le component TemporaryFakeTokenInput quand OIDC est disponible */}
-            <TemporaryFakeTokenInput />
-          </div>,
           {
             iconId: 'ri-user-line',
             linkProps: { href: '/profile', title: 'Mon compte' },
