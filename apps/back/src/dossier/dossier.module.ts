@@ -25,6 +25,13 @@ import { DepotAdminController } from './depot/depotAdmin.controller';
 import { DepotGateway } from './depot/depot.gateway';
 import { ControleController } from './controle/controle.controller';
 import { DepotCoordinatorService } from './depot/depotCoordinator.service';
+import { MasaEntity } from './masa/masa.entity';
+import { MasaController } from './masa/masa.controller';
+import { MasaService } from './masa/masa.service';
+import { MasaGateway } from './masa/masa.gateway';
+import { MasaRepository } from './masa/masa.repository';
+import { MasaApiKeyGuard } from './masa/masa-api-key.guard';
+import { MasaIpGuard } from './masa/masa-ip.guard';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
@@ -42,13 +49,13 @@ const sandreServiceFactory = {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity, ControleEntity]),
+    TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity, ControleEntity, MasaEntity]),
     SharedModule,
     InfraModule,
     UserModule,
     ReferentielModule,
   ],
-  controllers: [DepotController, DepotAdminController, ControleController],
+  controllers: [DepotController, DepotAdminController, ControleController, MasaController],
   providers: [
     // Depot
     { provide: DepotGateway, useClass: DepotRepository },
@@ -63,6 +70,11 @@ const sandreServiceFactory = {
     ControleV1Service,
     { provide: ControleGateway, useClass: ControleRepository },
     ControleMapper,
+    // Masa
+    { provide: MasaGateway, useClass: MasaRepository },
+    MasaService,
+    MasaApiKeyGuard,
+    MasaIpGuard,
   ],
   exports: [DepotService, DepotCoordinatorService, ControleSandreService, ControleV1Service],
 })
