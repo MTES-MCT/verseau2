@@ -18,6 +18,7 @@ export function DepotUploadRecapPage() {
     hasFile,
     parsedData,
     params,
+    parametreNames,
     totalAnalyses,
     parseMutation,
     uploadMutation,
@@ -53,7 +54,7 @@ export function DepotUploadRecapPage() {
           totalAnalyses={totalAnalyses}
         />
 
-        <ParamsTags params={params} />
+        <ParamsTags params={parametreNames} />
 
         <ChecksList droitsDeDepotStatus={droitsDeDepotStatus} />
 

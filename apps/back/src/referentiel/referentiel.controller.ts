@@ -2,7 +2,6 @@ import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/
 import { ReferentielService } from './referentiel.service';
 import { AuthenticationGuard } from '@authentication/authentication.guard';
 import { ParametreGateway } from './parametre/parametre.gateway';
-import { Code } from 'typeorm';
 import { CodeParametre } from './parametre/codeParametre';
 // import { AuthenticatedUserDecorator } from '@authentication/authenticated-user.decorator';
 // import type { AuthenticatedUser } from '@authentication/authentication';
@@ -36,7 +35,7 @@ export class ReferentielController {
   }
 
   //TODO: Ajouter Guard
-  @Get('parametre-code')
+  @Get('parametre-to-code')
   findCodeParametreById(@Query('id') id: keyof typeof CodeParametre): { code: number | null } {
     if (!id) {
       throw new BadRequestException('id query parameter is required');
@@ -45,5 +44,28 @@ export class ReferentielController {
     const code = this.parametreGateway.findCodeParametreById(id);
 
     return { code };
+  }
+
+  @Get('parametres-to-codes')
+  findCodesByParametres(@Query('parametres') parametres: string | string[]): { codes: (number | null)[] } {
+    if (!parametres) {
+      throw new BadRequestException('parametres query parameter is required');
+    }
+
+    const parametreList = Array.isArray(parametres) ? parametres : [parametres];
+    const codes = this.parametreGateway.findCodesByParametres(parametreList);
+
+    return { codes };
+  }
+
+  @Get('codes-to-parametres')
+  findParametresByCodes(@Query('codes') codes: string | string[]): { parametres: (string | null)[] } {
+    if (!codes) {
+      throw new BadRequestException('codes query parameter is required');
+    }
+
+    const parametres = this.parametreGateway.findParametresByCodes(codes);
+
+    return { parametres };
   }
 }

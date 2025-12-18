@@ -123,3 +123,6 @@ Validated files exported to external SFTP server:
 3. **Match module boundaries** - Never import across `apps/` directly, use `packages/` for sharing
 4. **Use testcontainers for DB tests** - Don't assume local Postgres is running
 5. **Frontend builds are served by backend** - Production uses `FrontendStaticModule`, not separate servers
+
+## Commit message guidelines
+- Always write git commit messages in French, following the existing repository style.

@@ -29,4 +29,25 @@ export class ParametreGateway {
         return null;
     }
   }
+
+  findCodesByParametres(ids: string[]): (number | null)[] {
+    return ids.map((id) => this.findCodeParametreById(id as keyof typeof CodeParametre));
+  }
+
+  findParametresByCodes(codes: string[] | string): (string | null)[] {
+    const codeList = Array.isArray(codes) ? codes : [codes];
+    // Convert strings to numbers
+    const numericCodes = codeList.map((c) => Number(c));
+    const reverseMapping = Object.entries(CodeParametre).reduce(
+      (acc, [key, value]) => {
+        if (typeof value === 'number') {
+          acc[value] = key;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
+
+    return numericCodes.map((code) => reverseMapping[Number(code)] || null);
+  }
 }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { type UseMutationResult, type UseQueryResult, useMutation, useQuery } from '@tanstack/react-query';
 import { checkScenarioCodeAndVersion, parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
 import { checkDroitsDeDepot, type DroitsDeDepotResponse, uploadDepot } from '../../api/depot';
+import { fetchParametresFromCodes } from '../../api/referentiel';
 
 type LocationState = {
   fileName?: string;
@@ -16,6 +17,7 @@ type UseDepotRecapResult = {
   parsedData: FctAssainissement | undefined;
   cdOuvrage?: string;
   params: string[];
+  parametreNames: string[];
   totalAnalyses: number;
   parseMutation: UseMutationResult<FctAssainissement, unknown, string>;
   uploadMutation: UseMutationResult<unknown, unknown, File>;
@@ -89,6 +91,17 @@ export function useDepotRecap(): UseDepotRecapResult {
     });
   };
 
+  const parametresQuery = useQuery({
+    queryKey: ['referentiel', 'codes-to-parametres', params],
+    queryFn: () => fetchParametresFromCodes(params),
+    enabled: params.length > 0,
+    staleTime: Infinity,
+  });
+
+  const parametreNames = useMemo(() => {
+    return (parametresQuery.data ?? []).filter((p): p is string => p !== null);
+  }, [parametresQuery.data]);
+
   return {
     fileName,
     fileContent,
@@ -96,6 +109,7 @@ export function useDepotRecap(): UseDepotRecapResult {
     parsedData,
     cdOuvrage,
     params,
+    parametreNames,
     totalAnalyses,
     parseMutation,
     uploadMutation,
