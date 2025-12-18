@@ -1,5 +1,5 @@
 import type { ControleDto, ControleSandreDto, ControleName } from '@lib/dossier';
-import { ErrorCode, SandreAcceptationStatus, buildMessage } from '@lib/dossier';
+import { ErrorCode, SandreAcceptationStatus, buildMessage, ControleDescription } from '@lib/dossier';
 import type { ControleView } from '../components/ControleGroup';
 
 const acceptationLabel: Record<SandreAcceptationStatus, string> = {
@@ -37,7 +37,11 @@ export function mapControlesV1ToView(controles: ControleDto[]): ControleView[] {
   return controles.map((controle) => ({
     name: controle.name,
     success: controle.success,
-    message: controle.error ? buildMessage(controle.error, controle.errorParams ?? []) : '-',
+    message: controle.success
+      ? ControleDescription[controle.name]
+      : controle.error
+        ? buildMessage(controle.error, controle.errorParams ?? [])
+        : '-',
   }));
 }
 
