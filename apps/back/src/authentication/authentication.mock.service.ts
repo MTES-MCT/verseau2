@@ -19,7 +19,7 @@ export class AuthenticationMockService implements Authentication {
 
   getOIDCConfiguration(): OIDCConfiguration {
     return {
-      authorizationEndpoint: 'http://localhost:5173/authentication_callback',
+      authorizationEndpoint: 'http://localhost:5173/mock_authorization',
       clientId: 'mock-client-id',
       redirectUri: 'http://localhost:5173/api/auth/callback',
       scope: 'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations',

@@ -6,7 +6,7 @@ import { authService } from '../services/auth.service';
  * Page de simulation d'authentification OIDC
  * Utile pour le développement sans passer par Cerbère
  */
-export default function AuthenticationCallbackPage() {
+export default function MockAuthorizationPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,25 +29,11 @@ export default function AuthenticationCallbackPage() {
       await authService.handleCallback(mockCode, mockState);
 
       // Redirige vers le dashboard après succès
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       console.error('Simulation authentication failed:', err);
       setError(err instanceof Error ? err.message : 'Échec de la simulation');
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRealAuth = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Déclenche le vrai flow OIDC
-      await authService.login();
-    } catch (err) {
-      console.error('Real authentication failed:', err);
-      setError(err instanceof Error ? err.message : "Échec de l'authentification");
       setIsLoading(false);
     }
   };

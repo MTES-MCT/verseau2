@@ -5,7 +5,7 @@ import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
 import LoginPage from './pages/LoginPage';
 import CallbackPage from './pages/CallbackPage';
-import AuthenticationCallbackPage from './pages/AuthenticationCallbackPage';
+import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { AppHeader } from './components/Header';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -54,7 +54,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/authentication_callback" element={<AuthenticationCallbackPage />} />
+            <Route path="/mock_authorization" element={<MockAuthorizationPage />} />
           </Routes>
         </main>
       </div>
