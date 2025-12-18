@@ -125,4 +125,6 @@ Validated files exported to external SFTP server:
 5. **Frontend builds are served by backend** - Production uses `FrontendStaticModule`, not separate servers
 
 ## Commit message guidelines
-- Always write git commit messages in French, following the existing repository style.
+- Ecris les messages de commit en français, suivant le style existant dans le repository, exemple: 
+  - feat(back): ajout d'une nouvelle fonctionnalité
+  - feat(front): ajout d'une autre nouvelle fonctionnalité

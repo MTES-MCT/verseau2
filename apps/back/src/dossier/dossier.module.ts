@@ -30,8 +30,8 @@ import { MasaController } from './masa/masa.controller';
 import { MasaService } from './masa/masa.service';
 import { MasaGateway } from './masa/masa.gateway';
 import { MasaRepository } from './masa/masa.repository';
-import { MasaApiKeyGuard } from './masa/masa-api-key.guard';
-import { MasaIpGuard } from './masa/masa-ip.guard';
+import { MasaApiKeyGuard } from './masa/masaApiKey.guard';
+import { MasaIpGuard } from './masa/masaIp.guard';
 
 const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
