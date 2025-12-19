@@ -1,15 +1,14 @@
 import { Header } from '@codegouvfr/react-dsfr/Header';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useLocation } from 'react-router';
+import { useAuth } from '../hooks/useAuth';
 
 export function AppHeader() {
   const location = useLocation();
+  const { isAuthenticated, login, logout } = useAuth();
 
   const isNavItemActive = (href: string): boolean => {
-    if (href === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(href);
+    return location.pathname.startsWith(href) && (href !== '/' || location.pathname === '/');
   };
 
   return (
@@ -19,17 +18,27 @@ export function AppHeader() {
         serviceTitle="Autosurveillance des systèmes d'assainissement"
         homeLinkProps={{ href: '/', title: 'Accueil' }}
         quickAccessItems={[
-          {
-            iconId: 'ri-user-line',
-            linkProps: { href: '/profile', title: 'Mon compte' },
-            text: 'Mon compte',
-          },
+          isAuthenticated
+            ? {
+                iconId: 'ri-logout-box-line',
+                buttonProps: {
+                  onClick: () => logout(),
+                },
+                text: 'Déconnexion',
+              }
+            : {
+                iconId: 'ri-user-line',
+                buttonProps: {
+                  onClick: () => login(),
+                },
+                text: 'Connexion',
+              },
         ]}
         navigation={[
           {
             text: 'Tableau de bord',
-            linkProps: { href: '/' },
-            isActive: isNavItemActive('/'),
+            linkProps: { href: '/dashboard' },
+            isActive: isNavItemActive('/dashboard'),
           },
           {
             text: 'Déposer des données',

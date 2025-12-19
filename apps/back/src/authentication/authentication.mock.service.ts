@@ -21,7 +21,7 @@ export class AuthenticationMockService implements Authentication {
     return {
       authorizationEndpoint: 'http://localhost:5173/mock_authorization',
       clientId: 'mock-client-id',
-      redirectUri: 'http://localhost:5173/api/auth/callback',
+      redirectUri: 'http://localhost:5173/dashboard',
       scope: 'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations',
     };
   }
@@ -52,7 +52,7 @@ export class AuthenticationMockService implements Authentication {
   }
 
   generateLogoutUrl(idToken: string): string {
-    return 'http://mock-logout-url';
+    return 'http://localhost:5173';
   }
 
   private getMockUser(): AuthenticatedUser {

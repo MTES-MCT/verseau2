@@ -1,15 +1,7 @@
-import { useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
-
-  useEffect(() => {
-    // Automatically redirect to OIDC login
-    login().catch((error) => {
-      console.error('Failed to initiate login:', error);
-    });
-  }, [login]);
 
   return (
     <div className="fr-container fr-py-6w">
@@ -22,13 +14,11 @@ export default function LoginPage() {
                 <p className="fr-text--lead">
                   {isLoading
                     ? 'Redirection vers la page de connexion Cerbère...'
-                    : 'Échec de la connexion. Veuillez réessayer.'}
+                    : 'Veuillez vous connecter pour accéder à l’application.'}
                 </p>
-                {!isLoading && (
-                  <button className="fr-btn fr-mt-2w" onClick={() => login()}>
-                    Se connecter
-                  </button>
-                )}
+                <button className="fr-btn fr-mt-2w" onClick={() => login()} disabled={isLoading}>
+                  {isLoading ? 'Chargement...' : 'Se connecter'}
+                </button>
               </div>
             </div>
           </div>
@@ -37,4 +27,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

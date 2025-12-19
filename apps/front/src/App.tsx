@@ -4,6 +4,7 @@ import { ControlePage } from './pages/Controle';
 import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
 import LoginPage from './pages/LoginPage';
+import { HomePage } from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { AppHeader } from './components/Header';
@@ -22,8 +23,9 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/callback" element={<CallbackPage />} />
+            <Route path="/" element={<HomePage />} />
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />

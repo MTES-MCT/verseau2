@@ -29,7 +29,7 @@ export default function MockAuthorizationPage() {
       await authService.handleCallback(mockCode, mockState);
 
       // Redirige vers le dashboard après succès
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Simulation authentication failed:', err);
       setError(err instanceof Error ? err.message : 'Échec de la simulation');
