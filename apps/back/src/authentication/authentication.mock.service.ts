@@ -8,10 +8,9 @@ export class AuthenticationMockService implements Authentication {
 
   async validateToken(token: string): Promise<AuthenticatedUser> {
     const providedToken = token?.trim();
-    const expectedToken = 'mock-token';
 
-    if (!providedToken || providedToken !== expectedToken) {
-      throw new Error('Invalid or missing fake token');
+    if (!providedToken) {
+      throw new Error('Missing token');
     }
 
     return this.getMockUser();
