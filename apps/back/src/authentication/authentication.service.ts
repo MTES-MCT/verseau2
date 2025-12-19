@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import {
   Configuration,
   authorizationCodeGrant,
@@ -9,6 +10,7 @@ import {
 } from 'openid-client';
 import { Authentication, AuthenticatedUser, OIDCTokens, OIDCConfiguration } from './authentication';
 import { ConfigService } from '@nestjs/config';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class AuthenticationService implements Authentication {
@@ -20,9 +22,11 @@ export class AuthenticationService implements Authentication {
   constructor(
     private readonly configuration: Configuration,
     private readonly configService: ConfigService,
+    private readonly logger: LoggerService,
   ) {
     this.redirectUri = this.configService.getOrThrow<string>('OIDC_REDIRECT_URI');
     this.clientId = this.configService.getOrThrow<string>('OIDC_CLIENT_ID');
+    this.logger.setContext(AuthenticationService.name);
   }
 
   async validateToken(token: string): Promise<AuthenticatedUser> {
@@ -58,7 +62,11 @@ export class AuthenticationService implements Authentication {
       pkceCodeVerifier: undefined,
     });
 
+    this.logger.debug(`Tokens received: ${JSON.stringify(tokens)}`);
+
     const user = await this.getUserInfo(tokens.access_token);
+
+    this.logger.debug(`User info received: ${JSON.stringify(user)}`);
 
     return {
       accessToken: tokens.access_token,

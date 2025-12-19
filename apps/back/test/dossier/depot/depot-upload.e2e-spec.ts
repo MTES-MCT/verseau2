@@ -17,7 +17,7 @@ import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { SftpProviderMock } from '@infra/sftp/sftp.provider.mock';
 import { Authentication } from '@authentication/authentication';
-import { AuthenticationGuard } from '@authentication/authentication.guard';
+import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { AuthenticationMockService } from '@authentication/authentication.mock.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserService } from '@user/user.service';
@@ -135,7 +135,7 @@ describe('Depot upload (e2e)', () => {
         { provide: S3, useClass: S3Mock },
         { provide: Sftp, useClass: SftpProviderMock },
         { provide: Authentication, useClass: AuthenticationMockService },
-        AuthenticationGuard,
+        AuthenticationMiddleware,
         { provide: UserService, useClass: UserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
@@ -143,6 +143,8 @@ describe('Depot upload (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    const authMiddleware = app.get(AuthenticationMiddleware);
+    app.use(authMiddleware.use.bind(authMiddleware));
 
     await app.init();
 

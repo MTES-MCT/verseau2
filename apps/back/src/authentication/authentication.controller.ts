@@ -1,26 +1,15 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Inject,
-  UnauthorizedException,
-  BadRequestException,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, UnauthorizedException, BadRequestException, Req } from '@nestjs/common';
 import { Authentication } from './authentication';
-import { AuthenticationGuard } from './authentication.guard';
-import { AuthenticatedUserDecorator } from './authenticated-user.decorator';
-import type { AuthenticatedUser } from './authentication';
+import type { CustomRequest } from '@shared/constants/customRequest';
 
 @Controller('auth')
 export class AuthenticationController {
-  constructor(@Inject(Authentication) private readonly authService: Authentication) {}
+  constructor(@Inject(Authentication) private readonly authentication: Authentication) {}
 
   @Get('login')
   login() {
     // Return OIDC configuration for frontend to build authorization URL
-    return this.authService.getOIDCConfiguration();
+    return this.authentication.getOIDCConfiguration();
   }
 
   @Post('callback')
@@ -44,7 +33,7 @@ export class AuthenticationController {
     }
 
     try {
-      const result = await this.authService.handleCallback(code, nonce);
+      const result = await this.authentication.handleCallback(code, nonce);
 
       return {
         accessToken: result.accessToken,
@@ -53,7 +42,7 @@ export class AuthenticationController {
         expiresIn: result.expiresIn,
         user: result.user,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       throw new UnauthorizedException(
         `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
@@ -67,9 +56,9 @@ export class AuthenticationController {
     }
 
     try {
-      const tokens = await this.authService.refreshTokens(refreshToken);
+      const tokens = await this.authentication.refreshTokens(refreshToken);
       return tokens;
-    } catch (error) {
+    } catch (error: unknown) {
       throw new UnauthorizedException(
         `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
@@ -82,13 +71,12 @@ export class AuthenticationController {
       throw new BadRequestException('Missing ID token');
     }
 
-    const logoutUrl = this.authService.generateLogoutUrl(idToken);
+    const logoutUrl = this.authentication.generateLogoutUrl(idToken);
     return { logoutUrl };
   }
 
   @Get('me')
-  @UseGuards(AuthenticationGuard)
-  me(@AuthenticatedUserDecorator() user: AuthenticatedUser) {
-    return user;
+  me(@Req() req: CustomRequest) {
+    return req.user;
   }
 }

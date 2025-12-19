@@ -9,7 +9,7 @@ export const createAuthenticationService = (
   configuration: Configuration,
   configService: ConfigService,
 ): Authentication => {
-  return new AuthenticationService(configuration, configService);
+  return new AuthenticationService(configuration, configService, new LoggerService('AuthenticationService'));
 };
 
 export const createAuthenticationMockService = (configService: ConfigService): Authentication => {

@@ -1,7 +1,6 @@
-import { Controller, Get, Inject, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Param } from '@nestjs/common';
 import { ControleGateway } from './controle.gateway';
 import { ControleDto, ControleSandreDto } from '@lib/dossier';
-import { AuthenticationGuard } from '@authentication/authentication.guard';
 import { ReponseSandreGateway } from './technique/sandre/reponseSandre.gateway';
 
 @Controller('depot')
@@ -12,16 +11,14 @@ export class ControleController {
   ) {}
 
   // TODO: Ajouter le guard HasUserAccessToDepotGuard
-  // @UseGuards(AuthenticationGuard, HasUserAccessToDepotGuard)
-  @UseGuards(AuthenticationGuard)
+  // @UseGuards(HasUserAccessToDepotGuard)
   @Get(':depotId/controle')
   async getControle(@Param('depotId') depotId: string): Promise<ControleDto[]> {
     return this.controleGateway.findByDepotId(depotId);
   }
 
   // TODO: Ajouter le guard HasUserAccessToDepotGuard
-  // @UseGuards(AuthenticationGuard, HasUserAccessToDepotGuard)
-  @UseGuards(AuthenticationGuard)
+  // @UseGuards(HasUserAccessToDepotGuard)
   @Get(':depotId/controle/sandre')
   async getControleSandre(@Param('depotId') depotId: string): Promise<ControleSandreDto[]> {
     return this.reponseSandreGateway.findByDepotId(depotId);

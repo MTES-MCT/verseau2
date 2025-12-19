@@ -15,10 +15,6 @@ const getDdlSync = (configService: ConfigService) => {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
-    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {

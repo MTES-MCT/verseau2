@@ -1,0 +1,34 @@
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/verseau2
+
+# Migrations
+RUN_MIGRATIONS_ON_STARTUP=false
+USE_SANDRE_MOCK=mock
+
+S3_PROVIDER=mock #ou mock
+S3_BUCKET=MY_BUCKET
+S3_ENDPOINT=OUTSCALE_ENDPOINT
+S3_REGION=OUTSCALE_REGION
+S3_ACCESS_KEY=MY_ACCESS_KEY
+S3_SECRET_KEY=MY_SECRET_KEY
+
+LOGS_LEVEL=debug # or verbose
+
+EMAIL_PROVIDER=mock # or brevo or #mailcatcher
+
+# OpenID Connect
+OIDC_ISSUER_URL=https://your-oidc-provider/.well-known/openid-configuration
+OIDC_CLIENT_ID=verseau2
+OIDC_CLIENT_SECRET=your-client-secret
+OIDC_REDIRECT_URI=http://localhost:5173/api/auth/callback
+OIDC_MOCK=true
+
+# SFTP Configuration
+SFTP_PROVIDER=mock # or real
+SFTP_HOST=localhost
+SFTP_PORT=22
+SFTP_USERNAME=user
+SFTP_PRIVATE_KEY=key
+
+# MASA webhook
+MASA_WEBHOOK_MOCK=true
+MASA_API_KEY=private-token

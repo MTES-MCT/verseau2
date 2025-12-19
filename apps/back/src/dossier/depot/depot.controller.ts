@@ -1,20 +1,9 @@
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  Post,
-  Query,
-  UploadedFile,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Query, UploadedFile, UseInterceptors, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
-import { AuthenticationGuard } from '@authentication/authentication.guard';
-import { AuthenticatedUserDecorator } from '@authentication/authenticated-user.decorator';
-import type { AuthenticatedUser } from '@authentication/authentication';
+import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
 import { DepotDto } from '@lib/dossier';
@@ -39,12 +28,9 @@ export class DepotController {
   ) {}
 
   @Post('upload')
-  @UseGuards(AuthenticationGuard)
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(
-    @UploadedFile() file: MulterFile | undefined,
-    @AuthenticatedUserDecorator() user: AuthenticatedUser,
-  ): Promise<DepotDto> {
+  async uploadFile(@UploadedFile() file: MulterFile | undefined, @Req() req: CustomRequest): Promise<DepotDto> {
+    const user = req.user;
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -75,18 +61,18 @@ export class DepotController {
   }
 
   @Get()
-  @UseGuards(AuthenticationGuard)
-  async listMyDepots(@AuthenticatedUserDecorator() user: AuthenticatedUser): Promise<DepotDto[]> {
+  async listMyDepots(@Req() req: CustomRequest): Promise<DepotDto[]> {
+    const user = req.user;
     const userEntity = await this.userService.findBySub(user.cerbereId);
     return this.depotService.findByUserId(userEntity.id);
   }
 
   @Get('droits-de-depot')
-  @UseGuards(AuthenticationGuard)
   async checkDroitsDeDepot(
     @Query('cdOuvrage') cdOuvrage: string,
-    @AuthenticatedUserDecorator() user: AuthenticatedUser,
+    @Req() req: CustomRequest,
   ): Promise<{ authorized: boolean }> {
+    const user = req.user;
     const userEntity = await this.userService.findBySub(user.cerbereId);
     const authorized = await this.depotService.checkDroitsDeDepot(cdOuvrage, userEntity.itvCdn);
     return { authorized };
