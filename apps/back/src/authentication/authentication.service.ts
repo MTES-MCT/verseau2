@@ -11,6 +11,7 @@ import {
 import { Authentication, AuthenticatedUser, OIDCTokens, OIDCConfiguration } from './authentication';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
+import { jwtVerify, createRemoteJWKSet, type JWTPayload } from 'jose';
 
 @Injectable()
 export class AuthenticationService implements Authentication {
@@ -18,6 +19,7 @@ export class AuthenticationService implements Authentication {
   private readonly clientId: string;
   private readonly scope =
     'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations';
+  private jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
   constructor(
     private readonly configuration: Configuration,
@@ -29,10 +31,32 @@ export class AuthenticationService implements Authentication {
     this.logger.setContext(AuthenticationService.name);
   }
 
+  private getJWKS() {
+    if (!this.jwks) {
+      const metadata = this.configuration.serverMetadata();
+      if (!metadata.jwks_uri) {
+        throw new Error('JWKS URI not available in OIDC metadata');
+      }
+      this.jwks = createRemoteJWKSet(new URL(metadata.jwks_uri));
+    }
+    return this.jwks;
+  }
+
   async validateToken(token: string): Promise<AuthenticatedUser> {
     try {
-      // Validate token by fetching user info (which validates the token internally)
-      return await this.getUserInfo(token);
+      try {
+        // Attempt local JWT verification first
+        const jwks = this.getJWKS();
+        const { payload } = await jwtVerify(token, jwks, {
+          issuer: this.configuration.serverMetadata().issuer,
+          audience: this.clientId,
+        });
+
+        return this.mapClaimsToUser(payload);
+      } catch {
+        // Fallback to fetchUserInfo if JWT verification fails (e.g. opaque token or local validation issues)
+        return await this.getUserInfo(token);
+      }
     } catch (error) {
       throw new Error(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -62,11 +86,7 @@ export class AuthenticationService implements Authentication {
       pkceCodeVerifier: undefined,
     });
 
-    this.logger.debug(`Tokens received: ${JSON.stringify(tokens)}`);
-
     const user = await this.getUserInfo(tokens.access_token);
-
-    this.logger.debug(`User info received: ${JSON.stringify(user)}`);
 
     return {
       accessToken: tokens.access_token,
@@ -78,22 +98,29 @@ export class AuthenticationService implements Authentication {
   }
 
   async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
-    const userInfo: UserInfoResponse = await fetchUserInfo(this.configuration, accessToken, skipSubjectCheck);
+    this.logger.debug(`Getting user info for access token: ${accessToken}`);
 
+    const userInfo: UserInfoResponse = await fetchUserInfo(this.configuration, accessToken, skipSubjectCheck);
+    this.logger.debug(`User info received: ${JSON.stringify(userInfo)}`);
+
+    return this.mapClaimsToUser(userInfo as unknown as JWTPayload);
+  }
+
+  private mapClaimsToUser(claims: JWTPayload): AuthenticatedUser {
     return {
-      cerbereId: userInfo.sub || '',
-      login: (userInfo.preferred_username as string) || (userInfo.uid as string) || '',
-      nom: (userInfo.usual_name as string) || (userInfo.family_name as string) || '',
-      prenom: (userInfo.given_name as string) || '',
-      mel: (userInfo.email as string) || '',
-      matricule: (userInfo.cerbere_matricule as string) || userInfo.sub || '',
-      unite: userInfo.organizational_unit as string | undefined,
-      emailMetier: userInfo.email_metier as string | undefined,
-      description: userInfo.cerbere_description as string | undefined,
-      mobile: userInfo.cerbere_mobile as string | undefined,
-      telephone: userInfo.phone_number,
-      profils: userInfo.cerbere_profils as string[] | undefined,
-      roles: userInfo.cerbere_roles as string[] | undefined,
+      cerbereId: (claims.sub as string) || '',
+      login: (claims.preferred_username as string) || (claims.uid as string) || '',
+      nom: (claims.usual_name as string) || (claims.family_name as string) || '',
+      prenom: (claims.given_name as string) || '',
+      mel: (claims.email as string) || '',
+      matricule: (claims.cerbere_matricule as string) || (claims.sub as string) || '',
+      unite: claims.organizational_unit as string | undefined,
+      emailMetier: claims.email_metier as string | undefined,
+      description: claims.cerbere_description as string | undefined,
+      mobile: claims.cerbere_mobile as string | undefined,
+      telephone: claims.phone_number as string | undefined,
+      profils: claims.cerbere_profils as string[] | undefined,
+      roles: claims.cerbere_roles as string[] | undefined,
     };
   }
 
