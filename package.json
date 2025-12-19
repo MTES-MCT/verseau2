@@ -1,6 +1,7 @@
 {
   "name": "verseau2",
   "private": false,
+  "node": "24.11.1",
   "workspaces": [
     "apps/*",
     "packages/*"
