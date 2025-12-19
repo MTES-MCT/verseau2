@@ -17,7 +17,6 @@ export function DepotUploadRecapPage() {
     fileName,
     hasFile,
     parsedData,
-    params,
     parametreNames,
     totalAnalyses,
     parseMutation,
