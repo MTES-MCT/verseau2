@@ -79,6 +79,11 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
         return `DCO hors plage (300 ; 1700) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]})`;
       }
       return `Valeur DCO manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+    case ErrorCode.E2_042:
+      if (params.length === 5) {
+        return `DBO5 hors plage (150 ; 800) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DBO5=${params[4]})`;
+      }
+      return `Valeur DBO5 manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     default:
       return `Erreur inconnue`;
   }

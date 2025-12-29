@@ -952,4 +952,123 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors[0].params).toEqual(['STEU004', 'PM004', '2024-01-18', '3']);
     });
   });
+
+  describe('CTL042 - verifyDbo5Range', () => {
+    it('should pass when DBO5 is within valid range (150 < DBO5 < 800)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '400')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDbo5Range(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL042);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when DBO5 is too low (DBO5 <= 150)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '150')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDbo5Range(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL042);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_042);
+      expect(result.errors[0].params).toEqual(['STEU001', 'PM001', '2024-01-15', '3', '150']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when DBO5 is too high (DBO5 >= 800)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '800')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDbo5Range(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL042);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_042);
+      expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '800']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when DBO5 value is missing', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU003',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM003',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-17',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '50')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDbo5Range(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL042);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_042);
+      expect(result.errors[0].params).toEqual(['STEU003', 'PM003', '2024-01-17', '3']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+  });
 });

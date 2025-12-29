@@ -8,7 +8,7 @@ export interface ControleDto extends BaseEntity {
   success: boolean;
   error?: ErrorCode;
   errorParams?: string[];
-  evenementType: EvenementType;
+  evenementType?: EvenementType | undefined;
 }
 
 export interface ControleSandreDto extends BaseEntity {
