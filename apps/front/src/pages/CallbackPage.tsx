@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { authService } from '../services/auth.service';
+import { useAuth } from '../hooks/useAuth';
 
 export default function CallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -28,7 +30,8 @@ export default function CallbackPage() {
       try {
         await authService.handleCallback(code, state);
 
-        // Redirect to the intended page or home
+        await refreshUser();
+
         const returnTo = sessionStorage.getItem('auth_return_to');
         sessionStorage.removeItem('auth_return_to');
         navigate(returnTo || '/', { replace: true });
@@ -39,7 +42,7 @@ export default function CallbackPage() {
     };
 
     handleCallback();
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, refreshUser]);
 
   if (error) {
     return (
