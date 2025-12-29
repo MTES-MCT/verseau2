@@ -158,7 +158,6 @@ describe('ControleV1Service (e2e)', () => {
       const controles = await controleV1Service.execute('dep_test_009', fctAssainissement);
 
       const ctl002 = controles.find((c) => c.name === ControleName.CTL002);
-      console.log(ctl002);
       // CTL002 should fail because at least one ouvrage is missing
       expect(ctl002).toBeDefined();
       expect(ctl002?.success).toBe(false);

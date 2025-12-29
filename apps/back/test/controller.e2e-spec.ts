@@ -1,5 +1,11 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
+
+dotenv.config({
+  path: path.join(__dirname, 'test.envfile'),
+  override: true,
+});
+
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -107,18 +113,12 @@ describe('Controller (e2e) - Unauthorized', () => {
     });
 
     it.skip('/webhook/masa/agent-verseau (POST) - Should return 201 Created', async () => {
-      dotenv.config({
-        path: path.join(__dirname, 'mocks', 'test.envfile'),
-        override: true,
-      });
-
       //MASA_API_KEY=private-token
       const response = await request(app.getHttpServer())
         .post('/webhook/masa/agent-verseau')
         .set('x-api-key', 'private-token')
         .send({ versau2DepotId: 'dep_test_001', numeroDepotVerseau1: '1234567890', statut: 'INTEGRE', rapport: 'test' })
         .expect(201);
-      console.log('response', response.body);
       return response;
     });
   });
