@@ -293,6 +293,50 @@ export class ControleMetierV2Service {
     });
   }
 
+  // CTL043: Analyse des concentrations en MES hors fourchette (100 < MES < 1200)
+  verifyMesRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterRange(fctAssainissement, {
+      name: ControleName.CTL043,
+      errorCode: ErrorCode.E2_043,
+      paramCode: CodeParametre.MES,
+      min: 100,
+      max: 1200,
+    });
+  }
+
+  // CTL044: Analyse des concentrations en NTK hors fourchette (20 < NTK < 160)
+  verifyNtkRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterRange(fctAssainissement, {
+      name: ControleName.CTL044,
+      errorCode: ErrorCode.E2_044,
+      paramCode: CodeParametre.NTK,
+      min: 20,
+      max: 160,
+    });
+  }
+
+  // CTL045: Analyse des concentrations en Ptot hors fourchette (4 < Ptot < 25)
+  verifyPtotRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterRange(fctAssainissement, {
+      name: ControleName.CTL045,
+      errorCode: ErrorCode.E2_045,
+      paramCode: CodeParametre.Ptot,
+      min: 4,
+      max: 25,
+    });
+  }
+
+  // CTL046: Analyse des concentrations en pH hors fourchette (2 < pH < 12)
+  verifyPhRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterRange(fctAssainissement, {
+      name: ControleName.CTL046,
+      errorCode: ErrorCode.E2_046,
+      paramCode: CodeParametre.pH,
+      min: 2,
+      max: 12,
+    });
+  }
+
   // Helper for parameter range verification
   private verifyParameterRange(
     fctAssainissement: FctAssainissement,

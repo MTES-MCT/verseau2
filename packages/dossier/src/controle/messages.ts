@@ -76,14 +76,33 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return params[4]; // message d'erreur d'impossibilité
     case ErrorCode.E2_041:
       if (params.length === 5) {
-        return `DCO hors plage (300 ; 1700) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]})`;
+        return `DCO hors plage (300-1700) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]})`;
       }
       return `Valeur DCO manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_042:
       if (params.length === 5) {
-        return `DBO5 hors plage (150 ; 800) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DBO5=${params[4]})`;
+        return `DBO5 hors plage (150-800) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DBO5=${params[4]})`;
       }
       return `Valeur DBO5 manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+    case ErrorCode.E2_043:
+      if (params.length === 5) {
+        return `MES hors plage (100-1200) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (MES=${params[4]})`;
+      }
+      return `Valeur MES manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+    case ErrorCode.E2_044:
+      if (params.length === 5) {
+        return `NTK hors plage (20-160) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]})`;
+      }
+      return `Valeur NTK manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+    case ErrorCode.E2_045:
+      if (params.length === 5) {
+        return `Ptot hors plage (4-25) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (Ptot=${params[4]})`;
+      }
+      return `Valeur Ptot manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+    case ErrorCode.E2_046:
+      if (params.length === 5) {
+        return `pH hors plage (2-12) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (pH=${params[4]})`;
+      }
     default:
       return `Erreur inconnue`;
   }
