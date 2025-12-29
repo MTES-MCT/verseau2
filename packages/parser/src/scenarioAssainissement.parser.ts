@@ -273,6 +273,7 @@ function mapPrelevementList(raw: any): Prelevement[] {
 function mapPrelevement(raw: any): Prelevement {
   return {
     cdSupport: raw[SandreTags.Support]?.[SandreTags.CdSupport],
+    datePrlvt: raw[SandreTags.DatePrlvt],
     conformitePrlvt: raw[SandreTags.ConformitePrlvt],
     analyse: mapAnalyseList(raw[SandreTags.Analyse]),
     accrePrlvt: raw[SandreTags.AccrePrlvt],

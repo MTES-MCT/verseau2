@@ -68,6 +68,7 @@ export interface PointMesure {
 
 export interface Prelevement {
   cdSupport?: string;
+  datePrlvt?: string;
   conformitePrlvt?: string;
   accrePrlvt?: string;
   analyse: Analyse[];
