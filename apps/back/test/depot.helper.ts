@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+import { clearControles } from './controle.helper';
 
 export interface DepotSeedData {
   id: string;
@@ -56,5 +57,6 @@ export async function seedDepotFull(dataSource: DataSource, data: DepotSeedData)
  * Clear all depot records
  */
 export async function clearDepots(dataSource: DataSource): Promise<void> {
+  await clearControles(dataSource);
   await dataSource.query(`DELETE FROM depot`);
 }

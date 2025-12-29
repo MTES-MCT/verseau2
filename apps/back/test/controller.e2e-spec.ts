@@ -1,11 +1,5 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
-
-dotenv.config({
-  path: path.join(__dirname, 'mocks', 'test.envfile'),
-  override: true,
-});
-
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -20,14 +14,23 @@ import { SftpModule } from '../src/infra/sftp/sftp.module';
 import { Module, Global } from '@nestjs/common';
 import { ConfigurationModule } from '../src/infra/config/configuration.module';
 import { S3 } from '@s3/s3';
+import { clearDepots, seedDepot } from './depot.helper';
+import { DataSource } from 'typeorm';
 
 @Module({
   imports: [],
+  providers: [
+    {
+      provide: S3,
+      useValue: {
+        upload: jest.fn().mockResolvedValue(undefined),
+        download: jest.fn().mockResolvedValue(Buffer.from('mock')),
+      },
+    },
+  ],
   exports: [S3],
 })
-class S3MockModule {
-  constructor() {}
-}
+class S3MockModule {}
 
 @Global()
 @Module({
@@ -43,7 +46,7 @@ class S3MockModule {
 })
 class InfraTestModule {}
 
-describe.skip('Controller (e2e) - Unauthorized', () => {
+describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -64,9 +67,11 @@ describe.skip('Controller (e2e) - Unauthorized', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    await clearDepots(app.get(DataSource));
   });
 
   afterAll(async () => {
+    await clearDepots(app.get(DataSource));
     await app.close();
   });
 
@@ -136,14 +141,22 @@ describe.skip('Controller (e2e) - Unauthorized', () => {
       return request(app.getHttpServer()).post('/webhook/masa/agent-verseau').expect(401);
     });
 
-    // it('/webhook/masa/agent-verseau (POST) - Should return 201 Unauthorized', async () => {
-    //   //MASA_API_KEY=private-token
-    //   return request(app.getHttpServer())
-    //     .post('/webhook/masa/agent-verseau')
-    //     .set('x-api-key', 'private-token')
-    //     .send({})
-    //     .expect(201);
-    // });
+    it.skip('/webhook/masa/agent-verseau (POST) - Should return 201 Created', async () => {
+      await seedDepot(app.get(DataSource), 'dep_test_001', 'test.xml', 1024, 'application/xml');
+      dotenv.config({
+        path: path.join(__dirname, 'mocks', 'test.envfile'),
+        override: true,
+      });
+
+      //MASA_API_KEY=private-token
+      const response = await request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send({ versau2DepotId: 'dep_test_001', numeroDepotVerseau1: '1234567890', statut: 'INTEGRE', rapport: 'test' })
+        .expect(201);
+      console.log('response', response.body);
+      return response;
+    });
   });
 
   describe('Controller (e2e) - Referentiel', () => {
