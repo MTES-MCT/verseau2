@@ -567,4 +567,241 @@ describe('ControleMetierV2Service (e2e)', () => {
       ]);
     });
   });
+
+  describe('CTL040 - verifyRatioMesDbo5', () => {
+    it('should pass when MES/DBO5 ratio is within valid range (0.7 < ratio < 1.5)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.MES.toString(), '10'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '10'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when MES/DBO5 ratio is too low (ratio <= 0.7)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.MES.toString(), '7'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '10'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
+      expect(result.errors[0].params).toEqual(['STEU001', 'PM001', '2024-01-15', '3', '7', '10', '0.70']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when MES/DBO5 ratio is too high (ratio >= 1.5)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.MES.toString(), '15'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '10'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
+      expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '15', '10', '1.50']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when MES value is missing', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU003',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM003',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-17',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '20')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
+      expect(result.errors[0].params).toEqual([
+        'STEU003',
+        'PM003',
+        '2024-01-17',
+        '3',
+        'Impossible de calculer le ratio (MES)',
+      ]);
+    });
+
+    it('should report error when DBO5 value is missing', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU004',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM004',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-18',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '50')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
+      expect(result.errors[0].params).toEqual([
+        'STEU004',
+        'PM004',
+        '2024-01-18',
+        '3',
+        'Impossible de calculer le ratio (DBO5)',
+      ]);
+    });
+
+    it('should report error when DBO5 value is zero', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU005',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM005',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-19',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.MES.toString(), '50'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '0'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params).toEqual([
+        'STEU005',
+        'PM005',
+        '2024-01-19',
+        '3',
+        'Impossible de calculer le ratio (DBO5 <= 0)',
+      ]);
+    });
+
+    it('should group analyses by the same (ouvrage, point_mesure, date, support) combination', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU010',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM010',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-25',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.MES.toString(), '7'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '10'),
+                      createTestAnalyse(CodeParametre.DCO.toString(), '50'), // DCO (should be ignored)
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL040);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params[6]).toBe('0.70'); // Ratio MES/DBO5
+    });
+  });
 });
