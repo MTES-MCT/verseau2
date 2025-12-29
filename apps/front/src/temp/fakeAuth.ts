@@ -1,7 +1,7 @@
 // Temporary fake token helpers to be removed when real OIDC is available.
 import { useEffect, useState } from 'react';
 
-export const FAKE_TOKEN_STORAGE_KEY = 'OIDC_FAKE_TOKEN';
+export const FAKE_TOKEN_STORAGE_KEY = 'FAKE_TOKEN_STORAGE_KEY';
 
 const getEnvFakeToken = (): string => ((import.meta.env.VITE_FAKE_TOKEN as string | undefined) || '').trim();
 

@@ -5,8 +5,11 @@ import { AuthenticationService } from './authentication.service';
 import { AuthenticationMockService } from './authentication.mock.service';
 import { LoggerService } from '@shared/logger/logger.service';
 
-export const createAuthenticationService = (configuration: Configuration): Authentication => {
-  return new AuthenticationService(configuration);
+export const createAuthenticationService = (
+  configuration: Configuration,
+  configService: ConfigService,
+): Authentication => {
+  return new AuthenticationService(configuration, configService, new LoggerService('AuthenticationService'));
 };
 
 export const createAuthenticationMockService = (configService: ConfigService): Authentication => {
@@ -23,7 +26,10 @@ export const createAuthenticationProviders = () => [
       }
       const issuerUrl = configService.getOrThrow<string>('OIDC_ISSUER_URL');
       const clientId = configService.getOrThrow<string>('OIDC_CLIENT_ID');
-      return await discovery(new URL(issuerUrl), clientId);
+      const clientSecret = configService.getOrThrow<string>('OIDC_CLIENT_SECRET');
+      return await discovery(new URL(issuerUrl), clientId, {
+        client_secret: clientSecret,
+      });
     },
     inject: [ConfigService],
   },
@@ -36,7 +42,7 @@ export const createAuthenticationProviders = () => [
         logger.warn('MOCK AUTHENTICATION SERVICE IN USE');
         return createAuthenticationMockService(configService);
       }
-      return createAuthenticationService(configuration);
+      return createAuthenticationService(configuration, configService);
     },
   },
 ];

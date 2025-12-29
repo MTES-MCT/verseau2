@@ -1,31 +1,17 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TypeOrmModule, getDataSourceToken } from '@nestjs/typeorm';
+import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { App } from 'supertest/types';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { ControleMapper } from '@dossier/controle/isov1/controle.mapper';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ControleRepository } from '@dossier/controle/controle.repository';
-import { ControleEntity } from '@dossier/controle/controle.entity';
-import { DepotEntity } from '@dossier/depot/depot.entity';
-import { UserEntity } from '@user/user.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
-import { SteuEntity } from '@referentiel/roseau/entities/steu.entity';
-import { CxnadmEntity } from '@referentiel/roseau/entities/cxnadm.entity';
-import { PmoEntity } from '@referentiel/roseau/entities/pmo.entity';
-import { TlrefEntity } from '@referentiel/roseau/entities/tlref.entity';
-import { AgaEntity } from '@referentiel/roseau/entities/aga.entity';
-import { SclEntity } from '@referentiel/roseau/entities/scl.entity';
-import { CxntechEntity } from '@referentiel/roseau/entities/cxntech.entity';
-import { ItvEntity } from '@referentiel/lanceleau/entities/itv.entity';
-import { SupEntity } from '@referentiel/lanceleau/entities/sup.entity';
-import { FanEntity } from '@referentiel/lanceleau/entities/fan.entity';
-import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
-import { UrfEntity } from '@referentiel/lanceleau/entities/urf.entity';
+
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
@@ -41,6 +27,7 @@ import {
 import { seedDepot, clearDepots } from '../../../depot.helper';
 import type { Analyse, Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
+import { initTestContainerImports } from '../../../init/initTestContainer';
 
 type PartialFctAssainissement = {
   scenario?: {
@@ -79,50 +66,7 @@ describe('ControleV1Service (e2e)', () => {
     const connectionUri = getPostgresConnectionUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        TypeOrmModule.forRoot({
-          type: 'postgres',
-          url: connectionUri,
-          entities: [
-            // App entities
-            ControleEntity,
-            DepotEntity,
-            UserEntity,
-            // Roseau entities
-            SteuEntity,
-            CxnadmEntity,
-            PmoEntity,
-            TlrefEntity,
-            AgaEntity,
-            SclEntity,
-            CxntechEntity,
-            // Lanceleau entities
-            ItvEntity,
-            SupEntity,
-            FanEntity,
-            ParEntity,
-            UrfEntity,
-          ],
-          synchronize: false,
-        }),
-        TypeOrmModule.forFeature([
-          ControleEntity,
-          DepotEntity,
-          UserEntity,
-          SteuEntity,
-          CxnadmEntity,
-          PmoEntity,
-          TlrefEntity,
-          AgaEntity,
-          SclEntity,
-          CxntechEntity,
-          ItvEntity,
-          SupEntity,
-          FanEntity,
-          ParEntity,
-          UrfEntity,
-        ]),
-      ],
+      imports: [...initTestContainerImports(connectionUri)],
       providers: [
         LoggerService,
         ControleV1Service,
@@ -214,7 +158,6 @@ describe('ControleV1Service (e2e)', () => {
       const controles = await controleV1Service.execute('dep_test_009', fctAssainissement);
 
       const ctl002 = controles.find((c) => c.name === ControleName.CTL002);
-      console.log(ctl002);
       // CTL002 should fail because at least one ouvrage is missing
       expect(ctl002).toBeDefined();
       expect(ctl002?.success).toBe(false);

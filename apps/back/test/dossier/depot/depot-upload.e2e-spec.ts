@@ -17,7 +17,7 @@ import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { SftpProviderMock } from '@infra/sftp/sftp.provider.mock';
 import { Authentication } from '@authentication/authentication';
-import { AuthenticationGuard, REQUEST_USER_KEY } from '@authentication/authentication.guard';
+import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { AuthenticationMockService } from '@authentication/authentication.mock.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserService } from '@user/user.service';
@@ -29,7 +29,7 @@ import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri
 
 class ConfigServiceMock {
   get(key: string) {
-    if (key === 'OIDC_FAKE_TOKEN') {
+    if (key === 'FAKE_TOKEN_STORAGE_KEY') {
       return 'test-token';
     }
     return null;
@@ -90,23 +90,6 @@ class UserServiceMock {
   }
 }
 
-// Attach the authenticated user to the request for the decorator to read
-class AuthenticationGuardMock extends AuthenticationGuard {
-  async canActivate(context: Parameters<AuthenticationGuard['canActivate']>[0]): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    request[REQUEST_USER_KEY] = {
-      cerbereId: 'mock-cerbere-id',
-      login: 'mock-login',
-      nom: 'Doe',
-      prenom: 'John',
-      mel: 'john.doe@example.com',
-      matricule: '123456789',
-    };
-    await Promise.resolve();
-    return true;
-  }
-}
-
 class RoseauGatewayMock {
   findSteuBySandreCda() {
     return Promise.resolve(null);
@@ -152,7 +135,7 @@ describe('Depot upload (e2e)', () => {
         { provide: S3, useClass: S3Mock },
         { provide: Sftp, useClass: SftpProviderMock },
         { provide: Authentication, useClass: AuthenticationMockService },
-        { provide: AuthenticationGuard, useClass: AuthenticationGuardMock },
+        AuthenticationMiddleware,
         { provide: UserService, useClass: UserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
@@ -160,9 +143,8 @@ describe('Depot upload (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-
-    // Ensure the AuthenticatedUser decorator can read the user set by the mock guard
-    app.useGlobalGuards(moduleFixture.get(AuthenticationGuard));
+    const authMiddleware = app.get(AuthenticationMiddleware);
+    app.use(authMiddleware.use.bind(authMiddleware));
 
     await app.init();
 

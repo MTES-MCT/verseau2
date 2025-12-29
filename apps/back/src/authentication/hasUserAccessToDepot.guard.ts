@@ -1,10 +1,9 @@
-import { Authentication, AuthenticatedUser } from './authentication';
+import { Authentication } from './authentication';
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
-import { REQUEST_USER_KEY } from './authentication.guard';
 import { DepotService } from '@dossier/depot/depot.service';
 import { UserService } from '@user/user.service';
-import { Request } from 'express';
+import { CustomRequest } from '@shared/constants/customRequest';
 
 @Injectable()
 export class HasUserAccessToDepotGuard implements CanActivate {
@@ -18,8 +17,8 @@ export class HasUserAccessToDepotGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-    const authenticatedUser = request[REQUEST_USER_KEY] as AuthenticatedUser;
+    const request = context.switchToHttp().getRequest<CustomRequest>();
+    const authenticatedUser = request.user;
 
     if (!authenticatedUser) {
       this.logger.warn('No authenticated user found in request');
