@@ -6,55 +6,22 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { ApiModule } from '../src/api/api.module';
 import { PGBOSS } from '../src/infra/queue/queue';
-import { DatabaseMockModule } from './mocks/databaseMock.module';
 import { InfraModule } from '@infra/infra.module';
-import { AuthenticationModule } from '@authentication/authentication.module';
-import { QueueModule } from '../src/infra/queue/queue.module';
-import { SftpModule } from '../src/infra/sftp/sftp.module';
-import { Module, Global } from '@nestjs/common';
-import { ConfigurationModule } from '../src/infra/config/configuration.module';
-import { S3 } from '@s3/s3';
-import { clearDepots, seedDepot } from './depot.helper';
-import { DataSource } from 'typeorm';
-
-@Module({
-  imports: [],
-  providers: [
-    {
-      provide: S3,
-      useValue: {
-        upload: jest.fn().mockResolvedValue(undefined),
-        download: jest.fn().mockResolvedValue(Buffer.from('mock')),
-      },
-    },
-  ],
-  exports: [S3],
-})
-class S3MockModule {}
-
-@Global()
-@Module({
-  imports: [
-    DatabaseMockModule,
-    AuthenticationModule,
-    S3MockModule,
-    QueueModule,
-    SftpModule.forRootAsync(),
-    ConfigurationModule,
-  ],
-  exports: [DatabaseMockModule, AuthenticationModule, S3MockModule, QueueModule, SftpModule, ConfigurationModule],
-})
-class InfraTestModule {}
+import { initTestContainerImports } from './init/initTestContainer';
+import { getPostgresConnectionUri, startPostgresContainer } from './testcontainer.config';
+import { InfraMockModule } from './mock/infraMock.module';
 
 describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
+    await startPostgresContainer();
+    const connectionUri = getPostgresConnectionUri();
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [ApiModule],
+      imports: [...initTestContainerImports(connectionUri), ApiModule],
     })
       .overrideModule(InfraModule)
-      .useModule(InfraTestModule)
+      .useModule(InfraMockModule)
       .overrideProvider(PGBOSS)
       .useValue({
         on: jest.fn(),
@@ -67,11 +34,9 @@ describe('Controller (e2e) - Unauthorized', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
-    await clearDepots(app.get(DataSource));
   });
 
   afterAll(async () => {
-    await clearDepots(app.get(DataSource));
     await app.close();
   });
 
@@ -142,7 +107,6 @@ describe('Controller (e2e) - Unauthorized', () => {
     });
 
     it.skip('/webhook/masa/agent-verseau (POST) - Should return 201 Created', async () => {
-      await seedDepot(app.get(DataSource), 'dep_test_001', 'test.xml', 1024, 'application/xml');
       dotenv.config({
         path: path.join(__dirname, 'mocks', 'test.envfile'),
         override: true,

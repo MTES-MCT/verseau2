@@ -23,6 +23,6 @@
     "^@user/(.*)$": "<rootDir>/src/user/$1",
     "^@lib/dossier$": "<rootDir>/../../packages/dossier/src/index.ts",
     "^@lib/parser$": "<rootDir>/../../packages/parser/src/index.ts",
-    "^pg-boss$": "<rootDir>/test/mocks/pg-boss.mock.ts"
+    "^pg-boss$": "<rootDir>/test/mock/pg-boss.mock.ts"
   }
 }
