@@ -86,7 +86,7 @@ export function useDepotRecap(): UseDepotRecapResult {
     }
     const file = buildFileFromContent(fileContent, fileName);
     uploadMutation.mutate(file, {
-      onSuccess: () => navigate('/'),
+      onSuccess: () => navigate('/dashboard'),
       onError: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
     });
   };
