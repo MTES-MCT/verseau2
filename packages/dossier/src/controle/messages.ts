@@ -74,6 +74,11 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
         return `Ratio MES/DBO5 hors plage (0.7-1.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (MES=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
       }
       return params[4]; // message d'erreur d'impossibilité
+    case ErrorCode.E2_041:
+      if (params.length === 5) {
+        return `DCO hors plage (300 ; 1700) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]})`;
+      }
+      return `Valeur DCO manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     default:
       return `Erreur inconnue`;
   }

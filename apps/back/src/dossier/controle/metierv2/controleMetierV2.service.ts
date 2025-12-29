@@ -15,7 +15,11 @@ export class ControleMetierV2Service {
   ) {}
 
   async execute(depotId: string, xmlObj: FctAssainissement, manager?: EntityManager): Promise<ControleModel[]> {
-    const tousControles = [this.verifyRatioDcoDbo5(xmlObj), this.verifyRatioMesDbo5(xmlObj)];
+    const tousControles = [
+      this.verifyRatioDcoDbo5(xmlObj),
+      this.verifyRatioMesDbo5(xmlObj),
+      this.verifyDcoRange(xmlObj),
+    ];
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(depotId, tousControles);
     const createdControles = await this.controleGateway.createControles(createControles, manager);
     return createdControles;
@@ -123,19 +127,17 @@ export class ControleMetierV2Service {
           missingValues.push('DBO5 <= 0');
         }
 
-        //TODO: comment gérere ces erreurs ? Plusieurs centaines par fichier
-
-        // errors.push({
-        //   code: ErrorCode.E2_039,
-        //   params: [
-        //     cdOuvrageDepollution,
-        //     numeroPointMesure,
-        //     datePrlvt,
-        //     cdSupport,
-        //     `Impossible de calculer le ratio (${missingValues.join(', ')})`,
-        //   ],
-        //   evenementType: EvenementType.AVERTISSEMENT,
-        // });
+        errors.push({
+          code: ErrorCode.E2_039,
+          params: [
+            cdOuvrageDepollution,
+            numeroPointMesure,
+            datePrlvt,
+            cdSupport,
+            `Impossible de calculer le ratio (${missingValues.join(', ')})`,
+          ],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
       }
     }
 
@@ -244,24 +246,90 @@ export class ControleMetierV2Service {
           missingValues.push('DBO5 <= 0');
         }
 
-        //TODO: comment gérere ces erreurs ? Plusieurs centaines par fichier
-
-        // errors.push({
-        //   code: ErrorCode.E2_040,
-        //   params: [
-        //     cdOuvrageDepollution,
-        //     numeroPointMesure,
-        //     datePrlvt,
-        //     cdSupport,
-        //     `Impossible de calculer le ratio (${missingValues.join(', ')})`,
-        //   ],
-        //   evenementType: EvenementType.AVERTISSEMENT,
-        // });
+        errors.push({
+          code: ErrorCode.E2_040,
+          params: [
+            cdOuvrageDepollution,
+            numeroPointMesure,
+            datePrlvt,
+            cdSupport,
+            `Impossible de calculer le ratio (${missingValues.join(', ')})`,
+          ],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
       }
     }
 
     return {
       name: ControleName.CTL040,
+      errors: errors,
+    };
+  }
+
+  // CTL041: Analyse des concentrations en DCO hors fourchette (300 < DCO < 1700)
+  verifyDcoRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const MIN_DCO = 300;
+    const MAX_DCO = 1700;
+    const DCO_CODE = CodeParametre.DCO.toString();
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const numeroPointMesure = pointMesure.numeroPointMesure || '';
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+
+          let dcoValue: number | undefined;
+          let hasDcoAnalyse = false;
+
+          for (const analyse of prelevement.analyse) {
+            if (analyse.cdParametre === DCO_CODE) {
+              hasDcoAnalyse = true;
+              if (analyse.rsAnalyse) {
+                const val = parseFloat(analyse.rsAnalyse);
+                if (!isNaN(val)) {
+                  dcoValue = val;
+                }
+              }
+              break;
+            }
+          }
+
+          if (hasDcoAnalyse) {
+            if (dcoValue !== undefined) {
+              if (dcoValue <= MIN_DCO || dcoValue >= MAX_DCO) {
+                errors.push({
+                  code: ErrorCode.E2_041,
+                  params: [cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport, dcoValue.toString()],
+                  evenementType: EvenementType.AVERTISSEMENT,
+                });
+              }
+            } else {
+              // DCO existe mais valeur manquante ou non numérique
+              errors.push({
+                code: ErrorCode.E2_041,
+                params: [cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport],
+                evenementType: EvenementType.AVERTISSEMENT,
+              });
+            }
+          } else {
+            // DCO non trouvé pour cette mesure
+            errors.push({
+              code: ErrorCode.E2_041,
+              params: [cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      name: ControleName.CTL041,
       errors: errors,
     };
   }
