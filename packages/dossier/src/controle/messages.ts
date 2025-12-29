@@ -66,12 +66,12 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return `Le code Sandre ${params[0]} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_039:
       if (params.length === 7) {
-        return `Ratio DCO/DBO5 hors plage (1.5 ; 3.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
+        return `Ratio DCO/DBO5 hors plage (1.5-3.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
       }
       return params[4]; // message d'erreur d'impossibilité
     case ErrorCode.E2_040:
       if (params.length === 7) {
-        return `Ratio MES/DBO5 hors plage (0.7 ; 1.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (MES=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
+        return `Ratio MES/DBO5 hors plage (0.7-1.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (MES=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
       }
       return params[4]; // message d'erreur d'impossibilité
     default:

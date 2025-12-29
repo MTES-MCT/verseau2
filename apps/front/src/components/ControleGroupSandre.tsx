@@ -2,30 +2,23 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { type ControleDto, EvenementType } from '@lib/dossier';
+import { type ControleDto } from '@lib/dossier';
 import { useState } from 'react';
 import './ControleGroup.css';
 
-type ControleGroupProps = {
+type ControleGroupSandreProps = {
   title: string;
-  controles: ControleView[];
+  controles: ControleSandreView[];
   defaultExpanded?: boolean;
 };
 
-export type ControleView = Pick<ControleDto, 'name' | 'success' | 'evenementType'> & { message: string };
+export type ControleSandreView = Pick<ControleDto, 'name' | 'success'> & { message: string };
 
-function getResultBadge(evenementType: EvenementType) {
-  if (evenementType === EvenementType.ERREUR) {
+function getResultBadge(success: boolean) {
+  if (success) {
     return (
-      <Badge severity="error" small>
-        Échec
-      </Badge>
-    );
-  }
-  if (evenementType === EvenementType.AVERTISSEMENT) {
-    return (
-      <Badge severity="warning" small>
-        Avertissement
+      <Badge severity="success" small>
+        Succès
       </Badge>
     );
   }
@@ -36,7 +29,7 @@ function getResultBadge(evenementType: EvenementType) {
   );
 }
 
-export function ControleGroup({ title, controles }: ControleGroupProps) {
+export function ControleSandreGroup({ title, controles }: ControleGroupSandreProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   console.log(controles);
 
@@ -72,7 +65,7 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
         headers={['Contrôle', 'Résultat', 'Message']}
         data={filteredControles.map((controle) => [
           controle.name,
-          getResultBadge(controle.evenementType),
+          getResultBadge(controle.success),
           controle.message || '-',
         ])}
         className={`${fr.cx('fr-p-0', 'fr-m-0')} table-no-margin-and-padding`}
@@ -81,4 +74,4 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
   );
 }
 
-export default ControleGroup;
+export default ControleSandreGroup;

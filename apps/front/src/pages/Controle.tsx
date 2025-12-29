@@ -6,6 +6,7 @@ import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
 import { ControleGroup } from '../components/ControleGroup';
 import { mapControlesV1ToView, mapSandreControlesToView } from './controleMapper';
 import { fr } from '@codegouvfr/react-dsfr';
+import { ControleSandreGroup } from '../components/ControleGroupSandre';
 
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>();
@@ -82,7 +83,7 @@ export function ControlePage() {
       {/* Accordion pour les contrôles Sandre */}
       {sandreControlesMapped.length > 0 && (
         <div className={fr.cx('fr-mb-4w')}>
-          <ControleGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
+          <ControleSandreGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
         </div>
       )}
 
