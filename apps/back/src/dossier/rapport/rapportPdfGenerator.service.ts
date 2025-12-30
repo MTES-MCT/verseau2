@@ -61,12 +61,23 @@ export class RapportPdfGeneratorService {
       }
 
       // Footer
-      const pages = doc.bufferedPageRange();
-      for (let i = pages.start; i < pages.start + pages.count; i++) {
+      const range = doc.bufferedPageRange();
+
+      for (let i = 0; i < range.count; i++) {
         doc.switchToPage(i);
-        doc.fontSize(8).text(`Page ${i + 1 - pages.start} sur ${pages.count} - Verseau 2`, 50, doc.page.height - 50, {
+
+        // Save current position
+        const currentY = doc.y;
+
+        // Add footer with absolute positioning that doesn't affect cursor
+        doc.fontSize(8).text(`Page ${i + 1} sur ${range.count} - Verseau 2`, 50, doc.page.height - 50, {
           align: 'center',
+          lineBreak: false,
+          continued: false,
         });
+
+        // Restore cursor position to prevent new page creation
+        doc.y = currentY;
       }
 
       doc.end();
