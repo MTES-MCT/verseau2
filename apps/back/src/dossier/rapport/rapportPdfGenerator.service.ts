@@ -9,12 +9,14 @@ import { buildMessage } from '@lib/dossier';
 export class RapportPdfGeneratorService {
   async generateReport(masa: MasaModel, depot: DepotModel, controlesV2: ControleModelWithoutDepot[]): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50, bufferPages: true });
+      const doc = new PDFDocument({ margin: 50, bufferPages: true, autoFirstPage: false });
       const chunks: Buffer[] = [];
 
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
+
+      doc.addPage();
 
       // Header
       doc.fontSize(20).text('Rapport', { align: 'center' });
@@ -42,7 +44,7 @@ export class RapportPdfGeneratorService {
         doc.fontSize(16).text('Résultats des contrôles V2', { underline: true });
         doc.moveDown(0.5);
 
-        for (const controle of controlesV2) {
+        controlesV2.forEach((controle, index) => {
           if (controle.success) {
             doc.fillColor('green');
             doc.fontSize(12).text(`${controle.name}: OK`);
@@ -52,17 +54,19 @@ export class RapportPdfGeneratorService {
             doc.fontSize(8).text(buildMessage(controle.error, controle.errorParams || []));
           }
           doc.fillColor('black'); // Reset color
-          doc.moveDown(0.5);
-        }
+          if (index < controlesV2.length - 1) {
+            doc.moveDown(0.5);
+          }
+        });
       }
 
       // Footer
       const pages = doc.bufferedPageRange();
-      for (let i = 0; i < pages.count; i++) {
+      for (let i = pages.start; i < pages.start + pages.count; i++) {
         doc.switchToPage(i);
-        doc
-          .fontSize(8)
-          .text(`Page ${i + 1} sur ${pages.count} - Verseau 2`, 50, doc.page.height - 50, { align: 'center' });
+        doc.fontSize(8).text(`Page ${i + 1 - pages.start} sur ${pages.count} - Verseau 2`, 50, doc.page.height - 50, {
+          align: 'center',
+        });
       }
 
       doc.end();

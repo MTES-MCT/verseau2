@@ -18,6 +18,7 @@ export class ControleMapper {
           return {
             depotId: depotId,
             name: controleIndividuel.name,
+            type: type,
             success: controleIndividuel.errors.length === 0,
           };
         } else {
