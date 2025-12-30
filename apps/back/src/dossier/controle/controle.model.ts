@@ -2,12 +2,12 @@ import { ControleEntity } from './controle.entity';
 
 export type ControleModel = Pick<
   ControleEntity,
-  'id' | 'name' | 'success' | 'error' | 'errorParams' | 'depot' | 'evenementType' | 'createdAt' | 'updatedAt'
+  'id' | 'name' | 'type' | 'success' | 'error' | 'errorParams' | 'depot' | 'evenementType' | 'createdAt' | 'updatedAt'
 >;
 
 export type ControleModelWithoutDepot = Omit<ControleModel, 'depot'>;
 
 export type CreateControleModel = Pick<
   ControleEntity,
-  'name' | 'success' | 'error' | 'depotId' | 'evenementType' | 'errorParams'
+  'name' | 'type' | 'success' | 'error' | 'depotId' | 'evenementType' | 'errorParams'
 >;

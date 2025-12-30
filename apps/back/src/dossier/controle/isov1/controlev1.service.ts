@@ -3,7 +3,7 @@ import { EntityManager } from 'typeorm';
 import type { FctAssainissement } from '@lib/parser';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { ControleError, ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
 import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
@@ -62,6 +62,7 @@ export class ControleV1Service {
     const tousControlesResult = (await tousControles).flat();
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
+      ControleType.CONTROLE_V1,
       tousControlesResult,
     );
     const createdControles = await this.controleGateway.createControles(createControles, manager);

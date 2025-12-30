@@ -6,9 +6,11 @@ import { NotificationGateway } from '@notification/notification.gateway';
 import { EmailTemplate } from '@notification/notification';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
-import { MasaPdfGeneratorService } from '@dossier/masa/masaPdfGenerator.service';
+import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { MasaModel } from '@dossier/masa/masa.model';
+import { AsyncTask } from '@worker/asyncTask';
+import { ControleGateway } from '@dossier/controle/controle.gateway';
 
 interface MasaProcessorData {
   masaId: string;
@@ -16,19 +18,21 @@ interface MasaProcessorData {
 }
 
 @Injectable()
-export class MasaProcessorService {
+export class MasaProcessorService implements AsyncTask<MasaProcessorData> {
   private readonly logger = new LoggerService(MasaProcessorService.name);
 
   constructor(
     @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
     @Inject(NotificationGateway) private readonly notificationService: NotificationGateway,
+    @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     @Inject(S3) private readonly s3: S3,
     @Inject(Sftp) private readonly sftpService: Sftp,
-    private readonly pdfGenerator: MasaPdfGeneratorService,
+    private readonly pdfGenerator: RapportPdfGeneratorService,
   ) {}
 
-  async process({ masaId, depotId }: MasaProcessorData): Promise<void> {
+  async process(data: MasaProcessorData): Promise<void> {
+    const { masaId, depotId } = data;
     this.logger.log(`Processing MASA report`, { masaId, depotId });
 
     try {
@@ -44,13 +48,16 @@ export class MasaProcessorService {
       }
 
       // 2. Generate PDF report
+      const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);
       this.logger.log(`Generating PDF report`, { masaId });
-      const pdfBuffer = await this.pdfGenerator.generateReport(masa, depot);
+      const pdfBuffer = await this.pdfGenerator.generateReport(masa, depot, controlesV2);
 
       // 3. Upload PDF to S3
       const pdfPath = `rapports/${depotId}/${masaId}.pdf`;
       await this.s3.upload(pdfPath, pdfBuffer, 'application/pdf');
       this.logger.log(`PDF uploaded to S3`, { pdfPath });
+
+      await this.depotGateway.updateDepot(depotId, { rapportPath: pdfPath });
 
       // 4. Send email to déposant
       await this.sendEmailToDeposant(depot, masa, pdfBuffer);
@@ -115,11 +122,12 @@ export class MasaProcessorService {
 
     const remotePath = `verseau2/${depot.id}`;
 
-    // Send XML
-    await this.sftpService.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
+    // TODO: Send to different SFTP based on agency configuration
+    // // Send XML
+    // await this.sftpService.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
 
-    // Send PDF
-    await this.sftpService.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
+    // // Send PDF
+    // await this.sftpService.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
 
     this.logger.log("Files sent to Agence de l'eau SFTP", { remotePath });
   }

@@ -52,7 +52,7 @@ export class AuthenticationController {
 
       // Sync user data to DB
       try {
-        await this.userService.findOrCreateUser(result.user.cerbereId, 'mock_itv', {
+        await this.userService.findOrCreateUser(result.user.cerbereId, '1', {
           email: result.user.mel,
           nom: result.user.nom,
           prenom: result.user.prenom,

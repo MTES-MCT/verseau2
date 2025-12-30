@@ -118,7 +118,7 @@ export class AuthenticationService implements Authentication {
       emailMetier: claims.email_metier as string | undefined,
       description: claims.cerbere_description as string | undefined,
       mobile: claims.cerbere_mobile as string | undefined,
-      telephone: claims.phone_number as string | undefined,
+      telephone: claims.phone_number,
       profils: claims.cerbere_profils as string[] | undefined,
       roles: claims.cerbere_roles as string[] | undefined,
     };

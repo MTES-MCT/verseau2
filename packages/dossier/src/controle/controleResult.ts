@@ -16,6 +16,11 @@ export interface ControleIndividuel {
   errors: ControleError[];
 }
 
+export enum ControleType {
+  CONTROLE_V1 = 'CONTROLE_V1',
+  CONTROLE_V2 = 'CONTROLE_V2',
+}
+
 export enum ControleName {
   CTL002 = 'CTL002',
   CTL003 = 'CTL003',

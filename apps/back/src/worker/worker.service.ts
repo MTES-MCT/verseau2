@@ -18,7 +18,7 @@ export class WorkerService implements OnModuleInit {
     [QueueName.send_to_sftp]: { batchSize: 5 },
     [QueueName.controle_metier]: { batchSize: 5 },
     [QueueName.controle_sandre]: { batchSize: 5 },
-    [QueueName.process_masa_report]: { batchSize: 3 },
+    [QueueName.process_after_masa_webhook]: { batchSize: 3 },
   };
 
   constructor(
@@ -114,13 +114,13 @@ export class WorkerService implements OnModuleInit {
             }
           });
           break;
-        case QueueName.process_masa_report:
+        case QueueName.process_after_masa_webhook:
           await this.queueService.work<{ masaId: string; depotId: string }>(queueName, options, async ([job]) => {
-            this.logger.log('Processing MASA report jobId', job.id);
+            this.logger.log('Processing after MASA webhook jobId', job.id);
             try {
               return await this.masaProcessorService.process(job.data);
             } catch (error) {
-              this.logger.error('MASA report processing failed', {
+              this.logger.error('After MASA webhook processing failed', {
                 jobId: job.id,
                 error: error instanceof Error ? error.message : (error as string),
                 stack: error instanceof Error ? error.stack : undefined,

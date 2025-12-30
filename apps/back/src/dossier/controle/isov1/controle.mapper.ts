@@ -1,4 +1,4 @@
-import { ControleError, ControleIndividuel } from '@lib/dossier';
+import { ControleError, ControleIndividuel, ControleType } from '@lib/dossier';
 import { Injectable } from '@nestjs/common';
 import { CreateControleModel } from '../controle.model';
 
@@ -9,6 +9,7 @@ export class ControleMapper {
 
   mapControlesIndividuelsToCreateControleModel(
     depotId: string,
+    type: ControleType,
     controlesIndividuels: ControleIndividuelWithoutSuccess[],
   ): CreateControleModel[] {
     return controlesIndividuels
@@ -26,6 +27,7 @@ export class ControleMapper {
               return {
                 depotId: depotId,
                 name: controleIndividuel.name,
+                type: type,
                 success: controleIndividuel.errors.length === 0,
                 error: error.code,
                 errorParams: error.params,

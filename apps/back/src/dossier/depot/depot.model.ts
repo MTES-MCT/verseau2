@@ -7,6 +7,7 @@ export type DepotModel = Pick<
   | 'nomOriginalFichier'
   | 'tailleFichier'
   | 'path'
+  | 'rapportPath'
   | 'type'
   | 'error'
   | 'step'
@@ -14,8 +15,9 @@ export type DepotModel = Pick<
   | 'controleStatus'
   | 'controleSandreStatus'
   | 'user'
+  | 'userId'
   | 'createdAt'
   | 'updatedAt'
 >;
 
-export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'step' | 'status'>;
+export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'step' | 'status' | 'user'>;

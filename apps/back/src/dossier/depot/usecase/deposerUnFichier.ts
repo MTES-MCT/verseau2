@@ -20,12 +20,12 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
 
   private readonly logger = new LoggerService(DeposerUnFichier.name);
 
-  async execute(depotData: DepotDeFichier, userId: string): Promise<DepotModel> {
+  async execute(depotData: DepotDeFichier): Promise<DepotModel> {
     const depot = await this.depotService.create({
       nomOriginalFichier: depotData.nomOriginalFichier,
       tailleFichier: depotData.size,
       type: depotData.type,
-      user: { id: userId } as any, // Link to user
+      userId: depotData.utilisateur.id,
     });
 
     const filePath = `${depot.id}_${depot.nomOriginalFichier}`;
@@ -69,6 +69,7 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
         depotId: depotId,
         filePath: filePath,
         utilisateur: {
+          id: depotData.utilisateur.id,
           nom: depotData.utilisateur.nom,
           prenom: depotData.utilisateur.prenom,
         },

@@ -12,7 +12,7 @@ import { ControleMetierProcessorService } from './controleMetier/controleMetierP
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
 import { MasaProcessorService } from './masa/masaProcessor.service';
 import { EmailProcessorService } from './email/emailProcessor.service';
-import { MasaPdfGeneratorService } from '@dossier/masa/masaPdfGenerator.service';
+import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 
 @Module({
   imports: [InfraModule, DossierModule, SharedModule, NotificationModule, ReferentielModule],
@@ -24,7 +24,7 @@ import { MasaPdfGeneratorService } from '@dossier/masa/masaPdfGenerator.service'
     ControleSandreProcessorService,
     MasaProcessorService,
     EmailProcessorService,
-    MasaPdfGeneratorService,
+    RapportPdfGeneratorService,
   ],
 })
 export class WorkerModule {}

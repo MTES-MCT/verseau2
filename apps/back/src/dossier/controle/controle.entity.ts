@@ -1,7 +1,7 @@
 import { BaseEntity } from '@shared/repository/base-entity';
 import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
 
 @Entity('controle')
 export class ControleEntity extends BaseEntity {
@@ -10,6 +10,9 @@ export class ControleEntity extends BaseEntity {
 
   @Column({ type: 'enum', enum: ControleName })
   name: ControleName;
+
+  @Column({ type: 'enum', enum: ControleType, nullable: true })
+  type?: ControleType;
 
   @Column({ type: 'boolean', nullable: true })
   success: boolean;

@@ -38,7 +38,7 @@ export class MasaService {
     });
 
     // Enqueue background job
-    await this.queueService.send(QueueName.process_masa_report, {
+    await this.queueService.send(QueueName.process_after_masa_webhook, {
       masaId: masaData.id,
       depotId: payload.versau2DepotId,
     });
