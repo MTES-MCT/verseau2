@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-12w')}>
@@ -38,7 +38,11 @@ export function HomePage() {
           )}
           <p className={fr.cx('fr-text--lead')}>L'application d'autosurveillance des systèmes d'assainissement.</p>
           <div className={fr.cx('fr-mt-4w')}>
-            <Button onClick={() => navigate('/dashboard')}>Accéder au tableau de bord</Button>
+            {user ? (
+              <Button onClick={() => navigate('/dashboard')}>Accéder au tableau de bord</Button>
+            ) : (
+              <Button onClick={login}>Se connecter</Button>
+            )}
           </div>
         </div>
       </div>
