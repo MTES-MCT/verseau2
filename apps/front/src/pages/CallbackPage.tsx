@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { authService } from '../services/auth.service';
 import { useAuth } from '../hooks/useAuth';
@@ -8,8 +8,14 @@ export default function CallbackPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const { refreshUser } = useAuth();
+  const callbackProcessed = useRef(false);
 
   useEffect(() => {
+    if (callbackProcessed.current) {
+      return;
+    }
+    callbackProcessed.current = true;
+
     const handleCallback = async () => {
       const code = searchParams.get('code');
       const state = searchParams.get('state');
