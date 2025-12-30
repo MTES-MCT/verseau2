@@ -1,6 +1,17 @@
-import { Controller, Get, Post, Body, Inject, UnauthorizedException, BadRequestException, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Inject,
+  UnauthorizedException,
+  BadRequestException,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Authentication } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
+import { MeGuard } from './me.guard';
 
 @Controller('auth')
 export class AuthenticationController {
@@ -76,7 +87,9 @@ export class AuthenticationController {
   }
 
   @Get('me')
+  @UseGuards(MeGuard)
   me(@Req() req: CustomRequest) {
-    return req.user;
+    const token = req.headers.authorization?.split(' ')[1] || '';
+    return this.authentication.getUserInfo(token);
   }
 }

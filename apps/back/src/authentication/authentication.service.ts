@@ -103,7 +103,25 @@ export class AuthenticationService implements Authentication {
     const userInfo: UserInfoResponse = await fetchUserInfo(this.configuration, accessToken, skipSubjectCheck);
     this.logger.debug(`User info received: ${JSON.stringify(userInfo)}`);
 
-    return this.mapClaimsToUser(userInfo as unknown as JWTPayload);
+    return this.mapOpenIdUserToUser(userInfo);
+  }
+
+  private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
+    return {
+      cerbereId: claims.sub,
+      login: claims.preferred_username || '',
+      nom: (claims.usual_name as string) || (claims.family_name as string) || '',
+      prenom: (claims.given_name as string) || '',
+      mel: (claims.email as string) || '',
+      matricule: (claims.cerbere_matricule as string) || claims.sub || '',
+      unite: claims.organizational_unit as string | undefined,
+      emailMetier: claims.email_metier as string | undefined,
+      description: claims.cerbere_description as string | undefined,
+      mobile: claims.cerbere_mobile as string | undefined,
+      telephone: claims.phone_number,
+      profils: claims.cerbere_profils as string[] | undefined,
+      roles: claims.cerbere_roles as string[] | undefined,
+    };
   }
 
   private mapClaimsToUser(claims: JWTPayload): AuthenticatedUser {
