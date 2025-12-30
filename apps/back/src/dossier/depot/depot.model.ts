@@ -18,4 +18,4 @@ export type DepotModel = Pick<
   | 'updatedAt'
 >;
 
-export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'user' | 'step' | 'status'>;
+export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'step' | 'status'>;

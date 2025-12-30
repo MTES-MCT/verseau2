@@ -19,6 +19,7 @@ export enum QueueName {
   send_to_sftp = 'send_to_sftp',
   controle_metier = 'controle_metier',
   controle_sandre = 'controle_sandre',
+  process_masa_report = 'process_masa_report',
 }
 
 export interface QueueOptions {

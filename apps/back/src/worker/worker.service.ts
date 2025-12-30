@@ -7,6 +7,8 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
+import { MasaProcessorService } from './masa/masaProcessor.service';
+import { EmailProcessorService } from './email/emailProcessor.service';
 
 @Injectable()
 export class WorkerService implements OnModuleInit {
@@ -16,6 +18,7 @@ export class WorkerService implements OnModuleInit {
     [QueueName.send_to_sftp]: { batchSize: 5 },
     [QueueName.controle_metier]: { batchSize: 5 },
     [QueueName.controle_sandre]: { batchSize: 5 },
+    [QueueName.process_masa_report]: { batchSize: 3 },
   };
 
   constructor(
@@ -24,6 +27,8 @@ export class WorkerService implements OnModuleInit {
     private readonly sftpProcessorService: SftpProcessorService,
     private readonly controleMetierProcessorService: ControleMetierProcessorService,
     private readonly controleSandreProcessorService: ControleSandreProcessorService,
+    private readonly masaProcessorService: MasaProcessorService,
+    private readonly emailProcessorService: EmailProcessorService,
     private readonly logger: LoggerService,
   ) {
     this.logger = new LoggerService(WorkerService.name);
@@ -51,7 +56,18 @@ export class WorkerService implements OnModuleInit {
           });
           break;
         case QueueName.email:
-          // TODO: Implement email worker
+          await this.queueService.work<any>(queueName, options, async ([job]) => {
+            this.logger.log('Processing email jobId', job.id);
+            try {
+              return await this.emailProcessorService.process(job.data);
+            } catch (error) {
+              this.logger.error('Email job processing failed', {
+                jobId: job.id,
+                error: error instanceof Error ? error.message : (error as string),
+              });
+              throw error;
+            }
+          });
           break;
         case QueueName.send_to_sftp:
           await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
@@ -95,6 +111,21 @@ export class WorkerService implements OnModuleInit {
                 stack: error instanceof Error ? error.stack : undefined,
               });
               throw error; // Re-throw so pg-boss still marks it as failed for retry
+            }
+          });
+          break;
+        case QueueName.process_masa_report:
+          await this.queueService.work<{ masaId: string; depotId: string }>(queueName, options, async ([job]) => {
+            this.logger.log('Processing MASA report jobId', job.id);
+            try {
+              return await this.masaProcessorService.process(job.data);
+            } catch (error) {
+              this.logger.error('MASA report processing failed', {
+                jobId: job.id,
+                error: error instanceof Error ? error.message : (error as string),
+                stack: error instanceof Error ? error.stack : undefined,
+              });
+              throw error;
             }
           });
           break;

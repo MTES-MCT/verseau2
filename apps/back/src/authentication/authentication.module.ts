@@ -5,9 +5,10 @@ import { SharedModule } from '@shared/shared.module';
 import { AuthenticationController } from './authentication.controller';
 import { AuthenticationMiddleware } from './authentication.middleware';
 import { MeGuard } from './me.guard';
+import { UserModule } from '@user/user.module';
 
 @Module({
-  imports: [SharedModule],
+  imports: [SharedModule, UserModule],
   controllers: [AuthenticationController],
   providers: [...createAuthenticationProviders(), AuthenticationMiddleware, MeGuard],
   exports: [Authentication, AuthenticationMiddleware, MeGuard],

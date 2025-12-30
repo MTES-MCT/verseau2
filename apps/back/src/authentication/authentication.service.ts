@@ -109,7 +109,7 @@ export class AuthenticationService implements Authentication {
   private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
     return {
       cerbereId: claims.sub,
-      login: claims.preferred_username || '',
+      login: (claims.preferred_username as string) || (claims.uid as string) || '',
       nom: (claims.usual_name as string) || (claims.family_name as string) || '',
       prenom: (claims.given_name as string) || '',
       mel: (claims.email as string) || '',
@@ -118,7 +118,7 @@ export class AuthenticationService implements Authentication {
       emailMetier: claims.email_metier as string | undefined,
       description: claims.cerbere_description as string | undefined,
       mobile: claims.cerbere_mobile as string | undefined,
-      telephone: claims.phone_number,
+      telephone: claims.phone_number as string | undefined,
       profils: claims.cerbere_profils as string[] | undefined,
       roles: claims.cerbere_roles as string[] | undefined,
     };

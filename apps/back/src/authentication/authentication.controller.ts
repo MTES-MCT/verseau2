@@ -12,10 +12,14 @@ import {
 import { Authentication } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { MeGuard } from './me.guard';
+import { UserService } from '@user/user.service';
 
 @Controller('auth')
 export class AuthenticationController {
-  constructor(@Inject(Authentication) private readonly authentication: Authentication) {}
+  constructor(
+    @Inject(Authentication) private readonly authentication: Authentication,
+    private readonly userService: UserService,
+  ) {}
 
   @Get('login')
   login() {
@@ -45,6 +49,18 @@ export class AuthenticationController {
 
     try {
       const result = await this.authentication.handleCallback(code, nonce);
+
+      // Sync user data to DB
+      try {
+        await this.userService.findOrCreateUser(result.user.cerbereId, 'mock_itv', {
+          email: result.user.mel,
+          nom: result.user.nom,
+          prenom: result.user.prenom,
+        });
+      } catch (e) {
+        // Log but don't fail authentication if sync fails
+        console.error('Failed to sync user data', e);
+      }
 
       return {
         accessToken: result.accessToken,

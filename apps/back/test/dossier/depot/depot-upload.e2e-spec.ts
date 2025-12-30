@@ -83,6 +83,9 @@ class UserServiceMock {
       id: 'user_123',
       sub,
       itvCdn: 'itv_mock',
+      email: 'test@example.com',
+      nom: 'Test',
+      prenom: 'User',
       depots: [],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -151,6 +154,19 @@ describe('Depot upload (e2e)', () => {
     dataSource = moduleFixture.get(DataSource);
     s3Mock = moduleFixture.get<S3>(S3) as S3Mock;
     queueMock = moduleFixture.get<QueueServiceMock>(QueueGateway);
+  });
+
+  beforeEach(async () => {
+    // Seed user
+    const userRepository = dataSource.getRepository(UserEntity);
+    await userRepository.save({
+      id: 'user_123',
+      sub: 'test-user-id',
+      itvCdn: 'itv_mock',
+      email: 'test@example.com',
+      nom: 'Test',
+      prenom: 'User',
+    });
   });
 
   afterAll(async () => {

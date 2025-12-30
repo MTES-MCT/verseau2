@@ -10,7 +10,11 @@ export class UserService {
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
   ) {}
 
-  async findOrCreateUser(sub: string, itvCdn: string): Promise<UserEntity> {
+  async findOrCreateUser(
+    sub: string,
+    itvCdn: string,
+    claims?: { email?: string; nom?: string; prenom?: string },
+  ): Promise<UserEntity> {
     // Validate ITV exists in referentiel
     const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
     if (!itv) {
@@ -20,11 +24,20 @@ export class UserService {
     // Find existing user by sub
     const existingUser = await this.userGateway.findBySub(sub);
     if (existingUser) {
+      // Update user claims if provided
+      if (
+        claims &&
+        (claims.email !== existingUser.email ||
+          claims.nom !== existingUser.nom ||
+          claims.prenom !== existingUser.prenom)
+      ) {
+        return await this.userGateway.updateUser(existingUser.id, claims);
+      }
       return existingUser;
     }
 
     // Create new user
-    return await this.userGateway.createUser({ sub, itvCdn });
+    return await this.userGateway.createUser({ sub, itvCdn, ...claims });
   }
 
   async findBySub(sub: string): Promise<UserEntity> {

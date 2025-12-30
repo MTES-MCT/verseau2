@@ -7,11 +7,14 @@ export interface EmailParams {
 
 export interface Attachment {
   fileName: string;
-  filePath: string;
+  filePath?: string;
+  content?: string; // Base64 encoded content
 }
 
 export interface EmailWithMessage extends EmailParams {
   message: string;
 }
 
-export enum EmailTemplate {}
+export enum EmailTemplate {
+  MASA_REPORT = 'MASA_REPORT',
+}

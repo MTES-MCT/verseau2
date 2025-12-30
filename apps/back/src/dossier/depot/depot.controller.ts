@@ -44,16 +44,21 @@ export class DepotController {
       throw new BadRequestException('File must be an XML file');
     }
 
-    const depot = await this.deposerUnFichier.execute({
-      nomOriginalFichier: file.originalname,
-      size: file.size,
-      type: file.mimetype,
-      buffer: file.buffer,
-      utilisateur: {
-        nom: user.nom,
-        prenom: user.prenom,
+    const userEntity = await this.userService.findBySub(user.cerbereId);
+
+    const depot = await this.deposerUnFichier.execute(
+      {
+        nomOriginalFichier: file.originalname,
+        size: file.size,
+        type: file.mimetype,
+        buffer: file.buffer,
+        utilisateur: {
+          nom: user.nom,
+          prenom: user.prenom,
+        },
       },
-    });
+      userEntity.id,
+    );
 
     this.logger.log('Depot created', { depotId: depot.id });
 

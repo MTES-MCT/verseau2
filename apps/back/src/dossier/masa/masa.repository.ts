@@ -24,4 +24,12 @@ export class MasaRepository extends Repository<MasaEntity> implements MasaGatewa
     });
     return await this.save(masa);
   }
+
+  async findById(id: string): Promise<MasaModel | null> {
+    return await this.findOne({ where: { id } });
+  }
+
+  async findByDepotId(depotId: string): Promise<MasaModel | null> {
+    return await this.findOne({ where: { depotId } });
+  }
 }
