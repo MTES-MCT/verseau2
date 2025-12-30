@@ -14,7 +14,7 @@ type ControleGroupProps = {
 
 export type ControleView = Pick<ControleDto, 'name' | 'success' | 'evenementType'> & { message: string };
 
-function getResultBadge(evenementType: EvenementType) {
+function getResultBadge(evenementType: EvenementType | undefined) {
   if (evenementType === EvenementType.ERREUR) {
     return (
       <Badge severity="error" small>
