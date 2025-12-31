@@ -188,14 +188,16 @@ function mapScenario(raw: any): Scenario {
     versionScenario: raw[SandreTags.VersionScenario],
     emetteur: mapEmetteur(raw[SandreTags.Emetteur]),
     dateDebutReference: raw[SandreTags.DateDebutReference],
-    dateFinReference: raw[SandreTags.DateFinReference],
+    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+    // dateFinReference: raw[SandreTags.DateFinReference],
   };
 }
 
 function mapEmetteur(raw: any): Emetteur {
   return {
     cdIntervenant: raw[SandreTags.CdIntervenant],
-    nomIntervenant: raw[SandreTags.NomIntervenant],
+    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+    // nomIntervenant: raw[SandreTags.NomIntervenant],
   };
 }
 
@@ -203,7 +205,8 @@ function mapOuvrage(raw: any): OuvrageDepollution {
   return {
     cdOuvrageDepollution: raw[SandreTags.CdOuvrageDepollution],
     typeOuvrageDepollution: raw[SandreTags.TypeOuvrageDepollution],
-    nomOuvrageDepollution: raw[SandreTags.NomOuvrageDepollution],
+    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+    // nomOuvrageDepollution: raw[SandreTags.NomOuvrageDepollution],
     natureSystTraitementEauxUsees: raw[SandreTags.NatureSystTraitementEauxUsees],
     pointMesure: mapPointMesureList(raw[SandreTags.PointMesure]),
     evenOuvragesAssainissement: mapEvenOuvrageAssainissementList(raw[SandreTags.EvenOuvrageAssainissement]),
@@ -234,10 +237,13 @@ function mapDestination(raw: any): Destination {
 function mapSystemeCollecte(raw: any): SystemeCollecte {
   return {
     cdSystemeCollecte: raw[SandreTags.CdSystemeCollecte],
-    lbSystemeCollecte: raw[SandreTags.LbSystemeCollecte],
+    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+    // lbSystemeCollecte: raw[SandreTags.LbSystemeCollecte],
     pointMesure: mapPointMesureList(raw[SandreTags.PointMesure]),
     agglomerationAssainissement: mapAgglomerationAssainissement(raw[SandreTags.AgglomerationAssainissement]),
-    evenOuvragesAssainissement: mapEvenOuvrageAssainissementList(raw[SandreTags.EvenOuvrageAssainissement]),
+    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+    // evenOuvragesAssainissement: mapEvenOuvrageAssainissementList(raw[SandreTags.EvenOuvrageAssainissement]),
+    // valeurCaracteristiqueRejets: mapValeurCaracteristiqueRejetList(raw[SandreTags.ValeurCaracteristiqueRejet]),
   };
 }
 
@@ -259,6 +265,8 @@ function mapPointMesureList(raw: any): PointMesure[] {
 function mapPointMesure(raw: any): PointMesure {
   return {
     numeroPointMesure: raw[SandreTags.NumeroPointMesure],
+    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+    // typeAppareilMesure: raw[SandreTags.TypeAppareilMesure],
     locGlobalePointMesure: raw[SandreTags.LocGlobalePointMesure],
     prelevement: mapPrelevementList(raw[SandreTags.Prlvt]),
   };

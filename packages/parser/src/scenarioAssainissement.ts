@@ -10,28 +10,32 @@ export interface Scenario {
   codeScenario: SandreScenarioCode;
   versionScenario: SandreScenarioVersion;
   dateDebutReference: string;
-  dateFinReference: string;
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // dateFinReference: string;
   emetteur: Emetteur;
 }
 
 export interface Emetteur {
   cdIntervenant: string;
-  nomIntervenant: string;
-  contact?: Contact;
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // nomIntervenant: string;
+  // contact?: Contact;
 }
 
 export interface OuvrageDepollution {
   cdOuvrageDepollution: string;
   typeOuvrageDepollution: string;
-  nomOuvrageDepollution: string;
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // nomOuvrageDepollution: string;
   natureSystTraitementEauxUsees?: string;
   maitreOuvrage?: Intervenant;
   exploitant?: Intervenant;
   pointMesure: PointMesure[];
-  typeRejet?: string;
-  typeMilieuRejet?: string;
-  zoneSensible?: string;
-  masseEauRejet?: string;
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // typeRejet?: string;
+  // typeMilieuRejet?: string;
+  // zoneSensible?: string;
+  // masseEauRejet?: string;
   evenOuvragesAssainissement?: EvenOuvrageAssainissement[];
   valeurCaracteristiqueRejets?: ValeurCaracteristiqueRejet[];
 }
@@ -42,11 +46,13 @@ export interface Intervenant {
 
 export interface SystemeCollecte {
   cdSystemeCollecte: string;
-  lbSystemeCollecte: string;
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // lbSystemeCollecte: string;
   pointMesure: PointMesure[];
   agglomerationAssainissement?: AgglomerationAssainissement;
-  evenOuvragesAssainissement?: EvenOuvrageAssainissement[];
-  valeurCaracteristiqueRejets?: ValeurCaracteristiqueRejet[];
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // evenOuvragesAssainissement?: EvenOuvrageAssainissement[];
+  // valeurCaracteristiqueRejets?: ValeurCaracteristiqueRejet[];
 }
 
 export interface ValeurCaracteristiqueRejet {
@@ -61,7 +67,8 @@ export interface Destination {
 
 export interface PointMesure {
   numeroPointMesure: string;
-  typeAppareilMesure?: string;
+  // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+  // typeAppareilMesure?: string;
   locGlobalePointMesure?: string;
   prelevement: Prelevement[];
 }
@@ -88,9 +95,10 @@ export interface Analyse {
   cdRemAnalyse: string;
 }
 
-export interface Contact {
-  typeContact?: string;
-}
+// Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
+// export interface Contact {
+//   typeContact?: string;
+// }
 
 export interface AgglomerationAssainissement {
   cdAgglomerationAssainissement: string;

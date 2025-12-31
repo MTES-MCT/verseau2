@@ -8,8 +8,7 @@ function createFctAssainissement(overrides: Partial<FctAssainissement> = {}): Fc
       codeScenario: SandreScenarioCode.FCT_ASSAIN,
       versionScenario: SandreScenarioVersion.V4,
       dateDebutReference: '',
-      dateFinReference: '',
-      emetteur: { cdIntervenant: '', nomIntervenant: '' },
+      emetteur: { cdIntervenant: '' }, // nomIntervenant commented out - unused by controleV1 and controleMetierV2 services
     },
     ouvrages: [],
     systemesCollecte: [],
@@ -42,14 +41,14 @@ describe('filterFctAssainissementForMetierV2', () => {
         {
           cdOuvrageDepollution: 'STEU_1',
           typeOuvrageDepollution: '',
-          nomOuvrageDepollution: '',
+          // nomOuvrageDepollution commented out - unused by controleV1 and controleMetierV2 services
           pointMesure: [a3PointMesure, nonA3orA4PointMesure, a4AndNonCdSupport3PointMesure],
         },
       ],
       systemesCollecte: [
         {
           cdSystemeCollecte: 'SC_1',
-          lbSystemeCollecte: '',
+          // lbSystemeCollecte commented out - unused by controleV1 and controleMetierV2 services
           pointMesure: [
             {
               numeroPointMesure: 'PM_A4',
@@ -96,7 +95,7 @@ describe('filterFctAssainissementForMetierV2', () => {
         {
           cdOuvrageDepollution: 'STEU_EMPTY',
           typeOuvrageDepollution: '',
-          nomOuvrageDepollution: '',
+          // nomOuvrageDepollution commented out - unused by controleV1 and controleMetierV2 services
           pointMesure: [
             {
               numeroPointMesure: 'PM_S7',
@@ -109,7 +108,7 @@ describe('filterFctAssainissementForMetierV2', () => {
       systemesCollecte: [
         {
           cdSystemeCollecte: 'SC_EMPTY',
-          lbSystemeCollecte: '',
+          // lbSystemeCollecte commented out - unused by controleV1 and controleMetierV2 services
           pointMesure: [
             {
               numeroPointMesure: 'PM_A3_WRONG_SUPPORT',

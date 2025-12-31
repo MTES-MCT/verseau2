@@ -57,8 +57,7 @@ function createTestFctAssainissement(overrides: PartialFctAssainissement = {}): 
       emetteur: {},
       codeScenario: SandreScenarioCode.FCT_ASSAIN,
       versionScenario: SandreScenarioVersion.V4,
-      dateDebutReference: '',
-      dateFinReference: '',
+      // dateDebutReference and dateFinReference commented out - unused by controleV1 and controleMetierV2 services
     },
     ouvrages: [],
     systemesCollecte: [],
