@@ -16,5 +16,5 @@ export interface EmailWithMessage extends EmailParams {
 }
 
 export enum EmailTemplate {
-  MASA_REPORT = 'MASA_REPORT',
+  RAPPORT = 'RAPPORT',
 }

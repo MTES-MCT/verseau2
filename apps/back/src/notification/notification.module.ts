@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationProducer } from './notification.producer';
-import { emailFactory } from './brevo/email.factory';
 import { ConfigModule } from '@nestjs/config';
+import { EmailProvider } from './email.provider';
+import { emailFactory } from './brevo/email.factory';
 
 @Module({
   imports: [ConfigModule],
@@ -13,6 +14,6 @@ import { ConfigModule } from '@nestjs/config';
     },
     emailFactory,
   ],
-  exports: [NotificationGateway, emailFactory],
+  exports: [NotificationGateway, EmailProvider],
 })
 export class NotificationModule {}

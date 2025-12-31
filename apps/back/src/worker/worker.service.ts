@@ -1,14 +1,14 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { QueueGateway, QueueName, QueueOptions } from '@queue/queue';
-import type { Queue } from '@queue/queue';
+import type { EmailJobData, Queue } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
-import { MasaProcessorService } from './masa/masaProcessor.service';
-import { EmailProcessorService } from './email/emailProcessor.service';
+import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
+import { EmailProvider } from '@notification/email.provider';
 
 @Injectable()
 export class WorkerService implements OnModuleInit {
@@ -27,8 +27,8 @@ export class WorkerService implements OnModuleInit {
     private readonly sftpProcessorService: SftpProcessorService,
     private readonly controleMetierProcessorService: ControleMetierProcessorService,
     private readonly controleSandreProcessorService: ControleSandreProcessorService,
-    private readonly masaProcessorService: MasaProcessorService,
-    private readonly emailProcessorService: EmailProcessorService,
+    private readonly masaProcessorService: MasaWebhookProcessorService,
+    @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
     private readonly logger: LoggerService,
   ) {
     this.logger = new LoggerService(WorkerService.name);
@@ -56,10 +56,10 @@ export class WorkerService implements OnModuleInit {
           });
           break;
         case QueueName.email:
-          await this.queueService.work<any>(queueName, options, async ([job]) => {
+          await this.queueService.work<EmailJobData>(queueName, options, async ([job]) => {
             this.logger.log('Processing email jobId', job.id);
             try {
-              return await this.emailProcessorService.process(job.data);
+              return await this.emailProvider.send(job.data.template, job.data.params);
             } catch (error) {
               this.logger.error('Email job processing failed', {
                 jobId: job.id,

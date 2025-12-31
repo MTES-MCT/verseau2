@@ -18,8 +18,8 @@ interface MasaProcessorData {
 }
 
 @Injectable()
-export class MasaProcessorService implements AsyncTask<MasaProcessorData> {
-  private readonly logger = new LoggerService(MasaProcessorService.name);
+export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData> {
+  private readonly logger = new LoggerService(MasaWebhookProcessorService.name);
 
   constructor(
     @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
@@ -108,7 +108,7 @@ export class MasaProcessorService implements AsyncTask<MasaProcessorData> {
         prenom: user.prenom,
         nom: user.nom,
       },
-      EmailTemplate.MASA_REPORT,
+      EmailTemplate.RAPPORT,
     );
 
     this.logger.log('Email sent to déposant', { email: user.email });

@@ -1,3 +1,5 @@
+import { EmailParams, EmailTemplate } from '@notification/notification';
+
 export interface Queue {
   send<T = object>(name: string, data?: T): Promise<string | null>;
   work<T = object>(
@@ -28,3 +30,8 @@ export interface QueueOptions {
 
 export const QueueGateway = Symbol('QUEUE');
 export const PGBOSS = Symbol('PGBOSS');
+
+export interface EmailJobData {
+  params: EmailParams;
+  template: EmailTemplate;
+}

@@ -14,12 +14,15 @@ const customFactory = (config: ConfigService) => {
   const logger = new LoggerService('EmailFactory');
   logger.log(`Provider used : ${emailProvider}`, 'EmailContactFactory');
   if (emailProvider === 'brevo') {
+    // TODO: Implement Brevo provider
     // return new EmailBrevoProvider(config, fileGateway);
   }
   if (emailProvider === 'mock') {
+    logger.warn('Using Mock Email Provider', 'EmailFactory');
     return new EmailBrevoMockProvider();
   }
   if (emailProvider === 'mailcatcher') {
+    // TODO: Implement MailCatcher provider
     // return new EmailBrevoCatcherProvider(config, fileGateway);
   }
   throw new Error('Invalid email provider');

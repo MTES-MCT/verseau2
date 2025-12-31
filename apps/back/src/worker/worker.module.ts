@@ -10,8 +10,7 @@ import { WorkerService } from './worker.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
-import { MasaProcessorService } from './masa/masaProcessor.service';
-import { EmailProcessorService } from './email/emailProcessor.service';
+import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 
 @Module({
@@ -22,8 +21,7 @@ import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator
     SftpProcessorService,
     ControleMetierProcessorService,
     ControleSandreProcessorService,
-    MasaProcessorService,
-    EmailProcessorService,
+    MasaWebhookProcessorService,
     RapportPdfGeneratorService,
   ],
 })
