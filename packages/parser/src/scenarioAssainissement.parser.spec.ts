@@ -22,6 +22,9 @@ describe('Sandre Parser', () => {
 
     const systeme = result.systemesCollecte[0];
     expect(systeme.cdSystemeCollecte).toBe('SANDRE_SYSTEME_1');
+
+    const locGlobalePointMesure = ouvrage2.pointMesure[0].locGlobalePointMesure;
+    expect(locGlobalePointMesure).toBe('S7');
   });
 
   it('should throw an error when the XML is not compliant', async () => {
@@ -32,6 +35,30 @@ describe('Sandre Parser', () => {
     const xmlPath = path.join(__dirname, 'xml', '18.6_MO_anonymized.xml');
     const xml = fs.readFileSync(xmlPath, 'utf-8');
     const result = await parseScenarioAssainissementXml(xml);
+    const ouvrage1 = result.ouvrages[0];
+    expect(ouvrage1.cdOuvrageDepollution).toBe('CD_OUVRAGE_1');
+    expect(ouvrage1.pointMesure[0].prelevement[0].cdSupport).toBe('3');
+    expect(ouvrage1.pointMesure[0].prelevement[0].analyse[0].cdParametre).toBe('1552');
+    expect(ouvrage1.pointMesure[0].prelevement[0].analyse[1].cdParametre).toBe('1553');
+
+    expect(ouvrage1.pointMesure[1].numeroPointMesure).toBe('NUM_POINT_2');
+    expect(ouvrage1.pointMesure[1].locGlobalePointMesure).toBe('A4');
+    expect(ouvrage1.pointMesure[1].prelevement[0].cdSupport).toBe('3');
+    expect(ouvrage1.pointMesure[1].prelevement[0].analyse[0].cdParametre).toBe('1552');
+    expect(ouvrage1.pointMesure[0].prelevement[1].analyse[0].cdParametre).toBe('1552');
+
+    expect(ouvrage1.pointMesure[2].numeroPointMesure).toBe('NUM_POINT_3');
+    expect(ouvrage1.pointMesure[2].locGlobalePointMesure).toBe('A6');
+    expect(ouvrage1.pointMesure[2].prelevement[0].cdSupport).toBe('31');
+    expect(ouvrage1.pointMesure[2].prelevement[0].analyse[0].cdParametre).toBe('1799');
+    expect(ouvrage1.pointMesure[2].prelevement[1].cdSupport).toBe('31');
+    expect(ouvrage1.pointMesure[2].prelevement[1].analyse[0].cdParametre).toBe('1799');
+
+    expect(ouvrage1.pointMesure[3].numeroPointMesure).toBe('NUM_POINT_4');
+    expect(ouvrage1.pointMesure[3].locGlobalePointMesure).toBe('S11');
+
+    const locGlobalePointMesure = ouvrage1.pointMesure[0].locGlobalePointMesure;
+    expect(locGlobalePointMesure).toBe('A3');
     expect(result).toBeDefined();
   });
 

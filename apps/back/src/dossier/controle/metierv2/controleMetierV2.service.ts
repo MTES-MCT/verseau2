@@ -6,6 +6,7 @@ import { ControleError, ControleName, ControleType, ErrorCode, EvenementType } f
 import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/controle.mapper';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
+import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -15,11 +16,13 @@ export class ControleMetierV2Service {
   ) {}
 
   async execute(depotId: string, xmlObj: FctAssainissement, manager?: EntityManager): Promise<ControleModel[]> {
+    const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
+      filterFctAssainissementForMetierV2(xmlObj);
     const tousControles = [
-      this.verifyRatioDcoDbo5(xmlObj),
-      this.verifyRatioMesDbo5(xmlObj),
-      this.verifyDcoRange(xmlObj),
-      this.verifyDbo5Range(xmlObj),
+      this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyDcoRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyDbo5Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
     ];
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,

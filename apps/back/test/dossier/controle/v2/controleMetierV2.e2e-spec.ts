@@ -11,6 +11,7 @@ import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
+import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
 
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
@@ -51,7 +52,7 @@ function createTestAnalyse(cdParametre: string, rsAnalyse: string): Analyse {
 
 // Helper to create minimal FctAssainissement for testing
 function createTestFctAssainissement(overrides: PartialFctAssainissement = {}): FctAssainissement {
-  return {
+  const fct = {
     scenario: {
       emetteur: {},
       codeScenario: SandreScenarioCode.FCT_ASSAIN,
@@ -63,6 +64,27 @@ function createTestFctAssainissement(overrides: PartialFctAssainissement = {}): 
     systemesCollecte: [],
     ...overrides,
   } as FctAssainissement;
+
+  // Default values so existing tests continue to exercise controls even with filtering enabled.
+  // Individual tests can override these to assert filtering behavior.
+  for (const ouvrage of fct.ouvrages ?? []) {
+    for (const pointMesure of ouvrage.pointMesure ?? []) {
+      pointMesure.locGlobalePointMesure ??= 'A3';
+      for (const prelevement of pointMesure.prelevement ?? []) {
+        prelevement.cdSupport ??= '3';
+      }
+    }
+  }
+  for (const systemeCollecte of fct.systemesCollecte ?? []) {
+    for (const pointMesure of systemeCollecte.pointMesure ?? []) {
+      pointMesure.locGlobalePointMesure ??= 'A3';
+      for (const prelevement of pointMesure.prelevement ?? []) {
+        prelevement.cdSupport ??= '3';
+      }
+    }
+  }
+
+  return fct;
 }
 
 describe('ControleMetierV2Service (e2e)', () => {
@@ -112,6 +134,65 @@ describe('ControleMetierV2Service (e2e)', () => {
     await dataSource.query(`DELETE FROM controle`);
     await clearDepots(dataSource);
     await clearReferentielData(dataSource);
+  });
+
+  describe('filterFctAssainissementForMetierV2', () => {
+    it('should keep only locGlobalePointMesure A3/A4 and cdSupport=3', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU_FILTER',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3_KEEP',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '1')],
+                  },
+                  {
+                    datePrlvt: '2024-01-02',
+                    cdSupport: '33',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '2')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4_KEEP',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-03',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '3')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_S7_DROP',
+                locGlobalePointMesure: 'S7',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-04',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '4')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const filtered = filterFctAssainissementForMetierV2(fctAssainissement);
+
+      expect(filtered.ouvrages).toHaveLength(1);
+      expect(filtered.ouvrages[0].pointMesure.map((pm) => pm.numeroPointMesure)).toEqual(['PM_A3_KEEP', 'PM_A4_KEEP']);
+      expect(filtered.ouvrages[0].pointMesure[0].prelevement).toHaveLength(1);
+      expect(filtered.ouvrages[0].pointMesure[0].prelevement[0].cdSupport).toBe('3');
+    });
   });
 
   describe('CTL039 - verifyRatioDcoDbo5', () => {

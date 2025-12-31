@@ -259,8 +259,8 @@ function mapPointMesureList(raw: any): PointMesure[] {
 function mapPointMesure(raw: any): PointMesure {
   return {
     numeroPointMesure: raw[SandreTags.NumeroPointMesure],
-    prelevement: mapPrelevementList(raw[SandreTags.Prlvt]),
     locGlobalePointMesure: raw[SandreTags.LocGlobalePointMesure],
+    prelevement: mapPrelevementList(raw[SandreTags.Prlvt]),
   };
 }
 
