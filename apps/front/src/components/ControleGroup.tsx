@@ -31,7 +31,7 @@ function getResultBadge(evenementType: EvenementType | undefined) {
   }
   return (
     <Badge severity="success" small>
-      Avertissement
+      Succès
     </Badge>
   );
 }
@@ -45,7 +45,12 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
   }
 
   const successCount = controles.filter((controle) => controle.success).length;
-  const failCount = controles.length - successCount;
+  const errorCount = controles.filter(
+    (controle) => !controle.success && controle.evenementType === EvenementType.ERREUR,
+  ).length;
+  const warningCount = controles.filter(
+    (controle) => !controle.success && controle.evenementType === EvenementType.AVERTISSEMENT,
+  ).length;
 
   const filteredControles = showSuccess ? controles : controles.filter((controle) => !controle.success);
 
@@ -57,8 +62,11 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
           <Badge severity="success" className="fr-mr-1w">
             {successCount} succès
           </Badge>
-          <Badge severity="error">
-            {failCount} échec{failCount > 1 ? 's' : ''}
+          <Badge severity="warning" className="fr-mr-1w">
+            {warningCount} avertissement{warningCount > 1 ? 's' : ''}
+          </Badge>
+          <Badge severity="error" className="fr-mr-1w">
+            {errorCount} erreur{errorCount > 1 ? 's' : ''}
           </Badge>
         </div>
       </div>

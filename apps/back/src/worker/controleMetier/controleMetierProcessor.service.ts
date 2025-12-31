@@ -6,7 +6,7 @@ import { parseScenarioAssainissementXml } from '@lib/parser';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, ControleStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleStatus, EvenementType } from '@lib/dossier';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { DataSource } from 'typeorm';
 
@@ -46,7 +46,9 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         const resultsV1 = await this.controleV1Service.execute(depotId, xmlObj, manager);
         const resultsV2 = await this.controleMetierV2Service.execute(depotId, xmlObj, manager);
 
-        const allSuccess = [...resultsV1, ...resultsV2].every((controle) => controle.success);
+        const allSuccess = [...resultsV1, ...resultsV2].every(
+          (controle) => controle.evenementType !== EvenementType.ERREUR,
+        );
 
         return { allSuccess, resultsV1, resultsV2 };
       });

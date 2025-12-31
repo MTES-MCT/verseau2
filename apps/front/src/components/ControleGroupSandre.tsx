@@ -38,7 +38,7 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
   }
 
   const successCount = controles.filter((controle) => controle.success).length;
-  const failCount = controles.length - successCount;
+  const errorCount = controles.filter((controle) => !controle.success).length;
 
   const filteredControles = showSuccess ? controles : controles.filter((controle) => !controle.success);
 
@@ -50,8 +50,8 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
           <Badge severity="success" className="fr-mr-1w">
             {successCount} succès
           </Badge>
-          <Badge severity="error">
-            {failCount} échec{failCount > 1 ? 's' : ''}
+          <Badge severity="error" className="fr-mr-1w">
+            {errorCount} erreur{errorCount > 1 ? 's' : ''}
           </Badge>
         </div>
       </div>
