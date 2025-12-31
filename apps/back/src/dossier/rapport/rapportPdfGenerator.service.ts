@@ -9,7 +9,7 @@ const COLORS = {
   PRIMARY: '#2563eb', // Blue
   SECONDARY: '#64748b', // Slate Gray
   SUCCESS: '#16a34a', // Green
-  WARNING: '#dc2626', // Red
+  WARNING: '#f97316', // Orange
   TEXT: '#1e293b', // Dark Slate
   LIGHT_BG: '#f8fafc', // Light Gray/White
   BORDER: '#e2e8f0', // Light Border
