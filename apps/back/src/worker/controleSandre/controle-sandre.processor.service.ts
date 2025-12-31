@@ -32,10 +32,12 @@ export class ControleSandreProcessorService implements AsyncTask<{ depotId: stri
         fileSize: `${Math.round((file.length / 1024 / 1024) * 100) / 100} MB`,
       });
 
+      // TODO: informations utilisateur utiles ?
       const fichierDeDepot: FichierDeDepot = {
         depotId,
         filePath,
         utilisateur: {
+          id: '',
           nom: '',
           prenom: '',
         },

@@ -2,7 +2,7 @@ import { FctAssainissement } from '@lib/parser';
 import { Inject, Injectable } from '@nestjs/common';
 import { ControleModel } from '../controle.model';
 import { EntityManager } from 'typeorm';
-import { ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { ControleError, ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/controle.mapper';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
@@ -21,7 +21,11 @@ export class ControleMetierV2Service {
       this.verifyDcoRange(xmlObj),
       this.verifyDbo5Range(xmlObj),
     ];
-    const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(depotId, tousControles);
+    const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
+      depotId,
+      ControleType.CONTROLE_V2,
+      tousControles,
+    );
     const createdControles = await this.controleGateway.createControles(createControles, manager);
     return createdControles;
   }

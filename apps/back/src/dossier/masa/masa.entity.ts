@@ -13,7 +13,7 @@ export class MasaEntity extends BaseEntity {
   @PrimaryColumn()
   declare id: string;
 
-  @Column({ type: 'varchar', name: 'depot_id' })
+  @Column({ type: 'varchar', name: 'depot_id', unique: true })
   depotId: string;
 
   @ManyToOne(() => DepotEntity)

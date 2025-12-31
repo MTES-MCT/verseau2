@@ -10,6 +10,8 @@ import { WorkerService } from './worker.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
+import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
+import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 
 @Module({
   imports: [InfraModule, DossierModule, SharedModule, NotificationModule, ReferentielModule],
@@ -19,6 +21,8 @@ import { ControleSandreProcessorService } from './controleSandre/controle-sandre
     SftpProcessorService,
     ControleMetierProcessorService,
     ControleSandreProcessorService,
+    MasaWebhookProcessorService,
+    RapportPdfGeneratorService,
   ],
 })
 export class WorkerModule {}

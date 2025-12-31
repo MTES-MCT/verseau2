@@ -11,6 +11,15 @@ export class UserEntity extends BaseEntity {
   @Column({ type: 'varchar', name: 'itv_cdn' })
   itvCdn: string; // External ID from referentiel
 
+  @Column({ type: 'varchar', nullable: true })
+  email: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  nom: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  prenom: string;
+
   @OneToMany(() => DepotEntity, (depot) => depot.user)
   depots: DepotEntity[];
 }

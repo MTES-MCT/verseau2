@@ -44,12 +44,15 @@ export class DepotController {
       throw new BadRequestException('File must be an XML file');
     }
 
+    const userEntity = await this.userService.findBySub(user.cerbereId);
+
     const depot = await this.deposerUnFichier.execute({
       nomOriginalFichier: file.originalname,
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer,
       utilisateur: {
+        id: userEntity.id,
         nom: user.nom,
         prenom: user.prenom,
       },

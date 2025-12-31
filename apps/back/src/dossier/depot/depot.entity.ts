@@ -18,6 +18,9 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   path?: string;
 
+  @Column({ type: 'varchar', name: 'rapport_path', nullable: true })
+  rapportPath?: string;
+
   @Column({ type: 'bigint', name: 'taille_fichier' })
   tailleFichier: number;
 
@@ -38,6 +41,9 @@ export class DepotEntity extends BaseEntity {
 
   @Column({ type: 'enum', enum: ControleSandreStatus, nullable: true, default: null, name: 'controle_sandre_status' })
   controleSandreStatus?: ControleSandreStatus;
+
+  @Column({ type: 'varchar', name: 'user_id', nullable: true })
+  userId?: string;
 
   @ManyToOne(() => UserEntity, (user) => user.depots)
   @JoinColumn({ name: 'user_id' })

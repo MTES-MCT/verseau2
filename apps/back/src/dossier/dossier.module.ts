@@ -32,6 +32,7 @@ import { MasaGateway } from './masa/masa.gateway';
 import { MasaRepository } from './masa/masa.repository';
 import { MasaApiKeyGuard } from './masa/masaApiKey.guard';
 import { MasaIpGuard } from './masa/masaIp.guard';
+import { RapportPdfGeneratorService } from './rapport/rapportPdfGenerator.service';
 import { ControleMetierV2Service } from './controle/metierv2/controleMetierV2.service';
 
 const logger = new LoggerService('DossierModule');
@@ -77,7 +78,18 @@ const sandreServiceFactory = {
     MasaService,
     MasaApiKeyGuard,
     MasaIpGuard,
+    RapportPdfGeneratorService,
   ],
-  exports: [DepotService, DepotCoordinatorService, ControleSandreService, ControleV1Service, ControleMetierV2Service],
+  exports: [
+    DepotService,
+    DepotCoordinatorService,
+    ControleSandreService,
+    ControleV1Service,
+    ControleMetierV2Service,
+    RapportPdfGeneratorService,
+    MasaGateway,
+    DepotGateway,
+    ControleGateway,
+  ],
 })
 export class DossierModule {}

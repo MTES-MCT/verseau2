@@ -5,6 +5,7 @@ export interface FichierDeDepot {
 }
 
 export interface UtilisateurDunEnvoi {
+  id: string;
   nom: string;
   prenom: string;
 }

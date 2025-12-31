@@ -3,12 +3,19 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import { ControleEntity } from './controle.entity';
 import { ControleModel, ControleModelWithoutDepot, CreateControleModel } from './controle.model';
 import { ControleGateway } from './controle.gateway';
+import { ControleType } from '@lib/dossier';
 
 @Injectable()
 export class ControleRepository extends Repository<ControleEntity> implements ControleGateway {
   constructor(private dataSource: DataSource) {
     super(ControleEntity, dataSource.createEntityManager());
   }
+  async findControlesV2ByDepotId(depotId: string): Promise<ControleModelWithoutDepot[]> {
+    return await this.find({
+      where: { depot: { id: depotId }, type: ControleType.CONTROLE_V2 },
+    });
+  }
+
   async findByUserId(userId: string): Promise<ControleModel[]> {
     return await this.find({
       where: { depot: { user: { id: userId } } },

@@ -205,7 +205,7 @@ describe('Worker Service (e2e)', () => {
       await fileProcessorService.process({
         depotId: depot.id,
         filePath: 'test_file.xml',
-        utilisateur: { nom: 'Test', prenom: 'User' },
+        utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
       });
 
       // Verify depot status updated
@@ -257,7 +257,7 @@ describe('Worker Service (e2e)', () => {
         fileProcessorService.process({
           depotId: depot.id,
           filePath: 'missing_file.xml',
-          utilisateur: { nom: 'Test', prenom: 'User' },
+          utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
         }),
       ).rejects.toThrow();
 

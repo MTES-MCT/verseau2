@@ -1,12 +1,14 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { QueueGateway, QueueName, QueueOptions } from '@queue/queue';
-import type { Queue } from '@queue/queue';
+import type { EmailJobData, Queue } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SftpProcessorService } from './sftp/sftpProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
+import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
+import { EmailProvider } from '@notification/email.provider';
 
 @Injectable()
 export class WorkerService implements OnModuleInit {
@@ -16,6 +18,7 @@ export class WorkerService implements OnModuleInit {
     [QueueName.send_to_sftp]: { batchSize: 5 },
     [QueueName.controle_metier]: { batchSize: 5 },
     [QueueName.controle_sandre]: { batchSize: 5 },
+    [QueueName.process_after_masa_webhook]: { batchSize: 3 },
   };
 
   constructor(
@@ -24,6 +27,8 @@ export class WorkerService implements OnModuleInit {
     private readonly sftpProcessorService: SftpProcessorService,
     private readonly controleMetierProcessorService: ControleMetierProcessorService,
     private readonly controleSandreProcessorService: ControleSandreProcessorService,
+    private readonly masaProcessorService: MasaWebhookProcessorService,
+    @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
     private readonly logger: LoggerService,
   ) {
     this.logger = new LoggerService(WorkerService.name);
@@ -51,7 +56,18 @@ export class WorkerService implements OnModuleInit {
           });
           break;
         case QueueName.email:
-          // TODO: Implement email worker
+          await this.queueService.work<EmailJobData>(queueName, options, async ([job]) => {
+            this.logger.log('Processing email jobId', job.id);
+            try {
+              return await this.emailProvider.send(job.data.template, job.data.params);
+            } catch (error) {
+              this.logger.error('Email job processing failed', {
+                jobId: job.id,
+                error: error instanceof Error ? error.message : (error as string),
+              });
+              throw error;
+            }
+          });
           break;
         case QueueName.send_to_sftp:
           await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
@@ -95,6 +111,21 @@ export class WorkerService implements OnModuleInit {
                 stack: error instanceof Error ? error.stack : undefined,
               });
               throw error; // Re-throw so pg-boss still marks it as failed for retry
+            }
+          });
+          break;
+        case QueueName.process_after_masa_webhook:
+          await this.queueService.work<{ masaId: string; depotId: string }>(queueName, options, async ([job]) => {
+            this.logger.log('Processing after MASA webhook jobId', job.id);
+            try {
+              return await this.masaProcessorService.process(job.data);
+            } catch (error) {
+              this.logger.error('After MASA webhook processing failed', {
+                jobId: job.id,
+                error: error instanceof Error ? error.message : (error as string),
+                stack: error instanceof Error ? error.stack : undefined,
+              });
+              throw error;
             }
           });
           break;

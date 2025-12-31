@@ -109,7 +109,7 @@ export class AuthenticationService implements Authentication {
   private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
     return {
       cerbereId: claims.sub,
-      login: claims.preferred_username || '',
+      login: (claims.preferred_username as string) || (claims.uid as string) || '',
       nom: (claims.usual_name as string) || (claims.family_name as string) || '',
       prenom: (claims.given_name as string) || '',
       mel: (claims.email as string) || '',
