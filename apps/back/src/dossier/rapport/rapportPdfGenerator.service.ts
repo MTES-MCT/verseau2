@@ -3,7 +3,17 @@ import PDFDocument from 'pdfkit';
 import { MasaModel } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '@dossier/controle/controle.model';
-import { buildMessage } from '@lib/dossier';
+import { buildMessage, ControleDescription, EvenementType } from '@lib/dossier';
+
+const COLORS = {
+  PRIMARY: '#2563eb', // Blue
+  SECONDARY: '#64748b', // Slate Gray
+  SUCCESS: '#16a34a', // Green
+  WARNING: '#dc2626', // Red
+  TEXT: '#1e293b', // Dark Slate
+  LIGHT_BG: '#f8fafc', // Light Gray/White
+  BORDER: '#e2e8f0', // Light Border
+};
 
 @Injectable()
 export class RapportPdfGeneratorService {
@@ -17,70 +27,197 @@ export class RapportPdfGeneratorService {
       doc.on('error', reject);
 
       doc.addPage();
+      doc.font('Helvetica');
 
-      // Header
-      doc.fontSize(20).text('Rapport', { align: 'center' });
-      doc.moveDown();
-      doc.fontSize(12).text(`Dépôt ID: ${depot.id}`);
-      doc.text(`Date de traitement: ${masa.createdAt.toLocaleString()}`);
-      doc.text(`Nom du fichier: ${depot.nomOriginalFichier}`);
-      doc.moveDown();
+      this.drawHeader(doc, depot, masa);
 
-      // Summary
-      doc.fontSize(16).text('Résumé', { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(12).text(`Statut MASA: ${masa.statut}`);
-      doc.text(`Numéro dépôt Verseau 1: ${masa.numeroDepotVerseau1}`);
-      doc.moveDown();
+      this.drawMasaReport(doc, masa);
 
-      // Detailed Report
-      doc.fontSize(16).text("Rapport d'intégration", { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(10).text(masa.rapport, { align: 'left' });
-
-      // Contrôles V2
       if (controlesV2 && controlesV2.length > 0) {
-        doc.moveDown();
-        doc.fontSize(16).text('Résultats des contrôles V2', { underline: true });
-        doc.moveDown(0.5);
-
-        controlesV2.forEach((controle, index) => {
-          if (controle.success) {
-            doc.fillColor('green');
-            doc.fontSize(12).text(`${controle.name}: OK`);
-          } else {
-            doc.fillColor('red');
-            doc.fontSize(12).text(`${controle.name}: Avertissement`);
-            doc.fontSize(8).text(buildMessage(controle.error, controle.errorParams || []));
-          }
-          doc.fillColor('black'); // Reset color
-          if (index < controlesV2.length - 1) {
-            doc.moveDown(0.5);
-          }
-        });
+        this.drawControlsV2(doc, controlesV2);
       }
 
-      // Footer
-      const range = doc.bufferedPageRange();
-
-      for (let i = 0; i < range.count; i++) {
-        doc.switchToPage(i);
-
-        // Save current position
-        const currentY = doc.y;
-
-        // Add footer with absolute positioning that doesn't affect cursor
-        doc.fontSize(8).text(`Page ${i + 1} sur ${range.count} - Verseau 2`, 50, doc.page.height - 50, {
-          align: 'center',
-          lineBreak: false,
-          continued: false,
-        });
-
-        // Restore cursor position to prevent new page creation
-        doc.y = currentY;
-      }
+      // 5. Footer
+      this.drawFooter(doc);
 
       doc.end();
     });
+  }
+
+  private drawHeader(doc: PDFKit.PDFDocument, depot: DepotModel, masa: MasaModel) {
+    doc.font('Helvetica-Bold').fontSize(24).fillColor(COLORS.PRIMARY).text('Rapport de Traitement', { align: 'left' });
+    doc.font('Helvetica');
+
+    doc.moveDown(0.5);
+    doc.lineWidth(2).strokeColor(COLORS.PRIMARY).moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(1);
+
+    const startY = doc.y;
+
+    doc.fontSize(10).fillColor(COLORS.SECONDARY).text('Dépôt ID:', 50, startY);
+    doc.fillColor(COLORS.TEXT).text(depot.id, 120, startY);
+
+    doc.fillColor(COLORS.SECONDARY).text('Date:', 300, startY);
+    const dateStr = masa.createdAt
+      ? new Date(masa.createdAt).toLocaleString('fr-FR')
+      : new Date().toLocaleString('fr-FR');
+    doc.fillColor(COLORS.TEXT).text(dateStr, 350, startY);
+
+    doc.moveDown(1.5);
+    const nextY = doc.y;
+
+    doc.fillColor(COLORS.SECONDARY).text('Fichier:', 50, nextY);
+    doc.fillColor(COLORS.TEXT).text(depot.nomOriginalFichier, 120, nextY, { width: 400 });
+
+    doc.moveDown(2);
+  }
+
+  private drawStatistics(doc: PDFKit.PDFDocument, total: number, success: number, warning: number, rate: number) {
+    const boxTop = doc.y;
+    const boxHeight = 70;
+
+    doc.rect(50, boxTop, 500, boxHeight).fillAndStroke(COLORS.LIGHT_BG, COLORS.BORDER);
+    doc.fillColor(COLORS.TEXT);
+
+    const quarter = 500 / 4;
+    const centerY = boxTop + 25;
+
+    this.drawStatItem(doc, 'Total Contrôles', total.toString(), 50, centerY);
+    this.drawStatItem(doc, 'Succès', success.toString(), 50 + quarter, centerY, COLORS.SUCCESS);
+    this.drawStatItem(
+      doc,
+      'Avertissements',
+      warning.toString(),
+      50 + quarter * 2,
+      centerY,
+      warning > 0 ? COLORS.WARNING : COLORS.TEXT,
+    );
+    this.drawStatItem(doc, 'Taux de succès', `${rate}%`, 50 + quarter * 3, centerY);
+
+    doc.y = boxTop + boxHeight + 20;
+    doc.x = 50; // Reset x position to left margin
+  }
+
+  private drawStatItem(
+    doc: PDFKit.PDFDocument,
+    label: string,
+    value: string,
+    x: number,
+    y: number,
+    color: string = COLORS.TEXT,
+  ) {
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .fillColor(COLORS.SECONDARY)
+      .text(label, x, y - 10, { width: 125, align: 'center' });
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(16)
+      .fillColor(color)
+      .text(value, x, y + 5, { width: 125, align: 'center' });
+    doc.font('Helvetica');
+  }
+
+  private drawMasaReport(doc: PDFKit.PDFDocument, masa: MasaModel) {
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .fillColor(COLORS.PRIMARY)
+      .text("Rapport d'intégration (Verseau 1)", 50, doc.y, { underline: false });
+    doc.font('Helvetica');
+    doc.moveDown(0.5);
+
+    doc.fontSize(10).fillColor(COLORS.TEXT).text(`Statut MASA: ${masa.statut}`);
+    doc.text(`Numéro dépôt Verseau 1: ${masa.numeroDepotVerseau1}`);
+    doc.moveDown(0.5);
+
+    if (masa.rapport) {
+      doc.fontSize(10).fillColor(COLORS.SECONDARY).text('Détail:', { underline: true });
+      doc.moveDown(0.2);
+      doc.fontSize(9).fillColor(COLORS.TEXT).text(masa.rapport, { align: 'left' });
+    }
+    doc.moveDown(2);
+  }
+
+  private drawControlsV2(doc: PDFKit.PDFDocument, controls: ControleModelWithoutDepot[]) {
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .fillColor(COLORS.PRIMARY)
+      .text('Résultats des contrôles V2', 50, doc.y, { underline: false });
+    doc.font('Helvetica');
+    doc.moveDown(1);
+
+    // Statistics
+    const totalControls = controls.length;
+    const successControls = controls.filter(
+      (c) => c.evenementType !== EvenementType.AVERTISSEMENT && c.evenementType !== EvenementType.ERREUR,
+    );
+    const warningControls = controls.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT);
+    const successRate = totalControls > 0 ? Math.round((successControls.length / totalControls) * 100) : 0;
+    const failedControls = warningControls;
+    this.drawStatistics(doc, totalControls, successControls.length, warningControls.length, successRate);
+
+    // Success Summary
+    if (successControls.length > 0) {
+      const startY = doc.y;
+      doc.rect(50, startY, 500, 25).fill(COLORS.LIGHT_BG);
+      doc
+        .fillColor(COLORS.SUCCESS)
+        .fontSize(10)
+        .text(`${successControls.length} contrôles validés avec succès`, 60, startY + 7);
+      doc.moveDown(1);
+
+      successControls.forEach((c) => {
+        if (doc.y > doc.page.height - 50) doc.addPage();
+        const msg = ControleDescription[c.name];
+        doc.fillColor(COLORS.TEXT).fontSize(8).text(`• ${c.name} - ${msg}`, { indent: 20 });
+      });
+      doc.moveDown(2);
+    }
+
+    // Warnings Detail
+    if (failedControls.length > 0) {
+      const groupedWarnings: Record<string, ControleModelWithoutDepot[]> = {};
+      failedControls.forEach((c) => {
+        if (!groupedWarnings[c.name]) {
+          groupedWarnings[c.name] = [];
+        }
+        groupedWarnings[c.name].push(c);
+      });
+
+      Object.keys(groupedWarnings).forEach((controlName) => {
+        if (doc.y > doc.page.height - 100) doc.addPage();
+
+        const group = groupedWarnings[controlName];
+
+        doc
+          .font('Helvetica-Bold')
+          .fillColor(COLORS.WARNING)
+          .fontSize(11)
+          .text(`${controlName} (${group.length} avertissements)`);
+        doc.font('Helvetica');
+        doc.moveDown(0.3);
+
+        group.forEach((c) => {
+          if (doc.y > doc.page.height - 50) doc.addPage();
+          const msg = buildMessage(c.error, c.errorParams || []);
+          doc.fillColor(COLORS.TEXT).fontSize(8).text(`• ${msg}`, { indent: 20 });
+        });
+        doc.moveDown(1);
+      });
+    }
+  }
+
+  private drawFooter(doc: PDFKit.PDFDocument) {
+    const range = doc.bufferedPageRange();
+    for (let i = 0; i < range.count; i++) {
+      doc.switchToPage(i);
+      doc
+        .fontSize(8)
+        .fillColor(COLORS.SECONDARY)
+        .text(`Page ${i + 1} / ${range.count} - Verseau 2`, 50, doc.page.height - 60, { align: 'center' });
+    }
   }
 }
