@@ -49,10 +49,12 @@ export class DepotController {
       throw new BadRequestException('No file provided');
     }
 
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
     const isXmlFile =
       file.mimetype === XML_MIME_TYPES.APPLICATION_XML ||
       file.mimetype === XML_MIME_TYPES.TEXT_XML ||
-      file.originalname.toLowerCase().endsWith(XML_EXTENSION);
+      originalName.toLowerCase().endsWith(XML_EXTENSION);
 
     if (!isXmlFile) {
       throw new BadRequestException('File must be an XML file');
@@ -61,7 +63,7 @@ export class DepotController {
     const userEntity = await this.userService.findBySub(user.cerbereId);
 
     const depot = await this.deposerUnFichier.execute({
-      nomOriginalFichier: file.originalname,
+      nomOriginalFichier: originalName,
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer,

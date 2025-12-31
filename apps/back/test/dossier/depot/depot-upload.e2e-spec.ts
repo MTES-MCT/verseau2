@@ -232,4 +232,28 @@ describe('Depot upload (e2e)', () => {
     expect(s3Mock.uploads).toHaveLength(0);
     expect(queueMock.calls).toHaveLength(0);
   });
+
+  it('uploads a file with accents in the name and preserves encoding', async () => {
+    s3Mock.uploads = [];
+    queueMock.calls = [];
+
+    const xmlContent = '<root></root>';
+    const filenameWithAccents = 'panissières.xml';
+
+    const response = await request(app.getHttpServer())
+      .post('/depot/upload')
+      .set('Authorization', 'Bearer test-token')
+      .attach('file', Buffer.from(xmlContent), { filename: filenameWithAccents, contentType: 'application/xml' })
+      .expect(201);
+
+    const responseBody = response.body as { id: string; nomOriginalFichier: string; type: string };
+
+    expect(responseBody.nomOriginalFichier).toBe(filenameWithAccents);
+
+    const depot = await dataSource.getRepository(DepotEntity).findOneOrFail({
+      where: { id: responseBody.id },
+    });
+
+    expect(depot.nomOriginalFichier).toBe(filenameWithAccents);
+  });
 });
