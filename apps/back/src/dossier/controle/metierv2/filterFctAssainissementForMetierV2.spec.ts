@@ -8,7 +8,7 @@ function createFctAssainissement(overrides: Partial<FctAssainissement> = {}): Fc
       codeScenario: SandreScenarioCode.FCT_ASSAIN,
       versionScenario: SandreScenarioVersion.V4,
       dateDebutReference: '',
-      emetteur: { cdIntervenant: '' }, // nomIntervenant commented out - unused by controleV1 and controleMetierV2 services
+      emetteur: { cdIntervenant: '', nomIntervenant: '' }, // nomIntervenant commented out - unused by controleV1 and controleMetierV2 services
     },
     ouvrages: [],
     systemesCollecte: [],
