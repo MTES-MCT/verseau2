@@ -18,7 +18,7 @@ export interface Scenario {
 export interface Emetteur {
   cdIntervenant: string;
   // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
-  // nomIntervenant: string;
+  nomIntervenant: string;
   // contact?: Contact;
 }
 

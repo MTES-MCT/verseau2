@@ -196,8 +196,7 @@ function mapScenario(raw: any): Scenario {
 function mapEmetteur(raw: any): Emetteur {
   return {
     cdIntervenant: raw[SandreTags.CdIntervenant],
-    // Unused by controleV1 and controleMetierV2 services - commented out to reduce object size
-    // nomIntervenant: raw[SandreTags.NomIntervenant],
+    nomIntervenant: raw[SandreTags.NomIntervenant],
   };
 }
 
