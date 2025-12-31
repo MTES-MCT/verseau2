@@ -138,6 +138,23 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
   return response.json();
 }
 
+export async function apiDownload(endpoint: string): Promise<Blob> {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const response = await authenticatedFetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/pdf',
+    },
+  });
+  return response.blob();
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new ApiError(`GET ${endpoint} failed: ${message}`, response.status, response.statusText);
+  }
+
+  return response.blob();
+}
+
 /**
  * Build URL with query parameters
  */

@@ -6,6 +6,7 @@ export interface DepotDto extends BaseEntity {
   numeroDepotVerseau1?: number;
   nomOriginalFichier: string;
   path?: string;
+  rapportPath?: string;
   tailleFichier: number;
   type: string;
   error?: string;

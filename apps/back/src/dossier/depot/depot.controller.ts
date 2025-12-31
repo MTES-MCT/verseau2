@@ -1,4 +1,16 @@
-import { BadRequestException, Controller, Get, Post, Query, UploadedFile, UseInterceptors, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+  Req,
+  Param,
+  UseGuards,
+  Res,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
@@ -7,6 +19,8 @@ import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
 import { DepotDto } from '@lib/dossier';
+import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
+import type { Response } from 'express';
 
 interface MulterFile {
   fieldname: string;
@@ -79,5 +93,20 @@ export class DepotController {
     const userEntity = await this.userService.findBySub(user.cerbereId);
     const authorized = await this.depotService.checkDroitsDeDepot(cdOuvrage, userEntity.itvCdn);
     return { authorized };
+  }
+
+  // TODO : utiliser une URL signée pour sécuriser l'accès au rapport pouré éviter le back de faire passe plat
+  @Get(':id/rapport')
+  @UseGuards(HasUserAccessToDepotGuard)
+  async downloadRapport(@Param('id') id: string, @Res() res: Response): Promise<void> {
+    const pdfBuffer = await this.depotService.downloadRapport(id);
+    const depot = await this.depotService.findById(id);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=rapport-${depot.id}.pdf`,
+    });
+
+    res.send(pdfBuffer);
   }
 }

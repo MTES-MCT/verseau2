@@ -4,11 +4,13 @@ import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import type { DepotDto, DepotStatus } from '@lib/dossier';
 import { fetchDepots, ApiError } from '../api/depot';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
 import { usePagination } from '../hooks/usePagination';
+import { useRapportDownload } from '../hooks/useRapportDownload';
 
 const DEPOT_POLLING_INTERVAL_MS = 2000;
 const PAGE_SIZE = 10;
@@ -56,6 +58,8 @@ function formatDate(date: Date | string): string {
 }
 
 export function Dashboard() {
+  const { downloadingDepotId, handleDownload } = useRapportDownload();
+
   const {
     data: depots = [],
     isLoading,
@@ -102,9 +106,23 @@ export function Dashboard() {
     getStatusBadge(depot.status),
     depot.step,
     depot.createdAt ? formatDate(depot.createdAt) : '-',
-    <Link to={`/controle/${depot.id}`} className="fr-btn fr-btn--sm fr-btn--tertiary-no-outline">
-      Voir
-    </Link>,
+    <div key={depot.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <Link to={`/controle/${depot.id}`} className="fr-btn fr-btn--sm fr-btn--tertiary-no-outline">
+        Voir
+      </Link>
+      {depot.rapportPath && (
+        <Button
+          size="small"
+          priority="tertiary no outline"
+          iconId="ri-download-line"
+          onClick={() => handleDownload(depot.id)}
+          disabled={downloadingDepotId === depot.id}
+          title="Télécharger le rapport PDF"
+        >
+          {downloadingDepotId === depot.id ? 'Téléchargement...' : 'Télécharger'}
+        </Button>
+      )}
+    </div>,
   ]);
 
   return (

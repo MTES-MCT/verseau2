@@ -2,12 +2,14 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateDepotModel, DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { S3 } from '@infra/s3/s3';
 
 @Injectable()
 export class DepotService {
   constructor(
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(S3) private readonly s3: S3,
   ) {}
 
   async create(depotData: CreateDepotModel): Promise<DepotModel> {
@@ -54,5 +56,15 @@ export class DepotService {
     // TODO : Vérifier si cette requête est la bonne pour les droits de dépo
     const cxnAdm = await this.roseauGateway.findCxnAdmBySteuAndItv(steu.steuCdn, itvCdn);
     return !!cxnAdm;
+  }
+
+  async downloadRapport(depotId: string): Promise<Buffer> {
+    const depot = await this.findById(depotId);
+    
+    if (!depot.rapportPath) {
+      throw new NotFoundException(`Rapport not found for depot: ${depotId}`);
+    }
+
+    return await this.s3.download(depot.rapportPath);
   }
 }
