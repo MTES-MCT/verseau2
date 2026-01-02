@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { clearControles } from './controle.helper';
+import { DepotStep } from '@lib/dossier';
 
 export interface DepotSeedData {
   id: string;
@@ -47,7 +48,7 @@ export async function seedDepotFull(dataSource: DataSource, data: DepotSeedData)
       data.type,
       data.path ?? null,
       data.status ?? 'PENDING',
-      data.step ?? 'UPLOADING_TO_S3',
+      data.step ?? DepotStep.UPLOADING_TO_S3,
       data.userId ?? null,
     ],
   );

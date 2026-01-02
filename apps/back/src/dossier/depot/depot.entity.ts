@@ -28,10 +28,10 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   error?: string;
 
-  @Column({ type: 'enum', enum: DepotStep, default: 'UPLOADING_TO_S3' })
+  @Column({ type: 'enum', enum: DepotStep, default: DepotStep.UPLOADING_TO_S3 })
   step: DepotStep;
 
-  @Column({ type: 'enum', enum: DepotStatus, default: 'PENDING' })
+  @Column({ type: 'enum', enum: DepotStatus, default: DepotStatus.PENDING })
   status: DepotStatus;
 
   @Column({ type: 'enum', enum: ControleStatus, nullable: true, default: null, name: 'controle_status' })

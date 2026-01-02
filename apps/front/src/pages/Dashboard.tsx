@@ -5,7 +5,7 @@ import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
-import type { DepotDto, DepotStatus } from '@lib/dossier';
+import { DepotStatus, type DepotDto } from '@lib/dossier';
 import { fetchDepots, ApiError } from '../api/depot';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
@@ -17,25 +17,25 @@ const PAGE_SIZE = 10;
 
 function getStatusBadge(status: DepotStatus) {
   switch (status) {
-    case 'SUCCESS':
+    case DepotStatus.SUCCESS:
       return (
         <Badge severity="success" small>
           Valide
         </Badge>
       );
-    case 'FAILED':
+    case DepotStatus.FAILED:
       return (
         <Badge severity="error" small>
           Écarte
         </Badge>
       );
-    case 'PROCESSING':
+    case DepotStatus.PROCESSING:
       return (
         <Badge severity="info" small>
           En cours
         </Badge>
       );
-    case 'PENDING':
+    case DepotStatus.PENDING:
       return (
         <Badge severity="warning" small>
           En attente
@@ -69,7 +69,7 @@ export function Dashboard() {
     queryFn: fetchDepots,
     refetchInterval: ({ state }) => {
       const hasPendingOrProcessing = state.data?.some(
-        (depot: DepotDto) => depot.status === 'PROCESSING' || depot.status === 'PENDING',
+        (depot: DepotDto) => depot.status === DepotStatus.PROCESSING || depot.status === DepotStatus.PENDING,
       );
 
       return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false;
@@ -132,13 +132,13 @@ export function Dashboard() {
           <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
 
           <StatCard
-            count={depots.filter((depot: DepotDto) => depot.status === 'PENDING').length}
+            count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.PENDING).length}
             label="Bilans en attente"
             icon={fr.cx('ri-hourglass-line')}
           />
 
           <StatCard
-            count={depots.filter((depot: DepotDto) => depot.status === 'FAILED').length}
+            count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.FAILED).length}
             label="Bilans écartés par le SPE"
             icon={fr.cx('ri-prohibited-2-line')}
           />
