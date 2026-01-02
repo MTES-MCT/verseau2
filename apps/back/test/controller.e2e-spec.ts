@@ -16,10 +16,11 @@ import { InfraModule } from '@infra/infra.module';
 import { initTestContainerImports } from './init/initTestContainer';
 import { getPostgresConnectionUri, startPostgresContainer } from './testcontainer.config';
 import { InfraMockModule } from './mock/infraMock.module';
+import { Authentication } from '@authentication/authentication';
 
 describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
-
+  let authService: Authentication;
   beforeAll(async () => {
     await startPostgresContainer();
     const connectionUri = getPostgresConnectionUri();
@@ -36,10 +37,12 @@ describe('Controller (e2e) - Unauthorized', () => {
         stop: jest.fn(),
         send: jest.fn(),
       })
+
       .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    authService = app.get<Authentication>(Authentication);
   });
 
   afterAll(async () => {
@@ -63,8 +66,13 @@ describe('Controller (e2e) - Unauthorized', () => {
       return request(app.getHttpServer()).post('/auth/callback').send({}).expect(400);
     });
 
-    it('/auth/refresh (POST) - Should return 401 Unauthorized', async () => {
-      return request(app.getHttpServer()).post('/auth/refresh').send({}).expect(401);
+    it('/auth/refresh (POST) - Should return 201', async () => {
+      return request(app.getHttpServer()).post('/auth/refresh').send({ refreshToken: 'refresh-token-abc' }).expect(201);
+    });
+
+    it('/auth/refresh (POST) - Should return 401 when refreshTokens throw an error', async () => {
+      jest.spyOn(authService, 'refreshTokens').mockRejectedValueOnce(new Error('Refresh failed'));
+      return request(app.getHttpServer()).post('/auth/refresh').send({ refreshToken: 'refresh-token-abc' }).expect(401);
     });
 
     it('/auth/logout (POST) - Should return 401 Unauthorized', async () => {

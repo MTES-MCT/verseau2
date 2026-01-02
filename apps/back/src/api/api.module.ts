@@ -30,6 +30,7 @@ export class ApiModule {
       .apply(AuthenticationMiddleware)
       .exclude({ path: 'auth/login', method: RequestMethod.GET })
       .exclude({ path: 'auth/callback', method: RequestMethod.POST })
+      .exclude({ path: 'auth/refresh', method: RequestMethod.POST })
       .exclude({ path: 'webhook/masa/agent-verseau', method: RequestMethod.POST })
       .forRoutes('{*all}');
   }

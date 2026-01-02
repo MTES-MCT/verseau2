@@ -67,6 +67,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
  * GET request helper
  */
 export async function apiGet<T>(endpoint: string): Promise<T> {
+  console.log('apiGet', endpoint);
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const response = await authenticatedFetch(url, {
     method: 'GET',
