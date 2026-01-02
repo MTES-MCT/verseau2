@@ -9,11 +9,11 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        workspace: [apps/front, apps/back]
+        workspace: [apps/front, apps/back, packages/parser, packages/dossier]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Build ${{ matrix.workspace }}
-        run: npm run build --workspace=${{ matrix.workspace }}
+        run: npm run build --workspace=${{ matrix.workspace }} --if-present
 
       - name: Run tests
-        run: npm run test --workspace=${{ matrix.workspace }}
+        run: npm run test --workspace=${{ matrix.workspace }} --if-present
