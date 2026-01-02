@@ -101,7 +101,7 @@ export function Dashboard() {
   }
 
   const tableData = paginatedData.map((depot: DepotDto) => [
-    depot.id,
+    depot.numeroDepotVerseau1,
     depot.nomOriginalFichier,
     getStatusBadge(depot.status),
     depot.step,
@@ -157,7 +157,7 @@ export function Dashboard() {
           caption="Liste des dépôts d'auto-surveillance"
           noCaption
           bordered
-          headers={['#', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
+          headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
           data={tableData}
           noScroll={false}
         />

@@ -1,16 +1,14 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus } from '@lib/dossier';
+import { MasaEntity } from '@dossier/masa/masa.entity';
 
 @Entity('depot')
 export class DepotEntity extends BaseEntity {
   @PrimaryColumn()
   declare id: string;
-
-  @Column({ type: 'int', name: 'numero_depot_verseau_1', nullable: true })
-  numeroDepotVerseau1?: number;
 
   @Column({ type: 'varchar', name: 'nom_original_fichier' })
   nomOriginalFichier: string;
@@ -51,6 +49,9 @@ export class DepotEntity extends BaseEntity {
 
   @OneToMany(() => ControleEntity, (controle) => controle.depot)
   controles?: ControleEntity[];
+
+  @OneToOne(() => MasaEntity, (masa) => masa.depot)
+  masa?: MasaEntity;
 
   @BeforeInsert()
   setId() {

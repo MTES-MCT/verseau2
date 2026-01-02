@@ -22,14 +22,12 @@ export class MasaService {
       throw new Error('Depot not found');
     }
 
-    // Check if MASA return already processed (idempotency)
     const existingMasa = await this.masaGateway.findByDepotId(payload.versau2DepotId);
     if (existingMasa) {
       this.logger.warn('MASA return already processed', { depotId: payload.versau2DepotId });
       return existingMasa;
     }
 
-    // Save MASA data
     const masaData = await this.masaGateway.saveMasaRetour({
       depotId: payload.versau2DepotId,
       numeroDepotVerseau1: payload.numeroDepotVerseau1,
@@ -37,7 +35,6 @@ export class MasaService {
       rapport: payload.rapport,
     });
 
-    // Enqueue background job
     await this.queueService.send(QueueName.process_after_masa_webhook, {
       masaId: masaData.id,
       depotId: payload.versau2DepotId,

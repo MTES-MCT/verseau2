@@ -22,6 +22,7 @@ import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseS
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 import type { App } from 'supertest/types';
+import { MasaEntity } from '@dossier/masa/masa.entity';
 
 // Mock S3 service
 class S3Mock implements S3 {
@@ -135,10 +136,10 @@ describe('Worker Service (e2e)', () => {
           type: 'postgres',
           url: getPostgresConnectionUri(),
           dropSchema: true,
-          entities: [DepotEntity, UserEntity, ControleEntity, ReponseSandreEntity],
+          entities: [DepotEntity, UserEntity, ControleEntity, ReponseSandreEntity, MasaEntity],
           synchronize: true,
         }),
-        TypeOrmModule.forFeature([DepotEntity, UserEntity, ControleEntity, ReponseSandreEntity]),
+        TypeOrmModule.forFeature([DepotEntity, UserEntity, ControleEntity, ReponseSandreEntity, MasaEntity]),
       ],
       providers: [
         LoggerService,

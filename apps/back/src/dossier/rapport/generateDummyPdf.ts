@@ -34,7 +34,6 @@ async function generateDummyPdf() {
 
   const depot: DepotModel = {
     id: 'dep_67890',
-    numeroDepotVerseau1: 12345,
     nomOriginalFichier: 'rapport_mensuel_2023_10.xml',
     tailleFichier: 2048576,
     path: '/data/uploads/rapport_mensuel_2023_10.xml',

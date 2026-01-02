@@ -41,7 +41,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   async findByUserId(userId: string): Promise<DepotModel[]> {
     return await this.find({
       where: { user: { id: userId } },
-      relations: ['user', 'controles'],
+      relations: ['masa'],
       order: {
         createdAt: 'DESC',
       },

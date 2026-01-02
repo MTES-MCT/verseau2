@@ -1,5 +1,5 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '../depot/depot.entity';
 
 export enum MasaStatus {
@@ -16,7 +16,7 @@ export class MasaEntity extends BaseEntity {
   @Column({ type: 'varchar', name: 'depot_id', unique: true })
   depotId: string;
 
-  @ManyToOne(() => DepotEntity)
+  @OneToOne(() => DepotEntity, (depot) => depot.masa)
   @JoinColumn({ name: 'depot_id' })
   depot: DepotEntity;
 

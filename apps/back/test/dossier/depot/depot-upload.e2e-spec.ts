@@ -26,7 +26,8 @@ import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
-
+import { MasaEntity } from '@dossier/masa/masa.entity';
+import { DepotMapper } from '@dossier/depot/depot.mapper';
 class ConfigServiceMock {
   get(key: string) {
     if (key === 'FAKE_TOKEN_STORAGE_KEY') {
@@ -122,10 +123,10 @@ describe('Depot upload (e2e)', () => {
           type: 'postgres',
           url: getPostgresConnectionUri(),
           dropSchema: true,
-          entities: [DepotEntity, UserEntity, ControleEntity],
+          entities: [DepotEntity, UserEntity, ControleEntity, MasaEntity],
           synchronize: true,
         }),
-        TypeOrmModule.forFeature([DepotEntity, UserEntity, ControleEntity]),
+        TypeOrmModule.forFeature([DepotEntity, UserEntity, ControleEntity, MasaEntity]),
       ],
       controllers: [DepotController],
       providers: [
@@ -142,6 +143,7 @@ describe('Depot upload (e2e)', () => {
         { provide: UserService, useClass: UserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
+        DepotMapper,
       ],
     }).compile();
 

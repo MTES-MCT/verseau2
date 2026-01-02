@@ -18,7 +18,7 @@ export type DroitsDeDepotResponse = {
 };
 
 export async function fetchDepots(): Promise<DepotDto[]> {
-  return apiGet<DepotDto[]>('/admin/depot');
+  return apiGet<DepotDto[]>('/depot');
 }
 
 export async function fetchControles(depotId: string): Promise<ControleDto[]> {
