@@ -1,12 +1,7 @@
 import { BaseEntity } from '@shared/repository/base-entity';
 import { BeforeInsert, Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '../depot/depot.entity';
-
-export enum MasaStatus {
-  REFUSE = 'REFUSE',
-  INTEGRE = 'INTEGRE',
-  INTEGRATION_PARTIELLE = 'INTEGRATION_PARTIELLE',
-}
+import { MasaStatus } from './masa.model';
 
 @Entity('masa')
 export class MasaEntity extends BaseEntity {

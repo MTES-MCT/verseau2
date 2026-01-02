@@ -1,10 +1,10 @@
-import { UserEntity } from './user.entity';
+import { UserModel } from './user.model';
 
 export interface UserGateway {
-  findBySub(sub: string): Promise<UserEntity | null>;
-  findByItvCdn(itvCdn: string): Promise<UserEntity | null>;
-  createUser(data: { sub: string; itvCdn: string; email?: string; nom?: string; prenom?: string }): Promise<UserEntity>;
-  updateUser(id: string, data: Partial<Pick<UserEntity, 'email' | 'nom' | 'prenom'>>): Promise<UserEntity>;
+  findBySub(sub: string): Promise<UserModel | null>;
+  findByItvCdn(itvCdn: string): Promise<UserModel | null>;
+  createUser(data: { sub: string; itvCdn: string; email?: string; nom?: string; prenom?: string }): Promise<UserModel>;
+  updateUser(id: string, data: Partial<Pick<UserModel, 'email' | 'nom' | 'prenom'>>): Promise<UserModel>;
 }
 
 export const UserGateway = Symbol('UserGateway');

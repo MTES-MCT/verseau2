@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
-import { UserEntity } from './user.entity';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { UserModel } from './user.model';
 
 @Injectable()
 export class UserService {
@@ -14,7 +14,7 @@ export class UserService {
     sub: string,
     itvCdn: string,
     claims?: { email?: string; nom?: string; prenom?: string },
-  ): Promise<UserEntity> {
+  ): Promise<UserModel> {
     // Validate ITV exists in referentiel
     const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
     if (!itv) {
@@ -40,7 +40,7 @@ export class UserService {
     return await this.userGateway.createUser({ sub, itvCdn, ...claims });
   }
 
-  async findBySub(sub: string): Promise<UserEntity> {
+  async findBySub(sub: string): Promise<UserModel> {
     const user = await this.userGateway.findBySub(sub);
     if (!user) {
       throw new NotFoundException(`User with sub ${sub} not found`);

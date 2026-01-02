@@ -1,6 +1,5 @@
 import { MasaModel } from './masa.model';
-import { MasaStatus } from './masa.entity';
-
+import { MasaStatus } from './masa.model';
 export interface MasaGateway {
   findById(id: string): Promise<MasaModel | null>;
   findByDepotId(depotId: string): Promise<MasaModel | null>;

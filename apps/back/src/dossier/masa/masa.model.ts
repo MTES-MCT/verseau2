@@ -1,4 +1,8 @@
-import { MasaStatus } from './masa.entity';
+export enum MasaStatus {
+  REFUSE = 'REFUSE',
+  INTEGRE = 'INTEGRE',
+  INTEGRATION_PARTIELLE = 'INTEGRATION_PARTIELLE',
+}
 
 export class MasaWebhookPayloadDto {
   versau2DepotId: string;

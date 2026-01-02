@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { MasaEntity, MasaStatus } from './masa.entity';
+import { MasaEntity } from './masa.entity';
 import { MasaGateway } from './masa.gateway';
-import { MasaModel } from './masa.model';
+import { MasaModel, MasaStatus } from './masa.model';
 
 @Injectable()
 export class MasaRepository extends Repository<MasaEntity> implements MasaGateway {

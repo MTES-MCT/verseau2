@@ -1,8 +1,7 @@
 import { RapportPdfGeneratorService } from './rapportPdfGenerator.service';
-import { MasaModel } from '../masa/masa.model';
+import { MasaModel, MasaStatus } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '../controle/controle.model';
-import { MasaStatus } from '../masa/masa.entity';
 import { DepotStep, DepotStatus, ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
 import * as fs from 'fs';
 import * as path from 'path';
