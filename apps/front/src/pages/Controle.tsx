@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useLocation } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
@@ -8,8 +8,15 @@ import { mapControlesV1ToView, mapSandreControlesToView } from './controleMapper
 import { fr } from '@codegouvfr/react-dsfr';
 import { ControleSandreGroup } from '../components/ControleGroupSandre';
 
+export type ControleLocationState = {
+  numeroDepotVerseau1?: string;
+};
+
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>();
+  const location = useLocation();
+  const state: ControleLocationState = location.state;
+  const numeroDepot = state?.numeroDepotVerseau1 || depotId;
   const {
     data: controles = [],
     isLoading,
@@ -70,8 +77,7 @@ export function ControlePage() {
   return (
     <div className="fr-container">
       <div className={fr.cx('fr-container')}>
-        <h1>Contrôles du dépôt numéro</h1>
-        <p className={fr.cx('fr-text--lead')}>{depotId}</p>
+        <p className={fr.cx('fr-text--lead')}>Contrôles du dépôt : {numeroDepot}</p>
       </div>
       {/* Accordion pour les contrôles V1 */}
       {controlesV1.length > 0 && (

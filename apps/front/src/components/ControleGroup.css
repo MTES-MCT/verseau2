@@ -1,3 +1,19 @@
-.table-no-margin-and-padding > table {
-    display: grid;
+.accordion-no-border::before {
+  content: none !important;
+}
+
+.accordion-no-border {
+  box-shadow: none !important;
+}
+
+.zebra-list {
+  list-style-type: none;
+}
+
+.zebra-list li:nth-child(even) {
+  background-color: white;
+}
+
+.zebra-list li:nth-child(odd) {
+  background-color: var(--background-alt-grey);
 }

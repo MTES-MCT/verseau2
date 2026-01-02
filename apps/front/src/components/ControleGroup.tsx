@@ -2,8 +2,9 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { type ControleDto, EvenementType } from '@lib/dossier';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import './ControleGroup.css';
 
 type ControleGroupProps = {
@@ -38,26 +39,93 @@ function getResultBadge(evenementType: EvenementType | undefined) {
 
 export function ControleGroup({ title, controles }: ControleGroupProps) {
   const [showSuccess, setShowSuccess] = useState(false);
-  console.log(controles);
+
+  const { successCount, errorCount, warningCount, filteredControles } = useMemo(() => {
+    const success = controles.filter((controle) => controle.success).length;
+    const errors = controles.filter(
+      (controle) => !controle.success && controle.evenementType === EvenementType.ERREUR,
+    ).length;
+    const warnings = controles.filter(
+      (controle) => !controle.success && controle.evenementType === EvenementType.AVERTISSEMENT,
+    ).length;
+
+    const filtered = showSuccess ? controles : controles.filter((controle) => !controle.success);
+
+    return {
+      successCount: success,
+      errorCount: errors,
+      warningCount: warnings,
+      filteredControles: filtered,
+    };
+  }, [controles, showSuccess]);
+
+  const groupedControles = useMemo(() => {
+    return filteredControles.reduce(
+      (acc, controle) => {
+        const name = controle.name || 'Inconnu';
+        if (!acc[name]) {
+          acc[name] = [];
+        }
+        acc[name].push(controle);
+        return acc;
+      },
+      {} as Record<string, ControleView[]>,
+    );
+  }, [filteredControles]);
+
+  const tableData = useMemo(() => {
+    return Object.entries(groupedControles).map(([name, group]) => {
+      if (group.length === 1) {
+        const c = group[0];
+        return [c.name, getResultBadge(c.evenementType), c.message || '-'];
+      }
+
+      const groupErrorCount = group.filter((c) => c.evenementType === EvenementType.ERREUR).length;
+      const groupWarningCount = group.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT).length;
+
+      const groupEvenementType =
+        groupErrorCount > 0 ? EvenementType.ERREUR : groupWarningCount > 0 ? EvenementType.AVERTISSEMENT : undefined;
+
+      const label = (
+        <div className="fr-flex fr-align-items-center">
+          <span className="fr-mr-2w">Détails ({group.length})</span>
+          {groupErrorCount > 0 && (
+            <Badge severity="error" small className="fr-mr-1w">
+              {groupErrorCount}
+            </Badge>
+          )}
+          {groupWarningCount > 0 && (
+            <Badge severity="warning" small>
+              {groupWarningCount}
+            </Badge>
+          )}
+        </div>
+      );
+
+      return [
+        name,
+        getResultBadge(groupEvenementType),
+        <Accordion label={label} key={name} className={`${fr.cx('fr-m-0')} accordion-no-border`}>
+          <ul className="zebra-list fr-p-0 fr-m-0">
+            {group.map((controle, index) => (
+              <li key={index} className="fr-flex fr-align-items-start fr-p-1w">
+                <span>{controle.message || '-'}</span>
+              </li>
+            ))}
+          </ul>
+        </Accordion>,
+      ];
+    });
+  }, [groupedControles]);
 
   if (controles.length === 0) {
     return null;
   }
 
-  const successCount = controles.filter((controle) => controle.success).length;
-  const errorCount = controles.filter(
-    (controle) => !controle.success && controle.evenementType === EvenementType.ERREUR,
-  ).length;
-  const warningCount = controles.filter(
-    (controle) => !controle.success && controle.evenementType === EvenementType.AVERTISSEMENT,
-  ).length;
-
-  const filteredControles = showSuccess ? controles : controles.filter((controle) => !controle.success);
-
   return (
     <div className="controle-group">
       <div className="fr-flex fr-justify-content-between fr-align-items-center fr-width-full fr-mb-2w">
-        <span>{title}</span>
+        <span className={fr.cx('fr-text--bold')}>{title}</span>
         <div>
           <Badge severity="success" className="fr-mr-1w">
             {successCount} succès
@@ -73,18 +141,8 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
       <Button priority="secondary" onClick={() => setShowSuccess(!showSuccess)} className="fr-mb-2w">
         {showSuccess ? 'Masquer les succès' : 'Tout afficher'}
       </Button>
-      <Table
-        caption={`Liste des contrôles ${title}`}
-        noCaption
-        bordered
-        headers={['Contrôle', 'Résultat', 'Message']}
-        data={filteredControles.map((controle) => [
-          controle.name,
-          getResultBadge(controle.evenementType),
-          controle.message || '-',
-        ])}
-        className={`${fr.cx('fr-p-0', 'fr-m-0')} table-no-margin-and-padding`}
-      />
+
+      <Table noCaption headers={['Contrôle', 'Résultat', 'Message']} data={tableData} className={fr.cx('fr-mb-4w')} />
     </div>
   );
 }

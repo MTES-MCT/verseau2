@@ -1,4 +1,6 @@
 import { Link } from 'react-router';
+import { type ControleLocationState } from './Controle';
+
 import { useQuery } from '@tanstack/react-query';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
@@ -107,7 +109,11 @@ export function Dashboard() {
     depot.step,
     depot.createdAt ? formatDate(depot.createdAt) : '-',
     <div key={depot.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-      <Link to={`/controle/${depot.id}`} className="fr-btn fr-btn--sm fr-btn--tertiary-no-outline">
+      <Link
+        to={`/controle/${depot.id}`}
+        state={{ numeroDepotVerseau1: depot.numeroDepotVerseau1 } as ControleLocationState}
+        className="fr-btn fr-btn--sm fr-btn--tertiary-no-outline"
+      >
         Voir
       </Link>
       {depot.rapportPath && (
