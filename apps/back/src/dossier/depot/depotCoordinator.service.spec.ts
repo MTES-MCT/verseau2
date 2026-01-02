@@ -3,6 +3,7 @@ import { DepotCoordinatorService } from './depotCoordinator.service';
 import { DepotService } from './depot.service';
 import { QueueName, QueueGateway } from '@queue/queue';
 import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus, DepotDto } from '@lib/dossier';
+import { DepotModel } from './depot.model';
 
 jest.mock('pg-boss', () => ({}));
 jest.mock('@queue/queue.service', () => ({
@@ -82,9 +83,12 @@ describe('DepotCoordinatorService', () => {
     it('should return early if controls are still pending', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
-        controleStatus: ControleStatus.PENDING,
-        controleSandreStatus: ControleSandreStatus.SUCCESS,
-      } as DepotDto);
+        nomOriginalFichier: 'test.xml',
+        step: DepotStep.CONTROLE_IN_PROGRESS,
+        status: DepotStatus.PROCESSING,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as DepotModel);
 
       await service.checkControlesCompletion(depotId);
 
@@ -95,10 +99,15 @@ describe('DepotCoordinatorService', () => {
     it('should proceed to SFTP if both controls are successful', async () => {
       const depot = {
         id: depotId,
-        path: '/path/to/file',
+        nomOriginalFichier: 'test.xml',
+        step: DepotStep.CONTROLE_COMPLETED,
+        status: DepotStatus.PROCESSING,
         controleStatus: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
-      } as DepotDto;
+        path: '/path/to/file',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as DepotModel;
       depotService.findById.mockResolvedValue(depot);
 
       await service.checkControlesCompletion(depotId);
@@ -116,9 +125,15 @@ describe('DepotCoordinatorService', () => {
     it('should fail the depot if Controle V1 fails', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
+        nomOriginalFichier: 'test.xml',
+        step: DepotStep.CONTROLE_COMPLETED,
+        status: DepotStatus.PROCESSING,
         controleStatus: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
-      } as DepotDto);
+        path: '/path/to/file',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as DepotModel);
 
       await service.checkControlesCompletion(depotId);
 
@@ -132,9 +147,15 @@ describe('DepotCoordinatorService', () => {
     it('should fail the depot if Controle Sandre fails', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
+        nomOriginalFichier: 'test.xml',
+        step: DepotStep.CONTROLE_COMPLETED,
         controleStatus: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.FAILED,
-      } as DepotDto);
+        path: '/path/to/file',
+        status: DepotStatus.PROCESSING,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as DepotModel);
 
       await service.checkControlesCompletion(depotId);
 
@@ -148,9 +169,15 @@ describe('DepotCoordinatorService', () => {
     it('should prioritize V1 failure over Sandre failure if both fail', async () => {
       depotService.findById.mockResolvedValue({
         id: depotId,
+        nomOriginalFichier: 'test.xml',
+        step: DepotStep.CONTROLE_COMPLETED,
         controleStatus: ControleStatus.FAILED,
-        controleSandreStatus: ControleSandreStatus.FAILED,
-      } as DepotDto);
+        controleSandreStatus: ControleSandreStatus.SUCCESS,
+        path: '/path/to/file',
+        status: DepotStatus.PROCESSING,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as DepotModel);
 
       await service.checkControlesCompletion(depotId);
 
