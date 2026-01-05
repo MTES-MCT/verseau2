@@ -7,9 +7,9 @@ import './ControleGroup.css';
 import { useControleStatistics } from '../hooks/useControleStatistics';
 import { useGroupedControles } from '../hooks/useGroupedControles';
 import { useControleTableData } from '../hooks/useControleTableData';
-import { ResultBadge } from './ResultBadge';
+import { ControleResultBadges } from './ControleResultBadges';
 import type { ControleView } from '../types/controle.types';
-import { ControleDescription } from '@lib/dossier';
+import { ControleDescription, EvenementType } from '@lib/dossier';
 import { StatCard } from './StatCard';
 import { ToggleSwitch } from '@codegouvfr/react-dsfr/ToggleSwitch';
 
@@ -21,16 +21,18 @@ type ControleGroupProps = {
 export function ControleGroup({ title, controles }: ControleGroupProps) {
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { successCount, errorCount, warningCount, filteredControles } = useControleStatistics(controles, showSuccess);
-  const groupedControles = useGroupedControles(filteredControles);
-  const tableDataRows = useControleTableData(groupedControles);
+  const { successCount, errorCount, warningCount } = useControleStatistics(controles, showSuccess);
+  const groupedControles = useGroupedControles(controles);
+  const tableDataRows = useControleTableData(groupedControles, showSuccess);
 
   const tableData = tableDataRows.map((row) => {
     const description = ControleDescription[row.name as keyof typeof ControleDescription];
     const displayName = description ? `${row.name} - ${description}` : row.name;
 
+    const resultCell = <ControleResultBadges row={row} />;
+
     if (!row.isGroup) {
-      return [displayName, <ResultBadge evenementType={row.evenementType} small />, row.message];
+      return [displayName, resultCell, row.message];
     }
 
     const groupData = row.groupData;
@@ -40,28 +42,58 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
       </div>
     );
 
-    // Group identical messages to avoid repetitiveness
-    const messageCounts = groupData.controls.reduce(
+    // Group by message and outcome to avoid repetitiveness and show the correct icon
+    const messageGroups = groupData.controls.reduce(
       (acc, ctrl) => {
+        if (!showSuccess && ctrl.success) {
+          return acc;
+        }
         const msg = ctrl.message || '-';
-        acc[msg] = (acc[msg] || 0) + 1;
+        const status = ctrl.success ? 'success' : ctrl.evenementType || 'error';
+        const key = `${status}-${msg}`;
+        if (!acc[key]) {
+          acc[key] = {
+            message: msg,
+            count: 0,
+            success: ctrl.success,
+            evenementType: ctrl.evenementType,
+          };
+        }
+        acc[key].count++;
         return acc;
       },
-      {} as Record<string, number>,
+      {} as Record<
+        string,
+        { message: string; count: number; success: boolean; evenementType: EvenementType | undefined }
+      >,
     );
+
+    const getIconInfo = (success: boolean, evenementType: EvenementType | undefined) => {
+      if (success) {
+        return { icon: 'fr-icon-checkbox-circle-fill', color: 'var(--text-default-success)' };
+      }
+      if (evenementType === EvenementType.AVERTISSEMENT) {
+        return { icon: 'fr-icon-warning-fill', color: 'var(--text-default-warning)' };
+      }
+      return { icon: 'fr-icon-error-fill', color: 'var(--text-default-error)' };
+    };
 
     return [
       displayName,
-      <ResultBadge evenementType={row.evenementType} small />,
+      resultCell,
       <Accordion label={label} key={row.name} className={`${fr.cx('fr-m-0')} accordion-no-border`}>
         <ul className="zebra-list fr-p-0 fr-m-0">
-          {Object.entries(messageCounts).map(([msg, count], index) => (
-            <li key={`${index}`} className="fr-flex fr-align-items-start fr-p-1w">
-              <span>
-                {msg} {count > 1 ? <Badge small>{count}</Badge> : null}
-              </span>
-            </li>
-          ))}
+          {Object.values(messageGroups).map((item, index) => {
+            const { icon, color } = getIconInfo(item.success, item.evenementType);
+            return (
+              <li key={`${index}`} className="fr-flex fr-align-items-start fr-p-1w">
+                <span className={`${icon} fr-mr-1w`} style={{ color }} aria-hidden="true" />
+                <span>
+                  {item.message} {item.count > 1 ? <Badge small>{item.count}</Badge> : null}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </Accordion>,
     ];

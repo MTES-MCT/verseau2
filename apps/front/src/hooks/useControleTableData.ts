@@ -18,48 +18,86 @@ type GroupedControleRow = {
     controls: ControleView[];
     errorCount: number;
     warningCount: number;
+    successCount: number;
   };
 };
 
 export type TableDataRow = SingleControleRow | GroupedControleRow;
 
-export function useControleTableData(groupedControles: Record<string, ControleView[]>): TableDataRow[] {
+export function useControleTableData(
+  groupedControles: Record<string, ControleView[]>,
+  showSuccess: boolean,
+): TableDataRow[] {
   return useMemo(() => {
     return Object.entries(groupedControles).flatMap(([name, group]) => {
+      const stats = getGroupStats(group);
+
+      const hasFailures = stats.errorCount > 0 || stats.warningCount > 0;
+      if (!showSuccess && !hasFailures) {
+        return [];
+      }
+
       if (group.length === 1) {
-        const c = group[0];
+        const controle = group[0];
         return {
-          name: c.name,
-          evenementType: c.evenementType,
-          message: c.message || '-',
+          name: controle.name,
+          evenementType: controle.evenementType,
+          message: controle.message || '-',
           isGroup: false as const,
         };
       }
 
-      const groupErrorCount = group.filter((c) => c.evenementType === EvenementType.ERREUR).length;
-      const groupWarningCount = group.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT).length;
-
-      const groupEvenementType =
-        groupErrorCount > 0 ? EvenementType.ERREUR : groupWarningCount > 0 ? EvenementType.AVERTISSEMENT : undefined;
-
-      const groupMessage =
-        groupErrorCount > 0
-          ? `Voir les ${groupErrorCount} erreur${groupErrorCount > 1 ? 's' : ''}`
-          : groupWarningCount > 0
-            ? `Voir les ${groupWarningCount} avertissement${groupWarningCount > 1 ? 's' : ''}`
-            : `Détails (${group.length})`;
+      const displayedItems = group.filter((controle) => showSuccess || !controle.success);
 
       return {
         name,
-        evenementType: groupEvenementType,
-        message: groupMessage,
+        evenementType: getGroupStatus(stats.errorCount, stats.warningCount),
+        message: getGroupMessage(displayedItems),
         isGroup: true as const,
         groupData: {
           controls: group,
-          errorCount: groupErrorCount,
-          warningCount: groupWarningCount,
+          ...stats,
         },
       };
     });
-  }, [groupedControles]);
+  }, [groupedControles, showSuccess]);
+}
+
+function getGroupStats(group: ControleView[]) {
+  return {
+    errorCount: group.filter((controle) => controle.evenementType === EvenementType.ERREUR).length,
+    warningCount: group.filter((controle) => controle.evenementType === EvenementType.AVERTISSEMENT).length,
+    successCount: group.filter((controle) => controle.success).length,
+  };
+}
+
+function getGroupStatus(errorCount: number, warningCount: number): EvenementType | undefined {
+  if (errorCount > 0) {
+    return EvenementType.ERREUR;
+  }
+  if (warningCount > 0) {
+    return EvenementType.AVERTISSEMENT;
+  }
+  return undefined;
+}
+
+function getGroupMessage(items: ControleView[]): string {
+  const stats = getGroupStats(items);
+  const activeTypesCount = [stats.errorCount, stats.warningCount, stats.successCount].filter(
+    (count) => count > 0,
+  ).length;
+
+  if (activeTypesCount > 1) {
+    return `Voir les ${items.length} contrôles`;
+  }
+
+  if (stats.errorCount > 0) {
+    return `Voir les ${stats.errorCount} erreur${stats.errorCount > 1 ? 's' : ''}`;
+  }
+
+  if (stats.warningCount > 0) {
+    return `Voir les ${stats.warningCount} avertissement${stats.warningCount > 1 ? 's' : ''}`;
+  }
+
+  return `Voir les ${stats.successCount} succès`;
 }
