@@ -34,6 +34,10 @@ export const Breadcrumb = () => {
     currentPageLabel = 'Récapitulatif';
   } else if (location.pathname.startsWith('/controle/')) {
     currentPageLabel = 'Détails du contrôle';
+    segments.push({
+      label: 'Tableau de bord',
+      href: '/dashboard',
+    });
   }
 
   return (
