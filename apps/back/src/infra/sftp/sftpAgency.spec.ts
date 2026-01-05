@@ -43,6 +43,7 @@ describe('SftpAgencyService', () => {
     });
 
     it('devrait initialiser les clients correctement', () => {
+      console.log(service.getConfiguredAgencies());
       expect(service.getConfiguredAgencies()).toHaveLength(2);
       expect(service.getConfiguredAgencies()).toContain('agence_01');
       expect(service.getConfiguredAgencies()).toContain('agence_02');
@@ -163,7 +164,7 @@ describe('SftpAgencyMock', () => {
 });
 
 describe('createSftpAgency factory', () => {
-  it('devrait retourner SftpAgencyMock quand SFTP_AGENCY_PROVIDER=mock', () => {
+  it('devrait retourner SftpAgencyMock quand SFTP_AGENCES_PROVIDER=mock', () => {
     const configService = {
       get: jest.fn((key: string) => {
         if (key === 'SFTP_AGENCY_PROVIDER') return 'mock';
@@ -175,11 +176,11 @@ describe('createSftpAgency factory', () => {
     expect(registry).toBeInstanceOf(SftpAgencyMock);
   });
 
-  it('devrait retourner SftpAgencyService quand SFTP_AGENCY_PROVIDER=real', () => {
+  it('devrait retourner SftpAgencyService quand SFTP_AGENCES_PROVIDER=real', () => {
     const configService = {
       get: jest.fn((key: string) => {
-        if (key === 'SFTP_AGENCY_PROVIDER') return 'real';
-        if (key === 'SFTP_AGENCY_CONFIG') return '{}';
+        if (key === 'SFTP_AGENCES_PROVIDER') return 'real';
+        if (key === 'SFTP_AGENCES_CONFIG') return '{}';
         return undefined;
       }),
     } as unknown as ConfigService;
