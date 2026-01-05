@@ -41,219 +41,26 @@ export class ControleMetierV2Service {
 
   // CTL039: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5
   verifyRatioDcoDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
-    const errors: ControleError[] = [];
-    const MIN_RATIO = 1.5;
-    const MAX_RATIO = 3.5;
-    const DCO_CODE = CodeParametre.DCO.toString();
-    const DBO5_CODE = CodeParametre.DBO5.toString();
-
-    interface GroupData {
-      dco?: number;
-      dbo5?: number;
-      cdOuvrageDepollution: string;
-      numeroPointMesure: string;
-      datePrlvt: string;
-      cdSupport: string;
-    }
-
-    const groups = new Map<string, GroupData>();
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        const numeroPointMesure = pointMesure.numeroPointMesure || '';
-
-        for (const prelevement of pointMesure.prelevement) {
-          const datePrlvt = prelevement.datePrlvt ?? '';
-          const cdSupport = prelevement.cdSupport ?? '';
-
-          const groupKey = `${cdOuvrageDepollution}|${numeroPointMesure}|${datePrlvt}|${cdSupport}`;
-
-          if (!groups.has(groupKey)) {
-            groups.set(groupKey, {
-              cdOuvrageDepollution,
-              numeroPointMesure,
-              datePrlvt,
-              cdSupport,
-            });
-          }
-
-          const group = groups.get(groupKey);
-          if (!group) {
-            continue;
-          }
-
-          for (const analyse of prelevement.analyse) {
-            const cdParametre = analyse.cdParametre;
-            const rsAnalyse = analyse.rsAnalyse;
-
-            if (cdParametre === DCO_CODE && rsAnalyse) {
-              const dcoValue = parseFloat(rsAnalyse);
-              if (!isNaN(dcoValue)) {
-                group.dco = dcoValue;
-              }
-            } else if (cdParametre === DBO5_CODE && rsAnalyse) {
-              const dbo5Value = parseFloat(rsAnalyse);
-              if (!isNaN(dbo5Value)) {
-                group.dbo5 = dbo5Value;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Check each group for ratio validation
-    for (const group of groups.values()) {
-      const { dco, dbo5, cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport } = group;
-
-      // Check if DCO and DBO5 exist and DBO5 > 0
-      if (dco !== undefined && dbo5 !== undefined && dbo5 > 0) {
-        const ratio = dco / dbo5;
-
-        // Check if ratio is outside acceptable range
-        if (ratio <= MIN_RATIO || ratio >= MAX_RATIO) {
-          errors.push({
-            code: ErrorCode.E2_039,
-            params: [
-              cdOuvrageDepollution,
-              numeroPointMesure,
-              datePrlvt,
-              cdSupport,
-              dco.toString(),
-              dbo5.toString(),
-              ratio.toFixed(2),
-            ],
-            evenementType: EvenementType.AVERTISSEMENT,
-          });
-        }
-      } else {
-        // Missing values or DBO5 <= 0
-        const missingValues: string[] = [];
-        if (dco === undefined) {
-          missingValues.push('DCO');
-        }
-        if (dbo5 === undefined) {
-          missingValues.push('DBO5');
-        }
-        if (dbo5 !== undefined && dbo5 <= 0) {
-          missingValues.push('DBO5 <= 0');
-        }
-      }
-    }
-
-    return {
+    return this.verifyParameterRatio(fctAssainissement, {
       name: ControleName.CTL039,
-      errors: errors,
-    };
+      errorCode: ErrorCode.E2_039,
+      paramCode1: CodeParametre.DCO,
+      paramCode2: CodeParametre.DBO5,
+      min: 1.5,
+      max: 3.5,
+    });
   }
 
   // CTL040: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio MES/DBO5
   verifyRatioMesDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
-    const errors: ControleError[] = [];
-    const MIN_RATIO = 0.7;
-    const MAX_RATIO = 1.5;
-    const MES_CODE = CodeParametre.MES.toString();
-    const DBO5_CODE = CodeParametre.DBO5.toString();
-
-    interface GroupData {
-      mes?: number;
-      dbo5?: number;
-      cdOuvrageDepollution: string;
-      numeroPointMesure: string;
-      datePrlvt: string;
-      cdSupport: string;
-    }
-
-    const groups = new Map<string, GroupData>();
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        const numeroPointMesure = pointMesure.numeroPointMesure || '';
-
-        for (const prelevement of pointMesure.prelevement) {
-          const datePrlvt = prelevement.datePrlvt ?? '';
-          const cdSupport = prelevement.cdSupport ?? '';
-
-          const groupKey = `${cdOuvrageDepollution}|${numeroPointMesure}|${datePrlvt}|${cdSupport}`;
-
-          if (!groups.has(groupKey)) {
-            groups.set(groupKey, {
-              cdOuvrageDepollution,
-              numeroPointMesure,
-              datePrlvt,
-              cdSupport,
-            });
-          }
-
-          const group = groups.get(groupKey);
-          if (!group) {
-            continue;
-          }
-
-          for (const analyse of prelevement.analyse) {
-            const cdParametre = analyse.cdParametre;
-            const rsAnalyse = analyse.rsAnalyse;
-
-            if (cdParametre === MES_CODE && rsAnalyse) {
-              const mesValue = parseFloat(rsAnalyse);
-              if (!isNaN(mesValue)) {
-                group.mes = mesValue;
-              }
-            } else if (cdParametre === DBO5_CODE && rsAnalyse) {
-              const dbo5Value = parseFloat(rsAnalyse);
-              if (!isNaN(dbo5Value)) {
-                group.dbo5 = dbo5Value;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    for (const group of groups.values()) {
-      const { mes, dbo5, cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport } = group;
-
-      if (mes !== undefined && dbo5 !== undefined && dbo5 > 0) {
-        const ratio = mes / dbo5;
-
-        if (ratio <= MIN_RATIO || ratio >= MAX_RATIO) {
-          errors.push({
-            code: ErrorCode.E2_040,
-            params: [
-              cdOuvrageDepollution,
-              numeroPointMesure,
-              datePrlvt,
-              cdSupport,
-              mes.toString(),
-              dbo5.toString(),
-              ratio.toFixed(2),
-            ],
-            evenementType: EvenementType.AVERTISSEMENT,
-          });
-        }
-      } else {
-        // Missing values or DBO5 <= 0
-        const missingValues: string[] = [];
-        if (mes === undefined) {
-          missingValues.push('MES');
-        }
-        if (dbo5 === undefined) {
-          missingValues.push('DBO5');
-        }
-        if (dbo5 !== undefined && dbo5 <= 0) {
-          missingValues.push('DBO5 <= 0');
-        }
-      }
-    }
-
-    return {
+    return this.verifyParameterRatio(fctAssainissement, {
       name: ControleName.CTL040,
-      errors: errors,
-    };
+      errorCode: ErrorCode.E2_040,
+      paramCode1: CodeParametre.MES,
+      paramCode2: CodeParametre.DBO5,
+      min: 0.7,
+      max: 1.5,
+    });
   }
 
   // CTL041: Analyse des concentrations en DCO hors fourchette (300 < DCO < 1700)
@@ -417,6 +224,101 @@ export class ControleMetierV2Service {
               }
             }
           }
+        }
+      }
+    }
+
+    return {
+      name: config.name,
+      errors: errors,
+    };
+  }
+
+  // Helper for parameter ratio verification
+  private verifyParameterRatio(
+    fctAssainissement: FctAssainissement,
+    config: {
+      name: ControleName;
+      errorCode: ErrorCode;
+      paramCode1: CodeParametre;
+      paramCode2: CodeParametre;
+      min: number;
+      max: number;
+    },
+  ): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const param1Code = config.paramCode1.toString();
+    const param2Code = config.paramCode2.toString();
+
+    interface GroupData {
+      val1?: number;
+      val2?: number;
+      cdOuvrageDepollution: string;
+      numeroPointMesure: string;
+      datePrlvt: string;
+      cdSupport: string;
+    }
+
+    const groups = new Map<string, GroupData>();
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const numeroPointMesure = pointMesure.numeroPointMesure || '';
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+
+          const groupKey = `${cdOuvrageDepollution}|${numeroPointMesure}|${datePrlvt}|${cdSupport}`;
+
+          if (!groups.has(groupKey)) {
+            groups.set(groupKey, {
+              cdOuvrageDepollution,
+              numeroPointMesure,
+              datePrlvt,
+              cdSupport,
+            });
+          }
+
+          const group = groups.get(groupKey)!;
+
+          for (const analyse of prelevement.analyse) {
+            if (analyse.cdParametre === param1Code && analyse.rsAnalyse) {
+              const val = parseFloat(analyse.rsAnalyse);
+              if (!isNaN(val)) {
+                group.val1 = val;
+              }
+            } else if (analyse.cdParametre === param2Code && analyse.rsAnalyse) {
+              const val = parseFloat(analyse.rsAnalyse);
+              if (!isNaN(val)) {
+                group.val2 = val;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (const group of groups.values()) {
+      if (group.val1 !== undefined && group.val2 !== undefined && group.val2 > 0) {
+        const ratio = group.val1 / group.val2;
+
+        if (ratio <= config.min || ratio >= config.max) {
+          errors.push({
+            code: config.errorCode,
+            params: [
+              group.cdOuvrageDepollution,
+              group.numeroPointMesure,
+              group.datePrlvt,
+              group.cdSupport,
+              group.val1.toString(),
+              group.val2.toString(),
+              ratio.toFixed(2),
+            ],
+            evenementType: EvenementType.AVERTISSEMENT,
+          });
         }
       }
     }
