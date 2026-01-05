@@ -58,6 +58,10 @@ export enum ControleName {
   CTL044 = 'CTL044',
   CTL045 = 'CTL045',
   CTL046 = 'CTL046',
+  CTL047 = 'CTL047',
+  CTL048 = 'CTL048',
+  CTL049 = 'CTL049',
+  CTL050 = 'CTL050',
 }
 
 export const ControleDescription: Record<ControleName, string> = {
@@ -99,4 +103,8 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL044]: 'Vérification des concentrations en NTK hors fourchette',
   [ControleName.CTL045]: 'Vérification des concentrations en Ptot hors fourchette',
   [ControleName.CTL046]: 'Vérification des concentrations en pH hors fourchette',
+  [ControleName.CTL047]: 'Vérification que la concentration DCO > DBO5',
+  [ControleName.CTL048]: 'Vérification que la concentration NTK > N-NH4',
+  [ControleName.CTL049]: 'Vérification que la concentration NGL > NTK',
+  [ControleName.CTL050]: 'Vérification que la concentration Ptot > PO4',
 };

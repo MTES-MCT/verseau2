@@ -103,6 +103,15 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       if (params.length === 5) {
         return `pH hors plage (2-12) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (pH=${params[4]})`;
       }
+      return `Valeur pH manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+    case ErrorCode.E2_047:
+      return `Incohérence : DCO ≤ DBO5 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]}, DBO5=${params[5]})`;
+    case ErrorCode.E2_048:
+      return `Incohérence : NTK ≤ N-NH4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]}, N-NH4=${params[5]})`;
+    case ErrorCode.E2_049:
+      return `Incohérence : NGL ≤ NTK pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]}, N-NH4=${params[5]})`;
+    case ErrorCode.E2_050:
+      return `Incohérence : Ptot ≤ PO4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (Ptot=${params[4]}, PO4=${params[5]})`;
     default:
       return `Erreur inconnue`;
   }

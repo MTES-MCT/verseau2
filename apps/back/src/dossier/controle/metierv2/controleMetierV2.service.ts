@@ -23,6 +23,12 @@ export class ControleMetierV2Service {
       this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
       this.verifyDcoRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
       this.verifyDbo5Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyPhRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
+      this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
     ];
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -134,20 +140,6 @@ export class ControleMetierV2Service {
         if (dbo5 !== undefined && dbo5 <= 0) {
           missingValues.push('DBO5 <= 0');
         }
-
-        // TODO: Comment gérer ces erreurs ? Des centaines d'erreurs de ce type sont générées.
-
-        // errors.push({
-        //   code: ErrorCode.E2_039,
-        //   params: [
-        //     cdOuvrageDepollution,
-        //     numeroPointMesure,
-        //     datePrlvt,
-        //     cdSupport,
-        //     `Impossible de calculer le ratio (${missingValues.join(', ')})`,
-        //   ],
-        //   evenementType: EvenementType.AVERTISSEMENT,
-        // });
       }
     }
 
@@ -255,20 +247,6 @@ export class ControleMetierV2Service {
         if (dbo5 !== undefined && dbo5 <= 0) {
           missingValues.push('DBO5 <= 0');
         }
-
-        // TODO: Comment gérer ces erreurs ? Des centaines d'erreurs de ce type sont générées.
-
-        // errors.push({
-        //   code: ErrorCode.E2_040,
-        //   params: [
-        //     cdOuvrageDepollution,
-        //     numeroPointMesure,
-        //     datePrlvt,
-        //     cdSupport,
-        //     `Impossible de calculer le ratio (${missingValues.join(', ')})`,
-        //   ],
-        //   evenementType: EvenementType.AVERTISSEMENT,
-        // });
       }
     }
 
@@ -344,6 +322,50 @@ export class ControleMetierV2Service {
     });
   }
 
+  // CTL047: Vérification que la concentration DCO > DBO5
+  verifyDcoGreaterThanDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterComparison(fctAssainissement, {
+      name: ControleName.CTL047,
+      errorCode: ErrorCode.E2_047,
+      paramCode1: CodeParametre.DCO,
+      paramCode2: CodeParametre.DBO5,
+      compare: (val1, val2) => val1 > val2,
+    });
+  }
+
+  // CTL048: Vérification que la concentration NTK > N-NH4
+  verifyNtkGreaterThanNnh4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterComparison(fctAssainissement, {
+      name: ControleName.CTL048,
+      errorCode: ErrorCode.E2_048,
+      paramCode1: CodeParametre.NTK,
+      paramCode2: CodeParametre.N_NH4,
+      compare: (val1, val2) => val1 > val2,
+    });
+  }
+
+  // CTL049: Vérification que la concentration NGL > NTK
+  verifyNglGreaterThanNtk(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterComparison(fctAssainissement, {
+      name: ControleName.CTL049,
+      errorCode: ErrorCode.E2_049,
+      paramCode1: CodeParametre.NGL,
+      paramCode2: CodeParametre.NTK,
+      compare: (val1, val2) => val1 > val2,
+    });
+  }
+
+  // CTL050: Vérification que la concentration Ptot > PO4
+  verifyPGreaterThanPO4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    return this.verifyParameterComparison(fctAssainissement, {
+      name: ControleName.CTL050,
+      errorCode: ErrorCode.E2_050,
+      paramCode1: CodeParametre.Ptot,
+      paramCode2: CodeParametre.PO4,
+      compare: (val1, val2) => val1 > val2,
+    });
+  }
+
   // Helper for parameter range verification
   private verifyParameterRange(
     fctAssainissement: FctAssainissement,
@@ -393,23 +415,7 @@ export class ControleMetierV2Service {
                   evenementType: EvenementType.AVERTISSEMENT,
                 });
               }
-            } else {
-              // TODO: Comment gérer ces erreurs ? Des centaines d'erreurs de ce type sont générées.
-              // Parameter exists but value is missing or non-numeric
-              // errors.push({
-              //   code: config.errorCode,
-              //   params: [cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport],
-              //   evenementType: EvenementType.AVERTISSEMENT,
-              // });
             }
-          } else {
-            // TODO: Comment gérer ces erreurs ? Des centaines d'erreurs de ce type sont générées.
-            // Parameter not found for this measurement
-            // errors.push({
-            //   code: config.errorCode,
-            //   params: [cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport],
-            //   evenementType: EvenementType.AVERTISSEMENT,
-            // });
           }
         }
       }
@@ -418,6 +424,97 @@ export class ControleMetierV2Service {
     return {
       name: config.name,
       errors: errors,
+    };
+  }
+
+  // Helper for parameter comparison (e.g., DCO > DBO5)
+  private verifyParameterComparison(
+    fctAssainissement: FctAssainissement,
+    config: {
+      name: ControleName;
+      errorCode: ErrorCode;
+      paramCode1: CodeParametre;
+      paramCode2: CodeParametre;
+      compare: (val1: number, val2: number) => boolean;
+    },
+  ): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const param1Code = config.paramCode1.toString();
+    const param2Code = config.paramCode2.toString();
+
+    interface GroupData {
+      val1?: number;
+      val2?: number;
+      cdOuvrageDepollution: string;
+      numeroPointMesure: string;
+      datePrlvt: string;
+      cdSupport: string;
+    }
+
+    const groups = new Map<string, GroupData>();
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const numeroPointMesure = pointMesure.numeroPointMesure || '';
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+
+          const groupKey = `${cdOuvrageDepollution}|${numeroPointMesure}|${datePrlvt}|${cdSupport}`;
+
+          if (!groups.has(groupKey)) {
+            groups.set(groupKey, {
+              cdOuvrageDepollution,
+              numeroPointMesure,
+              datePrlvt,
+              cdSupport,
+            });
+          }
+
+          const group = groups.get(groupKey)!;
+
+          for (const analyse of prelevement.analyse) {
+            if (analyse.cdParametre === param1Code && analyse.rsAnalyse) {
+              const val = parseFloat(analyse.rsAnalyse);
+              if (!isNaN(val)) {
+                group.val1 = val;
+              }
+            } else if (analyse.cdParametre === param2Code && analyse.rsAnalyse) {
+              const val = parseFloat(analyse.rsAnalyse);
+              if (!isNaN(val)) {
+                group.val2 = val;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (const group of groups.values()) {
+      if (group.val1 !== undefined && group.val2 !== undefined) {
+        if (!config.compare(group.val1, group.val2)) {
+          errors.push({
+            code: config.errorCode,
+            params: [
+              group.cdOuvrageDepollution,
+              group.numeroPointMesure,
+              group.datePrlvt,
+              group.cdSupport,
+              group.val1.toString(),
+              group.val2.toString(),
+            ],
+            evenementType: EvenementType.AVERTISSEMENT,
+          });
+        }
+      }
+    }
+
+    return {
+      name: config.name,
+      errors,
     };
   }
 }

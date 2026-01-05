@@ -15,4 +15,6 @@ export enum CodeParametre {
   NGL = 1551,
   /** Potentiel Hydrogène (pH) */
   pH = 1302,
+  /** Orthophosphates (PO4) */
+  PO4 = 1433,
 }
