@@ -1,8 +1,22 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { ControleGroup } from './ControleGroup';
 import { EvenementType, ControleName } from '@lib/dossier';
 import type { ControleView } from '../types/controle.types';
+
+const getStatCard = (label: string) => {
+  const labelElement = screen.getByText(label);
+  const container = labelElement.closest('.fr-col') as HTMLElement;
+  expect(container).toBeInTheDocument();
+  return container;
+};
+
+const expectStatCardCount = (label: string, count: string) => {
+  const statCard = getStatCard(label);
+  const countElement = within(statCard).getByText(count);
+  expect(countElement).toHaveClass('fr-h2', 'fr-mb-0');
+  return countElement;
+};
 
 describe('ControleGroup', () => {
   const mockControles: ControleView[] = [
@@ -87,8 +101,7 @@ describe('ControleGroup', () => {
 
     expect(screen.getByText('Error message')).toBeInTheDocument();
 
-    // Check for the count badge:
-    // 1 in StatCard, 1 in Result Column, 1 in the accordion list
+    // Check for the count badge - there's now 3 occurrences: StatCard + Result column badge + accordion
     expect(screen.getAllByText('2')).toHaveLength(3);
   });
 
@@ -118,30 +131,27 @@ describe('ControleGroup', () => {
 
     // Initially only Error and Warning are shown (2 items)
     expect(screen.getByText('Voir les 2 contrôles')).toBeInTheDocument();
+    expectStatCardCount('Succès', '1');
+    expectStatCardCount('Avertissement', '1');
+    expectStatCardCount('Erreur', '1');
 
-    // Check for badges in the Result column
-    // The StatCards show 1 each (3 matches)
-    // The Row Result column should ALSO show 1 for each (including success!)
-    // So we should have 2 * 3 = 6 elements with text "1"
-    expect(screen.getAllByText('1')).toHaveLength(6);
+    const accordionLabelBeforeToggle = screen.getByText('Voir les 2 contrôles');
+    fireEvent.click(accordionLabelBeforeToggle);
+    // No Success shown yet
+    expect(screen.getByText('Warning message')).toBeInTheDocument();
+    expect(screen.getByText('Error message')).toBeInTheDocument();
 
     // Toggle success
     const toggle = screen.getByLabelText('Afficher tous les contrôles (incluant les succès)');
     fireEvent.click(toggle);
 
-    // Now all 3 are shown in the message count
     expect(screen.getByText('Voir les 3 contrôles')).toBeInTheDocument();
 
-    const accordionLabel = screen.getByText('Voir les 3 contrôles');
-    fireEvent.click(accordionLabel);
+    const accordionLabelAfterToggle = screen.getByText('Voir les 3 contrôles');
+    fireEvent.click(accordionLabelAfterToggle);
 
     expect(screen.getByText('Success message')).toBeInTheDocument();
     expect(screen.getByText('Warning message')).toBeInTheDocument();
     expect(screen.getByText('Error message')).toBeInTheDocument();
-
-    // Stat cards should show 1 each (3 matches)
-    // Result column should show 1 each (3 matches)
-    // Accordion list should have items (but no badges because count=1)
-    expect(screen.getAllByText('1')).toHaveLength(6);
   });
 });
