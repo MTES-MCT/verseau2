@@ -27,7 +27,7 @@ describe('ControleMetierV2Service', () => {
     service = module.get<ControleMetierV2Service>(ControleMetierV2Service);
   });
 
-  describe('verifyDcoGtDbo5', () => {
+  describe('verifyDcoGreaterThanDbo5', () => {
     it('should return an error when DCO <= DBO5', () => {
       const xmlObj: FctAssainissement = {
         ouvrages: [
