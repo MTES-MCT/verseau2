@@ -42,10 +42,17 @@ export function useControleTableData(groupedControles: Record<string, ControleVi
       const groupEvenementType =
         groupErrorCount > 0 ? EvenementType.ERREUR : groupWarningCount > 0 ? EvenementType.AVERTISSEMENT : undefined;
 
+      const groupMessage =
+        groupErrorCount > 0
+          ? `Voir les ${groupErrorCount} erreur${groupErrorCount > 1 ? 's' : ''}`
+          : groupWarningCount > 0
+            ? `Voir les ${groupWarningCount} avertissement${groupWarningCount > 1 ? 's' : ''}`
+            : `Détails (${group.length})`;
+
       return {
         name,
         evenementType: groupEvenementType,
-        message: `Détails (${group.length})`,
+        message: groupMessage,
         isGroup: true as const,
         groupData: {
           controls: group,

@@ -75,21 +75,27 @@ export function ControlePage() {
   const sandreControlesMapped = mapSandreControlesToView(sandreControles);
 
   return (
-    <div className="fr-container">
-      <div className={fr.cx('fr-container')}>
-        <p className={fr.cx('fr-text--lead')}>Contrôles du dépôt : {numeroDepot}</p>
+    <div className="fr-container fr-pb-6w">
+      <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
+        <div className="fr-col-12">
+          <h1>Résultats des contrôles</h1>
+          <p className={fr.cx('fr-text--lead')}>
+            Dépôt : <span className="fr-badge fr-badge--info fr-badge--no-icon">{numeroDepot}</span>
+          </p>
+        </div>
       </div>
+
       {/* Accordion pour les contrôles V1 */}
       {controlesV1.length > 0 && (
         <div className={fr.cx('fr-mb-4w')}>
-          <ControleGroup title="Contrôles métiers V1" controles={controlesV1} />
+          <ControleGroup title="Contrôles métiers" controles={controlesV1} />
         </div>
       )}
 
       {/* Accordion pour les contrôles Sandre */}
       {sandreControlesMapped.length > 0 && (
         <div className={fr.cx('fr-mb-4w')}>
-          <ControleSandreGroup title="Contrôle SANDRE" controles={sandreControlesMapped} />
+          <ControleSandreGroup title="Contrôles SANDRE" controles={sandreControlesMapped} />
         </div>
       )}
 

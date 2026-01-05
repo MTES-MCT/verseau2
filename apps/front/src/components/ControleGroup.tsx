@@ -10,6 +10,9 @@ import { useGroupedControles } from '../hooks/useGroupedControles';
 import { useControleTableData } from '../hooks/useControleTableData';
 import { ResultBadge } from './ResultBadge';
 import type { ControleView } from '../types/controle.types';
+import { ControleDescription } from '@lib/dossier';
+import { StatCard } from './StatCard';
+import { ToggleSwitch } from '@codegouvfr/react-dsfr/ToggleSwitch';
 
 type ControleGroupProps = {
   title: string;
@@ -24,35 +27,40 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
   const tableDataRows = useControleTableData(groupedControles);
 
   const tableData = tableDataRows.map((row) => {
+    const description = ControleDescription[row.name as keyof typeof ControleDescription];
+    const displayName = description ? `${row.name} - ${description}` : row.name;
+
     if (!row.isGroup) {
-      return [row.name, <ResultBadge evenementType={row.evenementType} small />, row.message];
+      return [displayName, <ResultBadge evenementType={row.evenementType} small />, row.message];
     }
 
     const groupData = row.groupData;
     const label = (
       <div className="fr-flex fr-align-items-center">
         <span className="fr-mr-2w">{row.message}</span>
-        {groupData.errorCount > 0 && (
-          <Badge severity="error" small className="fr-mr-1w">
-            {groupData.errorCount}
-          </Badge>
-        )}
-        {groupData.warningCount > 0 && (
-          <Badge severity="warning" small>
-            {groupData.warningCount}
-          </Badge>
-        )}
       </div>
     );
 
+    // Group identical messages to avoid repetitiveness
+    const messageCounts = groupData.controls.reduce(
+      (acc, ctrl) => {
+        const msg = ctrl.message || '-';
+        acc[msg] = (acc[msg] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     return [
-      row.name,
+      displayName,
       <ResultBadge evenementType={row.evenementType} small />,
       <Accordion label={label} key={row.name} className={`${fr.cx('fr-m-0')} accordion-no-border`}>
         <ul className="zebra-list fr-p-0 fr-m-0">
-          {groupData.controls.map((controle, index) => (
-            <li key={`${controle.name}-${index}`} className="fr-flex fr-align-items-start fr-p-1w">
-              <span>{controle.message || '-'}</span>
+          {Object.entries(messageCounts).map(([msg, count], index) => (
+            <li key={`${index}`} className="fr-flex fr-align-items-start fr-p-1w">
+              <span>
+                {msg} {count > 1 ? <Badge small>{count}</Badge> : null}
+              </span>
             </li>
           ))}
         </ul>
@@ -66,25 +74,41 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
 
   return (
     <div className="controle-group">
-      <div className="fr-flex fr-justify-content-between fr-align-items-center fr-width-full fr-mb-2w">
-        <span className={fr.cx('fr-text--bold')}>{title}</span>
-        <div>
-          <Badge severity="success" className="fr-mr-1w">
-            {successCount} succès
-          </Badge>
-          <Badge severity="warning" className="fr-mr-1w">
-            {warningCount} avertissement{warningCount > 1 ? 's' : ''}
-          </Badge>
-          <Badge severity="error" className="fr-mr-1w">
-            {errorCount} erreur{errorCount > 1 ? 's' : ''}
-          </Badge>
-        </div>
-      </div>
-      <Button priority="secondary" onClick={() => setShowSuccess(!showSuccess)} className="fr-mb-2w">
-        {showSuccess ? 'Masquer les succès' : 'Tout afficher'}
-      </Button>
+      <h2 className={fr.cx('fr-h4', 'fr-mb-2w')}>{title}</h2>
 
-      <Table noCaption headers={['Contrôle', 'Résultat', 'Message']} data={tableData} className={fr.cx('fr-mb-4w')} />
+      <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
+        <StatCard
+          count={successCount}
+          label="Succès"
+          icon="fr-icon-checkbox-circle-fill"
+          color="var(--text-default-success)"
+        />
+        <StatCard
+          count={warningCount}
+          label="Avertissement"
+          icon="fr-icon-warning-fill"
+          color="var(--text-default-warning)"
+        />
+        <StatCard count={errorCount} label="Erreur" icon="fr-icon-error-fill" color="var(--text-default-error)" />
+      </div>
+
+      <div className="controle-table-container">
+        <Table
+          caption={
+            <div className="fr-flex fr-justify-content-end">
+              <ToggleSwitch
+                label="Afficher tous les contrôles (incluant les succès)"
+                labelPosition="left"
+                checked={showSuccess}
+                onChange={setShowSuccess}
+              />
+            </div>
+          }
+          headers={['Contrôle', 'Résultat', 'Message']}
+          data={tableData}
+          className={fr.cx('fr-mb-4w')}
+        />
+      </div>
     </div>
   );
 }
