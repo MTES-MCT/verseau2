@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { EvenementType } from '@lib/dossier';
-import type { ControleView } from '../types/controle.types';
+import type { ControleView, ControleFilterSet } from '../types/controle.types';
 
 type SingleControleRow = {
   isGroup: false;
@@ -26,14 +26,14 @@ export type TableDataRow = SingleControleRow | GroupedControleRow;
 
 export function useControleTableData(
   groupedControles: Record<string, ControleView[]>,
-  showSuccess: boolean,
+  activeFilters: ControleFilterSet,
 ): TableDataRow[] {
   return useMemo(() => {
     return Object.entries(groupedControles).flatMap(([name, group]) => {
       const stats = getGroupStats(group);
+      const filtered = filterControles(group, activeFilters);
 
-      const hasFailures = stats.errorCount > 0 || stats.warningCount > 0;
-      if (!showSuccess && !hasFailures) {
+      if (filtered.length === 0) {
         return [];
       }
 
@@ -47,7 +47,7 @@ export function useControleTableData(
         };
       }
 
-      const displayedItems = group.filter((controle) => showSuccess || !controle.success);
+      const displayedItems = filtered;
 
       return {
         name,
@@ -60,7 +60,26 @@ export function useControleTableData(
         },
       };
     });
-  }, [groupedControles, showSuccess]);
+  }, [groupedControles, activeFilters]);
+}
+
+function filterControles(group: ControleView[], activeFilters: ControleFilterSet): ControleView[] {
+  if (activeFilters.size === 0) {
+    return group;
+  }
+
+  return group.filter((controle) => {
+    if (activeFilters.has('success') && controle.success) {
+      return true;
+    }
+    if (activeFilters.has('warning') && controle.evenementType === EvenementType.AVERTISSEMENT) {
+      return true;
+    }
+    if (activeFilters.has('error') && controle.evenementType === EvenementType.ERREUR) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function getGroupStats(group: ControleView[]) {

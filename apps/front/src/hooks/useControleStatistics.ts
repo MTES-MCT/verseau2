@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { EvenementType } from '@lib/dossier';
 import type { ControleView } from '../types/controle.types';
 
-export function useControleStatistics(controles: ControleView[], showSuccess: boolean) {
+export function useControleStatistics(controles: ControleView[]) {
   return useMemo(() => {
     const result = controles.reduce(
       (acc, controle) => {
@@ -14,20 +14,15 @@ export function useControleStatistics(controles: ControleView[], showSuccess: bo
           acc.warningCount++;
         }
 
-        if (showSuccess || !controle.success) {
-          acc.filteredControles.push(controle);
-        }
-
         return acc;
       },
       {
         successCount: 0,
         errorCount: 0,
         warningCount: 0,
-        filteredControles: [] as ControleView[],
       },
     );
 
     return result;
-  }, [controles, showSuccess]);
+  }, [controles]);
 }

@@ -134,20 +134,24 @@ export function Dashboard() {
   return (
     <>
       <div>
-        <div className="fr-grid-row fr-grid-row--gutters">
-          <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
-
-          <StatCard
-            count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.PENDING).length}
-            label="Bilans en attente"
-            icon={fr.cx('ri-hourglass-line')}
-          />
-
-          <StatCard
-            count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.FAILED).length}
-            label="Bilans écartés par le SPE"
-            icon={fr.cx('ri-prohibited-2-line')}
-          />
+        <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
+          <div className="fr-col-12 fr-col-md-4">
+            <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
+          </div>
+          <div className="fr-col-12 fr-col-md-4">
+            <StatCard
+              count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.PENDING).length}
+              label="Bilans en attente"
+              icon={fr.cx('ri-hourglass-line')}
+            />
+          </div>
+          <div className="fr-col-12 fr-col-md-4">
+            <StatCard
+              count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.FAILED).length}
+              label="Bilans écartés par le SPE"
+              icon={fr.cx('ri-prohibited-2-line')}
+            />
+          </div>
         </div>
       </div>
 

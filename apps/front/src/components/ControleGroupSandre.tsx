@@ -121,13 +121,17 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
       <h2 className={fr.cx('fr-h4', 'fr-mb-2w')}>{title}</h2>
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
-        <StatCard
-          count={successCount}
-          label="Succès"
-          icon="fr-icon-checkbox-circle-fill"
-          color="var(--text-default-success)"
-        />
-        <StatCard count={errorCount} label="Erreur" icon="fr-icon-error-fill" color="var(--text-default-error)" />
+        <div className="fr-col-12 fr-col-md-4">
+          <StatCard
+            count={successCount}
+            label="Succès"
+            icon="fr-icon-checkbox-circle-fill"
+            color="var(--text-default-success)"
+          />
+        </div>
+        <div className="fr-col-12 fr-col-md-4">
+          <StatCard count={errorCount} label="Erreur" icon="fr-icon-error-fill" color="var(--text-default-error)" />
+        </div>
       </div>
 
       <div className="controle-table-container">

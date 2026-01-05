@@ -7,10 +7,9 @@ import { useGroupedControles } from '../hooks/useGroupedControles';
 import { useControleTableData } from '../hooks/useControleTableData';
 import { ControleResultBadges } from './ControleResultBadges';
 import { ControleMessageCell } from './ControleMessageCell';
-import type { ControleView } from '../types/controle.types';
+import type { ControleView, ControleFilterType, ControleFilterSet } from '../types/controle.types';
 import { ControleDescription } from '@lib/dossier';
-import { StatCard } from './StatCard';
-import { ToggleSwitch } from '@codegouvfr/react-dsfr/ToggleSwitch';
+import { ClickableStatCard } from './ClickableStatCard';
 
 type ControleGroupProps = {
   title: string;
@@ -18,11 +17,23 @@ type ControleGroupProps = {
 };
 
 export function ControleGroup({ title, controles }: ControleGroupProps) {
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<ControleFilterSet>(new Set(['warning', 'error']));
 
-  const { successCount, errorCount, warningCount } = useControleStatistics(controles, showSuccess);
+  const toggleFilter = (filter: ControleFilterType) => {
+    setActiveFilters((prev) => {
+      const newFilters = new Set(prev);
+      if (newFilters.has(filter)) {
+        newFilters.delete(filter);
+      } else {
+        newFilters.add(filter);
+      }
+      return newFilters;
+    });
+  };
+
+  const { successCount, errorCount, warningCount } = useControleStatistics(controles);
   const groupedControles = useGroupedControles(controles);
-  const tableDataRows = useControleTableData(groupedControles, showSuccess).sort((a, b) => {
+  const tableDataRows = useControleTableData(groupedControles, activeFilters).sort((a, b) => {
     return a.name.localeCompare(b.name);
   });
 
@@ -34,51 +45,48 @@ export function ControleGroup({ title, controles }: ControleGroupProps) {
       return [
         displayName,
         <ControleResultBadges row={row} />,
-        <ControleMessageCell row={row} showSuccess={showSuccess} />,
+        <ControleMessageCell row={row} activeFilters={activeFilters} />,
       ];
     });
-  }, [tableDataRows, showSuccess]);
+  }, [tableDataRows, activeFilters]);
 
   if (controles.length === 0) {
     return null;
   }
 
   return (
-    <div className="controle-group">
+    <div>
       <h2 className={fr.cx('fr-h4', 'fr-mb-2w')}>{title}</h2>
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
-        <StatCard
+        <ClickableStatCard
           count={successCount}
           label="Succès"
           icon="fr-icon-checkbox-circle-fill"
           color="var(--text-default-success)"
+          onClick={() => toggleFilter('success')}
+          isActive={activeFilters.has('success')}
         />
-        <StatCard
+        <ClickableStatCard
           count={warningCount}
           label="Avertissement"
           icon="fr-icon-warning-fill"
           color="var(--text-default-warning)"
+          onClick={() => toggleFilter('warning')}
+          isActive={activeFilters.has('warning')}
         />
-        <StatCard count={errorCount} label="Erreur" icon="fr-icon-error-fill" color="var(--text-default-error)" />
+        <ClickableStatCard
+          count={errorCount}
+          label="Erreur"
+          icon="fr-icon-error-fill"
+          color="var(--text-default-error)"
+          onClick={() => toggleFilter('error')}
+          isActive={activeFilters.has('error')}
+        />
       </div>
 
       <div className="controle-table-container">
-        <Table
-          caption={
-            <div className="fr-flex fr-justify-content-end">
-              <ToggleSwitch
-                label="Afficher tous les contrôles (incluant les succès)"
-                labelPosition="left"
-                checked={showSuccess}
-                onChange={setShowSuccess}
-              />
-            </div>
-          }
-          headers={['Contrôle', 'Résultat', 'Message']}
-          data={tableData}
-          className={fr.cx('fr-mb-4w')}
-        />
+        <Table headers={['Contrôle', 'Résultat', 'Message']} data={tableData} className={fr.cx('fr-mb-4w')} />
       </div>
     </div>
   );

@@ -8,6 +8,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+.fr-container {
+  max-width: 90rem;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

@@ -3,13 +3,14 @@ import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { EvenementType } from '@lib/dossier';
 import type { TableDataRow } from '../hooks/useControleTableData';
+import type { ControleFilterSet } from '../types/controle.types';
 
 type ControleMessageCellProps = {
   row: TableDataRow;
-  showSuccess: boolean;
+  activeFilters: ControleFilterSet;
 };
 
-export function ControleMessageCell({ row, showSuccess }: ControleMessageCellProps) {
+export function ControleMessageCell({ row, activeFilters }: ControleMessageCellProps) {
   if (!row.isGroup) {
     return <>{row.message}</>;
   }
@@ -22,10 +23,30 @@ export function ControleMessageCell({ row, showSuccess }: ControleMessageCellPro
     </div>
   );
 
-  // Group by message and outcome to avoid repetitiveness and show the correct icon
   const messageGroups = controls.reduce(
     (acc, ctrl) => {
-      if (!showSuccess && ctrl.success) {
+      if (activeFilters.size === 0) {
+        const msg = ctrl.message || '-';
+        const status = ctrl.success ? 'success' : ctrl.evenementType || 'error';
+        const key = `${status}-${msg}`;
+        if (!acc[key]) {
+          acc[key] = {
+            message: msg,
+            count: 0,
+            success: ctrl.success,
+            evenementType: ctrl.evenementType,
+          };
+        }
+        acc[key].count++;
+        return acc;
+      }
+
+      const shouldShow =
+        (activeFilters.has('success') && ctrl.success) ||
+        (activeFilters.has('warning') && ctrl.evenementType === EvenementType.AVERTISSEMENT) ||
+        (activeFilters.has('error') && ctrl.evenementType === EvenementType.ERREUR);
+
+      if (!shouldShow) {
         return acc;
       }
       const msg = ctrl.message || '-';
