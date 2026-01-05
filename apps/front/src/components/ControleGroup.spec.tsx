@@ -11,6 +11,13 @@ const getStatCard = (label: string) => {
   return container;
 };
 
+const clickClickableStatCard = (label: string) => {
+  const clickableStatCard = screen.getByTestId(`clickable-stat-card-${label}`);
+  const button = clickableStatCard.querySelector('button');
+  expect(button).toBeInTheDocument();
+  fireEvent.click(button!);
+};
+
 const expectStatCardCount = (label: string, count: string) => {
   const statCard = getStatCard(label);
   const countElement = within(statCard).getByText(count);
@@ -56,21 +63,63 @@ describe('ControleGroup', () => {
     expect(screen.getAllByText('1')).toHaveLength(3);
   });
 
-  it('filters out successful controls by default', () => {
+  it('filters to show only errors and warnings by default', () => {
     render(<ControleGroup title="Test Group" controles={mockControles} />);
 
-    // CTL002 is successful
+    // By default, warning and error filters are active
+    // CTL002 is successful, should not be shown
     expect(screen.queryByText(/CTL002/)).not.toBeInTheDocument();
     expect(screen.getByText(/CTL003/)).toBeInTheDocument();
     expect(screen.getByText(/CTL004/)).toBeInTheDocument();
   });
 
-  it('shows successful controls when toggle is switched', () => {
+  it('shows successful controls when success filter is activated', () => {
     render(<ControleGroup title="Test Group" controles={mockControles} />);
 
-    const toggle = screen.getByLabelText('Afficher tous les contrôles (incluant les succès)');
-    fireEvent.click(toggle);
+    // Initially, CTL002 (success) is not shown
+    expect(screen.queryByText(/CTL002/)).not.toBeInTheDocument();
 
+    // Click on Succès StatCard to activate success filter
+    clickClickableStatCard('Succès');
+
+    // Now all three types should be visible
+    expect(screen.getByText(/CTL002/)).toBeInTheDocument();
+    expect(screen.getByText(/CTL003/)).toBeInTheDocument();
+    expect(screen.getByText(/CTL004/)).toBeInTheDocument();
+  });
+
+  it('toggles filters when clicking StatCards', () => {
+    render(<ControleGroup title="Test Group" controles={mockControles} />);
+
+    // By default, errors and warnings are shown
+    expect(screen.queryByText(/CTL002/)).not.toBeInTheDocument();
+    expect(screen.getByText(/CTL003/)).toBeInTheDocument();
+    expect(screen.getByText(/CTL004/)).toBeInTheDocument();
+
+    // Click error filter to deactivate it
+    clickClickableStatCard('Erreur');
+
+    // Now only warning should be shown
+    expect(screen.queryByText(/CTL002/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CTL003/)).not.toBeInTheDocument();
+    expect(screen.getByText(/CTL004/)).toBeInTheDocument();
+
+    // Click error filter again to reactivate it
+    clickClickableStatCard('Erreur');
+
+    // Error should be back
+    expect(screen.getByText(/CTL003/)).toBeInTheDocument();
+    expect(screen.getByText(/CTL004/)).toBeInTheDocument();
+  });
+
+  it('shows all controls when all filters are deactivated', () => {
+    render(<ControleGroup title="Test Group" controles={mockControles} />);
+
+    // Deactivate both active filters
+    clickClickableStatCard('Avertissement');
+    clickClickableStatCard('Erreur');
+
+    // Now all controls should be shown (no filters active = show all)
     expect(screen.getByText(/CTL002/)).toBeInTheDocument();
     expect(screen.getByText(/CTL003/)).toBeInTheDocument();
     expect(screen.getByText(/CTL004/)).toBeInTheDocument();
@@ -129,7 +178,7 @@ describe('ControleGroup', () => {
 
     render(<ControleGroup title="Mixed Group" controles={mixedGroupedMocks} />);
 
-    // Initially only Error and Warning are shown (2 items)
+    // Initially only Error and Warning are shown (2 items) - default filters
     expect(screen.getByText('Voir les 2 contrôles')).toBeInTheDocument();
     expectStatCardCount('Succès', '1');
     expectStatCardCount('Avertissement', '1');
@@ -141,9 +190,8 @@ describe('ControleGroup', () => {
     expect(screen.getByText('Warning message')).toBeInTheDocument();
     expect(screen.getByText('Error message')).toBeInTheDocument();
 
-    // Toggle success
-    const toggle = screen.getByLabelText('Afficher tous les contrôles (incluant les succès)');
-    fireEvent.click(toggle);
+    // Click success filter to activate it
+    clickClickableStatCard('Succès');
 
     expect(screen.getByText('Voir les 3 contrôles')).toBeInTheDocument();
 
