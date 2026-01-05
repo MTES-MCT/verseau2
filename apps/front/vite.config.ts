@@ -1,5 +1,6 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+
 import path from 'node:path';
 
 // https://vite.dev/config/
@@ -14,5 +15,10 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@lib/parser'],
     exclude: ['@lib/dossier'],
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './vitest.setup.ts',
   },
 });

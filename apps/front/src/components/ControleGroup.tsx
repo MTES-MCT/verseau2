@@ -1,6 +1,5 @@
 import { fr } from '@codegouvfr/react-dsfr';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
-import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { useState } from 'react';
