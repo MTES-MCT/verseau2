@@ -1,7 +1,7 @@
 import type { ControleDto, ControleSandreDto, ControleName } from '@lib/dossier';
 import { ErrorCode, SandreAcceptationStatus, buildMessage, ControleDescription } from '@lib/dossier';
-import type { ControleView } from '../components/ControleGroup';
 import type { ControleSandreView } from 'src/components/ControleGroupSandre';
+import type { ControleView } from 'src/types/controle.types';
 
 const acceptationLabel: Record<SandreAcceptationStatus, string> = {
   [SandreAcceptationStatus.WAITING]: 'Acceptation: En attente',
