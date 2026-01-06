@@ -9,7 +9,7 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
-import { constrainedMemory } from 'process';
+import { CpyEntity } from './entities/cpy.entity';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -28,6 +28,8 @@ export class RoseauRepository implements RoseauGateway {
     private readonly tlrefRepository: Repository<TlrefEntity>,
     @InjectRepository(CxntechEntity)
     private readonly cxntechRepository: Repository<CxntechEntity>,
+    @InjectRepository(CpyEntity)
+    private readonly cpyRepository: Repository<CpyEntity>,
   ) {}
 
   async findAga(): Promise<AgaEntity[]> {
@@ -122,5 +124,16 @@ export class RoseauRepository implements RoseauGateway {
       .getRawOne<{ scl_cdn: string }>();
 
     return Boolean(row);
+  }
+
+  async findCapaciteNominaleBySteuSandreAndYear(steuSandreCda: string, year: number): Promise<number | null> {
+    const result = await this.cpyRepository
+      .createQueryBuilder('cpy')
+      .select('cpy.cpy_eh_trait_nom_cap_mt', 'capacite_nominale')
+      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = cpy.steu_cdn')
+      .where('steu.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
+      .andWhere('cpy.cpy_an = :year', { year })
+      .getRawOne<{ capacite_nominale: number | null }>();
+    return result?.capacite_nominale ?? null;
   }
 }

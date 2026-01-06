@@ -62,6 +62,7 @@ export enum ControleName {
   CTL048 = 'CTL048',
   CTL049 = 'CTL049',
   CTL050 = 'CTL050',
+  CTL051 = 'CTL051',
 }
 
 export const ControleDescription: Record<ControleName, string> = {
@@ -107,4 +108,5 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL048]: 'Vérification que la concentration NTK > N-NH4',
   [ControleName.CTL049]: 'Vérification que la concentration NGL > NTK',
   [ControleName.CTL050]: 'Vérification que la concentration Ptot > PO4',
+  [ControleName.CTL051]: 'Vérification que les volumes A3/A4 sont cohérents avec la capacité nominale en EH',
 };

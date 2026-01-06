@@ -6,30 +6,34 @@ import { ControleError, ControleName, ControleType, ErrorCode, EvenementType } f
 import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/controle.mapper';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
+import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 
 @Injectable()
 export class ControleMetierV2Service {
   constructor(
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
+    @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     private readonly controleMapper: ControleMapper,
   ) {}
 
   async execute(depotId: string, xmlObj: FctAssainissement, manager?: EntityManager): Promise<ControleModel[]> {
     const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
       filterFctAssainissementForMetierV2(xmlObj);
-    const tousControles = [
-      this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyDcoRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyDbo5Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyPhRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-      this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3),
-    ];
+
+    const tousControles = await Promise.all([
+      Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyDcoRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyDbo5Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
+    ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
       ControleType.CONTROLE_V2,
@@ -331,5 +335,99 @@ export class ControleMetierV2Service {
     });
 
     return groups;
+  }
+
+  // CTL051: Vérification que les volumes A3/A4 sont cohérents avec la capacité nominale en EH
+  async verifyVolumeA3A4VsCapaciteEH(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+    const errors: ControleError[] = [];
+
+    const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
+    if (!dateDebutReference) {
+      errors.push({
+        code: ErrorCode.E2_051,
+        params: [dateDebutReference],
+        evenementType: EvenementType.AVERTISSEMENT,
+      });
+      return { name: ControleName.CTL051, errors };
+    }
+
+    const year = parseInt(dateDebutReference.substring(0, 4), 10);
+    if (isNaN(year)) {
+      errors.push({
+        code: ErrorCode.E2_051,
+        params: [year.toString()],
+        evenementType: EvenementType.AVERTISSEMENT,
+      });
+      return { name: ControleName.CTL051, errors };
+    }
+
+    const volumeParamCode = String(CodeParametre.Volume);
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!cdOuvrageDepollution) continue;
+
+      // Récupérer la capacité nominale en EH depuis Roseau
+      const capaciteEH = await this.roseauGateway.findCapaciteNominaleBySteuSandreAndYear(cdOuvrageDepollution, year);
+
+      if (capaciteEH === null || capaciteEH <= 0) {
+        continue;
+      }
+
+      // Collecter les volumes A3 et A4 par date de prélèvement
+      const volumesByDate = new Map<string, { volumeA3?: number; volumeA4?: number }>();
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const locGlobale = pointMesure.locGlobalePointMesure;
+        if (locGlobale !== 'A3' && locGlobale !== 'A4') continue;
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt;
+          if (!datePrlvt) continue;
+
+          const volumeValue = this.extractAnalyseValue(prelevement.analyse, volumeParamCode);
+          if (volumeValue === undefined) continue;
+
+          if (!volumesByDate.has(datePrlvt)) {
+            volumesByDate.set(datePrlvt, {});
+          }
+
+          const entry = volumesByDate.get(datePrlvt)!;
+          if (locGlobale === 'A3') {
+            entry.volumeA3 = volumeValue;
+          } else if (locGlobale === 'A4') {
+            entry.volumeA4 = volumeValue;
+          }
+        }
+      }
+
+      for (const [datePrlvt, volumes] of volumesByDate.entries()) {
+        const { volumeA3, volumeA4 } = volumes;
+
+        if (volumeA3 !== undefined && volumeA4 !== undefined) {
+          const seuil = capaciteEH * 0.2;
+          const testA3 = volumeA3 * 6 < seuil;
+          const testA4 = volumeA4 * 6 < seuil;
+
+          if (!testA3 || !testA4) {
+            errors.push({
+              code: ErrorCode.E2_051,
+              params: [
+                cdOuvrageDepollution,
+                datePrlvt,
+                seuil.toFixed(2),
+                volumeA3.toString(),
+                testA3 ? '<' : '≥',
+                volumeA4.toString(),
+                testA4 ? '<' : '≥',
+              ],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return { name: ControleName.CTL051, errors };
   }
 }

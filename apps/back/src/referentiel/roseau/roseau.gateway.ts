@@ -29,6 +29,7 @@ export interface RoseauGateway {
     cdSystemeCollecte: string,
     cdAgglomerationAssainissement: string,
   ): Promise<boolean>;
+  findCapaciteNominaleBySteuSandreAndYear(steuSandreCda: string, year: number): Promise<number | null>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

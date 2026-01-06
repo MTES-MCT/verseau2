@@ -39,6 +39,7 @@ export enum ErrorCode {
   E2_048 = 'E2.048',
   E2_049 = 'E2.049',
   E2_050 = 'E2.050',
+  E2_051 = 'E2.051',
 }
 
 export enum AvertissmentCode {

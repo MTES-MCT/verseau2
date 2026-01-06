@@ -17,4 +17,6 @@ export enum CodeParametre {
   pH = 1302,
   /** Orthophosphates (PO4) */
   PO4 = 1433,
+  /** Volume (m³) */
+  Volume = 1552,
 }

@@ -59,7 +59,7 @@ export function ControlePage() {
 
   if (errorMessage || errorSandreMessage) {
     return (
-      <div className="fr-container fr-py-6w">
+      <div className="fr-py-6w">
         <Link to="/" className="fr-link fr-mb-2w" style={{ display: 'inline-block' }}>
           ← Retour au dashboard
         </Link>
@@ -75,7 +75,7 @@ export function ControlePage() {
   const sandreControlesMapped = mapSandreControlesToView(sandreControles);
 
   return (
-    <div className="fr-container fr-pb-6w">
+    <div className="fr-pb-6w">
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-12">
           <h1>Résultats des contrôles</h1>
