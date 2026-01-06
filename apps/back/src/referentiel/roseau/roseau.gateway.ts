@@ -35,6 +35,7 @@ export interface RoseauGateway {
     year: number,
     parametreCodes: string[],
   ): Promise<Map<string, number>>;
+  findMaxDebitReference(steuSandreCda: string): Promise<number | null>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

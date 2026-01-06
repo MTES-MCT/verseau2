@@ -11,6 +11,7 @@ import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
 import { CpyEntity } from './entities/cpy.entity';
 import { ResaEntity } from './entities/resa.entity';
+import { StchanEntity } from './entities/stchan.entity';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -33,6 +34,8 @@ export class RoseauRepository implements RoseauGateway {
     private readonly cpyRepository: Repository<CpyEntity>,
     @InjectRepository(ResaEntity)
     private readonly resaRepository: Repository<ResaEntity>,
+    @InjectRepository(StchanEntity)
+    private readonly stchanRepository: Repository<StchanEntity>,
   ) {}
 
   async findAga(): Promise<AgaEntity[]> {
@@ -160,5 +163,25 @@ export class RoseauRepository implements RoseauGateway {
       map.set(row.par_rfa, parseFloat(row.resa_cma_val));
     }
     return map;
+  }
+
+  async findMaxDebitReference(steuSandreCda: string): Promise<number | null> {
+    const result = await this.stchanRepository
+      .createQueryBuilder('t')
+      .select('t.stchan_pc95_val', 'pc95')
+      .addSelect('c.cpy_ref_debit_mt', 'dref')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = t.steu_cdn')
+      .innerJoin(CpyEntity, 'c', 'c.steu_cdn = s.steu_cdn')
+      .where('s.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
+      .andWhere('t.stchan_an = s.steu_encours_an')
+      .andWhere('c.cpy_an = s.steu_encours_an')
+      .getRawOne<{ pc95: number | null; dref: number | null }>();
+
+    if (!result) return null;
+
+    const pc95 = result.pc95 ? parseFloat(result.pc95.toString()) : 0;
+    const dref = result.dref ? parseFloat(result.dref.toString()) : 0;
+
+    return Math.max(pc95, dref);
   }
 }

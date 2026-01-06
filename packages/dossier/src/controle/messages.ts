@@ -124,6 +124,10 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       } else if (params.length === 1) {
         return `Date ${params} invalide pour le contrôle des concentrations DBO5/DCO vs CMA N-1.`;
       }
+    case ErrorCode.E2_053:
+      if (params.length === 5) {
+        return `Débit entrant excédentaire pour l'ouvrage ${params[0]}, date ${params[1]}. Somme mesurée: ${params[2]} m³, max(PC95, Dref): ${params[3]} m³, Seuil (2 x max): ${params[4]} m³`;
+      }
     default:
       return `Erreur inconnue`;
   }

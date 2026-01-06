@@ -8,7 +8,6 @@ import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import da from 'zod/v4/locales/da.js';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -35,6 +34,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
       this.verifyCmaComparisonForDcoDbo5(xmlObj),
+      // this.verifyDebitEntrantVsChargeMax(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -517,5 +517,80 @@ export class ControleMetierV2Service {
     }
 
     return { name: ControleName.CTL052, errors };
+  }
+
+  // CTL053: Vérification du débit entrant (paramètre 1552) vs max(PC95, Dref)
+  async verifyDebitEntrantVsChargeMax(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+    const errors: ControleError[] = [];
+    const volumeCode = String(CodeParametre.Volume); // Paramètre 1552
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
+
+      // Récupérer max(PC95, Dref) depuis Roseau
+      const maxDebitRef = await this.roseauGateway.findMaxDebitReference(cdOuvrageDepollution);
+
+      if (maxDebitRef === null || maxDebitRef <= 0) {
+        // Pas de données de référence, on saute la vérification
+        continue;
+      }
+
+      // Collecter les débits entrants (1552) par date d'analyse pour support 3 et localisations A3, A2, A7
+      const debitsByDate = new Map<string, number>();
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const locGlobale = pointMesure.locGlobalePointMesure ?? '';
+
+        // Vérifier que la localisation est dans les bonnes zones (A3, A2, A7)
+        if (!['A3', 'A2', 'A7'].includes(locGlobale)) {
+          continue;
+        }
+
+        for (const prelevement of pointMesure.prelevement) {
+          // Vérifier que le support est 3
+          if (prelevement.cdSupport !== '3') {
+            continue;
+          }
+
+          const datePrlvt = prelevement.datePrlvt ?? '';
+
+          for (const analyse of prelevement.analyse) {
+            // Chercher le paramètre 1552 (Volume/Débit entrant)
+            if (analyse.cdParametre === volumeCode) {
+              const debitValue = this.extractAnalyseValue([analyse], volumeCode);
+
+              if (debitValue !== undefined) {
+                const currentSum = debitsByDate.get(datePrlvt) ?? 0;
+                debitsByDate.set(datePrlvt, currentSum + debitValue);
+              }
+            }
+          }
+        }
+      }
+
+      // Vérifier que chaque somme n'excède pas 2 fois max(PC95, Dref)
+      const threshold = 2 * maxDebitRef;
+      for (const [datePrlvt, totalDebit] of debitsByDate.entries()) {
+        if (totalDebit > threshold) {
+          const error: ControleError = {
+            code: ErrorCode.E2_053,
+            params: [
+              cdOuvrageDepollution,
+              datePrlvt,
+              totalDebit.toFixed(2),
+              maxDebitRef.toFixed(2),
+              threshold.toFixed(2),
+            ],
+            evenementType: EvenementType.AVERTISSEMENT,
+          };
+          errors.push(error);
+        }
+      }
+    }
+
+    return { name: ControleName.CTL053, errors };
   }
 }

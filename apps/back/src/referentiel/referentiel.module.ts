@@ -19,6 +19,7 @@ import { TlrefEntity } from './roseau/entities/tlref.entity';
 import { CxntechEntity } from './roseau/entities/cxntech.entity';
 import { CpyEntity } from './roseau/entities/cpy.entity';
 import { ResaEntity } from './roseau/entities/resa.entity';
+import { StchanEntity } from './roseau/entities/stchan.entity';
 import { SupEntity } from './lanceleau/entities/sup.entity';
 import { FanEntity } from './lanceleau/entities/fan.entity';
 import { ParEntity } from './lanceleau/entities/par.entity';
@@ -38,6 +39,7 @@ import { ParametreGateway } from './parametre/parametre.gateway';
       TlrefEntity,
       CxntechEntity,
       ResaEntity,
+      StchanEntity,
       SupEntity,
       FanEntity,
       ParEntity,
