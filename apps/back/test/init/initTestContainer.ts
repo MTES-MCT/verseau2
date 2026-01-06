@@ -17,6 +17,7 @@ import { UrfEntity } from '@referentiel/lanceleau/entities/urf.entity';
 import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseSandre.entity';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { CpyEntity } from '@referentiel/roseau/entities/cpy.entity';
+import { ResaEntity } from '@referentiel/roseau/entities/resa.entity';
 
 export function initTestContainerImports(connectionUri: string) {
   return [
@@ -39,6 +40,7 @@ export function initTestContainerImports(connectionUri: string) {
         SclEntity,
         CxntechEntity,
         CpyEntity,
+        ResaEntity,
         // Lanceleau entities
         ItvEntity,
         SupEntity,
@@ -62,6 +64,7 @@ export function initTestContainerImports(connectionUri: string) {
       SclEntity,
       CxntechEntity,
       CpyEntity,
+      ResaEntity,
       ItvEntity,
       SupEntity,
       FanEntity,

@@ -8,6 +8,7 @@ import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
+import da from 'zod/v4/locales/da.js';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -33,6 +34,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
+      this.verifyCmaComparisonForDcoDbo5(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -429,5 +431,91 @@ export class ControleMetierV2Service {
     }
 
     return { name: ControleName.CTL051, errors };
+  }
+
+  // CTL052: Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1
+  async verifyCmaComparisonForDcoDbo5(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+    const errors: ControleError[] = [];
+
+    const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
+    if (!dateDebutReference) {
+      errors.push({
+        code: ErrorCode.E2_052,
+        params: [dateDebutReference],
+        evenementType: EvenementType.AVERTISSEMENT,
+      });
+      return { name: ControleName.CTL052, errors };
+    }
+
+    const currentYear = parseInt(dateDebutReference.substring(0, 4), 10);
+    if (isNaN(currentYear)) {
+      errors.push({
+        code: ErrorCode.E2_052,
+        params: [currentYear.toString()],
+        evenementType: EvenementType.AVERTISSEMENT,
+      });
+      return { name: ControleName.CTL052, errors };
+    }
+
+    const previousYear = currentYear - 1;
+    const dbo5Code = String(CodeParametre.DBO5);
+    const dcoCode = String(CodeParametre.DCO);
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!cdOuvrageDepollution) continue;
+
+      let cmaValues: Map<string, number>;
+      try {
+        cmaValues = await this.roseauGateway.findConcentrationMoyenneAnnuelle(cdOuvrageDepollution, previousYear, [
+          dbo5Code,
+          dcoCode,
+        ]);
+      } catch {
+        continue;
+      }
+
+      if (cmaValues.size === 0) {
+        continue;
+      }
+
+      const dbo5ValueNmoins1 = cmaValues.get(dbo5Code);
+      const dcoValueNmoins1 = cmaValues.get(dcoCode);
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A3') continue;
+
+        for (const prelevement of pointMesure.prelevement) {
+          if (prelevement.cdSupport !== '3') continue;
+
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const dbo5Value = this.extractAnalyseValue(prelevement.analyse, dbo5Code);
+          const dcoValue = this.extractAnalyseValue(prelevement.analyse, dcoCode);
+
+          // Comparer DBO5 avec CMA N-1
+          if (dbo5Value !== undefined && dbo5ValueNmoins1 !== undefined) {
+            if (dbo5Value > dbo5ValueNmoins1) {
+              errors.push({
+                code: ErrorCode.E2_052,
+                params: ['DBO5', cdOuvrageDepollution, datePrlvt, dbo5Value.toFixed(2), dbo5ValueNmoins1.toFixed(2)],
+                evenementType: EvenementType.AVERTISSEMENT,
+              });
+            }
+          }
+
+          if (dcoValue !== undefined && dcoValueNmoins1 !== undefined) {
+            if (dcoValue > dcoValueNmoins1) {
+              errors.push({
+                code: ErrorCode.E2_052,
+                params: ['DCO', cdOuvrageDepollution, datePrlvt, dcoValue.toFixed(2), dcoValueNmoins1.toFixed(2)],
+                evenementType: EvenementType.AVERTISSEMENT,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return { name: ControleName.CTL052, errors };
   }
 }

@@ -23,6 +23,7 @@ describe('ControleMetierV2Service', () => {
           provide: RoseauGateway,
           useValue: {
             findCapaciteNominaleBySteuSandreAndYear: jest.fn(),
+            findConcentrationMoyenneAnnuelle: jest.fn(),
           },
         },
         {
@@ -734,6 +735,143 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
       expect(result.errors[0].params).toEqual([undefined]);
       expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verifyCmaComparisonForDcoDbo5', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return an error when DBO5 value exceeds CMA N-1', async () => {
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-06-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '200' }, // 200 vs CMA 150 = 33% écart
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const cmaMap = new Map([
+        [CodeParametre.DBO5.toString(), 150],
+        [CodeParametre.DCO.toString(), 400],
+      ]);
+      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
+
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL052);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+      expect(roseauGateway.findConcentrationMoyenneAnnuelle).toHaveBeenCalledWith('STEU1', 2023, [
+        CodeParametre.DBO5.toString(),
+        CodeParametre.DCO.toString(),
+      ]);
+    });
+
+    it('should return no error when values are lower than CMA N-1', async () => {
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-06-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '149' }, // 155 vs CMA 150 = 3% écart
+                      { cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '399' }, // 400 vs CMA 400 = 0% écart
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const cmaMap = new Map([
+        [CodeParametre.DBO5.toString(), 150],
+        [CodeParametre.DCO.toString(), 400],
+      ]);
+      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
+
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip comparison when no CMA found', async () => {
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU_NOT_FOUND',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-06-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '500' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const cmaMap = new Map(); // Vide - pas de CMA trouvée
+      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
+
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return error when dateDebutReference is missing', async () => {
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: undefined,
+        },
+        ouvrages: [],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL052);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
     });
   });
 });

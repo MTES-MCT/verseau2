@@ -26,9 +26,10 @@ import { initTestContainerImports } from '../../../init/initTestContainer';
 type PartialFctAssainissement = {
   scenario?: {
     emetteur: Partial<Emetteur>;
-    destinataire: Partial<Emetteur>;
+    destinataire?: Partial<Emetteur>;
     codeScenario: string;
     versionScenario: string;
+    dateDebutReference?: string;
   };
   ouvrages?: Partial<OuvrageDepollution>[];
   systemesCollecte?: Partial<SystemeCollecte>;
@@ -291,157 +292,6 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
-    // TODO: Comment gérer ces erreurs ? Des centaines d'erreurs de ce type sont générées.
-    it.skip('should report error when DCO value is missing', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU003',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM003',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-17',
-                    cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '20')],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioDcoDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL039);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual([
-        'STEU003',
-        'PM003',
-        '2024-01-17',
-        '3',
-        'Impossible de calculer le ratio (DCO)',
-      ]);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
-    });
-
-    it.skip('should report error when DBO5 value is missing', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU004',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM004',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-18',
-                    cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '50')],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioDcoDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL039);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual([
-        'STEU004',
-        'PM004',
-        '2024-01-18',
-        '3',
-        'Impossible de calculer le ratio (DBO5)',
-      ]);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
-    });
-
-    it.skip('should report error when DBO5 value is zero', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU005',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM005',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-19',
-                    cdSupport: '3',
-                    analyse: [
-                      createTestAnalyse(CodeParametre.DCO.toString(), '50'),
-                      createTestAnalyse(CodeParametre.DBO5.toString(), '0'),
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioDcoDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL039);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual([
-        'STEU005',
-        'PM005',
-        '2024-01-19',
-        '3',
-        'Impossible de calculer le ratio (DBO5 <= 0)',
-      ]);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
-    });
-
-    it.skip('should report error when DBO5 value is negative', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU006',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM006',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-20',
-                    cdSupport: '3',
-                    analyse: [
-                      createTestAnalyse(CodeParametre.DCO.toString(), '50'),
-                      createTestAnalyse(CodeParametre.DBO5.toString(), '-5'),
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioDcoDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL039);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual([
-        'STEU006',
-        'PM006',
-        '2024-01-20',
-        '3',
-        'Impossible de calculer le ratio (DBO5 <= 0)',
-      ]);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
-    });
-
     it('should handle multiple groups with different validation results', () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -611,42 +461,6 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL039);
       expect(result.errors).toHaveLength(0);
     });
-
-    it.skip('should handle missing both DCO and DBO5', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU011',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM011',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-26',
-                    cdSupport: '3',
-                    analyse: [
-                      createTestAnalyse('1305', '15'), // MES (neither DCO nor DBO5)
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioDcoDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL039);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual([
-        'STEU011',
-        'PM011',
-        '2024-01-26',
-        '3',
-        'Impossible de calculer le ratio (DCO, DBO5)',
-      ]);
-    });
   });
 
   describe('CTL040 - verifyRatioMesDbo5', () => {
@@ -744,113 +558,6 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors[0].code).toBe(ErrorCode.E2_040);
       expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '15', '10', '1.50']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
-    });
-
-    it.skip('should report error when MES value is missing', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU003',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM003',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-17',
-                    cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '20')],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL040);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual([
-        'STEU003',
-        'PM003',
-        '2024-01-17',
-        '3',
-        'Impossible de calculer le ratio (MES)',
-      ]);
-    });
-
-    it.skip('should report error when DBO5 value is missing', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU004',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM004',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-18',
-                    cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '50')],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL040);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual([
-        'STEU004',
-        'PM004',
-        '2024-01-18',
-        '3',
-        'Impossible de calculer le ratio (DBO5)',
-      ]);
-    });
-
-    it.skip('should report error when DBO5 value is zero', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU005',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM005',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-19',
-                    cdSupport: '3',
-                    analyse: [
-                      createTestAnalyse(CodeParametre.MES.toString(), '50'),
-                      createTestAnalyse(CodeParametre.DBO5.toString(), '0'),
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyRatioMesDbo5(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL040);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual([
-        'STEU005',
-        'PM005',
-        '2024-01-19',
-        '3',
-        'Impossible de calculer le ratio (DBO5 <= 0)',
-      ]);
     });
 
     it('should group analyses by the same (ouvrage, point_mesure, date, support) combination', () => {
@@ -973,65 +680,6 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '1700']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
-
-    it.skip('should report error when DCO value is missing', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU003',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM003',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-17',
-                    cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '50')],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyDcoRange(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL041);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU003', 'PM003', '2024-01-17', '3']);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
-    });
-
-    it.skip('should report error when DCO value is empty', () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU004',
-            pointMesure: [
-              {
-                numeroPointMesure: 'PM004',
-                prelevement: [
-                  {
-                    datePrlvt: '2024-01-18',
-                    cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '')],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
-
-      const result = controleMetierV2Service.verifyDcoRange(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL041);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU004', 'PM004', '2024-01-18', '3']);
-    });
   });
 
   describe('CTL042 - verifyDbo5Range', () => {
@@ -1121,20 +769,46 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '800']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
+  });
 
-    it.skip('should report error when DBO5 value is missing', () => {
+  describe('CTL052 - verifyCmaComparisonForDcoDbo5', () => {
+    it('should pass when DBO5 and DCO are lower than CMA N-1', async () => {
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (1, 'STEU001')
+      `);
+
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        VALUES (1, 1, 2023, '1313', 100)
+      `);
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        VALUES (2, 1, 2023, '1314', 200)
+      `);
+
       const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01', // Year N = 2024, so N-1 = 2023
+        },
         ouvrages: [
           {
-            cdOuvrageDepollution: 'STEU003',
+            cdOuvrageDepollution: 'STEU001',
             pointMesure: [
               {
-                numeroPointMesure: 'PM003',
+                numeroPointMesure: 'PM001',
+                locGlobalePointMesure: 'A3',
                 prelevement: [
                   {
-                    datePrlvt: '2024-01-17',
+                    datePrlvt: '2024-01-15',
                     cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '50')],
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '99'),
+                      createTestAnalyse(CodeParametre.DCO.toString(), '199'),
+                    ],
                   },
                 ],
               },
@@ -1143,12 +817,193 @@ describe('ControleMetierV2Service (e2e)', () => {
         ],
       });
 
-      const result = controleMetierV2Service.verifyDbo5Range(fctAssainissement);
+      const result = await controleMetierV2Service.verifyCmaComparisonForDcoDbo5(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL042);
+      expect(result.name).toBe(ControleName.CTL052);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when DBO5 exceeds CMA N-1', async () => {
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (2, 'STEU002')
+      `);
+
+      // Seed CMA for DBO5 = 150 mg/L
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        VALUES (3, 2, 2023, '1313', 150)
+      `);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-02-10',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '151')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyCmaComparisonForDcoDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_042);
-      expect(result.errors[0].params).toEqual(['STEU003', 'PM003', '2024-01-17', '3']);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+      expect(result.errors[0].params).toEqual(['DBO5', 'STEU002', '2024-02-10', '151.00', '150.00']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when DCO exceeds CMA N-1', async () => {
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (3, 'STEU003')
+      `);
+
+      // Seed CMA for DCO = 300 mg/L
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        VALUES (4, 3, 2023, '1314', 300)
+      `);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU003',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM003',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-03-05',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DCO.toString(), '301'), // +50% from CMA (300), exceeds 30%
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyCmaComparisonForDcoDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL052);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+      expect(result.errors[0].params).toEqual(['DCO', 'STEU003', '2024-03-05', '301.00', '300.00']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should not report error when no CMA data exists for year N-1', async () => {
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (4, 'STEU004')
+      `);
+
+      // No RESA data - no CMA available
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU004',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM004',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-04-12',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '500'), // High value but no CMA to compare
+                      createTestAnalyse(CodeParametre.DCO.toString(), '1000'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyCmaComparisonForDcoDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL052);
+      expect(result.errors).toHaveLength(0); // Should skip gracefully when no CMA data
+    });
+
+    it('should not report error when dateDebutReference is missing', async () => {
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (5, 'STEU005')
+      `);
+
+      await dataSource.query(`
+        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        VALUES (5, 5, 2023, '1313', 100)
+      `);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU005',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM005',
+                locGlobalePointMesure: 'A3',
+                // dateDebutReference: undefined - not set, should skip control
+                prelevement: [
+                  {
+                    datePrlvt: '2024-05-20',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '200')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyCmaComparisonForDcoDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL052);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+      expect(result.errors[0].params).toEqual([undefined]);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });

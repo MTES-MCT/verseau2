@@ -118,6 +118,12 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       } else if (params.length === 1) {
         return `Date ${params} invalide pour le contrôle des volumes A3/A4 vs capacité EH.`;
       }
+    case ErrorCode.E2_052:
+      if (params.length === 5) {
+        return `Concentration ${params[0]} incohérente pour l'ouvrage ${params[1]}, date ${params[2]}. Valeur mesurée: ${params[3]}, CMA année N-1: ${params[4]}`;
+      } else if (params.length === 1) {
+        return `Date ${params} invalide pour le contrôle des concentrations DBO5/DCO vs CMA N-1.`;
+      }
     default:
       return `Erreur inconnue`;
   }

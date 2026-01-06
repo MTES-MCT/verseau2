@@ -97,6 +97,54 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       pmo_val_fin_dt DATE
     )
   `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.cpy CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE custom_ingestion_roseau.cpy (
+      cpy_cdn VARCHAR PRIMARY KEY,
+      steu_cdn VARCHAR,
+      cpy_an INTEGER,
+      cpy_eh_trait_nom_cap_mt NUMERIC
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.cxntech CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE custom_ingestion_roseau.cxntech (
+      cxntech_cdn VARCHAR PRIMARY KEY,
+      aval_scl_cdn VARCHAR,
+      amont_zgc_cdn VARCHAR,
+      cxntech_retrait_dt VARCHAR
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.aga CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE custom_ingestion_roseau.aga (
+      aga_cdn VARCHAR PRIMARY KEY,
+      zgc_cdn VARCHAR,
+      aga_sandre_cda VARCHAR
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.scl CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE custom_ingestion_roseau.scl (
+      scl_cdn VARCHAR PRIMARY KEY,
+      scl_sandre_cda VARCHAR
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.resa CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE custom_ingestion_roseau.resa (
+      resa_cdn VARCHAR PRIMARY KEY,
+      steu_cdn VARCHAR,
+      resa_an INTEGER,
+      par_rfa VARCHAR,
+      resa_cma_val NUMERIC
+    )
+  `);
 }
 
 export async function createLanceleauTables(dataSource: DataSource): Promise<void> {
@@ -216,5 +264,22 @@ export async function seedTlref(
     VALUES ($1, $2, $3)
   `,
     [tlrefCdn, trlRfa, tlrefEltCda],
+  );
+}
+
+export async function seedResa(
+  dataSource: DataSource,
+  resaCdn: string,
+  steuCdn: string,
+  resaAn: number,
+  parRfa: string,
+  resaCmaVal: number,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+    VALUES ($1, $2, $3, $4, $5)
+  `,
+    [resaCdn, steuCdn, resaAn, parRfa, resaCmaVal],
   );
 }

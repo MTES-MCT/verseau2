@@ -10,6 +10,7 @@ import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
 import { CpyEntity } from './entities/cpy.entity';
+import { ResaEntity } from './entities/resa.entity';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -30,6 +31,8 @@ export class RoseauRepository implements RoseauGateway {
     private readonly cxntechRepository: Repository<CxntechEntity>,
     @InjectRepository(CpyEntity)
     private readonly cpyRepository: Repository<CpyEntity>,
+    @InjectRepository(ResaEntity)
+    private readonly resaRepository: Repository<ResaEntity>,
   ) {}
 
   async findAga(): Promise<AgaEntity[]> {
@@ -135,5 +138,27 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('cpy.cpy_an = :year', { year })
       .getRawOne<{ capacite_nominale: number | null }>();
     return result?.capacite_nominale ?? null;
+  }
+
+  async findConcentrationMoyenneAnnuelle(
+    steuSandreCda: string,
+    year: number,
+    parametreCodes: string[],
+  ): Promise<Map<string, number>> {
+    const rows = await this.resaRepository
+      .createQueryBuilder('r')
+      .select('r.par_rfa', 'par_rfa')
+      .addSelect('r.resa_cma_val', 'resa_cma_val')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = r.steu_cdn')
+      .where('s.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
+      .andWhere('r.resa_an = :year', { year })
+      .andWhere('r.par_rfa IN (:...parametreCodes)', { parametreCodes })
+      .getRawMany<{ par_rfa: string; resa_cma_val: string }>();
+
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      map.set(row.par_rfa, parseFloat(row.resa_cma_val));
+    }
+    return map;
   }
 }
