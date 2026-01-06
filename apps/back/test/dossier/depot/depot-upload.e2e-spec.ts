@@ -147,7 +147,7 @@ describe('Depot upload (e2e)', () => {
       ],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ logger: false });
     const authMiddleware = app.get(AuthenticationMiddleware);
     app.use(authMiddleware.use.bind(authMiddleware));
 

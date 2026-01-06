@@ -157,7 +157,7 @@ describe('Worker Service (e2e)', () => {
       ],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ logger: false });
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);

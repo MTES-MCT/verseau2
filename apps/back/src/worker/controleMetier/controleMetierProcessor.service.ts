@@ -6,8 +6,17 @@ import { parseScenarioAssainissementXml } from '@lib/parser';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, ControleStatus, EvenementType } from '@lib/dossier';
+import {
+  DepotStep,
+  DepotStatus,
+  ControleStatus,
+  EvenementType,
+  ControleName,
+  ControleType,
+  ErrorCode,
+} from '@lib/dossier';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
+import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -21,6 +30,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     private readonly controleV1Service: ControleV1Service,
     private readonly depotService: DepotService,
     private readonly depotCoordinatorService: DepotCoordinatorService,
+    @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
   ) {}
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
@@ -59,16 +69,22 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         v2Count: resultsV2.length,
       });
 
-      // Update depot with Business controls result
       await this.depotService.update(depotId, {
         controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
         step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
       });
 
-      // Check if all controls are complete and coordinate next step
       await this.depotCoordinatorService.checkControlesCompletion(depotId);
     } catch (error) {
       this.logger.error(`Depot ${depotId} - Controles Métier failed`, error);
+
+      try {
+        await this.createTechnicalErrorControle(depotId);
+        this.logger.log(`Depot ${depotId} - Technical error control persisted successfully`);
+      } catch (persistError) {
+        this.logger.error(`Depot ${depotId} - Failed to persist technical error control`, persistError);
+      }
+
       await this.depotService.update(depotId, {
         status: DepotStatus.FAILED,
         step: DepotStep.CONTROLE_FAILED,
@@ -76,5 +92,17 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       });
       throw error;
     }
+  }
+
+  private async createTechnicalErrorControle(depotId: string): Promise<void> {
+    await this.controleGateway.createControle({
+      name: ControleName.CTL_TECHNICAL_ERROR,
+      type: ControleType.CONTROLE_V2,
+      success: false,
+      evenementType: EvenementType.ERREUR,
+      error: ErrorCode.E2_999,
+      errorParams: [depotId],
+      depotId,
+    });
   }
 }

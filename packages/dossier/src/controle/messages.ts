@@ -128,6 +128,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       if (params.length === 5) {
         return `Débit entrant excédentaire pour l'ouvrage ${params[0]}, date ${params[1]}. Somme mesurée: ${params[2]} m³, max(PC95, Dref): ${params[3]} m³, Seuil (2 x max): ${params[4]} m³`;
       }
+    case ErrorCode.E2_999:
+      return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${params[0]}`;
     default:
       return `Erreur inconnue`;
   }

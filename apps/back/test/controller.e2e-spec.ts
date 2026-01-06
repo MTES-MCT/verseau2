@@ -40,7 +40,7 @@ describe('Controller (e2e) - Unauthorized', () => {
 
       .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ logger: false });
     await app.init();
     authService = app.get<Authentication>(Authentication);
   });
