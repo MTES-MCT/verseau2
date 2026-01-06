@@ -21,6 +21,9 @@ export class ControleMetierV2Service {
     const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
       filterFctAssainissementForMetierV2(xmlObj);
 
+    /**
+     * TODO : Pour chaque contrôle, retourner aussi les succèss afin de les persister également en base de données et de les afficher dans l'UI.
+     */
     const tousControles = await Promise.all([
       Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
@@ -32,6 +35,8 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
       this.verifyCmaComparisonForDcoDbo5(xmlObj),
       // this.verifyDebitEntrantVsChargeMax(xmlObj),

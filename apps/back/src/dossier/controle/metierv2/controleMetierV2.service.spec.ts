@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ControleMetierV2Service } from './controleMetierV2.service';
 import { ControleGateway } from '../controle.gateway';
@@ -872,6 +873,60 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+    });
+  });
+  describe('verifyNglGreaterThanNtk', () => {
+    it('should return an error when NGL <= NTK', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU_CODE',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-06-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.NTK.toString(), rsAnalyse: '10' },
+                      { cdParametre: CodeParametre.NGL.toString(), rsAnalyse: '5' },
+                    ],
+                  },
+                  {
+                    datePrlvt: '2024-06-16',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.NTK.toString(), rsAnalyse: '1' },
+                      { cdParametre: CodeParametre.NGL.toString(), rsAnalyse: '5' },
+                    ],
+                  },
+                  {
+                    datePrlvt: '2024-06-17',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.NTK.toString(), rsAnalyse: '5' },
+                      { cdParametre: CodeParametre.NGL.toString(), rsAnalyse: '1' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyNglGreaterThanNtk(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL049);
+      expect(result.errors).toHaveLength(2);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_049);
+      expect(result.errors[0].params).toEqual(['STEU_NOT_FOUND', 'PM1', '2024-06-15', '3', '5', '10']);
+      expect(result.errors[1].params).toEqual(['STEU_NOT_FOUND', 'PM1', '2024-06-17', '3', '1', '5']);
     });
   });
 });
