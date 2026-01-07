@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export function AppHeader() {
   const location = useLocation();
-  const { isAuthenticated, login, logout } = useAuth();
+  const { isAuthenticated, login, logout, user } = useAuth();
 
   const isNavItemActive = (href: string): boolean => {
     return location.pathname.startsWith(href) && (href !== '/' || location.pathname === '/');
@@ -18,13 +18,14 @@ export function AppHeader() {
         serviceTitle="Autosurveillance des systèmes d'assainissement"
         homeLinkProps={{ href: '/', title: 'Accueil' }}
         quickAccessItems={[
-          isAuthenticated
+          // TODO : afficher l'intervenant lié à l'utilisateur connecté
+          isAuthenticated && user
             ? {
                 iconId: 'ri-logout-box-line',
                 buttonProps: {
                   onClick: () => logout(),
                 },
-                text: 'Déconnexion',
+                text: `${user.prenom} ${user.nom}`,
               }
             : {
                 iconId: 'ri-user-line',
