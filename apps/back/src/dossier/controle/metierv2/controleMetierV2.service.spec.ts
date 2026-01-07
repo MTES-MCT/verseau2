@@ -532,7 +532,7 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should return an error when volume A3 exceeds threshold', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(1000);
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(2001);
 
       const xmlObj: FctAssainissement = {
         scenario: {
@@ -547,7 +547,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '40' }], // Volume A3 = 40 m³ (40*6=240 > 200)
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '400' }], // Volume A3 = 40 m³ (40*6=240 > 200)
                   },
                 ],
               },
@@ -556,7 +556,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '18' }], // Volume A4 = 18 m³
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '180' }], // Volume A4 = 18 m³
                   },
                 ],
               },
@@ -570,11 +570,11 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL051);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '200.00', '40', '≥', '18', '<']);
+      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '400.20', '400', '≥', '180', '≥']);
     });
 
     it('should return an error when volume A4 exceeds threshold', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(1000);
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(2001);
 
       const xmlObj: FctAssainissement = {
         scenario: {
@@ -589,7 +589,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '20' }], // Volume A3 = 20 m³
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '200' }], // Volume A3 = 20 m³
                   },
                 ],
               },
@@ -598,7 +598,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '50' }], // Volume A4 = 50 m³ (50*6=300 > 200)
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '500' }], // Volume A4 = 50 m³ (50*6=300 > 200)
                   },
                 ],
               },
@@ -612,11 +612,11 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL051);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '200.00', '20', '<', '50', '≥']);
+      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '400.20', '200', '≥', '500', '≥']);
     });
 
     it('should return an error when both volumes exceed threshold', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(1000);
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(2001);
 
       const xmlObj: FctAssainissement = {
         scenario: {
@@ -631,7 +631,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '40' }],
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '400' }],
                   },
                 ],
               },
@@ -640,7 +640,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '50' }],
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '500' }],
                   },
                 ],
               },
@@ -654,7 +654,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL051);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '200.00', '40', '≥', '50', '≥']);
+      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '400.20', '400', '≥', '500', '≥']);
     });
 
     it('should return no error when capacity is not found', async () => {
@@ -736,6 +736,89 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
       expect(result.errors[0].params).toEqual([undefined]);
       expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).not.toHaveBeenCalled();
+    });
+
+    it('should not apply control when capacity is less than or equal to 2000 EH', async () => {
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(2000);
+
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '1000' }], // Volume très élevé
+                  },
+                ],
+              },
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '1000' }], // Volume très élevé
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(0);
+      expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).toHaveBeenCalledWith('STEU1', 2024);
+    });
+
+    it('should apply control when capacity is greater than 2000 EH', async () => {
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(2001);
+
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '100' }], // Volume élevé (100*6=600 > 400.2)
+                  },
+                ],
+              },
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '100' }], // Volume élevé (100*6=600 > 400.2)
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).toHaveBeenCalledWith('STEU1', 2024);
     });
   });
 
@@ -925,8 +1008,8 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL049);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0].code).toBe(ErrorCode.E2_049);
-      expect(result.errors[0].params).toEqual(['STEU_NOT_FOUND', 'PM1', '2024-06-15', '3', '5', '10']);
-      expect(result.errors[1].params).toEqual(['STEU_NOT_FOUND', 'PM1', '2024-06-17', '3', '1', '5']);
+      expect(result.errors[0].params).toEqual(['STEU_CODE', 'PM1', '2024-06-15', '3', '5', '10']);
+      expect(result.errors[1].params).toEqual(['STEU_CODE', 'PM1', '2024-06-17', '3', '1', '5']);
     });
   });
 });

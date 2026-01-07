@@ -114,7 +114,7 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return `Incohérence : Ptot ≤ PO4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (Ptot=${params[4]}, PO4=${params[5]})`;
     case ErrorCode.E2_051:
       if (params.length === 7) {
-        return `Volume A3/A4 incohérent vs capacité EH pour l'ouvrage ${params[0]}, date ${params[1]}. Seuil = ${params[2]} m³. A3: ${params[3]}*6 ${params[4]} seuil ; A4: ${params[5]}*6 ${params[6]} seuil`;
+        return `Volume A3/A4 incohérent vs capacité EH pour l'ouvrage ${params[0]}, date ${params[1]}. Seuil = ${params[2]} EH. A3: ${params[3]}*6 ${params[4]} seuil ; A4: ${params[5]}*6 ${params[6]} seuil`;
       } else if (params.length === 1) {
         return `Date ${params} invalide pour le contrôle des volumes A3/A4 vs capacité EH.`;
       }

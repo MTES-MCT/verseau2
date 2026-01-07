@@ -377,7 +377,7 @@ export class ControleMetierV2Service {
       // Récupérer la capacité nominale en EH depuis Roseau
       const capaciteEH = await this.roseauGateway.findCapaciteNominaleBySteuSandreAndYear(cdOuvrageDepollution, year);
 
-      if (capaciteEH === null || capaciteEH <= 0) {
+      if (capaciteEH === null || capaciteEH <= 2000) {
         continue;
       }
 
