@@ -1,6 +1,6 @@
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
-import { ResultBadge } from './ResultBadge';
 import type { TableDataRow } from '../hooks/useControleTableData';
+import { EvenementType } from '@lib/dossier';
 
 type ControleResultBadgesProps = {
   row: TableDataRow;
@@ -8,7 +8,26 @@ type ControleResultBadgesProps = {
 
 export function ControleResultBadges({ row }: ControleResultBadgesProps) {
   if (!row.isGroup) {
-    return <ResultBadge evenementType={row.evenementType} small />;
+    const evenementType = row.evenementType;
+    return (
+      <div className="fr-flex fr-grid-row--gutters">
+        {evenementType === EvenementType.ERREUR && (
+          <Badge severity="error" small>
+            Échec
+          </Badge>
+        )}
+        {evenementType === EvenementType.AVERTISSEMENT && (
+          <Badge severity="warning" small>
+            Avertissement
+          </Badge>
+        )}
+        {!evenementType && (
+          <Badge severity="success" small>
+            Succès
+          </Badge>
+        )}
+      </div>
+    );
   }
 
   const { errorCount, warningCount, successCount } = row.groupData;
@@ -16,12 +35,12 @@ export function ControleResultBadges({ row }: ControleResultBadgesProps) {
   return (
     <div className="fr-flex fr-grid-row--gutters">
       {errorCount > 0 && (
-        <Badge severity="error" small className="fr-mr-1v">
+        <Badge severity="error" small>
           {errorCount}
         </Badge>
       )}
       {warningCount > 0 && (
-        <Badge severity="warning" small className="fr-mr-1v">
+        <Badge severity="warning" small>
           {warningCount}
         </Badge>
       )}
