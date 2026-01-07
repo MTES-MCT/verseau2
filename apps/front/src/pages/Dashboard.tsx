@@ -17,8 +17,16 @@ import { useRapportDownload } from '../hooks/useRapportDownload';
 const DEPOT_POLLING_INTERVAL_MS = 2000;
 const PAGE_SIZE = 10;
 
-function getStatusBadge(status: DepotStatus) {
-  switch (status) {
+function getStatusBadge(depot: DepotDto) {
+  if (depot.numeroDepotVerseau1 && depot.status === DepotStatus.SUCCESS) {
+    return (
+      <Badge severity="success" small>
+        Intégré
+      </Badge>
+    );
+  }
+
+  switch (depot.status) {
     case DepotStatus.SUCCESS:
       return (
         <Badge severity="success" small>
@@ -28,7 +36,7 @@ function getStatusBadge(status: DepotStatus) {
     case DepotStatus.FAILED:
       return (
         <Badge severity="error" small>
-          Écarte
+          Rejeté
         </Badge>
       );
     case DepotStatus.PROCESSING:
@@ -44,7 +52,7 @@ function getStatusBadge(status: DepotStatus) {
         </Badge>
       );
     default:
-      return <Badge small>{status}</Badge>;
+      return <Badge small>{depot.status}</Badge>;
   }
 }
 
@@ -105,7 +113,7 @@ export function Dashboard() {
   const tableData = paginatedData.map((depot: DepotDto) => [
     depot.numeroDepotVerseau1,
     depot.nomOriginalFichier,
-    getStatusBadge(depot.status),
+    getStatusBadge(depot),
     depot.step,
     depot.createdAt ? formatDate(depot.createdAt) : '-',
     <div key={depot.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -136,19 +144,19 @@ export function Dashboard() {
       <div>
         <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
           <div className="fr-col-12 fr-col-md-4">
-            <StatCard count={depots.length} label="Bilans déposés" icon={fr.cx('ri-folder-2-line')} />
+            <StatCard count={depots.length} label="Fichiers déposés" icon={fr.cx('ri-folder-2-line')} />
           </div>
           <div className="fr-col-12 fr-col-md-4">
             <StatCard
               count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.PENDING).length}
-              label="Bilans en attente"
+              label="Fichiers en attente"
               icon={fr.cx('ri-hourglass-line')}
             />
           </div>
           <div className="fr-col-12 fr-col-md-4">
             <StatCard
               count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.FAILED).length}
-              label="Bilans écartés par le SPE"
+              label="Fichiers rejetés"
               icon={fr.cx('ri-prohibited-2-line')}
             />
           </div>
