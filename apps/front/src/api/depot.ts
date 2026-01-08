@@ -43,16 +43,9 @@ export async function checkDroitsDeDepot(cdOuvrage: string): Promise<DroitsDeDep
 export async function downloadRapport(depotId: string): Promise<Blob> {
   const url = `/admin/depot/${depotId}/rapport`;
   return apiDownload(url);
+}
 
-  // const url = `/admin/depot/${depotId}/rapport`;
-  // const response = await authenticatedFetch(url.startsWith('http') ? url : `${API_BASE_URL}${url}`, {
-  //   method: 'GET',
-  // });
-
-  // if (!response.ok) {
-  //   const message = await response.text().catch(() => response.statusText);
-  //   throw new ApiError(`Download rapport failed: ${message}`, response.status, response.statusText);
-  // }
-
-  // return response.blob();
+export async function downloadXml(depotId: string): Promise<Blob> {
+  const url = `/depot/${depotId}/xml`;
+  return apiDownload(url);
 }

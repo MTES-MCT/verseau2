@@ -12,7 +12,7 @@ import { fetchDepots, ApiError } from '../api/depot';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
 import { usePagination } from '../hooks/usePagination';
-import { useRapportDownload } from '../hooks/useRapportDownload';
+import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 
 const DEPOT_POLLING_INTERVAL_MS = 2000;
 const PAGE_SIZE = 10;
@@ -68,7 +68,8 @@ function formatDate(date: Date | string): string {
 }
 
 export function Dashboard() {
-  const { downloadingDepotId, handleDownload } = useRapportDownload();
+  const { downloadingDepotId, handleDownload, downloadingXmlId, handleDownloadXml, downloadError, setDownloadError } =
+    useRapportAndXmlDownload();
 
   const {
     data: depots = [],
@@ -124,6 +125,16 @@ export function Dashboard() {
       >
         Voir
       </Link>
+      <Button
+        size="small"
+        priority="tertiary no outline"
+        iconId="ri-download-line"
+        onClick={() => handleDownloadXml(depot.id, depot.nomOriginalFichier)}
+        disabled={downloadingXmlId === depot.id}
+        title="Télécharger le fichier XML"
+      >
+        {downloadingXmlId === depot.id ? 'XML...' : 'XML'}
+      </Button>
       {depot.rapportPath && (
         <Button
           size="small"
@@ -133,7 +144,7 @@ export function Dashboard() {
           disabled={downloadingDepotId === depot.id}
           title="Télécharger le rapport PDF"
         >
-          {downloadingDepotId === depot.id ? 'Téléchargement...' : 'Télécharger'}
+          {downloadingDepotId === depot.id ? 'Rapport...' : 'Rapport'}
         </Button>
       )}
     </div>,
@@ -171,6 +182,17 @@ export function Dashboard() {
           </p>
         </div>
 
+        {downloadError && (
+          <div className="fr-mb-2w">
+            <Alert
+              severity="error"
+              title="Erreur de téléchargement"
+              description={downloadError}
+              closable
+              onClose={() => setDownloadError(null)}
+            />
+          </div>
+        )}
         <Table
           caption="Liste des dépôts d'auto-surveillance"
           noCaption

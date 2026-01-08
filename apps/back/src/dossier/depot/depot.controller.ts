@@ -114,4 +114,15 @@ export class DepotController {
 
     res.send(pdfBuffer);
   }
+
+  @Get(':id/xml')
+  @UseGuards(HasUserAccessToDepotGuard)
+  async downloadXml(@Param('id') id: string, @Res() res: Response): Promise<void> {
+    const xmlBuffer = await this.depotService.downloadXml(id);
+    const depot = await this.depotService.findById(id);
+
+    res.attachment(depot.nomOriginalFichier || `depot-${depot.id}.xml`);
+    res.type('application/xml');
+    res.send(xmlBuffer);
+  }
 }

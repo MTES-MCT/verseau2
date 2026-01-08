@@ -52,7 +52,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 
         return retryResponse;
       }
-    } catch (error) {
+    } catch {
       // Refresh failed, redirect to login
       authService.clearTokens();
       window.location.href = '/login';
@@ -146,7 +146,6 @@ export async function apiDownload(endpoint: string): Promise<Blob> {
       'Content-Type': 'application/pdf',
     },
   });
-  return response.blob();
   if (!response.ok) {
     const message = await response.text().catch(() => response.statusText);
     throw new ApiError(`GET ${endpoint} failed: ${message}`, response.status, response.statusText);
