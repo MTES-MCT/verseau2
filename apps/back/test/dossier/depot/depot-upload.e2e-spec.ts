@@ -202,7 +202,7 @@ describe('Depot upload (e2e)', () => {
     const expectedPath = `${depot.id}_${responseBody.nomOriginalFichier}`;
     expect(depot.path).toBe(expectedPath);
     expect(depot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
-    expect(depot.step).toBe(DepotStep.UPLOADING_TO_S3);
+    expect(depot.step).toBe(DepotStep.PENDING);
 
     expect(s3Mock.uploads).toHaveLength(1);
     expect((s3Mock.uploads[0] as { key: string }).key).toBe(expectedPath);

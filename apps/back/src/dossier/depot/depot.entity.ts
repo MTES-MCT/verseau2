@@ -28,8 +28,11 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   error?: string;
 
-  @Column({ type: 'enum', enum: DepotStep, default: DepotStep.UPLOADING_TO_S3 })
-  step: DepotStep;
+  @Column({ type: 'enum', enum: DepotStep, nullable: true })
+  step?: DepotStep;
+
+  @Column({ type: 'enum', enum: DepotStep, default: [], name: 'step_history', array: true, nullable: true })
+  stepHistory?: DepotStep[];
 
   @Column({
     type: 'enum',
@@ -65,5 +68,13 @@ export class DepotEntity extends BaseEntity {
   @BeforeInsert()
   setId() {
     this.id = 'dep_' + this.id;
+  }
+
+  public updateStep(newStep: DepotStep): void {
+    if (this.step !== newStep) {
+      this.stepHistory = this.stepHistory || [];
+      this.stepHistory.push(newStep);
+      this.step = newStep;
+    }
   }
 }

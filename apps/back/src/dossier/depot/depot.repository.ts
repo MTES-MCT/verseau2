@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { DepotEntity } from './depot.entity';
 import { DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
-import { EtapeMetier } from '@lib/dossier';
+import { DepotStep, EtapeMetier } from '@lib/dossier';
 import { mapDepotEntityToModel } from './depot.mapper';
 
 @Injectable()
@@ -14,6 +14,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
 
   async createDepot(depot: Partial<DepotModel>): Promise<DepotModel> {
     const newDepot = this.create(depot);
+    newDepot.updateStep(DepotStep.PENDING);
     const savedDepot = await this.save(newDepot);
     return mapDepotEntityToModel(savedDepot);
   }
@@ -38,6 +39,18 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   }
 
   async updateDepot(id: string, updateData: Partial<DepotModel>): Promise<DepotModel | null> {
+    if (updateData.step !== undefined) {
+      const entity = await this.findOne({ where: { id } });
+      if (entity) {
+        entity.updateStep(updateData.step);
+        Object.assign(entity, updateData);
+
+        await this.save(entity);
+        return mapDepotEntityToModel(entity);
+      }
+      return null;
+    }
+
     await this.update(id, updateData);
     return await this.findDepotById(id);
   }
