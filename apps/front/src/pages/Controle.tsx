@@ -1,12 +1,13 @@
 import { useParams, Link, useLocation } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import { type ControleDto, type ControleSandreDto } from '@lib/dossier';
-import { fetchControles, fetchControlesSandre, ApiError } from '../api/depot';
+import { type ControleDto, type ControleSandreDto, type MasaDto } from '@lib/dossier';
+import { fetchControles, fetchControlesSandre, fetchMasa, ApiError } from '../api/depot';
 import { ControleGroup } from '../components/ControleGroup';
 import { mapControlesV1ToView, mapSandreControlesToView } from './controleMapper';
 import { fr } from '@codegouvfr/react-dsfr';
 import { ControleSandreGroup } from '../components/ControleGroupSandre';
+import { MasaIntegrationTable } from '../components/MasaIntegrationTable';
 
 export type ControleLocationState = {
   numeroDepotVerseau1?: string;
@@ -25,16 +26,21 @@ export function ControlePage() {
     queryKey: ['controles', depotId],
     queryFn: () => fetchControles(depotId!),
     enabled: Boolean(depotId),
+    retry: false,
   });
 
-  const {
-    data: sandreControles = [],
-    isLoading: isLoadingSandre,
-    error: errorSandre,
-  } = useQuery<ControleSandreDto[], ApiError>({
+  const { data: sandreControles = [] } = useQuery<ControleSandreDto[], ApiError>({
     queryKey: ['controles-sandre', depotId],
     queryFn: () => fetchControlesSandre(depotId!),
     enabled: Boolean(depotId),
+    retry: false,
+  });
+
+  const { data: masa = null } = useQuery<MasaDto | null, ApiError>({
+    queryKey: ['masa', depotId],
+    queryFn: () => fetchMasa(depotId!),
+    enabled: Boolean(depotId),
+    retry: false,
   });
 
   const errorMessage = error
@@ -43,13 +49,7 @@ export function ControlePage() {
       : 'Une erreur est survenue lors du chargement des contrôles'
     : null;
 
-  const errorSandreMessage = errorSandre
-    ? errorSandre instanceof ApiError
-      ? `Erreur ${errorSandre.status}: ${errorSandre.message}`
-      : 'Une erreur est survenue lors du chargement des contrôles SANDRE'
-    : null;
-
-  if (isLoading || isLoadingSandre) {
+  if (isLoading) {
     return (
       <div className="fr-container fr-py-6w">
         <p>Chargement des contrôles...</p>
@@ -57,16 +57,13 @@ export function ControlePage() {
     );
   }
 
-  if (errorMessage || errorSandreMessage) {
+  if (errorMessage) {
     return (
       <div className="fr-py-6w">
         <Link to="/" className="fr-link fr-mb-2w" style={{ display: 'inline-block' }}>
           ← Retour au dashboard
         </Link>
         {errorMessage && <Alert severity="error" title="Erreur" description={errorMessage} />}
-        {errorSandreMessage && (
-          <Alert severity="error" title="Erreur" description={errorSandreMessage} className="fr-mt-2w" />
-        )}
       </div>
     );
   }
@@ -98,6 +95,11 @@ export function ControlePage() {
           <ControleSandreGroup title="Contrôles SANDRE" controles={sandreControlesMapped} />
         </div>
       )}
+
+      {/* Section Intégration MASA */}
+      <div className={fr.cx('fr-mb-4w')}>
+        <MasaIntegrationTable title="Intégration des données" masa={masa} />
+      </div>
 
       {/* Afficher un message si aucun contrôle n'est trouvé */}
       {controlesV1.length === 0 && sandreControlesMapped.length === 0 && (

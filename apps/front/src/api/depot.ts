@@ -1,4 +1,4 @@
-import type { DepotDto, ControleDto, ControleSandreDto } from '@lib/dossier';
+import type { DepotDto, ControleDto, ControleSandreDto, MasaDto } from '@lib/dossier';
 import { apiGet, apiPostFormData, buildUrl, apiDownload } from './apiClient';
 
 export class ApiError extends Error {
@@ -27,6 +27,10 @@ export async function fetchControles(depotId: string): Promise<ControleDto[]> {
 
 export async function fetchControlesSandre(depotId: string): Promise<ControleSandreDto[]> {
   return apiGet<ControleSandreDto[]>(`/depot/${depotId}/controle/sandre`);
+}
+
+export async function fetchMasa(depotId: string): Promise<MasaDto | null> {
+  return apiGet<MasaDto | null>(`/depot/${depotId}/masa`);
 }
 
 export async function uploadDepot(file: File): Promise<void> {
