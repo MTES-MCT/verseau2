@@ -15,7 +15,7 @@ import { usePagination } from '../hooks/usePagination';
 import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
 
-const DEPOT_POLLING_INTERVAL_MS = 5000;
+const DEPOT_POLLING_INTERVAL_MS = 2000;
 const PAGE_SIZE = 10;
 
 function getStatusBadge(depot: DepotDto) {
@@ -74,9 +74,11 @@ export function Dashboard() {
     refetchInterval: ({ state }) => {
       const hasPendingOrProcessing = state.data?.some(
         (depot: DepotDto) =>
-          [EtapeMetier.CONTROLE_METIER, EtapeMetier.CONTROLE_REFERENTIEL, EtapeMetier.SCENARIO_SANDRE].includes(
-            depot.etapeMetier!,
-          ) && depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT,
+          (!depot.etapeMetier ||
+            [EtapeMetier.CONTROLE_METIER, EtapeMetier.CONTROLE_REFERENTIEL, EtapeMetier.SCENARIO_SANDRE].includes(
+              depot.etapeMetier,
+            )) &&
+          depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT,
       );
 
       return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false;
