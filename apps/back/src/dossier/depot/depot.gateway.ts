@@ -1,3 +1,4 @@
+import { EtapeMetier } from '@lib/dossier';
 import { DepotModel } from './depot.model';
 
 export interface DepotGateway {
@@ -7,6 +8,7 @@ export interface DepotGateway {
   findAllDepotsByAdmin(): Promise<DepotModel[]>;
   updateDepot(id: string, updateData: Partial<DepotModel>): Promise<DepotModel | null>;
   findByUserId(userId: string): Promise<DepotModel[]>;
+  updateEtapeMetier(depotId: string, etapeMetier: EtapeMetier | null): Promise<DepotModel | null>;
 }
 
 export const DepotGateway = Symbol('DepotGateway');

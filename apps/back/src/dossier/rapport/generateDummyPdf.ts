@@ -40,7 +40,7 @@ async function generateDummyPdf() {
     type: 'xml',
     error: undefined,
     step: DepotStep.SFTP_COMPLETED,
-    status: DepotStatus.SUCCESS,
+    status: DepotStatus.INTEGRE,
     controleStatus: undefined,
     controleSandreStatus: undefined,
     userId: 'user_001',

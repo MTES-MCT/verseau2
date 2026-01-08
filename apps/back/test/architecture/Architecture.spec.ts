@@ -45,7 +45,8 @@ describe('Architecture test', () => {
             .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.ENTITY_SUFFIX))
             .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MODULE_SUFFIX))
             .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.SERVICE_SUFFIX))
-            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MODEL_SUFFIX)),
+            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MODEL_SUFFIX))
+            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MAPPER_SUFFIX)),
         )
         .because('Entity files should only be imported by modules, repositories, services, gateways and other entities')
         .check(srcProject.allClasses());

@@ -7,48 +7,41 @@ import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
-import { DepotStatus, type DepotDto } from '@lib/dossier';
+import { DepotStatus, EtapeMetier, type DepotDto } from '@lib/dossier';
 import { fetchDepots, ApiError } from '../api/depot';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
 import { usePagination } from '../hooks/usePagination';
 import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
+import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
 
-const DEPOT_POLLING_INTERVAL_MS = 2000;
+const DEPOT_POLLING_INTERVAL_MS = 5000;
 const PAGE_SIZE = 10;
 
 function getStatusBadge(depot: DepotDto) {
-  if (depot.numeroDepotVerseau1 && depot.status === DepotStatus.SUCCESS) {
-    return (
-      <Badge severity="success" small>
-        Intégré
-      </Badge>
-    );
-  }
-
   switch (depot.status) {
-    case DepotStatus.SUCCESS:
+    case DepotStatus.INTEGRE:
       return (
         <Badge severity="success" small>
-          Valide
+          Intégré
         </Badge>
       );
-    case DepotStatus.FAILED:
+    case DepotStatus.INTEGRE_PARTIELLEMENT:
+      return (
+        <Badge severity="success" small>
+          Intégré partiellement
+        </Badge>
+      );
+    case DepotStatus.REJETE:
       return (
         <Badge severity="error" small>
           Rejeté
         </Badge>
       );
-    case DepotStatus.PROCESSING:
+    case DepotStatus.EN_COURS_DE_TRAITEMENT:
       return (
         <Badge severity="info" small>
-          En cours
-        </Badge>
-      );
-    case DepotStatus.PENDING:
-      return (
-        <Badge severity="warning" small>
-          En attente
+          En cours de traitement
         </Badge>
       );
     default:
@@ -80,7 +73,10 @@ export function Dashboard() {
     queryFn: fetchDepots,
     refetchInterval: ({ state }) => {
       const hasPendingOrProcessing = state.data?.some(
-        (depot: DepotDto) => depot.status === DepotStatus.PROCESSING || depot.status === DepotStatus.PENDING,
+        (depot: DepotDto) =>
+          [EtapeMetier.CONTROLE_METIER, EtapeMetier.CONTROLE_REFERENTIEL, EtapeMetier.SCENARIO_SANDRE].includes(
+            depot.etapeMetier!,
+          ) && depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT,
       );
 
       return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false;
@@ -115,7 +111,7 @@ export function Dashboard() {
     depot.numeroDepotVerseau1,
     depot.nomOriginalFichier,
     getStatusBadge(depot),
-    depot.step,
+    `${getMessageForDepotEtapeMetier(depot.etapeMetier) ? `${getMessageForDepotEtapeMetier(depot.etapeMetier)} - ${getEtapeMetierNumber(depot.etapeMetier)}/4` : ''}`,
     depot.createdAt ? formatDate(depot.createdAt) : '-',
     <div key={depot.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
       <Link
@@ -159,14 +155,14 @@ export function Dashboard() {
           </div>
           <div className="fr-col-12 fr-col-md-4">
             <StatCard
-              count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.PENDING).length}
-              label="Fichiers en attente"
+              count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT).length}
+              label="Fichiers en cours"
               icon={fr.cx('ri-hourglass-line')}
             />
           </div>
           <div className="fr-col-12 fr-col-md-4">
             <StatCard
-              count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.FAILED).length}
+              count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.REJETE).length}
               label="Fichiers rejetés"
               icon={fr.cx('ri-prohibited-2-line')}
             />

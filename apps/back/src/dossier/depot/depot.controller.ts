@@ -21,7 +21,7 @@ import { UserService } from '@user/user.service';
 import { DepotDto } from '@lib/dossier';
 import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
 import type { Response } from 'express';
-import { DepotMapper } from './depot.mapper';
+import { mapDepotEntityToDepotDto } from './depot.mapper';
 
 interface MulterFile {
   fieldname: string;
@@ -40,7 +40,6 @@ export class DepotController {
     private readonly deposerUnFichier: DeposerUnFichier,
     private readonly depotService: DepotService,
     private readonly userService: UserService,
-    private readonly depotMapper: DepotMapper,
   ) {}
 
   @Post('upload')
@@ -86,7 +85,7 @@ export class DepotController {
     const user = req.user;
     const userEntity = await this.userService.findBySub(user.cerbereId);
     const depots = await this.depotService.findByUserId(userEntity.id);
-    return depots.map((depot) => this.depotMapper.mapDepotEntityToDepotDto(depot));
+    return depots.map((depot) => mapDepotEntityToDepotDto(depot));
   }
 
   @Get('droits-de-depot')

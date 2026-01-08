@@ -11,6 +11,7 @@ export enum MatchingPattern {
   PROCESSOR_SUFFIX = 'processor',
   MODULE_SUFFIX = 'module.ts',
   MODEL_SUFFIX = 'model.ts',
+  MAPPER_SUFFIX = 'mapper.ts',
   USECASE_SUFFIX = '', // UseCase files (e.g., deposerUnFichier.ts)
 
   // Module patterns

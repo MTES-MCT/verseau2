@@ -183,7 +183,7 @@ describe('Worker Service (e2e)', () => {
         nomOriginalFichier: 'test_file.xml',
         type: 'application/xml',
         tailleFichier: 1024,
-        status: DepotStatus.PENDING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.UPLOADING_TO_S3,
       });
 
@@ -213,7 +213,7 @@ describe('Worker Service (e2e)', () => {
       const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
         where: { id: depot.id },
       });
-      expect(updatedDepot.status).toBe(DepotStatus.PROCESSING);
+      expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
 
       // Verify jobs enqueued
@@ -246,7 +246,7 @@ describe('Worker Service (e2e)', () => {
         nomOriginalFichier: 'missing_file.xml',
         type: 'application/xml',
         tailleFichier: 1024,
-        status: DepotStatus.PENDING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.UPLOADING_TO_S3,
       });
 
@@ -266,7 +266,7 @@ describe('Worker Service (e2e)', () => {
       const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
         where: { id: depot.id },
       });
-      expect(updatedDepot.status).toBe(DepotStatus.FAILED);
+      expect(updatedDepot.status).toBe(DepotStatus.REJETE);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_FAILED);
     });
   });
@@ -280,7 +280,7 @@ describe('Worker Service (e2e)', () => {
         nomOriginalFichier: 'sftp_test.xml',
         type: 'application/xml',
         tailleFichier: 1024,
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
       });
 
@@ -297,11 +297,11 @@ describe('Worker Service (e2e)', () => {
         filePath: 'sftp_test.xml',
       });
 
-      // Verify depot status updated to SUCCESS
+      // Verify depot status stays EN_COURS_DE_TRAITEMENT (waiting for MASA)
       const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
         where: { id: depot.id },
       });
-      expect(updatedDepot.status).toBe(DepotStatus.SUCCESS);
+      expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.SFTP_COMPLETED);
 
       // Verify SFTP was called
@@ -317,7 +317,7 @@ describe('Worker Service (e2e)', () => {
         nomOriginalFichier: 'sftp_fail.xml',
         type: 'application/xml',
         tailleFichier: 1024,
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
       });
 
@@ -340,7 +340,7 @@ describe('Worker Service (e2e)', () => {
       const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
         where: { id: depot.id },
       });
-      expect(updatedDepot.status).toBe(DepotStatus.FAILED);
+      expect(updatedDepot.status).toBe(DepotStatus.REJETE);
       expect(updatedDepot.step).toBe(DepotStep.SFTP_FAILED);
     });
   });

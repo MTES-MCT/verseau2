@@ -50,7 +50,7 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
       this.logger.error('Failed to upload file to S3', (error as Error).message);
       await this.depotService.update(depotId, {
         error: DepotError.UPLOAD_FAILED,
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.UPLOADING_TO_S3,
       });
       throw error;
@@ -78,7 +78,7 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
       this.logger.error('Failed to enqueue file', (error as Error).message);
       await this.depotService.update(depotId, {
         error: DepotError.ENQUEUE_FAILED,
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
       });
     }

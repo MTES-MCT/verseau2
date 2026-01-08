@@ -1,3 +1,4 @@
+import { EtapeMetier } from '@lib/dossier';
 import { DepotEntity } from './depot.entity';
 
 export type DepotModel = Pick<
@@ -18,6 +19,6 @@ export type DepotModel = Pick<
   | 'createdAt'
   | 'updatedAt'
   | 'masa'
->;
+> & { etapeMetier?: EtapeMetier };
 
 export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'step' | 'status' | 'user'>;

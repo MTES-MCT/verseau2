@@ -9,6 +9,7 @@ import { DepotService } from '@dossier/depot/depot.service';
 import {
   DepotStep,
   DepotStatus,
+  EtapeMetier,
   ControleStatus,
   EvenementType,
   ControleName,
@@ -35,7 +36,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
     await this.depotService.update(depotId, {
-      status: DepotStatus.PROCESSING,
+      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.CONTROLE_IN_PROGRESS,
     });
 
@@ -72,6 +73,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       await this.depotService.update(depotId, {
         controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
         step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
+        etapeMetier: allSuccess ? EtapeMetier.CONTROLE_METIER : EtapeMetier.CONTROLE_REFERENTIEL,
       });
 
       await this.depotCoordinatorService.checkControlesCompletion(depotId);
@@ -86,7 +88,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       }
 
       await this.depotService.update(depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
         controleStatus: ControleStatus.FAILED,
       });

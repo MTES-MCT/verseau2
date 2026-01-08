@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DepotService } from './depot.service';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
-import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
@@ -18,8 +18,9 @@ export class DepotCoordinatorService {
     const depot = await this.depotService.findById(depotId);
 
     if (
-      depot.status === DepotStatus.SUCCESS ||
-      depot.status === DepotStatus.FAILED ||
+      depot.status === DepotStatus.INTEGRE ||
+      depot.status === DepotStatus.INTEGRE_PARTIELLEMENT ||
+      depot.status === DepotStatus.REJETE ||
       depot.step === DepotStep.READY_FOR_SFTP ||
       depot.step === DepotStep.SFTP_IN_PROGRESS ||
       depot.step === DepotStep.SFTP_COMPLETED
@@ -50,8 +51,9 @@ export class DepotCoordinatorService {
     if (v1Success && sandreSuccess) {
       this.logger.log(`Depot ${depotId} - Both controls succeeded, dispatching to SFTP`);
       await this.depotService.update(depotId, {
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
+        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
       });
 
       await this.queueService.send(QueueName.send_to_sftp, {
@@ -68,7 +70,7 @@ export class DepotCoordinatorService {
       });
 
       await this.depotService.update(depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: failedStep,
       });
     }

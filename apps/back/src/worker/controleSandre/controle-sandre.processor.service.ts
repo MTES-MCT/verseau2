@@ -4,7 +4,7 @@ import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, ControleSandreStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleSandreStatus, EtapeMetier } from '@lib/dossier';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 
@@ -21,7 +21,7 @@ export class ControleSandreProcessorService implements AsyncTask<{ depotId: stri
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
     await this.depotService.update(depotId, {
-      status: DepotStatus.PROCESSING,
+      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.CONTROLE_SANDRE_IN_PROGRESS,
     });
 
@@ -59,6 +59,7 @@ export class ControleSandreProcessorService implements AsyncTask<{ depotId: stri
       await this.depotService.update(depotId, {
         controleSandreStatus: isSuccess ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
         step: isSuccess ? DepotStep.CONTROLE_SANDRE_COMPLETED : DepotStep.CONTROLE_SANDRE_FAILED,
+        etapeMetier: isSuccess ? EtapeMetier.SCENARIO_SANDRE : EtapeMetier.CONTROLE_METIER,
       });
 
       // Check if both controls are complete and coordinate next step
@@ -66,7 +67,7 @@ export class ControleSandreProcessorService implements AsyncTask<{ depotId: stri
     } catch (error) {
       this.logger.error(`Depot ${depotId} - Controle SANDRE failed`, error);
       await this.depotService.update(depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
       });

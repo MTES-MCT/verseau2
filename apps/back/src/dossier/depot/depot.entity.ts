@@ -2,7 +2,7 @@ import { BaseEntity } from '@shared/repository/base-entity';
 import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
-import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 
 @Entity('depot')
@@ -31,7 +31,16 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'enum', enum: DepotStep, default: DepotStep.UPLOADING_TO_S3 })
   step: DepotStep;
 
-  @Column({ type: 'enum', enum: DepotStatus, default: DepotStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: EtapeMetier,
+    nullable: true,
+    default: null,
+    name: 'etape_metier',
+  })
+  etapeMetier?: EtapeMetier | null;
+
+  @Column({ type: 'enum', enum: DepotStatus, default: DepotStatus.EN_COURS_DE_TRAITEMENT })
   status: DepotStatus;
 
   @Column({ type: 'enum', enum: ControleStatus, nullable: true, default: null, name: 'controle_status' })

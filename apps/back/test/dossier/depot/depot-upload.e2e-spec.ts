@@ -27,7 +27,6 @@ import { ControleEntity } from '@dossier/controle/controle.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 import { MasaEntity } from '@dossier/masa/masa.entity';
-import { DepotMapper } from '@dossier/depot/depot.mapper';
 class ConfigServiceMock {
   get(key: string) {
     if (key === 'FAKE_TOKEN_STORAGE_KEY') {
@@ -143,7 +142,6 @@ describe('Depot upload (e2e)', () => {
         { provide: UserService, useClass: UserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
-        DepotMapper,
       ],
     }).compile();
 
@@ -203,7 +201,7 @@ describe('Depot upload (e2e)', () => {
 
     const expectedPath = `${depot.id}_${responseBody.nomOriginalFichier}`;
     expect(depot.path).toBe(expectedPath);
-    expect(depot.status).toBe(DepotStatus.PENDING);
+    expect(depot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
     expect(depot.step).toBe(DepotStep.UPLOADING_TO_S3);
 
     expect(s3Mock.uploads).toHaveLength(1);

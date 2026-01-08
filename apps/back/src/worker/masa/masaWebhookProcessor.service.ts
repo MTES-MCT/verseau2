@@ -8,7 +8,8 @@ import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
-import { MasaModel } from '@dossier/masa/masa.model';
+import { MasaModel, MasaStatus } from '@dossier/masa/masa.model';
+import { DepotStatus } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 
@@ -47,27 +48,34 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         throw new Error(`Depot not found: ${depotId}`);
       }
 
-      // 2. Generate PDF report
+      // 2. Mettre à jour le statut du dépôt selon le retour MASA
+      const newStatus = this.mapMasaStatusToDepotStatus(masa.statut);
+      await this.depotGateway.updateDepot(depotId, {
+        status: newStatus,
+      });
+      await this.depotGateway.updateEtapeMetier(depotId, null);
+
+      // 3. Generate PDF report
       const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);
       this.logger.log(`Generating PDF report`, { masaId });
       const pdfBuffer = await this.pdfGenerator.generateReport(masa, depot, controlesV2);
 
-      // 3. Upload PDF to S3
+      // 4. Upload PDF to S3
       const pdfPath = `rapports/${depotId}/${masaId}.pdf`;
       await this.s3.upload(pdfPath, pdfBuffer, 'application/pdf');
       this.logger.log(`PDF uploaded to S3`, { pdfPath });
 
       await this.depotGateway.updateDepot(depotId, { rapportPath: pdfPath });
 
-      // 4. Send email to déposant
+      // 5. Send email to déposant
       await this.sendEmailToDeposant(depot, masa, pdfBuffer);
 
-      // 5. Download XML file from S3
+      // 6. Download XML file from S3
       if (!depot.path) {
         throw new Error(`No XML file path for depot: ${depotId}`);
       }
 
-      // 6. Send to Agence de l'eau SFTP
+      // 7. Send to Agence de l'eau SFTP
       await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
 
       this.logger.log(`MASA report processing completed`, { masaId, depotId });
@@ -79,6 +87,20 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         stack: error instanceof Error ? error.stack : undefined,
       });
       throw error;
+    }
+  }
+
+  private mapMasaStatusToDepotStatus(masaStatus: MasaStatus): DepotStatus {
+    switch (masaStatus) {
+      case MasaStatus.INTEGRE:
+        return DepotStatus.INTEGRE;
+      case MasaStatus.INTEGRATION_PARTIELLE:
+        return DepotStatus.INTEGRE_PARTIELLEMENT;
+      case MasaStatus.REFUSE:
+        return DepotStatus.REJETE;
+      default:
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        throw new Error(`Unknown MASA status: ${masaStatus}`);
     }
   }
 

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DepotCoordinatorService } from './depotCoordinator.service';
 import { DepotService } from './depot.service';
 import { QueueName, QueueGateway } from '@queue/queue';
-import { DepotStep, DepotStatus, ControleStatus, ControleSandreStatus, DepotDto } from '@lib/dossier';
+import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus, DepotDto } from '@lib/dossier';
 import { DepotModel } from './depot.model';
 
 jest.mock('pg-boss', () => ({}));
@@ -52,8 +52,8 @@ describe('DepotCoordinatorService', () => {
   describe('checkControlesCompletion', () => {
     const depotId = 'test-depot-id';
 
-    it('should return early if depot is already in SUCCESS status', async () => {
-      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.SUCCESS } as DepotDto);
+    it('should return early if depot is already in INTEGRE status', async () => {
+      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.INTEGRE } as DepotDto);
 
       await service.checkControlesCompletion(depotId);
 
@@ -62,8 +62,8 @@ describe('DepotCoordinatorService', () => {
       expect(queueService.send).not.toHaveBeenCalled();
     });
 
-    it('should return early if depot is already in FAILED status', async () => {
-      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.FAILED } as DepotDto);
+    it('should return early if depot is already in REJETE status', async () => {
+      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.REJETE } as DepotDto);
 
       await service.checkControlesCompletion(depotId);
 
@@ -72,7 +72,7 @@ describe('DepotCoordinatorService', () => {
     });
 
     it('should return early if depot step indicates SFTP is already dispatched', async () => {
-      depotService.findById.mockResolvedValue({ id: depotId, step: DepotStep.READY_FOR_SFTP } as DepotDto);
+      depotService.findById.mockResolvedValue({ id: depotId, step: DepotStep.READY_FOR_SFTP } as DepotModel);
 
       await service.checkControlesCompletion(depotId);
 
@@ -85,7 +85,7 @@ describe('DepotCoordinatorService', () => {
         id: depotId,
         nomOriginalFichier: 'test.xml',
         step: DepotStep.CONTROLE_IN_PROGRESS,
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         createdAt: new Date(),
         updatedAt: new Date(),
       } as DepotModel);
@@ -101,7 +101,7 @@ describe('DepotCoordinatorService', () => {
         id: depotId,
         nomOriginalFichier: 'test.xml',
         step: DepotStep.CONTROLE_COMPLETED,
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         controleStatus: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
         path: '/path/to/file',
@@ -113,8 +113,9 @@ describe('DepotCoordinatorService', () => {
       await service.checkControlesCompletion(depotId);
 
       expect(depotService.update).toHaveBeenCalledWith(depotId, {
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
+        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
       });
       expect(queueService.send).toHaveBeenCalledWith(QueueName.send_to_sftp, {
         depotId: depot.id,
@@ -127,7 +128,7 @@ describe('DepotCoordinatorService', () => {
         id: depotId,
         nomOriginalFichier: 'test.xml',
         step: DepotStep.CONTROLE_COMPLETED,
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         controleStatus: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
         path: '/path/to/file',
@@ -138,7 +139,7 @@ describe('DepotCoordinatorService', () => {
       await service.checkControlesCompletion(depotId);
 
       expect(depotService.update).toHaveBeenCalledWith(depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
       });
       expect(queueService.send).not.toHaveBeenCalled();
@@ -152,7 +153,7 @@ describe('DepotCoordinatorService', () => {
         controleStatus: ControleStatus.SUCCESS,
         controleSandreStatus: ControleSandreStatus.FAILED,
         path: '/path/to/file',
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         createdAt: new Date(),
         updatedAt: new Date(),
       } as DepotModel);
@@ -160,7 +161,7 @@ describe('DepotCoordinatorService', () => {
       await service.checkControlesCompletion(depotId);
 
       expect(depotService.update).toHaveBeenCalledWith(depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
       });
       expect(queueService.send).not.toHaveBeenCalled();
@@ -174,7 +175,7 @@ describe('DepotCoordinatorService', () => {
         controleStatus: ControleStatus.FAILED,
         controleSandreStatus: ControleSandreStatus.SUCCESS,
         path: '/path/to/file',
-        status: DepotStatus.PROCESSING,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         createdAt: new Date(),
         updatedAt: new Date(),
       } as DepotModel);
@@ -182,7 +183,7 @@ describe('DepotCoordinatorService', () => {
       await service.checkControlesCompletion(depotId);
 
       expect(depotService.update).toHaveBeenCalledWith(depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
       });
     });

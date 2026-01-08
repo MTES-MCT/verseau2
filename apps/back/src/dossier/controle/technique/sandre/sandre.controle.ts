@@ -25,7 +25,7 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
       return null;
     }
     await this.depotService.update(fichierDeDepot.depotId, {
-      status: DepotStatus.PROCESSING,
+      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
     });
 
@@ -54,7 +54,7 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
         });
 
         await this.depotService.update(fichierDeDepot.depotId, {
-          status: DepotStatus.FAILED,
+          status: DepotStatus.REJETE,
           step: DepotStep.CONTROLE_FAILED,
         });
       }
@@ -80,7 +80,7 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
     } catch (error) {
       this.logger.error('Processing file failed', error);
       await this.depotService.update(fichierDeDepot.depotId, {
-        status: DepotStatus.FAILED,
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
       });
       throw error;
