@@ -4,7 +4,6 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import type { Request } from 'express';
 import { DepotController } from '@dossier/depot/depot.controller';
 import { DeposerUnFichier } from '@dossier/depot/usecase/deposerUnFichier';
 import { DepotService } from '@dossier/depot/depot.service';
@@ -27,6 +26,8 @@ import { ControleEntity } from '@dossier/controle/controle.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 import { MasaEntity } from '@dossier/masa/masa.entity';
+import cookieParser from 'cookie-parser';
+
 class ConfigServiceMock {
   get(key: string) {
     if (key === 'FAKE_TOKEN_STORAGE_KEY') {
@@ -146,6 +147,7 @@ describe('Depot upload (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication({ logger: false });
+    app.use(cookieParser());
     const authMiddleware = app.get(AuthenticationMiddleware);
     app.use(authMiddleware.use.bind(authMiddleware));
 
@@ -183,7 +185,7 @@ describe('Depot upload (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .post('/depot/upload')
-      .set('Authorization', 'Bearer test-token')
+      .set('Cookie', ['access_token=test-token'])
       .attach('file', Buffer.from(xmlContent), { filename: 'sample.xml', contentType: 'application/xml' })
       .expect(201);
 
@@ -225,7 +227,7 @@ describe('Depot upload (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/depot/upload')
-      .set('Authorization', 'Bearer test-token')
+      .set('Cookie', ['access_token=test-token'])
       .attach('file', Buffer.from('plain text'), { filename: 'sample.txt', contentType: 'text/plain' })
       .expect(400);
 
@@ -242,7 +244,7 @@ describe('Depot upload (e2e)', () => {
 
     const response = await request(app.getHttpServer())
       .post('/depot/upload')
-      .set('Authorization', 'Bearer test-token')
+      .set('Cookie', ['access_token=test-token'])
       .attach('file', Buffer.from(xmlContent), { filename: filenameWithAccents, contentType: 'application/xml' })
       .expect(201);
 
