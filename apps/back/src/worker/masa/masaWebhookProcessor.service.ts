@@ -9,7 +9,7 @@ import { Sftp } from '@infra/sftp/sftp';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { MasaModel, MasaStatus } from '@dossier/masa/masa.model';
-import { DepotStatus } from '@lib/dossier';
+import { DepotStatus, DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 
@@ -52,6 +52,7 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       const newStatus = this.mapMasaStatusToDepotStatus(masa.statut);
       await this.depotGateway.updateDepot(depotId, {
         status: newStatus,
+        step: DepotStep.MASA_CALLED_ENPOINT,
       });
       await this.depotGateway.updateEtapeMetier(depotId, null);
 
