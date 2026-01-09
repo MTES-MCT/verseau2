@@ -1,5 +1,4 @@
 import { fr } from '@codegouvfr/react-dsfr';
-import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { type MasaDto, MasaStatus } from '@lib/dossier';
@@ -8,29 +7,6 @@ type MasaIntegrationStatusProps = {
   title: string;
   masa: MasaDto | null;
 };
-
-function getMasaBadge(statut: MasaStatus) {
-  switch (statut) {
-    case MasaStatus.INTEGRE:
-      return (
-        <Badge severity="success" small>
-          Intégré
-        </Badge>
-      );
-    case MasaStatus.INTEGRATION_PARTIELLE:
-      return (
-        <Badge severity="warning" small>
-          Intégration partielle
-        </Badge>
-      );
-    case MasaStatus.REFUSE:
-      return (
-        <Badge severity="error" small>
-          Refusé
-        </Badge>
-      );
-  }
-}
 
 export function MasaIntegrationStatus({ title, masa }: MasaIntegrationStatusProps) {
   if (!masa) {
