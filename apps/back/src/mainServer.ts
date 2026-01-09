@@ -1,12 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ApiModule } from './api/api.module';
 import { MigrationService } from './infra/database/migration.service';
+import cookieParser from 'cookie-parser';
 
 async function bootstrapServer() {
   const app = await NestFactory.create(ApiModule);
 
-  // Enable Nest lifecycle hooks on shutdown signals (SIGTERM, SIGINT)
-  app.enableShutdownHooks();
+  app.use(cookieParser());
 
   // Run migrations before starting the server (with advisory lock for multi-instance safety)
   const migrationService = app.get(MigrationService);
@@ -16,6 +16,9 @@ async function bootstrapServer() {
     console.error('Fatal: Migration failed on startup', error);
     process.exit(1);
   }
+
+  // Enable Nest lifecycle hooks on shutdown signals (SIGTERM, SIGINT)
+  app.enableShutdownHooks();
 
   // Enable CORS for frontend development
   app.enableCors({

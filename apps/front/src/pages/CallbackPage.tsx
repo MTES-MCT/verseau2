@@ -40,7 +40,10 @@ export default function CallbackPage() {
 
         const returnTo = sessionStorage.getItem('auth_return_to');
         sessionStorage.removeItem('auth_return_to');
-        navigate(returnTo || '/', { replace: true });
+
+        // Sécurisation : on s'assure que le chemin est relatif et ne commence pas par //
+        const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+        navigate(safeReturnTo, { replace: true });
       } catch (err) {
         console.error('Callback error:', err);
         setError(err instanceof Error ? err.message : "Échec de l'authentification");

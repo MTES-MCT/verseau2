@@ -18,21 +18,8 @@ export class ApiError extends Error {
  * Enhanced fetch wrapper with automatic token management and refresh
  */
 export async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = await authService.getAccessToken();
-
-  if (!token) {
-    // Redirect to login if not authenticated
-    window.location.href = '/login';
-    throw new ApiError('Not authenticated', 401, 'Unauthorized');
-  }
-
-  // Add Authorization header
-  const headers = new Headers(options.headers);
-  headers.set('Authorization', `Bearer ${token}`);
-
   const response = await fetch(url, {
     ...options,
-    headers,
     credentials: 'include',
   });
 
@@ -40,18 +27,13 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
   if (response.status === 401) {
     try {
       await authService.refreshToken();
-      const newToken = await authService.getAccessToken();
 
-      if (newToken) {
-        headers.set('Authorization', `Bearer ${newToken}`);
-        const retryResponse = await fetch(url, {
-          ...options,
-          headers,
-          credentials: 'include',
-        });
+      const retryResponse = await fetch(url, {
+        ...options,
+        credentials: 'include',
+      });
 
-        return retryResponse;
-      }
+      return retryResponse;
     } catch {
       // Refresh failed, redirect to login
       authService.clearTokens();

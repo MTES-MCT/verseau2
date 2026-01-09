@@ -12,6 +12,8 @@ export interface OIDCConfiguration {
   scope: string;
 }
 
+import type { Response } from 'express';
+
 export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
   getOIDCConfiguration(): OIDCConfiguration;
@@ -19,6 +21,7 @@ export interface Authentication {
   getUserInfo(accessToken: string): Promise<AuthenticatedUser>;
   refreshTokens(refreshToken: string): Promise<OIDCTokens>;
   generateLogoutUrl(idToken: string): string;
+  buildCookieResponse(res: Response, tokens: OIDCTokens): void;
 }
 
 export interface AuthenticatedUser {

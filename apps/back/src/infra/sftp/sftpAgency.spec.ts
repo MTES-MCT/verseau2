@@ -43,7 +43,6 @@ describe('SftpAgencyService', () => {
     });
 
     it('devrait initialiser les clients correctement', () => {
-      console.log(service.getConfiguredAgencies());
       expect(service.getConfiguredAgencies()).toHaveLength(2);
       expect(service.getConfiguredAgencies()).toContain('agence_01');
       expect(service.getConfiguredAgencies()).toContain('agence_02');

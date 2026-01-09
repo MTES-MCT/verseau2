@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export function AppHeader() {
   const location = useLocation();
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, login, logout, user } = useAuth();
 
   const isNavItemActive = (href: string): boolean => {
     return location.pathname.startsWith(href) && (href !== '/' || location.pathname === '/');
@@ -59,8 +59,8 @@ export function AppHeader() {
               }
             : {
                 iconId: 'fr-icon-lock-line',
-                linkProps: {
-                  href: '/pages/data/cerbere.php',
+                buttonProps: {
+                  onClick: () => login(),
                 },
                 text: 'Se connecter',
               },

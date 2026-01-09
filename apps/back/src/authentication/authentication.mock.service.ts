@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Authentication, AuthenticatedUser, OIDCTokens, OIDCConfiguration } from './authentication';
+import type { Response } from 'express';
 
 @Injectable()
 export class AuthenticationMockService implements Authentication {
@@ -52,6 +53,25 @@ export class AuthenticationMockService implements Authentication {
 
   generateLogoutUrl(idToken: string): string {
     return 'http://localhost:5173';
+  }
+
+  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
+    // In mock, set cookies similarly to real implementation for tests
+    res.cookie('access_token', tokens.accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    if (tokens.refreshToken) {
+      res.cookie('refresh_token', tokens.refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/',
+      });
+    }
   }
 
   private getMockUser(): AuthenticatedUser {

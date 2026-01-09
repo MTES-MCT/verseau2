@@ -90,7 +90,7 @@ class AuthService {
   /**
    * Handle the OIDC callback after user authentication
    */
-  async handleCallback(code: string, state: string): Promise<AuthenticatedUser> {
+  async handleCallback(code: string, state: string): Promise<void> {
     // Retrieve state and nonce from sessionStorage
     const expectedState = this.sessionStorage.getItem(STATE_KEY);
     const expectedNonce = this.sessionStorage.getItem(NONCE_KEY);
@@ -118,6 +118,7 @@ class AuthService {
         code,
         nonce: expectedNonce,
       }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -127,15 +128,14 @@ class AuthService {
 
     const data: AuthCallbackResponse = await response.json();
 
-    // Store tokens
+    // Tokens are now set as HttpOnly cookies by the backend
+    // We store the expiration and id_token (for logout hint)
     this.storeTokens({
-      access_token: data.accessToken,
+      access_token: 'cookie-stored',
       id_token: data.idToken,
-      refresh_token: data.refreshToken,
+      refresh_token: 'cookie-stored',
       expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
     });
-
-    return data.user;
   }
 
   /**
@@ -143,10 +143,7 @@ class AuthService {
    */
   async logout(): Promise<void> {
     const tokens = this.getTokens();
-    if (!tokens?.id_token) {
-      this.clearTokens();
-      return;
-    }
+    const idToken = tokens?.id_token;
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -154,7 +151,7 @@ class AuthService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ idToken: tokens.id_token }),
+        body: JSON.stringify({ idToken }),
       });
 
       if (response.ok) {
@@ -180,39 +177,28 @@ class AuthService {
 
     // Check if token is expired or will expire in the next 60 seconds
     if (tokens.expires_at - Date.now() < 60000) {
-      if (tokens.refresh_token) {
-        try {
-          await this.refreshToken();
-          const newTokens = this.getTokens();
-          return newTokens?.access_token || null;
-        } catch (error) {
-          this.clearTokens();
-          return null;
-        }
-      } else {
+      try {
+        await this.refreshToken();
+        return 'cookie-stored';
+      } catch (error) {
         this.clearTokens();
         return null;
       }
     }
 
-    return tokens.access_token;
+    return 'cookie-stored';
   }
 
   /**
    * Refresh the access token
    */
   async refreshToken(): Promise<void> {
-    const tokens = this.getTokens();
-    if (!tokens?.refresh_token) {
-      throw new Error('No refresh token available');
-    }
-
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken: tokens.refresh_token }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -221,10 +207,11 @@ class AuthService {
 
     const data: RefreshResponse = await response.json();
 
+    const tokens = this.getTokens();
     this.storeTokens({
-      access_token: data.accessToken,
-      id_token: data.idToken,
-      refresh_token: data.refreshToken || tokens.refresh_token,
+      access_token: 'cookie-stored',
+      id_token: data.idToken || tokens?.id_token || '',
+      refresh_token: 'cookie-stored',
       expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
     });
   }
@@ -241,16 +228,9 @@ class AuthService {
    * Get current user information
    */
   async getCurrentUser(): Promise<AuthenticatedUser> {
-    const token = await this.getAccessToken();
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
     const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      credentials: 'include',
     });
 
     if (!response.ok) {

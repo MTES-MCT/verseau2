@@ -10,6 +10,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import cookieParser from 'cookie-parser';
 import { ApiModule } from '../src/api/api.module';
 import { PGBOSS } from '../src/infra/queue/queue';
 import { InfraModule } from '@infra/infra.module';
@@ -41,6 +42,7 @@ describe('Controller (e2e) - Unauthorized', () => {
       .compile();
 
     app = moduleFixture.createNestApplication({ logger: false });
+    app.use(cookieParser());
     await app.init();
     authService = app.get<Authentication>(Authentication);
   });
@@ -67,12 +69,18 @@ describe('Controller (e2e) - Unauthorized', () => {
     });
 
     it('/auth/refresh (POST) - Should return 201', async () => {
-      return request(app.getHttpServer()).post('/auth/refresh').send({ refreshToken: 'refresh-token-abc' }).expect(201);
+      return request(app.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', ['refresh_token=refresh-token-abc'])
+        .expect(201);
     });
 
     it('/auth/refresh (POST) - Should return 401 when refreshTokens throw an error', async () => {
       jest.spyOn(authService, 'refreshTokens').mockRejectedValueOnce(new Error('Refresh failed'));
-      return request(app.getHttpServer()).post('/auth/refresh').send({ refreshToken: 'refresh-token-abc' }).expect(401);
+      return request(app.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', ['refresh_token=refresh-token-abc'])
+        .expect(401);
     });
 
     it('/auth/logout (POST) - Should return 401 Unauthorized', async () => {

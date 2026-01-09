@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { CookieOptions, Response } from 'express';
 
 import {
   Configuration,
@@ -164,5 +165,20 @@ export class AuthenticationService implements Authentication {
     logoutUrl.searchParams.set('post_logout_redirect_uri', this.redirectUri.replace('/api/auth/callback', ''));
 
     return logoutUrl.toString();
+  }
+
+  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
+    const cookieOptions: CookieOptions = {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
+    };
+    res.cookie('access_token', tokens.accessToken, cookieOptions);
+
+    if (tokens.refreshToken) {
+      res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
+    }
   }
 }
