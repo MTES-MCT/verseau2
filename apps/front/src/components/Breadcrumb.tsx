@@ -42,6 +42,7 @@ export const Breadcrumb = () => {
 
   return (
     <DsfrBreadcrumb
+      className="breadcrumb-container"
       currentPageLabel={currentPageLabel}
       homeLinkProps={{
         href: '/',

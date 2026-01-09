@@ -8,6 +8,14 @@ html {
   scrollbar-gutter: stable;
 }
 
+.app-container {
+  min-height: 80vh;
+}
+
+.breadcrumb-container {
+  text-align: left;
+}
+
 .fr-container {
   max-width: 90rem;
 }
@@ -46,4 +54,12 @@ html {
 
 .read-the-docs {
   color: #888;
+}
+
+/* Reduce partners logos size in footer to better fit layout */
+.fr-footer__partners img,
+.fr-footer__partners-link img,
+.fr-footer__partners .fr-footer__partners-link img {
+  max-height: 2.5rem;
+  width: auto;
 }

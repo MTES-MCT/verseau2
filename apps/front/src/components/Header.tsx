@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 
 export function AppHeader() {
   const location = useLocation();
-  const { isAuthenticated, login, logout, user } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
 
   const isNavItemActive = (href: string): boolean => {
     return location.pathname.startsWith(href) && (href !== '/' || location.pathname === '/');
@@ -14,11 +14,41 @@ export function AppHeader() {
   return (
     <div className={fr.cx('fr-grid-row', 'fr-grid-row--middle')}>
       <Header
-        brandTop="Ministère de la Transition écologique"
-        serviceTitle="Autosurveillance des systèmes d'assainissement"
+        brandTop={
+          <span style={{ textAlign: 'left', display: 'block' }}>
+            MINISTÈRE
+            <br />
+            DE LA TRANSITION
+            <br />
+            ÉCOLOGIQUE,
+            <br />
+            DE LA BIODIVERSITÉ
+            <br />
+            ET DES NÉGOCIATIONS
+            <br />
+            INTERNATIONALES
+            <br />
+            SUR LE CLIMAT ET LA NATURE
+          </span>
+        }
+        operatorLogo={{
+          alt: 'logo_portail_as',
+          imgUrl:
+            'https://assainissement.developpement-durable.gouv.fr/public/images/assainissement-collectif-logo-principal.png',
+          orientation: 'horizontal',
+        }}
+        serviceTitle="Verseau 2.0"
+        serviceTagline="Réseau de collecte et station de traitement des eaux usées"
         homeLinkProps={{ href: '/', title: 'Accueil' }}
         quickAccessItems={[
-          // TODO : afficher l'intervenant lié à l'utilisateur connecté
+          {
+            iconId: 'fr-icon-theme-fill',
+            buttonProps: {
+              'aria-controls': 'fr-theme-modal',
+              'data-fr-opened': false,
+            },
+            text: "Paramètres d'affichage",
+          },
           isAuthenticated && user
             ? {
                 iconId: 'ri-logout-box-line',
@@ -28,11 +58,11 @@ export function AppHeader() {
                 text: `${user.prenom} ${user.nom}`,
               }
             : {
-                iconId: 'ri-user-line',
-                buttonProps: {
-                  onClick: () => login(),
+                iconId: 'fr-icon-lock-line',
+                linkProps: {
+                  href: '/pages/data/cerbere.php',
                 },
-                text: 'Connexion',
+                text: 'Se connecter',
               },
         ]}
         navigation={[
@@ -42,9 +72,25 @@ export function AppHeader() {
             isActive: isNavItemActive('/dashboard'),
           },
           {
-            text: 'Déposer des données',
-            linkProps: { href: '/depot/upload' },
-            isActive: isNavItemActive('/depot/upload'),
+            text: "Gestion des données d'autosurveillance",
+            isActive: isNavItemActive('/depot'),
+            menuLinks: [
+              {
+                text: "Déposer des données d'autosurveillance",
+                linkProps: { href: '/depot/upload' },
+                isActive: isNavItemActive('/depot/upload'),
+              },
+              {
+                text: "Télécharger des données d'autosurveillance",
+                linkProps: { href: '/depot/download' },
+                isActive: isNavItemActive('/depot/download'),
+              },
+              {
+                text: 'Détail des mesures déposées',
+                linkProps: { href: '/depot/details' },
+                isActive: isNavItemActive('/depot/details'),
+              },
+            ],
           },
         ]}
       />

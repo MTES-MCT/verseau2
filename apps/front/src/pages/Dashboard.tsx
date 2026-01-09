@@ -158,7 +158,7 @@ export function Dashboard() {
           <div className="fr-col-12 fr-col-md-4">
             <StatCard
               count={depots.filter((depot: DepotDto) => depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT).length}
-              label="Fichiers en cours"
+              label="Fichiers en cours de traitement"
               icon={fr.cx('ri-hourglass-line')}
             />
           </div>

@@ -3,11 +3,14 @@ import { Dashboard } from './pages/Dashboard';
 import { ControlePage } from './pages/Controle';
 import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
+import { DepotDownloadPage } from './pages/DepotDownload';
+import { DepotDetailsPage } from './pages/DepotDetails';
 import LoginPage from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { AppHeader } from './components/Header';
+import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
@@ -17,8 +20,9 @@ function App() {
   return (
     <BrowserRouter>
       <AppHeader />
-      <div className={fr.cx('fr-container')}>
+      <div className={`${fr.cx('fr-container')} app-container`}>
         <Breadcrumb />
+
         <main className={fr.cx('fr-py-4w', 'fr-px-0')}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -49,6 +53,22 @@ function App() {
               }
             />
             <Route
+              path="/depot/download"
+              element={
+                <ProtectedRoute>
+                  <DepotDownloadPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/depot/details"
+              element={
+                <ProtectedRoute>
+                  <DepotDetailsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/depot/upload/recap"
               element={
                 <ProtectedRoute>
@@ -60,6 +80,7 @@ function App() {
           </Routes>
         </main>
       </div>
+      <AppFooter />
     </BrowserRouter>
   );
 }

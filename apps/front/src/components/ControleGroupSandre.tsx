@@ -3,10 +3,8 @@ import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { type ControleDto } from '@lib/dossier';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import './ControleGroup.css';
-import { StatCard } from './StatCard';
-import { ToggleSwitch } from '@codegouvfr/react-dsfr/ToggleSwitch';
 
 type ControleGroupSandreProps = {
   title: string;
@@ -32,19 +30,17 @@ function getResultBadge(success: boolean) {
 }
 
 export function ControleSandreGroup({ title, controles }: ControleGroupSandreProps) {
-  const [showSuccess, setShowSuccess] = useState(false);
-
-  const { successCount, errorCount, filteredControles } = useMemo(() => {
+  const { filteredControles } = useMemo(() => {
     const success = controles.filter((controle) => controle.success).length;
     const errors = controles.filter((controle) => !controle.success).length;
-    const filtered = showSuccess ? controles : controles.filter((controle) => !controle.success);
+    const filtered = controles;
 
     return {
       successCount: success,
       errorCount: errors,
       filteredControles: filtered,
     };
-  }, [controles, showSuccess]);
+  }, [controles]);
 
   const groupedControles = useMemo(() => {
     return filteredControles.reduce(
@@ -94,7 +90,7 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
       return [
         displayName,
         getResultBadge(groupErrorCount === 0),
-        <Accordion label={label} key={name} className={`${fr.cx('fr-m-0')} accordion-no-border`}>
+        <Accordion label={label} key={name} className={`${fr.cx('fr-m-0')} accordion-no-border`} defaultExpanded={true}>
           <ul className="zebra-list fr-p-0 fr-m-0">
             {Object.entries(messageCounts).map(([msg, count], index) => (
               <li key={index} className="fr-flex fr-align-items-start fr-p-1w">
@@ -120,37 +116,8 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
     <div className="controle-group">
       <h2 className={fr.cx('fr-h4', 'fr-mb-2w')}>{title}</h2>
 
-      <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
-        <div className="fr-col-12 fr-col-md-4">
-          <StatCard
-            count={successCount}
-            label="Succès"
-            icon="fr-icon-checkbox-circle-fill"
-            color="var(--text-default-success)"
-          />
-        </div>
-        <div className="fr-col-12 fr-col-md-4">
-          <StatCard count={errorCount} label="Erreur" icon="fr-icon-error-fill" color="var(--text-default-error)" />
-        </div>
-      </div>
-
       <div className="controle-table-container">
-        <Table
-          caption={
-            <div className="fr-flex fr-justify-content-end">
-              <ToggleSwitch
-                label="Afficher tous les contrôles (incluant les succès)"
-                labelPosition="left"
-                checked={showSuccess}
-                onChange={setShowSuccess}
-              />
-            </div>
-          }
-          headers={['Contrôle', 'Résultat', 'Message']}
-          data={tableData}
-          className={fr.cx('fr-mb-4w')}
-          fixed
-        />
+        <Table headers={['Contrôle', 'Résultat', 'Message']} data={tableData} className={fr.cx('fr-mb-4w')} fixed />
       </div>
     </div>
   );

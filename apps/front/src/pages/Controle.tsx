@@ -7,7 +7,7 @@ import { ControleGroup } from '../components/ControleGroup';
 import { mapControlesV1ToView, mapSandreControlesToView } from './controleMapper';
 import { fr } from '@codegouvfr/react-dsfr';
 import { ControleSandreGroup } from '../components/ControleGroupSandre';
-import { MasaIntegrationTable } from '../components/MasaIntegrationTable';
+import { MasaIntegrationStatus } from '../components/MasaIntegrationStatus';
 
 export type ControleLocationState = {
   numeroDepotVerseau1?: string;
@@ -98,7 +98,7 @@ export function ControlePage() {
 
       {/* Section Intégration MASA */}
       <div className={fr.cx('fr-mb-4w')}>
-        <MasaIntegrationTable title="Intégration des données" masa={masa} />
+        <MasaIntegrationStatus title="Intégration des données" masa={masa} />
       </div>
 
       {/* Afficher un message si aucun contrôle n'est trouvé */}
