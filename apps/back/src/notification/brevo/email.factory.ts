@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
 import { EmailBrevoMockProvider } from './emailBrevoMock.provider';
 import { LoggerService } from '@shared/logger/logger.service';
+import { EmailBrevoCatcherProvider } from './emailBrevoCatcher.provider';
+import { EmailBrevoProvider } from './emailBrevo.provider';
 
 export const emailFactory = {
   provide: EmailProvider,
@@ -15,15 +17,14 @@ const customFactory = (config: ConfigService) => {
   logger.log(`Provider used : ${emailProvider}`, 'EmailContactFactory');
   if (emailProvider === 'brevo') {
     // TODO: Implement Brevo provider
-    // return new EmailBrevoProvider(config, fileGateway);
+    return new EmailBrevoProvider(config);
   }
   if (emailProvider === 'mock') {
     logger.warn('Using Mock Email Provider', 'EmailFactory');
     return new EmailBrevoMockProvider();
   }
   if (emailProvider === 'mailcatcher') {
-    // TODO: Implement MailCatcher provider
-    // return new EmailBrevoCatcherProvider(config, fileGateway);
+    return new EmailBrevoCatcherProvider(config);
   }
   throw new Error('Invalid email provider');
 };

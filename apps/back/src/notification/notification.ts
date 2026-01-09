@@ -15,6 +15,15 @@ export interface EmailWithMessage extends EmailParams {
   message: string;
 }
 
+export interface EmailRapportParams extends EmailParams {
+  depotId: string;
+  nomOriginalFichier: string;
+  statut: string;
+  numeroDepotVerseau1: string | null;
+  prenom: string;
+  nom: string;
+}
+
 export enum EmailTemplate {
-  RAPPORT = 'RAPPORT',
+  RAPPORT = 2,
 }

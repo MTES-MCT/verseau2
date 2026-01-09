@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.931.0",
+    "@getbrevo/brevo": "^3.0.1",
     "@lib/dossier": "*",
     "@lib/parser": "*",
     "@nestjs/common": "^11.0.1",
@@ -38,6 +39,7 @@
     "axios": "^1.13.2",
     "cookie-parser": "^1.4.7",
     "form-data": "^4.0.4",
+    "nodemailer": "^7.0.12",
     "openid-client": "^6.8.1",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3",
@@ -61,6 +63,7 @@
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
+    "@types/nodemailer": "^7.0.4",
     "@types/pdfkit": "^0.17.4",
     "@types/ssh2-sftp-client": "^9.0.6",
     "@types/supertest": "^6.0.2",

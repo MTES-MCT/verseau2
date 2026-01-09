@@ -3,7 +3,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { MasaGateway } from '@dossier/masa/masa.gateway';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { NotificationGateway } from '@notification/notification.gateway';
-import { EmailTemplate } from '@notification/notification';
+import { EmailTemplate, EmailRapportParams } from '@notification/notification';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
@@ -114,10 +114,10 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       return;
     }
 
-    await this.notificationService.sendEmail(
+    await this.notificationService.sendEmail<EmailRapportParams>(
       {
         to: [{ email: user.email, name: `${user.prenom} ${user.nom}` }],
-        subject: `Rapport MASA - Dépôt ${depot.id}`,
+        subject: `Rapport du dépôt ${masa.numeroDepotVerseau1}`,
         attachments: [
           {
             fileName: `rapport-masa-${depot.id}.pdf`,
@@ -133,7 +133,6 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       },
       EmailTemplate.RAPPORT,
     );
-
     this.logger.log('Email sent to déposant', { email: user.email });
   }
 

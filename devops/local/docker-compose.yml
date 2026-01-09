@@ -13,7 +13,6 @@ services:
       POSTGRES_DB: verseau2
     networks:
       - verseau2-network
-
   s3mock:
     image: adobe/s3mock:latest
     container_name: verseau2-s3mock
@@ -23,7 +22,11 @@ services:
       - '9191:9191'
     networks:
       - verseau2-network
-
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - "1025:1025"
+      - "1080:1080"
 
 # Pour tester l'application en local
   app:
