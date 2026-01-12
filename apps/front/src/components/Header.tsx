@@ -31,12 +31,6 @@ export function AppHeader() {
             SUR LE CLIMAT ET LA NATURE
           </span>
         }
-        operatorLogo={{
-          alt: 'logo_portail_as',
-          imgUrl:
-            'https://assainissement.developpement-durable.gouv.fr/public/images/assainissement-collectif-logo-principal.png',
-          orientation: 'horizontal',
-        }}
         serviceTitle="Verseau 2.0"
         serviceTagline="Réseau de collecte et station de traitement des eaux usées"
         homeLinkProps={{ href: '/', title: 'Accueil' }}

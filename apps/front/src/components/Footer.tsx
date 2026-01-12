@@ -21,7 +21,7 @@ export function AppFooter() {
         </span>
       }
       accessibility="non compliant"
-      contentDescription="Le portail sur l'assainissement collectif est propulsé par la direction de l'eau et de la biodiversité. Le code source est disponible en licence libre."
+      contentDescription="VERSEAU2 est propulsé par la direction de l'eau et de la biodiversité. Le code source est disponible en licence libre."
       partnersLogos={{
         sub: [
           {
