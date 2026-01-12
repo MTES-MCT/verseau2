@@ -95,7 +95,6 @@ describe('ControleV1Service (e2e)', () => {
 
   afterAll(async () => {
     await app?.close();
-    await stopPostgresContainer();
   });
 
   beforeEach(async () => {

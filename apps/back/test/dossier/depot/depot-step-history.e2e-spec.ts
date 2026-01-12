@@ -20,10 +20,6 @@ describe('DepotRepository - Step History Integration Tests', () => {
     postgresUri = getPostgresConnectionUri();
   }, 60_000);
 
-  afterAll(async () => {
-    await stopPostgresContainer();
-  }, 60_000);
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [

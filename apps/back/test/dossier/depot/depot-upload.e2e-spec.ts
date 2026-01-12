@@ -175,7 +175,6 @@ describe('Depot upload (e2e)', () => {
 
   afterAll(async () => {
     await app?.close();
-    await stopPostgresContainer();
   });
 
   it('uploads an XML file and enqueues processing', async () => {

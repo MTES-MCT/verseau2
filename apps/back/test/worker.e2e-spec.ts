@@ -173,7 +173,6 @@ describe('Worker Service (e2e)', () => {
 
   afterAll(async () => {
     await app?.close();
-    await stopPostgresContainer();
   });
 
   describe('FileProcessorService', () => {
