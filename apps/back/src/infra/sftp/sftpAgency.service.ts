@@ -46,12 +46,16 @@ export class SftpAgencyService implements SftpAgency {
         this.validateConfig(agencyId, config);
 
         const sftpClient = new Client();
-        const sftpService = new SftpService(sftpClient, {
-          host: config.host,
-          port: config.port,
-          username: config.username,
-          privateKey: config.privateKey,
-        });
+        const sftpService = new SftpService(
+          sftpClient,
+          {
+            host: config.host,
+            port: config.port,
+            username: config.username,
+            privateKey: config.privateKey,
+          },
+          this.logger,
+        );
 
         this.clients.set(agencyId, sftpService);
         this.logger.log(`Client SFTP configuré pour l'agence: ${agencyId}`);

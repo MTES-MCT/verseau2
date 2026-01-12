@@ -7,7 +7,7 @@ import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 
 import { WorkerService } from './worker.service';
-import { SftpProcessorService } from './sftp/sftpProcessor.service';
+import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
@@ -18,7 +18,7 @@ import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator
   providers: [
     FileProcessorService,
     WorkerService,
-    SftpProcessorService,
+    SftpAgentVerseauProcessorService,
     ControleMetierProcessorService,
     ControleSandreProcessorService,
     MasaWebhookProcessorService,

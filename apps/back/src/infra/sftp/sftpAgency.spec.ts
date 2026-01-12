@@ -51,7 +51,7 @@ describe('SftpAgencyService', () => {
     it('devrait retourner un client pour une agence configurée', () => {
       const client = service.getClient('agence_01');
       expect(client).toBeDefined();
-      expect(typeof client.send).toBe('function');
+      expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
     it('devrait vérifier si un client existe', () => {

@@ -4,7 +4,7 @@ import type { EmailJobData, Queue } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
-import { SftpProcessorService } from './sftp/sftpProcessor.service';
+import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
@@ -24,7 +24,7 @@ export class WorkerService implements OnModuleInit {
   constructor(
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly fileProcessorService: FileProcessorService,
-    private readonly sftpProcessorService: SftpProcessorService,
+    private readonly sftpProcessorService: SftpAgentVerseauProcessorService,
     private readonly controleMetierProcessorService: ControleMetierProcessorService,
     private readonly controleSandreProcessorService: ControleSandreProcessorService,
     private readonly masaProcessorService: MasaWebhookProcessorService,

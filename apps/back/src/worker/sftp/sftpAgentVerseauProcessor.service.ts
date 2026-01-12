@@ -6,14 +6,14 @@ import { AsyncTask } from '@worker/asyncTask';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 @Injectable()
-export class SftpProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
+export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
   constructor(
     @Inject(Sftp) private readonly sftpService: Sftp,
     @Inject(S3) private readonly s3: S3,
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
   ) {
-    this.logger = new LoggerService(SftpProcessorService.name);
+    this.logger = new LoggerService(SftpAgentVerseauProcessorService.name);
   }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
@@ -25,8 +25,12 @@ export class SftpProcessorService implements AsyncTask<{ depotId: string; filePa
 
     try {
       this.logger.log('Downloading file', filePath);
+      const depot = await this.depotService.findById(depotId);
+      if (!depot) {
+        throw new Error(`Depot with id ${depotId} not found`);
+      }
       const file = await this.s3.download(filePath);
-      await this.sftpService.send(file, depotId);
+      await this.sftpService.sendToAgentVerseau(file, depot.path);
       // Attente du retour MASA - pas de changement de status
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,

@@ -8,7 +8,7 @@ import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { DepotStep, DepotStatus } from '@lib/dossier';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
-import { SftpProcessorService } from '@worker/sftp/sftpProcessor.service';
+import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
@@ -54,7 +54,7 @@ class SftpMock implements Sftp {
   calls: Array<{ file: Buffer; depotId: string }> = [];
   shouldFail = false;
 
-  async send(file: Buffer, depotId: string): Promise<void> {
+  async sendToAgentVerseau(file: Buffer, depotId: string): Promise<void> {
     if (this.shouldFail) {
       throw new Error('SFTP send failed');
     }
@@ -125,7 +125,7 @@ describe('Worker Service (e2e)', () => {
   let queueMock: QueueServiceMock;
   let sandreMock: ControleSandreMock;
   let fileProcessorService: FileProcessorService;
-  let sftpProcessorService: SftpProcessorService;
+  let sftpProcessorService: SftpAgentVerseauProcessorService;
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -144,7 +144,7 @@ describe('Worker Service (e2e)', () => {
       providers: [
         LoggerService,
         FileProcessorService,
-        SftpProcessorService,
+        SftpAgentVerseauProcessorService,
         DepotService,
         DepotRepository,
         { provide: DepotGateway, useExisting: DepotRepository },
@@ -166,7 +166,7 @@ describe('Worker Service (e2e)', () => {
     queueMock = moduleFixture.get<QueueServiceMock>(QueueGateway);
     sandreMock = moduleFixture.get<ControleSandreMock>(ControleSandreService);
     fileProcessorService = moduleFixture.get(FileProcessorService);
-    sftpProcessorService = moduleFixture.get(SftpProcessorService);
+    sftpProcessorService = moduleFixture.get(SftpAgentVerseauProcessorService);
   });
 
   afterAll(async () => {
@@ -306,7 +306,7 @@ describe('Worker Service (e2e)', () => {
 
       // Verify SFTP was called
       expect(sftpMock.calls).toHaveLength(1);
-      expect(sftpMock.calls[0].depotId).toBe(depot.id);
+      expect(sftpMock.calls[0].depotId).toBe('sftp_test.xml');
     });
 
     it('should handle SFTP failures', async () => {
