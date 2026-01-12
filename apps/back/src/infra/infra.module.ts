@@ -5,6 +5,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthenticationModule } from '@authentication/authentication.module';
 import { SftpModule } from './sftp/sftp.module';
 import { ConfigurationModule } from './config/configuration.module';
+import { SharedModule } from '@shared/shared.module';
 
 @Global()
 @Module({
@@ -15,6 +16,7 @@ import { ConfigurationModule } from './config/configuration.module';
     AuthenticationModule,
     SftpModule.forRootAsync(),
     ConfigurationModule,
+    SharedModule,
   ],
   exports: [S3Module, QueueModule, DatabaseModule, AuthenticationModule, SftpModule],
 })

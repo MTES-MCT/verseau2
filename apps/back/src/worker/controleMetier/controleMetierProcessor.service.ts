@@ -22,8 +22,6 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ControleMetierProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
-  private readonly logger = new LoggerService(ControleMetierProcessorService.name);
-
   constructor(
     @Inject(S3) private readonly s3: S3,
     private readonly dataSource: DataSource,
@@ -32,7 +30,10 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     private readonly depotService: DepotService,
     private readonly depotCoordinatorService: DepotCoordinatorService,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(ControleMetierProcessorService.name);
+  }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
     await this.depotService.update(depotId, {

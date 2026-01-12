@@ -7,13 +7,12 @@ import { EmailBrevoProvider } from './emailBrevo.provider';
 
 export const emailFactory = {
   provide: EmailProvider,
-  inject: [ConfigService],
-  useFactory: (configService: ConfigService) => customFactory(configService),
+  inject: [ConfigService, LoggerService],
+  useFactory: (configService: ConfigService, logger: LoggerService) => customFactory(configService, logger),
 };
 
-const customFactory = (config: ConfigService) => {
+const customFactory = (config: ConfigService, logger: LoggerService) => {
   const emailProvider = config.getOrThrow<string>('EMAIL_PROVIDER');
-  const logger = new LoggerService('EmailFactory');
   logger.log(`Provider used : ${emailProvider}`, 'EmailContactFactory');
   if (emailProvider === 'brevo') {
     // TODO: Implement Brevo provider

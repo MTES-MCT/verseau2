@@ -27,6 +27,7 @@ import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import cookieParser from 'cookie-parser';
+import { loggerProviderMock } from '@shared/logger/logger.mock';
 
 class ConfigServiceMock {
   get(key: string) {
@@ -143,10 +144,11 @@ describe('Depot upload (e2e)', () => {
         { provide: UserService, useClass: UserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
+        loggerProviderMock,
       ],
     }).compile();
 
-    app = moduleFixture.createNestApplication({ logger: false });
+    app = moduleFixture.createNestApplication();
     app.use(cookieParser());
     const authMiddleware = app.get(AuthenticationMiddleware);
     app.use(authMiddleware.use.bind(authMiddleware));

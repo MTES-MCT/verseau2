@@ -8,13 +8,14 @@ import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class MasaService {
-  private readonly logger = new LoggerService(MasaService.name);
-
   constructor(
     @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
     @Inject(QueueGateway) private readonly queueService: Queue,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(MasaService.name);
+  }
 
   async processRetourAgentVerseau(payload: MasaWebhookPayloadDto) {
     const depot = await this.depotGateway.findDepotById(payload.versau2DepotId);

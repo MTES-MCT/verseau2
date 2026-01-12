@@ -31,7 +31,7 @@ export class WorkerService implements OnModuleInit {
     @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
     private readonly logger: LoggerService,
   ) {
-    this.logger = new LoggerService(WorkerService.name);
+    this.logger.setContext(WorkerService.name);
   }
 
   async onModuleInit() {

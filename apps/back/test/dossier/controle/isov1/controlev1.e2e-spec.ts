@@ -28,6 +28,7 @@ import { seedDepot, clearDepots } from '../../../depot.helper';
 import type { Analyse, Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
 import { initTestContainerImports } from '../../../init/initTestContainer';
+import { LoggerServiceMock } from '@shared/logger/logger.mock';
 
 type PartialFctAssainissement = {
   scenario?: {
@@ -67,7 +68,6 @@ describe('ControleV1Service (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [...initTestContainerImports(connectionUri)],
       providers: [
-        LoggerService,
         ControleV1Service,
         ControleMapper,
         ControleRepository,
@@ -76,6 +76,7 @@ describe('ControleV1Service (e2e)', () => {
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
+        { provide: LoggerService, useClass: LoggerServiceMock },
       ],
     }).compile();
 

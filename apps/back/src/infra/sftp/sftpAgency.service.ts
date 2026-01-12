@@ -24,10 +24,13 @@ export type SftpAgenciesConfig = Record<string, SftpAgencyConfig>;
 
 @Injectable()
 export class SftpAgencyService implements SftpAgency {
-  private readonly logger = new LoggerService(SftpAgencyService.name);
   private readonly clients: Map<string, Sftp> = new Map();
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(SftpAgencyService.name);
     this.initializeClients();
   }
 

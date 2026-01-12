@@ -8,14 +8,15 @@ import { LoggerService } from '@shared/logger/logger.service';
 export const createAuthenticationService = (
   configuration: Configuration,
   configService: ConfigService,
+  logger: LoggerService,
 ): Authentication => {
-  return new AuthenticationService(configuration, configService, new LoggerService('AuthenticationService'));
+  return new AuthenticationService(configuration, configService, logger);
 };
 
 export const createAuthenticationMockService = (configService: ConfigService): Authentication => {
   return new AuthenticationMockService(configService);
 };
-const logger = new LoggerService('AuthenticationFactory');
+
 export const createAuthenticationProviders = () => [
   {
     provide: 'OIDC_CONFIGURATION',
@@ -35,14 +36,14 @@ export const createAuthenticationProviders = () => [
   },
   {
     provide: Authentication,
-    inject: ['OIDC_CONFIGURATION', ConfigService],
-    useFactory: (configuration: Configuration, configService: ConfigService): Authentication => {
+    inject: ['OIDC_CONFIGURATION', ConfigService, LoggerService],
+    useFactory: (configuration: Configuration, configService: ConfigService, logger: LoggerService): Authentication => {
       const useMock = configService.get<string>('OIDC_MOCK') === 'true';
       if (useMock) {
         logger.warn('MOCK AUTHENTICATION SERVICE IN USE');
         return createAuthenticationMockService(configService);
       }
-      return createAuthenticationService(configuration, configService);
+      return createAuthenticationService(configuration, configService, logger);
     },
   },
 ];

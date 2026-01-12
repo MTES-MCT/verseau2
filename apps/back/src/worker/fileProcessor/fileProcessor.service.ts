@@ -13,8 +13,10 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   constructor(
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly depotService: DepotService,
-  ) {}
-  private readonly logger = new LoggerService(FileProcessorService.name);
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(FileProcessorService.name);
+  }
 
   async process(fichierDeDepot: FichierDeDepot) {
     await this.depotService.update(fichierDeDepot.depotId, {

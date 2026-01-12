@@ -18,6 +18,8 @@ import { initTestContainerImports } from './init/initTestContainer';
 import { getPostgresConnectionUri, startPostgresContainer } from './testcontainer.config';
 import { InfraMockModule } from './mock/infraMock.module';
 import { Authentication } from '@authentication/authentication';
+import { LoggerService } from '@shared/logger/logger.service';
+import { loggerValueMock } from '@shared/logger/logger.mock';
 
 describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
@@ -31,13 +33,9 @@ describe('Controller (e2e) - Unauthorized', () => {
       .overrideModule(InfraModule)
       .useModule(InfraMockModule)
       .overrideProvider(PGBOSS)
-      .useValue({
-        on: jest.fn(),
-        start: jest.fn(),
-        createQueue: jest.fn(),
-        stop: jest.fn(),
-        send: jest.fn(),
-      })
+      .useValue(null)
+      .overrideProvider(LoggerService)
+      .useValue(loggerValueMock)
 
       .compile();
 

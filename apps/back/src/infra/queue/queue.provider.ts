@@ -24,8 +24,9 @@ async function initializeQueues(boss: PgBoss, logger: LoggerService): Promise<vo
 
 export const queueProvider = {
   provide: PGBOSS,
-  useFactory: async (configService: ConfigService) => {
-    const logger = new LoggerService('QueueModule');
+  inject: [ConfigService, LoggerService],
+  useFactory: async (configService: ConfigService, logger: LoggerService) => {
+    logger.setContext('QueueModule');
     const connectionString = configService.getOrThrow<string>('DATABASE_URL');
 
     const boss = new PgBoss(connectionString);
@@ -44,5 +45,4 @@ export const queueProvider = {
 
     return boss;
   },
-  inject: [ConfigService],
 };

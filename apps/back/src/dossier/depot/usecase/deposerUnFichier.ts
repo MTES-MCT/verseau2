@@ -16,9 +16,10 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
     private readonly depotService: DepotService,
     @Inject(QueueGateway) private readonly queueService: Queue,
     @Inject(S3) private readonly s3: S3,
-  ) {}
-
-  private readonly logger = new LoggerService(DeposerUnFichier.name);
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(DeposerUnFichier.name);
+  }
 
   async execute(depotData: DepotDeFichier): Promise<DepotModel> {
     const depot = await this.depotService.create({

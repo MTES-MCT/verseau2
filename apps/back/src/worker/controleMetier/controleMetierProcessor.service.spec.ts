@@ -8,7 +8,6 @@ import { DepotService } from '@dossier/depot/depot.service';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { S3 } from '@s3/s3';
-import { LoggerService } from '@shared/logger/logger.service';
 import {
   ControleName,
   ControleType,
@@ -18,6 +17,8 @@ import {
   DepotStep,
   ControleStatus,
 } from '@lib/dossier';
+import { SharedModule } from '@shared/shared.module';
+import { loggerProviderMock } from '@shared/logger/logger.mock';
 
 describe('ControleMetierProcessorService - Technical Error Handling', () => {
   let service: ControleMetierProcessorService;
@@ -59,6 +60,7 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
     } as unknown as ControleGateway;
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [SharedModule],
       providers: [
         ControleMetierProcessorService,
         { provide: S3, useValue: mockS3 },
@@ -68,6 +70,7 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
         { provide: DepotService, useValue: mockDepotService },
         { provide: DepotCoordinatorService, useValue: mockDepotCoordinatorService },
         { provide: ControleGateway, useValue: mockControleGateway },
+        loggerProviderMock,
       ],
     }).compile();
 

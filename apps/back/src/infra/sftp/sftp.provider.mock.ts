@@ -4,7 +4,9 @@ import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class SftpProviderMock implements Sftp {
-  private readonly logger = new LoggerService(SftpProviderMock.name);
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext(SftpProviderMock.name);
+  }
 
   async sendToAgentVerseau(file: Buffer, remotePath: string): Promise<void> {
     this.logger.log(`[MOCK] Uploading file to SFTP: ${remotePath}`);

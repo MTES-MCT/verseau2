@@ -10,14 +10,15 @@ import { FichierDeDepot } from '@dossier/depot/file/file';
 
 @Injectable()
 export class ControleSandreProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
-  private readonly logger = new LoggerService(ControleSandreProcessorService.name);
-
   constructor(
     @Inject(S3) private readonly s3: S3,
     private readonly controleSandreService: ControleSandreService,
     private readonly depotService: DepotService,
     private readonly depotCoordinatorService: DepotCoordinatorService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(ControleSandreProcessorService.name);
+  }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
     await this.depotService.update(depotId, {

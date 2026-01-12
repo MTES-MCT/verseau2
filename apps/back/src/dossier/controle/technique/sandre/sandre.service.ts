@@ -7,11 +7,11 @@ import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class SandreService {
-  private readonly logger = new LoggerService(SandreService.name);
   private readonly httpClient: AxiosInstance;
   private readonly baseUrl = 'http://www.sandre.eaufrance.fr/PS5/api';
 
-  constructor() {
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext(SandreService.name);
     this.httpClient = axios.create({
       timeout: 30000, // 30 seconds timeout
     });

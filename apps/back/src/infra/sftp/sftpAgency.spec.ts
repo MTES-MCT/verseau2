@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { SftpAgencyService } from './sftpAgency.service';
 import { SftpAgencyMock } from './sftpAgency.mock';
 import { createSftpAgency } from './sftpAgency.factory';
+import { SharedModule } from '@shared/shared.module';
+import { loggerProviderMock, LoggerServiceMock } from '@shared/logger/logger.mock';
 
 describe('SftpAgencyService', () => {
   describe('avec configuration valide', () => {
@@ -25,6 +27,7 @@ describe('SftpAgencyService', () => {
       });
 
       const module: TestingModule = await Test.createTestingModule({
+        imports: [SharedModule],
         providers: [
           SftpAgencyService,
           {
@@ -36,6 +39,7 @@ describe('SftpAgencyService', () => {
               }),
             },
           },
+          loggerProviderMock,
         ],
       }).compile();
 
@@ -71,6 +75,7 @@ describe('SftpAgencyService', () => {
 
     beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
+        imports: [SharedModule],
         providers: [
           SftpAgencyService,
           {
@@ -91,11 +96,15 @@ describe('SftpAgencyService', () => {
   });
 
   describe('avec configuration invalide', () => {
+    const logger = new LoggerServiceMock();
     it('devrait lever une erreur si le JSON est invalide', () => {
       expect(() => {
-        new SftpAgencyService({
-          get: jest.fn(() => '{invalid json'),
-        } as unknown as ConfigService);
+        new SftpAgencyService(
+          {
+            get: jest.fn(() => '{invalid json'),
+          } as unknown as ConfigService,
+          logger,
+        );
       }).toThrow(/Configuration SFTP invalide/);
     });
 
@@ -110,9 +119,12 @@ describe('SftpAgencyService', () => {
       });
 
       expect(() => {
-        new SftpAgencyService({
-          get: jest.fn(() => configJson),
-        } as unknown as ConfigService);
+        new SftpAgencyService(
+          {
+            get: jest.fn(() => configJson),
+          } as unknown as ConfigService,
+          logger,
+        );
       }).toThrow(/Configuration incomplète pour l'agence agence_01: port manquant/);
     });
 
@@ -127,9 +139,12 @@ describe('SftpAgencyService', () => {
       });
 
       expect(() => {
-        new SftpAgencyService({
-          get: jest.fn(() => configJson),
-        } as unknown as ConfigService);
+        new SftpAgencyService(
+          {
+            get: jest.fn(() => configJson),
+          } as unknown as ConfigService,
+          logger,
+        );
       }).toThrow(/Port invalide pour l'agence agence_01: doit être un nombre/);
     });
   });
@@ -139,7 +154,7 @@ describe('SftpAgencyMock', () => {
   let mock: SftpAgencyMock;
 
   beforeEach(() => {
-    mock = new SftpAgencyMock();
+    mock = new SftpAgencyMock(new LoggerServiceMock());
   });
 
   it("devrait retourner un client mock pour n'importe quelle agence", () => {
@@ -171,7 +186,7 @@ describe('createSftpAgency factory', () => {
       }),
     } as unknown as ConfigService;
 
-    const registry = createSftpAgency(configService);
+    const registry = createSftpAgency(configService, new LoggerServiceMock());
     expect(registry).toBeInstanceOf(SftpAgencyMock);
   });
 
@@ -184,7 +199,7 @@ describe('createSftpAgency factory', () => {
       }),
     } as unknown as ConfigService;
 
-    const registry = createSftpAgency(configService);
+    const registry = createSftpAgency(configService, new LoggerServiceMock());
     expect(registry).toBeInstanceOf(SftpAgencyService);
   });
 
@@ -193,7 +208,7 @@ describe('createSftpAgency factory', () => {
       get: jest.fn(() => undefined),
     } as unknown as ConfigService;
 
-    const registry = createSftpAgency(configService);
+    const registry = createSftpAgency(configService, new LoggerServiceMock());
     expect(registry).toBeInstanceOf(SftpAgencyService);
   });
 });

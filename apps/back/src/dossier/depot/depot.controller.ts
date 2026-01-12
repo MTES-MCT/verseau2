@@ -34,13 +34,14 @@ interface MulterFile {
 
 @Controller('depot')
 export class DepotController {
-  private readonly logger = new LoggerService(DepotController.name);
-
   constructor(
     private readonly deposerUnFichier: DeposerUnFichier,
     private readonly depotService: DepotService,
     private readonly userService: UserService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(DepotController.name);
+  }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))

@@ -13,7 +13,6 @@ import { ReferentielGateway } from './referentiel.gateway';
 import { ReferentielRepository } from './referentiel.repository';
 import { ReferentielService } from './referentiel.service';
 import { ReferentielController } from './referentiel.controller';
-import { SharedModule } from '@shared/shared.module';
 import { PmoEntity } from './roseau/entities/pmo.entity';
 import { TlrefEntity } from './roseau/entities/tlref.entity';
 import { CxntechEntity } from './roseau/entities/cxntech.entity';
@@ -45,7 +44,6 @@ import { ParametreGateway } from './parametre/parametre.gateway';
       ParEntity,
       UrfEntity,
     ]),
-    SharedModule,
   ],
   controllers: [ReferentielController],
   providers: [

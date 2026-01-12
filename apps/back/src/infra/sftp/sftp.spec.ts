@@ -4,6 +4,9 @@ import { SftpModule } from './sftp.module';
 import { Sftp } from './sftp';
 import { SftpService } from './sftp.service';
 import { SftpProviderMock } from './sftp.provider.mock';
+import { SharedModule } from '@shared/shared.module';
+import { LoggerService } from '@shared/logger/logger.service';
+import { loggerValueMock } from '@shared/logger/logger.mock';
 
 describe('SftpModule', () => {
   let module: TestingModule;
@@ -22,10 +25,12 @@ describe('SftpModule', () => {
     mockConfigService.get.mockReturnValue('mock');
 
     module = await Test.createTestingModule({
-      imports: [SftpModule.forRootAsync()],
+      imports: [SftpModule.forRootAsync(), SharedModule],
     })
       .overrideProvider(ConfigService)
       .useValue(mockConfigService)
+      .overrideProvider(LoggerService)
+      .useValue(loggerValueMock)
       .compile();
 
     sftp = module.get<Sftp>(Sftp);
@@ -47,7 +52,7 @@ describe('SftpModule', () => {
     });
 
     module = await Test.createTestingModule({
-      imports: [SftpModule.forRootAsync()],
+      imports: [SftpModule.forRootAsync(), SharedModule],
     })
       .overrideProvider(ConfigService)
       .useValue(mockConfigService)

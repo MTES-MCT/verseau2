@@ -10,15 +10,15 @@ import { LoggerService } from '@shared/logger/logger.service';
  */
 @Injectable()
 export class SftpAgencyMock implements SftpAgency {
-  private readonly logger = new LoggerService(SftpAgencyMock.name);
   private readonly mockClient: Sftp;
 
   // Liste des agences mockées par défaut
   private readonly defaultAgencies = ['agence_01', 'agence_02', 'agence_03', 'agence_04', 'agence_05', 'agence_06'];
 
-  constructor() {
-    this.mockClient = new SftpProviderMock();
-    this.logger.log(`[MOCK] SftpAgency initialisé avec ${this.defaultAgencies.length} agences mockées`);
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext(SftpAgencyMock.name);
+    this.mockClient = new SftpProviderMock(this.logger);
+    this.logger.log(`[MOCK] SftpAgency initialisé with ${this.defaultAgencies.length} agences mockées`);
   }
 
   getClient(agencyId: string): Sftp {

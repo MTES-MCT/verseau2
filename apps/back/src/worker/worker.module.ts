@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { DossierModule } from '@dossier/dossier.module';
 import { InfraModule } from '@infra/infra.module';
-import { SharedModule } from '@shared/shared.module';
 import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 
@@ -14,7 +13,7 @@ import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 
 @Module({
-  imports: [InfraModule, DossierModule, SharedModule, NotificationModule, ReferentielModule],
+  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule],
   providers: [
     FileProcessorService,
     WorkerService,

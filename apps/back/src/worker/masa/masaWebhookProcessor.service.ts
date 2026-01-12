@@ -20,8 +20,6 @@ interface MasaProcessorData {
 
 @Injectable()
 export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData> {
-  private readonly logger = new LoggerService(MasaWebhookProcessorService.name);
-
   constructor(
     @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
@@ -30,7 +28,10 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
     @Inject(S3) private readonly s3: S3,
     @Inject(Sftp) private readonly sftpService: Sftp,
     private readonly pdfGenerator: RapportPdfGeneratorService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(MasaWebhookProcessorService.name);
+  }
 
   async process(data: MasaProcessorData): Promise<void> {
     const { masaId, depotId } = data;

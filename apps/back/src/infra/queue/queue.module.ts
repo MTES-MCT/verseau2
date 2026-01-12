@@ -10,9 +10,12 @@ import type { PgBoss } from './pgboss';
  * Handles graceful shutdown of pg-boss
  */
 class QueueShutdownService implements OnModuleDestroy {
-  private readonly logger = new LoggerService('QueueModule');
-
-  constructor(@Inject(PGBOSS) private readonly pgboss: PgBoss<object>) {}
+  constructor(
+    @Inject(PGBOSS) private readonly pgboss: PgBoss<object>,
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext('QueueModule');
+  }
 
   async onModuleDestroy(): Promise<void> {
     try {

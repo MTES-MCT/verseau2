@@ -5,7 +5,6 @@ import { DepotEntity } from './depot/depot.entity';
 import { DepotRepository } from './depot/depot.repository';
 import { DepotService } from './depot/depot.service';
 import { DeposerUnFichier } from './depot/usecase/deposerUnFichier';
-import { SharedModule } from '@shared/shared.module';
 import { InfraModule } from '@infra/infra.module';
 import { SandreService } from './controle/technique/sandre/sandre.service';
 import { SandreMockService } from './controle/technique/sandre/sandre.mock.service';
@@ -35,24 +34,23 @@ import { MasaIpGuard } from './masa/masaIp.guard';
 import { RapportPdfGeneratorService } from './rapport/rapportPdfGenerator.service';
 import { ControleMetierV2Service } from './controle/metierv2/controleMetierV2.service';
 
-const logger = new LoggerService('DossierModule');
 const sandreServiceFactory = {
   provide: SandreService,
-  useFactory: (): SandreService => {
+  inject: [LoggerService],
+  useFactory: (logger: LoggerService): SandreService => {
     const useMock = process.env.USE_SANDRE_MOCK === 'true';
     if (useMock) {
       logger.warn('MOCK SANDRE - Using SandreMockService');
-      return new SandreMockService() as unknown as SandreService;
+      return new SandreMockService(logger) as unknown as SandreService;
     }
     logger.log('Using SandreService');
-    return new SandreService();
+    return new SandreService(logger);
   },
 };
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity, ControleEntity, MasaEntity]),
-    SharedModule,
     InfraModule,
     UserModule,
     ReferentielModule,

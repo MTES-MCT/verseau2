@@ -26,12 +26,12 @@ export interface SandreMockServiceOptions {
 
 @Injectable()
 export class SandreMockService {
-  private readonly logger = new LoggerService(SandreMockService.name);
   private readonly validationResults = new Map<string, MockValidationData>();
   private readonly defaultBehavior: 'conformant' | 'non-conformant' | 'random';
   private readonly conformantRate: number;
 
-  constructor() {
+  constructor(private readonly logger: LoggerService) {
+    this.logger.setContext(SandreMockService.name);
     const envBehavior = process.env.SANDRE_MOCK_BEHAVIOR as 'conformant' | 'non-conformant' | 'random' | undefined;
     const envConformantRate = process.env.SANDRE_MOCK_CONFORMANT_RATE
       ? parseFloat(process.env.SANDRE_MOCK_CONFORMANT_RATE)
