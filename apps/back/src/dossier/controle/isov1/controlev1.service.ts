@@ -18,7 +18,7 @@ export class ControleV1Service {
     private readonly controleMapper: ControleMapper,
     private readonly logger: LoggerService,
   ) {
-    this.logger = new LoggerService(ControleV1Service.name);
+    this.logger.setContext(ControleV1Service.name);
   }
 
   // Première implémentation naïve des contrôles v1

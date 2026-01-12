@@ -5,6 +5,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
+import { addNameTagToXml } from '@lib/parser';
 @Injectable()
 export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
   constructor(
@@ -13,7 +14,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
   ) {
-    this.logger = new LoggerService(SftpAgentVerseauProcessorService.name);
+    this.logger.setContext(SftpAgentVerseauProcessorService.name);
   }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
@@ -25,16 +26,26 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
 
     try {
       this.logger.log('Downloading file', filePath);
-      const depot = await this.depotService.findById(depotId);
+      const depot = await this.depotService.findDepotByIdWithUser(depotId);
       if (!depot) {
         throw new Error(`Depot with id ${depotId} not found`);
       }
       const file = await this.s3.download(filePath);
-      await this.sftpService.sendToAgentVerseau(file, depot.path);
-      // Attente du retour MASA - pas de changement de status
+
+      let fileToSend = file;
+      if (depot.user) {
+        const xmlContent = file.toString('utf-8');
+        const fullName = `${depot.user.prenom || ''} ${depot.user.nom || ''}`.trim();
+        if (fullName) {
+          const modifiedXml = addNameTagToXml(xmlContent, fullName);
+          fileToSend = Buffer.from(modifiedXml, 'utf-8');
+          this.logger.log(`Added NomContact tag to XML for user ${depot.userId} in depot ${depotId}`);
+        }
+      }
+
+      await this.sftpService.sendToAgentVerseau(fileToSend, depot.path);
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
-        // status reste EN_COURS_DE_TRAITEMENT
       });
     } catch (error: any) {
       this.logger.error('Failed to process file', error);

@@ -32,6 +32,14 @@ export class DepotService {
     return depot;
   }
 
+  async findDepotByIdWithUser(id: string): Promise<DepotModel> {
+    const depot = await this.depotGateway.findDepotByIdWithUser(id);
+    if (!depot) {
+      throw new NotFoundException(`Depot with id ${id} not found`);
+    }
+    return depot;
+  }
+
   async findAllByAdmin(): Promise<DepotModel[]> {
     return await this.depotGateway.findAllDepotsByAdmin();
   }
