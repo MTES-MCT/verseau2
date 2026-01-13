@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity('aga', { schema: 'custom_ingestion_roseau', synchronize: false })
+@Entity('aga', { schema: 'roseau', synchronize: false })
 export class AgaEntity {
   @PrimaryColumn({ name: 'aga_cdn' })
   agaCdn: string;

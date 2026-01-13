@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity('pmo', { schema: 'custom_ingestion_roseau', synchronize: false })
+@Entity('pmo', { schema: 'roseau', synchronize: false })
 export class PmoEntity {
   @PrimaryColumn({ name: 'pmo_cdn' })
   pmoCdn: string;

@@ -1,112 +1,147 @@
-const { spawn } = require("child_process");
+const { spawn } = require('child_process');
 
 class PgService {
   constructor(config) {
     this.config = config;
   }
 
-  async createSchema() {
-    console.log(
-      "Creating schemas custom_ingestion_roseau and custom_ingestion_lanceleau..."
-    );
-
-    const { connectionString } = this.config.pg;
-
-    const env = { ...process.env };
-    const dbTarget = connectionString;
-
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is required");
+  /**
+   * Restaure le dump et renomme les schémas avec le suffixe de couleur
+   * @param {string} filePath - Chemin vers le fichier dump
+   * @param {string} targetColor - 'blue' ou 'green'
+   */
+  async restoreDatabase(filePath, targetColor) {
+    if (!targetColor || !['blue', 'green'].includes(targetColor)) {
+      throw new Error('targetColor must be "blue" or "green"');
     }
 
-    console.log("Using DATABASE_URL for connection.");
-
-    const sql = `
-      CREATE EXTENSION IF NOT EXISTS pg_trgm;
-      CREATE SCHEMA IF NOT EXISTS custom_ingestion_roseau;
-      CREATE SCHEMA IF NOT EXISTS custom_ingestion_lanceleau;
-    `;
-
-    const args = ["-d", dbTarget, "-c", sql];
-
-    return new Promise((resolve, reject) => {
-      const psqlProcess = spawn("psql", args, { env });
-
-      psqlProcess.stdout.on("data", (data) => {
-        console.log(`psql: ${data}`);
-      });
-
-      psqlProcess.stderr.on("data", (data) => {
-        console.error(`psql: ${data}`);
-      });
-
-      psqlProcess.on("close", (code) => {
-        if (code === 0) {
-          console.log("Schemas created successfully.");
-          resolve();
-        } else {
-          console.error(`psql exited with code ${code}`);
-          reject(new Error(`psql exited with code ${code}`));
-        }
-      });
-
-      psqlProcess.on("error", (err) => {
-        console.error("Failed to start psql:", err);
-        reject(err);
-      });
-    });
-  }
-
-  async restoreDatabase(filePath) {
     console.log(`Starting database restore from ${filePath}...`);
 
     const { connectionString } = this.config.pg;
 
-    const env = { ...process.env };
-    const dbTarget = connectionString;
-
     if (!connectionString) {
-      throw new Error("DATABASE_URL is required");
+      throw new Error('DATABASE_URL is required');
     }
 
-    console.log("Using DATABASE_URL for connection.");
+    console.log('Using DATABASE_URL for connection.');
+    console.log(`Target color: ${targetColor}`);
+
+    // Étape 1 : Supprimer les schémas standards s'ils existent (pour que pg_restore puisse les créer)
+    console.log(`Dropping standard schemas if they exist...`);
+    await this._dropStandardSchemas(connectionString);
+
+    // Étape 2 : Restaurer le dump normalement (crée custom_ingestion_roseau et custom_ingestion_lanceleau)
+    console.log(`Restoring dump...`);
+    await this._restoreDump(filePath, connectionString);
+
+    // Étape 3 : Renommer les schémas avec le suffixe de couleur
+    console.log(`Renaming schemas to ${targetColor}...`);
+    await this._renameSchemasToColor(targetColor, connectionString);
+
+    console.log('Database restore completed successfully.');
+  }
+
+  async _dropStandardSchemas(connectionString) {
+    const env = { ...process.env };
+
+    const sql = `
+      DROP SCHEMA IF EXISTS custom_ingestion_roseau CASCADE;
+      DROP SCHEMA IF EXISTS custom_ingestion_lanceleau CASCADE;
+      CREATE SCHEMA custom_ingestion_roseau;
+      CREATE SCHEMA custom_ingestion_lanceleau;
+    `;
+
+    return new Promise((resolve, reject) => {
+      const args = ['-d', connectionString, '-c', sql];
+      const psqlProcess = spawn('psql', args, { env });
+
+      psqlProcess.stderr.on('data', (data) => {
+        console.log(`  ${data}`);
+      });
+
+      psqlProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log(`✅ Standard schemas recreated.`);
+          resolve();
+        } else {
+          reject(new Error(`Failed to recreate schemas (exit code ${code})`));
+        }
+      });
+
+      psqlProcess.on('error', (err) => reject(err));
+    });
+  }
+
+  async _restoreDump(filePath, connectionString) {
+    const env = { ...process.env };
 
     const args = [
-      "--clean",
-      "--if-exists",
-      "--verbose",
-      "--no-owner",
-      "--no-acl",
-      "-d",
-      dbTarget,
+      '--verbose',
+      '--no-owner',
+      '--no-acl',
+      '--schema=custom_ingestion_roseau',
+      '--schema=custom_ingestion_lanceleau',
+      '-d',
+      connectionString,
       filePath,
     ];
 
     return new Promise((resolve, reject) => {
-      const restoreProcess = spawn("pg_restore", args, { env });
+      const restoreProcess = spawn('pg_restore', args, { env });
 
-      restoreProcess.stdout.on("data", (data) => {
+      let stderr = '';
+
+      restoreProcess.stdout.on('data', (data) => {
         console.log(`pg_restore: ${data}`);
       });
 
-      restoreProcess.stderr.on("data", (data) => {
-        console.error(`pg_restore: ${data}`);
+      restoreProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+        console.log(`pg_restore: ${data}`);
       });
 
-      restoreProcess.on("close", (code) => {
+      restoreProcess.on('close', (code) => {
         if (code === 0) {
-          console.log("Database restore completed successfully.");
+          console.log('✅ Dump restored successfully.');
           resolve();
         } else {
-          console.error(`pg_restore exited with code ${code}`);
+          console.error('pg_restore stderr:', stderr);
           reject(new Error(`pg_restore exited with code ${code}`));
         }
       });
 
-      restoreProcess.on("error", (err) => {
-        console.error("Failed to start pg_restore:", err);
-        reject(err);
+      restoreProcess.on('error', (err) => reject(err));
+    });
+  }
+
+  async _renameSchemasToColor(targetColor, connectionString) {
+    const env = { ...process.env };
+
+    const sql = `
+      DROP SCHEMA IF EXISTS custom_ingestion_roseau_${targetColor} CASCADE;
+      DROP SCHEMA IF EXISTS custom_ingestion_lanceleau_${targetColor} CASCADE;
+      ALTER SCHEMA custom_ingestion_roseau RENAME TO custom_ingestion_roseau_${targetColor};
+      ALTER SCHEMA custom_ingestion_lanceleau RENAME TO custom_ingestion_lanceleau_${targetColor};
+    `;
+
+    return new Promise((resolve, reject) => {
+      const args = ['-d', connectionString, '-c', sql];
+      const psqlProcess = spawn('psql', args, { env });
+
+      psqlProcess.stderr.on('data', (data) => {
+        console.log(`  ${data}`);
       });
+
+      psqlProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log(`✅ Schemas renamed to ${targetColor} successfully.`);
+          resolve();
+        } else {
+          reject(new Error(`Failed to rename schemas (exit code ${code})`));
+        }
+      });
+
+      psqlProcess.on('error', (err) => reject(err));
     });
   }
 }

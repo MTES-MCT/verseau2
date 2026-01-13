@@ -1,14 +1,14 @@
 import { DataSource } from 'typeorm';
 
 export async function createReferentielSchemas(dataSource: DataSource): Promise<void> {
-  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS custom_ingestion_roseau`);
-  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS custom_ingestion_lanceleau`);
+  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS roseau`);
+  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS lanceleau`);
 }
 
 export async function createRoseauTables(dataSource: DataSource): Promise<void> {
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.steu CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.steu CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.steu (
+    CREATE TABLE roseau.steu (
       steu_cdn VARCHAR PRIMARY KEY,
       ag_cdn VARCHAR,
       inst_ag_cdn VARCHAR,
@@ -67,18 +67,18 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.tlref CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.tlref CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.tlref (
+    CREATE TABLE roseau.tlref (
       tlref_cdn VARCHAR PRIMARY KEY,
       trl_rfa VARCHAR,
       tlref_elt_cda VARCHAR
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.cxnadm CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.cxnadm CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.cxnadm (
+    CREATE TABLE roseau.cxnadm (
       cxnadm_cdn VARCHAR PRIMARY KEY,
       mo_steu_cdn VARCHAR,
       steu_itv_cdn VARCHAR,
@@ -86,9 +86,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.pmo CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.pmo CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.pmo (
+    CREATE TABLE roseau.pmo (
       pmo_cdn VARCHAR PRIMARY KEY,
       steu_cdn VARCHAR,
       pmo_no INTEGER,
@@ -98,9 +98,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.cpy CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.cpy CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.cpy (
+    CREATE TABLE roseau.cpy (
       cpy_cdn VARCHAR PRIMARY KEY,
       steu_cdn VARCHAR,
       cpy_an INTEGER,
@@ -108,9 +108,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.cxntech CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.cxntech CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.cxntech (
+    CREATE TABLE roseau.cxntech (
       cxntech_cdn VARCHAR PRIMARY KEY,
       aval_scl_cdn VARCHAR,
       amont_zgc_cdn VARCHAR,
@@ -118,26 +118,26 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.aga CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.aga CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.aga (
+    CREATE TABLE roseau.aga (
       aga_cdn VARCHAR PRIMARY KEY,
       zgc_cdn VARCHAR,
       aga_sandre_cda VARCHAR
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.scl CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.scl CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.scl (
+    CREATE TABLE roseau.scl (
       scl_cdn VARCHAR PRIMARY KEY,
       scl_sandre_cda VARCHAR
     )
   `);
 
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_roseau.resa CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.resa CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_roseau.resa (
+    CREATE TABLE roseau.resa (
       resa_cdn VARCHAR PRIMARY KEY,
       steu_cdn VARCHAR,
       resa_an INTEGER,
@@ -148,9 +148,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
 }
 
 export async function createLanceleauTables(dataSource: DataSource): Promise<void> {
-  await dataSource.query(`DROP TABLE IF EXISTS custom_ingestion_lanceleau.itv CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.itv CASCADE`);
   await dataSource.query(`
-    CREATE TABLE custom_ingestion_lanceleau.itv (
+    CREATE TABLE lanceleau.itv (
       itv_cdn VARCHAR PRIMARY KEY,
       peti_cdn VARCHAR,
       dir_itv_cdn VARCHAR,
@@ -197,11 +197,11 @@ export async function createReferentielDataset(dataSource: DataSource): Promise<
 }
 
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {
-  await dataSource.query(`DELETE FROM custom_ingestion_roseau.steu`);
-  await dataSource.query(`DELETE FROM custom_ingestion_roseau.cxnadm`);
-  await dataSource.query(`DELETE FROM custom_ingestion_roseau.pmo`);
-  await dataSource.query(`DELETE FROM custom_ingestion_roseau.tlref`);
-  await dataSource.query(`DELETE FROM custom_ingestion_lanceleau.itv`);
+  await dataSource.query(`DELETE FROM roseau.steu`);
+  await dataSource.query(`DELETE FROM roseau.cxnadm`);
+  await dataSource.query(`DELETE FROM roseau.pmo`);
+  await dataSource.query(`DELETE FROM roseau.tlref`);
+  await dataSource.query(`DELETE FROM lanceleau.itv`);
 }
 
 // ============= Seed Data Functions =============
@@ -209,7 +209,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
 export async function seedSteu(dataSource: DataSource, steuCdn: string, steuSandreCda: string): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+    INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
     VALUES ($1, $2)
   `,
     [steuCdn, steuSandreCda],
@@ -219,7 +219,7 @@ export async function seedSteu(dataSource: DataSource, steuCdn: string, steuSand
 export async function seedItv(dataSource: DataSource, itvCdn: string, itvRfa: string): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO custom_ingestion_lanceleau.itv (itv_cdn, itv_rfa)
+    INSERT INTO lanceleau.itv (itv_cdn, itv_rfa)
     VALUES ($1, $2)
   `,
     [itvCdn, itvRfa],
@@ -235,7 +235,7 @@ export async function seedCxnadm(
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO custom_ingestion_roseau.cxnadm (cxnadm_cdn, mo_steu_cdn, steu_itv_cdn, exp_steu_cdn)
+    INSERT INTO roseau.cxnadm (cxnadm_cdn, mo_steu_cdn, steu_itv_cdn, exp_steu_cdn)
     VALUES ($1, $2, $3, $4)
   `,
     [cxnadmCdn, moSteuCdn, steuItvCdn, expSteuCdn ?? null],
@@ -245,7 +245,7 @@ export async function seedCxnadm(
 export async function seedPmo(dataSource: DataSource, pmoCdn: string, steuCdn: string, pmoNo: number): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO custom_ingestion_roseau.pmo (pmo_cdn, steu_cdn, pmo_no)
+    INSERT INTO roseau.pmo (pmo_cdn, steu_cdn, pmo_no)
     VALUES ($1, $2, $3)
   `,
     [pmoCdn, steuCdn, pmoNo],
@@ -260,7 +260,7 @@ export async function seedTlref(
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO custom_ingestion_roseau.tlref (tlref_cdn, trl_rfa, tlref_elt_cda)
+    INSERT INTO roseau.tlref (tlref_cdn, trl_rfa, tlref_elt_cda)
     VALUES ($1, $2, $3)
   `,
     [tlrefCdn, trlRfa, tlrefEltCda],
@@ -277,7 +277,7 @@ export async function seedResa(
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+    INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
     VALUES ($1, $2, $3, $4, $5)
   `,
     [resaCdn, steuCdn, resaAn, parRfa, resaCmaVal],

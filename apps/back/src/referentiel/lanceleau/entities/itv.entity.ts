@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity('itv', { schema: 'custom_ingestion_lanceleau', synchronize: false })
+@Entity('itv', { schema: 'lanceleau', synchronize: false })
 export class ItvEntity {
   @PrimaryColumn({ name: 'itv_cdn' })
   itvCdn: string;

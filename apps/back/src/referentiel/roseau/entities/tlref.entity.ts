@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity('tlref', { schema: 'custom_ingestion_roseau', synchronize: false })
+@Entity('tlref', { schema: 'roseau', synchronize: false })
 export class TlrefEntity {
   @PrimaryColumn({ name: 'tlref_cdn' })
   tlrefCdn: string;

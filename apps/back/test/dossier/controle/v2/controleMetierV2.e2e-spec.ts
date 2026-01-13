@@ -773,16 +773,16 @@ describe('ControleMetierV2Service (e2e)', () => {
   describe('CTL052 - verifyCmaComparisonForDcoDbo5', () => {
     it('should pass when DBO5 and DCO are lower than CMA N-1', async () => {
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
         VALUES (1, 'STEU001')
       `);
 
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
         VALUES (1, 1, 2023, '1313', 100)
       `);
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
         VALUES (2, 1, 2023, '1314', 200)
       `);
 
@@ -824,13 +824,13 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error when DBO5 exceeds CMA N-1', async () => {
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
         VALUES (2, 'STEU002')
       `);
 
       // Seed CMA for DBO5 = 150 mg/L
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
         VALUES (3, 2, 2023, '1313', 150)
       `);
 
@@ -872,13 +872,13 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error when DCO exceeds CMA N-1', async () => {
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
         VALUES (3, 'STEU003')
       `);
 
       // Seed CMA for DCO = 300 mg/L
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
         VALUES (4, 3, 2023, '1314', 300)
       `);
 
@@ -922,7 +922,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should not report error when no CMA data exists for year N-1', async () => {
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
         VALUES (4, 'STEU004')
       `);
 
@@ -966,12 +966,12 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should not report error when dateDebutReference is missing', async () => {
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.steu (steu_cdn, steu_sandre_cda)
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
         VALUES (5, 'STEU005')
       `);
 
       await dataSource.query(`
-        INSERT INTO custom_ingestion_roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
+        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
         VALUES (5, 5, 2023, '1313', 100)
       `);
 

@@ -1,6 +1,6 @@
 import { Entity, PrimaryColumn } from 'typeorm';
 
-@Entity('sup', { schema: 'custom_ingestion_lanceleau', synchronize: false })
+@Entity('sup', { schema: 'lanceleau', synchronize: false })
 export class SupEntity {
   @PrimaryColumn({ name: 'sup_rfa' })
   supRfa: string;

@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity('cxntech', { schema: 'custom_ingestion_roseau', synchronize: false })
+@Entity('cxntech', { schema: 'roseau', synchronize: false })
 export class CxntechEntity {
   @PrimaryColumn({ name: 'cxntech_cdn' }) // Assuming there is a PK, though not explicitly asked, TypeORM needs one.
   cxntechCdn: string;
