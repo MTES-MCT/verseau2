@@ -33,7 +33,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (!isAuthenticated) {
     // Save the attempted URL for redirecting after login
     sessionStorage.setItem('auth_return_to', location.pathname + location.search);
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

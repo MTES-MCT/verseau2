@@ -37,7 +37,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     } catch {
       // Refresh failed, redirect to login
       authService.clearTokens();
-      window.location.href = '/login';
+      window.location.href = '/';
       throw new ApiError('Session expired', 401, 'Unauthorized');
     }
   }
@@ -94,7 +94,7 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
   const token = await authService.getAccessToken();
 
   if (!token) {
-    window.location.href = '/login';
+    window.location.href = '/';
     throw new ApiError('Not authenticated', 401, 'Unauthorized');
   }
 

@@ -61,10 +61,7 @@ export default function CallbackPage() {
             <div className="fr-alert fr-alert--error">
               <h3 className="fr-alert__title">Erreur d'authentification</h3>
               <p>{error}</p>
-              <button
-                className="fr-btn fr-btn--secondary fr-mt-2w"
-                onClick={() => navigate('/login', { replace: true })}
-              >
+              <button className="fr-btn fr-btn--secondary fr-mt-2w" onClick={() => navigate('/', { replace: true })}>
                 Réessayer
               </button>
             </div>
@@ -75,20 +72,22 @@ export default function CallbackPage() {
   }
 
   return (
-    <div className="fr-container fr-py-6w">
-      <div className="fr-grid-row fr-grid-row--center">
-        <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
-          <div className="fr-card fr-p-4w">
-            <div className="fr-card__body">
-              <div className="fr-card__content">
-                <h1 className="fr-h3">Authentification en cours...</h1>
-                <p className="fr-text--lead">Veuillez patienter pendant que nous finalisons votre connexion.</p>
-                <div className="fr-mt-2w" style={{ display: 'flex', justifyContent: 'center' }}>
-                  <span className="fr-icon-loader-5-line fr-icon--lg" aria-hidden="true"></span>
-                </div>
-              </div>
+    <div className="home-background">
+      <div className="fr-container fr-py-6w">
+        <div className="fr-grid-row fr-grid-row--center">
+          <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
+            {/* <div className="fr-card fr-p-4w">
+              <div className="fr-card__body">
+                <div className="fr-card__content"> */}
+            <h1 className="fr-h3">Authentification en cours...</h1>
+            <p className="fr-text--lead">Veuillez patienter pendant que nous finalisons votre connexion.</p>
+            <div className="fr-mt-2w" style={{ display: 'flex', justifyContent: 'center' }}>
+              <span className="fr-icon-loader-5-line fr-icon--lg" aria-hidden="true"></span>
             </div>
           </div>
+          {/* </div>
+            </div>
+          </div> */}
         </div>
       </div>
     </div>

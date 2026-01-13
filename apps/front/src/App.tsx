@@ -5,7 +5,6 @@ import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
 import { DepotDownloadPage } from './pages/DepotDownload';
 import { DepotDetailsPage } from './pages/DepotDetails';
-import LoginPage from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
@@ -25,7 +24,6 @@ function App() {
 
         <main className={fr.cx('fr-py-4w', 'fr-px-0')}>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
             <Route path="/callback" element={<CallbackPage />} />
             <Route path="/" element={<HomePage />} />
             <Route
