@@ -12,6 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
@@ -22,6 +23,7 @@ import { DepotDto } from '@lib/dossier';
 import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
 import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
+import { sanitizeFilename } from '@shared/schema/filename.service';
 
 interface MulterFile {
   fieldname: string;
@@ -44,6 +46,7 @@ export class DepotController {
   }
 
   @Post('upload')
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: MulterFile | undefined, @Req() req: CustomRequest): Promise<DepotDto> {
     const user = req.user;
@@ -52,6 +55,10 @@ export class DepotController {
     }
 
     const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    if (!originalName || originalName.trim().length === 0) {
+      throw new BadRequestException('File must have a valid name');
+    }
+    const sanitizedName = sanitizeFilename(originalName);
 
     const isXmlFile =
       file.mimetype === XML_MIME_TYPES.APPLICATION_XML ||
@@ -65,7 +72,7 @@ export class DepotController {
     const userEntity = await this.userService.findBySub(user.cerbereId);
 
     const depot = await this.deposerUnFichier.execute({
-      nomOriginalFichier: originalName,
+      nomOriginalFichier: sanitizedName,
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer,
@@ -121,7 +128,7 @@ export class DepotController {
     const xmlBuffer = await this.depotService.downloadXml(id);
     const depot = await this.depotService.findById(id);
 
-    res.attachment(depot.nomOriginalFichier || `depot-${depot.id}.xml`);
+    res.attachment(depot.nomOriginalFichier);
     res.type('application/xml');
     res.send(xmlBuffer);
   }

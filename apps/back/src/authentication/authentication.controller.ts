@@ -10,12 +10,14 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Authentication } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
 import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
 
+@Throttle({ default: { ttl: 60000, limit: 10 } })
 @Controller('auth')
 export class AuthenticationController {
   constructor(
@@ -122,6 +124,7 @@ export class AuthenticationController {
   }
 
   @Get('me')
+  @SkipThrottle({ default: true })
   @UseGuards(MeGuard)
   me(@Req() req: CustomRequest) {
     const token = req.token || '';

@@ -1,4 +1,6 @@
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { DossierModule } from '@dossier/dossier.module';
 import { InfraModule } from '@infra/infra.module';
 import { NotificationModule } from '@notification/notification.module';
@@ -20,6 +22,12 @@ import { AuthenticationMiddleware } from '@authentication/authentication.middlew
     ReferentielModule,
   ],
   controllers: [VersionController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class ApiModule {
   configure(consumer: MiddlewareConsumer) {
