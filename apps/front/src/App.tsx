@@ -12,6 +12,7 @@ import { AppHeader } from './components/Header';
 import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AppRoutes } from './routes';
 import './App.css';
 import { fr } from '@codegouvfr/react-dsfr';
 
@@ -24,10 +25,10 @@ function App() {
 
         <main className={fr.cx('fr-py-4w', 'fr-px-0')}>
           <Routes>
-            <Route path="/callback" element={<CallbackPage />} />
-            <Route path="/" element={<HomePage />} />
+            <Route path={AppRoutes.CALLBACK} element={<CallbackPage />} />
+            <Route path={AppRoutes.HOME} element={<HomePage />} />
             <Route
-              path="/dashboard"
+              path={AppRoutes.DASHBOARD}
               element={
                 <ProtectedRoute>
                   <Dashboard />
@@ -35,7 +36,7 @@ function App() {
               }
             />
             <Route
-              path="/controle/:depotId"
+              path={AppRoutes.CONTROLE}
               element={
                 <ProtectedRoute>
                   <ControlePage />
@@ -43,7 +44,7 @@ function App() {
               }
             />
             <Route
-              path="/depot/upload"
+              path={AppRoutes.DEPOT_UPLOAD}
               element={
                 <ProtectedRoute>
                   <DepotUploadPage />
@@ -51,7 +52,7 @@ function App() {
               }
             />
             <Route
-              path="/depot/download"
+              path={AppRoutes.DEPOT_DOWNLOAD}
               element={
                 <ProtectedRoute>
                   <DepotDownloadPage />
@@ -59,7 +60,7 @@ function App() {
               }
             />
             <Route
-              path="/depot/details"
+              path={AppRoutes.DEPOT_DETAILS}
               element={
                 <ProtectedRoute>
                   <DepotDetailsPage />
@@ -67,14 +68,14 @@ function App() {
               }
             />
             <Route
-              path="/depot/upload/recap"
+              path={AppRoutes.DEPOT_UPLOAD_RECAP}
               element={
                 <ProtectedRoute>
                   <DepotUploadRecapPage />
                 </ProtectedRoute>
               }
             />
-            <Route path="/mock_authorization" element={<MockAuthorizationPage />} />
+            <Route path={AppRoutes.MOCK_AUTHORIZATION} element={<MockAuthorizationPage />} />
           </Routes>
         </main>
       </div>

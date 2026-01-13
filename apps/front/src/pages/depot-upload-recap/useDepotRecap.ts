@@ -4,6 +4,7 @@ import { type UseMutationResult, type UseQueryResult, useMutation, useQuery } fr
 import { checkScenarioCodeAndVersion, parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
 import { checkDroitsDeDepot, type DroitsDeDepotResponse, uploadDepot } from '../../api/depot';
 import { fetchParametresFromCodes } from '../../api/referentiel';
+import { AppRoutes } from '../../routes';
 
 type LocationState = {
   fileName?: string;
@@ -78,7 +79,7 @@ export function useDepotRecap(): UseDepotRecapResult {
     return droitsDeDepotQuery.data?.authorized ? 'authorized' : 'unauthorized';
   }, [cdOuvrage, droitsDeDepotQuery.isLoading, droitsDeDepotQuery.isError, droitsDeDepotQuery.data?.authorized]);
 
-  const handleReturn = () => navigate('/depot/upload');
+  const handleReturn = () => navigate(AppRoutes.DEPOT_UPLOAD);
 
   const handleFinalize = () => {
     if (!fileName || !fileContent) {
@@ -86,7 +87,7 @@ export function useDepotRecap(): UseDepotRecapResult {
     }
     const file = buildFileFromContent(fileContent, fileName);
     uploadMutation.mutate(file, {
-      onSuccess: () => navigate('/dashboard'),
+      onSuccess: () => navigate(AppRoutes.DASHBOARD),
       onError: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
     });
   };

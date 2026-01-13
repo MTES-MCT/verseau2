@@ -1,20 +1,21 @@
 import { useLocation } from 'react-router';
 import { Breadcrumb as DsfrBreadcrumb } from '@codegouvfr/react-dsfr/Breadcrumb';
+import { AppRoutes } from '../routes';
 
 export const Breadcrumb = () => {
   const location = useLocation();
 
   const getSegmentsFromPath = (pathname: string) => {
-    if (pathname === '/') {
+    if (pathname === AppRoutes.HOME) {
       return null;
     }
 
     const segments: Array<{ label: string; href: string }> = [];
 
-    if (pathname.startsWith('/depot/upload')) {
+    if (pathname.startsWith(AppRoutes.DEPOT_UPLOAD)) {
       segments.push({
         label: 'Déposer des données',
-        href: '/depot/upload',
+        href: AppRoutes.DEPOT_UPLOAD,
       });
     }
 
@@ -28,15 +29,17 @@ export const Breadcrumb = () => {
   }
 
   let currentPageLabel = '';
-  if (location.pathname === '/depot/upload') {
+  if (location.pathname === AppRoutes.DEPOT_UPLOAD) {
     currentPageLabel = 'Sélection du fichier';
-  } else if (location.pathname === '/depot/upload/recap') {
+  } else if (location.pathname === AppRoutes.DEPOT_UPLOAD_RECAP) {
     currentPageLabel = 'Récapitulatif';
-  } else if (location.pathname.startsWith('/controle/')) {
+  } else if (location.pathname === AppRoutes.DASHBOARD) {
+    currentPageLabel = 'Tableau de bord';
+  } else if (location.pathname.startsWith(AppRoutes.CONTROLE.split(':')[0])) {
     currentPageLabel = 'Détails du contrôle';
     segments.push({
       label: 'Tableau de bord',
-      href: '/dashboard',
+      href: AppRoutes.DASHBOARD,
     });
   }
 
@@ -45,7 +48,7 @@ export const Breadcrumb = () => {
       className="breadcrumb-container"
       currentPageLabel={currentPageLabel}
       homeLinkProps={{
-        href: '/',
+        href: AppRoutes.HOME,
       }}
       segments={segments.map((segment) => ({
         label: segment.label,

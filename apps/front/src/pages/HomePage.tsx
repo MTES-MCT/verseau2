@@ -2,6 +2,7 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
+import { AppRoutes } from '../routes';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export function HomePage() {
             )}
             <p className={fr.cx('fr-text--lead')}>L'application d'autosurveillance des systèmes d'assainissement.</p>
             <div className={fr.cx('fr-mt-4w')}>
-              {user ? <Button onClick={() => navigate('/dashboard')}>Accéder au tableau de bord</Button> : null}
+              {user ? <Button onClick={() => navigate(AppRoutes.DASHBOARD)}>Accéder au tableau de bord</Button> : null}
             </div>
           </div>
         </div>

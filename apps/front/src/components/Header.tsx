@@ -2,13 +2,14 @@ import { Header } from '@codegouvfr/react-dsfr/Header';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useLocation } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
+import { AppRoutes } from '../routes';
 
 export function AppHeader() {
   const location = useLocation();
   const { isAuthenticated, login, logout, user } = useAuth();
 
   const isNavItemActive = (href: string): boolean => {
-    return location.pathname.startsWith(href) && (href !== '/' || location.pathname === '/');
+    return location.pathname.startsWith(href) && (href !== AppRoutes.HOME || location.pathname === AppRoutes.HOME);
   };
 
   return (
@@ -33,7 +34,7 @@ export function AppHeader() {
         }
         serviceTitle="Verseau 2.0"
         serviceTagline="Réseau de collecte et station de traitement des eaux usées"
-        homeLinkProps={{ href: '/', title: 'Accueil' }}
+        homeLinkProps={{ href: AppRoutes.HOME, title: 'Accueil' }}
         quickAccessItems={[
           {
             iconId: 'fr-icon-theme-fill',
@@ -62,8 +63,8 @@ export function AppHeader() {
         navigation={[
           {
             text: 'Tableau de bord',
-            linkProps: { href: '/dashboard' },
-            isActive: isNavItemActive('/dashboard'),
+            linkProps: { href: AppRoutes.DASHBOARD },
+            isActive: isNavItemActive(AppRoutes.DASHBOARD),
           },
           {
             text: "Gestion des données d'autosurveillance",
@@ -71,18 +72,18 @@ export function AppHeader() {
             menuLinks: [
               {
                 text: "Déposer des données d'autosurveillance",
-                linkProps: { href: '/depot/upload' },
-                isActive: isNavItemActive('/depot/upload'),
+                linkProps: { href: AppRoutes.DEPOT_UPLOAD },
+                isActive: isNavItemActive(AppRoutes.DEPOT_UPLOAD),
               },
               {
                 text: "Télécharger des données d'autosurveillance",
-                linkProps: { href: '/depot/download' },
-                isActive: isNavItemActive('/depot/download'),
+                linkProps: { href: AppRoutes.DEPOT_DOWNLOAD },
+                isActive: isNavItemActive(AppRoutes.DEPOT_DOWNLOAD),
               },
               {
                 text: 'Détail des mesures déposées',
-                linkProps: { href: '/depot/details' },
-                isActive: isNavItemActive('/depot/details'),
+                linkProps: { href: AppRoutes.DEPOT_DETAILS },
+                isActive: isNavItemActive(AppRoutes.DEPOT_DETAILS),
               },
             ],
           },
