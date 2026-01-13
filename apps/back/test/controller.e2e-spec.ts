@@ -20,6 +20,7 @@ import { InfraMockModule } from './mock/infraMock.module';
 import { Authentication } from '@authentication/authentication';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
+import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 
 describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
@@ -28,7 +29,7 @@ describe('Controller (e2e) - Unauthorized', () => {
     await startPostgresContainer();
     const connectionUri = getPostgresConnectionUri();
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [...initTestContainerImports(connectionUri), ApiModule],
+      imports: [...initTestContainerImports(connectionUri), ApiModule, ThrottlerConfigModule],
     })
       .overrideModule(InfraModule)
       .useModule(InfraMockModule)
