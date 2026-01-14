@@ -1,136 +1,282 @@
-import { ErrorCode } from './evenement';
+import { ErrorCode, ErrorParamsMap } from './evenement';
 
 export function buildMessage(error: ErrorCode | undefined, params: string[]): string {
   switch (error) {
-    case ErrorCode.E2_003:
-      return `Le code ouvrage ${params[0]} n'existe pas dans la base de données Roseau ! Veuillez vérifier son exactitude ou le créer dans Roseau.`;
-    case ErrorCode.E2_004:
-      if (params.length === 2) {
-        return `Le maître d'ouvrage ${params[0]} n'est pas rattaché à l'ouvrage ${params[1]} dans Roseau !`;
+    case ErrorCode.E2_003: {
+      const [cdOuvrage] = params as ErrorParamsMap[ErrorCode.E2_003];
+      return `Le code ouvrage ${cdOuvrage} n'existe pas dans la base de données Roseau ! Veuillez vérifier son exactitude ou le créer dans Roseau.`;
+    }
+    case ErrorCode.E2_004: {
+      const [moa, cdOuvrage] = params as ErrorParamsMap[ErrorCode.E2_004];
+      if (cdOuvrage) {
+        return `Le maître d'ouvrage ${moa} n'est pas rattaché à l'ouvrage ${cdOuvrage} dans Roseau !`;
       }
-      return `Le maître d'ouvrage ${params[0]} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
-    case ErrorCode.E2_005:
-      if (params.length === 2) {
-        return `L'exploitant ${params[0]} n'est pas rattaché à l'ouvrage ${params[1]} dans Roseau !`;
+      return `Le maître d'ouvrage ${moa} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
+    }
+    case ErrorCode.E2_005: {
+      const [exploitant, cdOuvrage] = params as ErrorParamsMap[ErrorCode.E2_005];
+      if (cdOuvrage) {
+        return `L'exploitant ${exploitant} n'est pas rattaché à l'ouvrage ${cdOuvrage} dans Roseau !`;
       }
-      return `L'exploitant ${params[0]} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
-    case ErrorCode.E2_006:
-      return `Le code support ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_007:
-      return `Le code lieu d'analyse ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_008:
-      return `Le code statut du résultat d'analyse ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_009:
-      return `Le code qualification de l'acquisition du résultat d'analyse ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_010:
-      return `Le code fraction analysée ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_011:
-      return `Le code Sandre ${params[0]} de la méthode d'analyse utilisée est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_012:
-      return `Le code Sandre ${params[0]} du paramètre est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_013:
-      return `Le code Sandre ${params[0]} de l'unité de référence est inconnu ou ne correspond pas au paramètre ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_014:
-      return `Le code intervenant ${params[0]} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
-    case ErrorCode.E2_015:
-      return `Le code Sandre ${params[0]} de la finalité de l'analyse est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_016:
-      return `Le code Sandre ${params[0]} de l'accréditation de l'analyse est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_017:
-      return `Le code Sandre ${params[0]} de la période de calcul est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_018:
-      return `Le code Sandre ${params[0]} du type d'ouvrage aval est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_019:
-      return `Le code Sandre ${params[0]} de l'ouvrage aval est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_020:
-      return `Le code Sandre ${params[0]} du type d'évènement est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_021:
-      return `Le code Sandre ${params[0]} de la remarque est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_022:
-      return `Le code du système de collecte ${params[0]} est inconnu ! Veuillez le saisir dans Roseau.`;
-    case ErrorCode.E2_023:
-      return `Le code agglomération ${params[0]} ne peut pas recevoir de données du système de collecte ${params[1]} !`;
-    case ErrorCode.E2_024:
-      return `Le code Sandre ${params[0]} du type d'ouvrage de dépollution est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_025:
-      return `Le code Sandre ${params[0]} de la nature du système de traitement des eaux usées est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_026:
-      return `Le code de l'émetteur ${params[0]} des données est inconnu. Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
-    case ErrorCode.E2_033:
-      return `Le point de mesure N° ${params[0]} est inconnu pour l'ouvrage ${params[1]} ! Veuillez contacter le service gestionnaire de l'ouvrage.`;
-    case ErrorCode.E2_034:
-      return `Le code Sandre ${params[0]} du type de déversoir d'orage est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_035:
-      return `Le code de la conformité du prélèvement ${params[0]} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
-    case ErrorCode.E2_036:
-      return `Le code Sandre ${params[0]} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+      return `L'exploitant ${exploitant} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
+    }
+    case ErrorCode.E2_006: {
+      const [cdSupport] = params as ErrorParamsMap[ErrorCode.E2_006];
+      return `Le code support ${cdSupport} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_007: {
+      const [cdLieuAnalyse] = params as ErrorParamsMap[ErrorCode.E2_007];
+      return `Le code lieu d'analyse ${cdLieuAnalyse} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_008: {
+      const [cdStatut] = params as ErrorParamsMap[ErrorCode.E2_008];
+      return `Le code statut du résultat d'analyse ${cdStatut} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_009: {
+      const [cdQualification] = params as ErrorParamsMap[ErrorCode.E2_009];
+      return `Le code qualification de l'acquisition du résultat d'analyse ${cdQualification} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_010: {
+      const [cdFraction] = params as ErrorParamsMap[ErrorCode.E2_010];
+      return `Le code fraction analysée ${cdFraction} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_011: {
+      const [cdMethode] = params as ErrorParamsMap[ErrorCode.E2_011];
+      return `Le code Sandre ${cdMethode} de la méthode d'analyse utilisée est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_012: {
+      const [cdParametre] = params as ErrorParamsMap[ErrorCode.E2_012];
+      return `Le code Sandre ${cdParametre} du paramètre est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_013: {
+      const [cdUnite] = params as ErrorParamsMap[ErrorCode.E2_013];
+      return `Le code Sandre ${cdUnite} de l'unité de référence est inconnu ou ne correspond pas au paramètre ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_014: {
+      const [cdIntervenant] = params as ErrorParamsMap[ErrorCode.E2_014];
+      return `Le code intervenant ${cdIntervenant} n'existe pas dans la base de données Lanceleau ! Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
+    }
+    case ErrorCode.E2_015: {
+      const [cdFinalite] = params as ErrorParamsMap[ErrorCode.E2_015];
+      return `Le code Sandre ${cdFinalite} de la finalité de l'analyse est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_016: {
+      const [cdAccreditation] = params as ErrorParamsMap[ErrorCode.E2_016];
+      return `Le code Sandre ${cdAccreditation} de l'accréditation de l'analyse est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_017: {
+      const [cdPeriode] = params as ErrorParamsMap[ErrorCode.E2_017];
+      return `Le code Sandre ${cdPeriode} de la période de calcul est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_018: {
+      const [cdTypeOuvrageAval] = params as ErrorParamsMap[ErrorCode.E2_018];
+      return `Le code Sandre ${cdTypeOuvrageAval} du type d'ouvrage aval est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_019: {
+      const [cdOuvrageAval] = params as ErrorParamsMap[ErrorCode.E2_019];
+      return `Le code Sandre ${cdOuvrageAval} de l'ouvrage aval est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_020: {
+      const [cdTypeEvenement] = params as ErrorParamsMap[ErrorCode.E2_020];
+      return `Le code Sandre ${cdTypeEvenement} du type d'évènement est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_021: {
+      const [cdRemarque] = params as ErrorParamsMap[ErrorCode.E2_021];
+      return `Le code Sandre ${cdRemarque} de la remarque est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_022: {
+      const [cdScl] = params as ErrorParamsMap[ErrorCode.E2_022];
+      return `Le code du système de collecte ${cdScl} est inconnu ! Veuillez le saisir dans Roseau.`;
+    }
+    case ErrorCode.E2_023: {
+      const [cdAgglo, cdScl] = params as ErrorParamsMap[ErrorCode.E2_023];
+      return `Le code agglomération ${cdAgglo} ne peut pas recevoir de données du système de collecte ${cdScl} !`;
+    }
+    case ErrorCode.E2_024: {
+      const [cdTypeOuvrageDepollution] = params as ErrorParamsMap[ErrorCode.E2_024];
+      return `Le code Sandre ${cdTypeOuvrageDepollution} du type d'ouvrage de dépollution est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_025: {
+      const [cdNatureSteu] = params as ErrorParamsMap[ErrorCode.E2_025];
+      return `Le code Sandre ${cdNatureSteu} de la nature du système de traitement des eaux usées est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_026: {
+      const [cdEmetteur] = params as ErrorParamsMap[ErrorCode.E2_026];
+      return `Le code de l'émetteur ${cdEmetteur} des données est inconnu. Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
+    }
+    case ErrorCode.E2_033: {
+      const [numeroPointMesure, cdOuvrage] = params as ErrorParamsMap[ErrorCode.E2_033];
+      return `Le point de mesure N° ${numeroPointMesure} est inconnu pour l'ouvrage ${cdOuvrage} ! Veuillez contacter le service gestionnaire de l'ouvrage.`;
+    }
+    case ErrorCode.E2_034: {
+      const [cdTypeDeversoir] = params as ErrorParamsMap[ErrorCode.E2_034];
+      return `Le code Sandre ${cdTypeDeversoir} du type de déversoir d'orage est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_035: {
+      const [cdConformite] = params as ErrorParamsMap[ErrorCode.E2_035];
+      return `Le code de la conformité du prélèvement ${cdConformite} est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
+    case ErrorCode.E2_036: {
+      const [cdTypeAppareil] = params as ErrorParamsMap[ErrorCode.E2_036];
+      return `Le code Sandre ${cdTypeAppareil} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
+    }
     case ErrorCode.E2_039:
-      if (params.length === 7) {
-        return `Le ratio DCO/DBO5 calculé (${params[6]}) est en dehors de la plage de valeurs attendues (1,5 à 3,5) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]} (DCO = ${params[4]} mg/L, DBO5 = ${params[5]} mg/L).`;
-      }
-      return params[4]; // message d'erreur d'impossibilité
+      return buildErrorMessage39(params);
     case ErrorCode.E2_040:
-      if (params.length === 7) {
-        return `Le ratio MES/DBO5 calculé (${params[6]}) est en dehors de la plage de valeurs attendues (0,7 à 1,5) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]} (MES = ${params[4]} mg/L, DBO5 = ${params[5]} mg/L).`;
-      }
-      return params[4]; // message d'erreur d'impossibilité
+      return buildErrorMessage40(params);
     case ErrorCode.E2_041:
-      if (params.length === 5) {
-        return `La concentration en DCO (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (300 à 1700 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
-      }
-      return `Valeur DCO manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+      return buildErrorMessage41(params);
     case ErrorCode.E2_042:
-      if (params.length === 5) {
-        return `La concentration en DBO5 (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (150 à 800 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
-      }
-      return `Valeur DBO5 manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+      return buildErrorMessage42(params);
     case ErrorCode.E2_043:
-      if (params.length === 5) {
-        return `La concentration en MES (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (100 à 1200 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
-      }
-      return `Valeur MES manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+      return buildErrorMessage43(params);
     case ErrorCode.E2_044:
-      if (params.length === 5) {
-        return `La concentration en NTK (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (20 à 160 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
-      }
-      return `Valeur NTK manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+      return buildErrorMessage44(params);
     case ErrorCode.E2_045:
-      if (params.length === 5) {
-        return `La concentration en Ptot (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (4 à 25 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
-      }
-      return `Valeur Ptot manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+      return buildErrorMessage45(params);
     case ErrorCode.E2_046:
-      if (params.length === 5) {
-        return `Le pH (${params[4]}) est en dehors de la plage de valeurs attendues (2 à 12) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
-      }
-      return `Valeur pH manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
+      return buildErrorMessage46(params);
     case ErrorCode.E2_047:
-      return `Incohérence : DCO ≤ DBO5 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]} mg/L, DBO5=${params[5]} mg/L)`;
+      return buildErrorMessage47(params);
     case ErrorCode.E2_048:
-      return `Incohérence : NTK ≤ N-NH4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]} mg/L, N-NH4=${params[5]} mg/L)`;
+      return buildErrorMessage48(params);
     case ErrorCode.E2_049:
-      return `Incohérence : NGL ≤ NTK pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NGL=${params[4]}, NTK=${params[5]})`;
+      return buildErrorMessage49(params);
     case ErrorCode.E2_050:
-      return `Incohérence : Ptot ≤ PO4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (Ptot=${params[4]}, PO4=${params[5]})`;
+      return buildErrorMessage50(params);
     case ErrorCode.E2_051:
-      if (params.length === 7) {
-        return `Volume A3/A4 incohérent vs capacité EH pour l'ouvrage ${params[0]}, date ${params[1]}. Seuil = ${params[2]} EH. A3: ${params[3]}*6 ${params[4]} seuil ; A4: ${params[5]}*6 ${params[6]} seuil`;
-      } else if (params.length === 1) {
-        return `Date ${params} invalide pour le contrôle des volumes A3/A4 vs capacité EH.`;
-      }
+      return buildErrorMessage51(params);
     case ErrorCode.E2_052:
-      if (params.length === 5) {
-        return `Concentration ${params[0]} incohérente pour l'ouvrage ${params[1]}, date ${params[2]}. Valeur mesurée: ${params[3]}, CMA année N-1: ${params[4]}`;
-      } else if (params.length === 1) {
-        return `Date ${params} invalide pour le contrôle des concentrations DBO5/DCO vs CMA N-1.`;
-      }
+      return buildErrorMessage52(params);
     case ErrorCode.E2_053:
-      if (params.length === 5) {
-        return `Débit entrant excédentaire pour l'ouvrage ${params[0]}, date ${params[1]}. Somme mesurée: ${params[2]} m³, max(PC95, Dref): ${params[3]} m³, Seuil (2 x max): ${params[4]} m³`;
-      }
-    case ErrorCode.E2_999:
-      return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${params[0]}`;
+      return buildErrorMessage53(params);
+    case ErrorCode.E2_999: {
+      const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
+      return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
+    }
     default:
       return `Erreur inconnue`;
   }
 }
+
+const buildErrorMessage39 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_039];
+  if (p.length === 7) {
+    const [cdOuvrage, locGlobale, date, , val1, val2, ratio] = p;
+    return `Le ratio DCO/DBO5 calculé (${ratio}) est en dehors de la plage de valeurs attendues (1,5 à 3,5) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date} (DCO = ${val1} mg/L, DBO5 = ${val2} mg/L).`;
+  }
+  return p[4];
+};
+
+const buildErrorMessage40 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_040];
+  if (p.length === 7) {
+    const [cdOuvrage, locGlobale, date, , val1, val2, ratio] = p;
+    return `Le ratio MES/DBO5 calculé (${ratio}) est en dehors de la plage de valeurs attendues (0,7 à 1,5) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date} (MES = ${val1} mg/L, DBO5 = ${val2} mg/L).`;
+  }
+  return p[4];
+};
+
+const buildErrorMessage41 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_041];
+  if (p.length === 5) {
+    const [cdOuvrage, locGlobale, date, , val] = p;
+    return `La concentration en DCO (${val} mg/L) est en dehors de la plage de valeurs attendues (300 à 1700 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+  }
+  return `Valeur DCO manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
+};
+
+const buildErrorMessage42 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_042];
+  if (p.length === 5) {
+    const [cdOuvrage, locGlobale, date, , val] = p;
+    return `La concentration en DBO5 (${val} mg/L) est en dehors de la plage de valeurs attendues (150 à 800 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+  }
+  return `Valeur DBO5 manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
+};
+
+const buildErrorMessage43 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_043];
+  if (p.length === 5) {
+    const [cdOuvrage, locGlobale, date, , val] = p;
+    return `La concentration en MES (${val} mg/L) est en dehors de la plage de valeurs attendues (100 à 1200 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+  }
+  return `Valeur MES manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
+};
+
+const buildErrorMessage44 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_044];
+  if (p.length === 5) {
+    const [cdOuvrage, locGlobale, date, , val] = p;
+    return `La concentration en NTK (${val} mg/L) est en dehors de la plage de valeurs attendues (20 à 160 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+  }
+  return `Valeur NTK manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
+};
+
+const buildErrorMessage45 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_045];
+  if (p.length === 5) {
+    const [cdOuvrage, locGlobale, date, , val] = p;
+    return `La concentration en Ptot (${val} mg/L) est en dehors de la plage de valeurs attendues (4 à 25 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+  }
+  return `Valeur Ptot manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
+};
+
+const buildErrorMessage46 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_046];
+  if (p.length === 5) {
+    const [cdOuvrage, locGlobale, date, , val] = p;
+    return `Le pH (${val}) est en dehors de la plage de valeurs attendues (2 à 12) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+  }
+  return `Valeur pH manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
+};
+
+const buildErrorMessage47 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_047];
+  return `Incohérence : DCO ≤ DBO5 pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (DCO=${val1} mg/L, DBO5=${val2} mg/L)`;
+};
+
+const buildErrorMessage48 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_048];
+  return `Incohérence : NTK ≤ N-NH4 pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (NTK=${val1} mg/L, N-NH4=${val2} mg/L)`;
+};
+
+const buildErrorMessage49 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_049];
+  return `Incohérence : NGL ≤ NTK pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (NGL=${val1}, NTK=${val2})`;
+};
+
+const buildErrorMessage50 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_050];
+  return `Incohérence : Ptot ≤ PO4 pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (Ptot=${val1}, PO4=${val2})`;
+};
+
+const buildErrorMessage51 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_051];
+  if (p.length === 7) {
+    const [cdOuvrage, date, seuil, valA3, testA3, valA4, testA4] = p;
+    return `Volume A3/A4 incohérent vs capacité EH pour l'ouvrage ${cdOuvrage}, date ${date}. Seuil = ${seuil} EH. A3: ${valA3}*6 ${testA3} seuil ; A4: ${valA4}*6 ${testA4} seuil`;
+  } else {
+    return `Date ${p[0]} invalide pour le contrôle des volumes A3/A4 vs capacité EH.`;
+  }
+};
+
+const buildErrorMessage52 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_052];
+  if (p.length === 5) {
+    const [param, cdOuvrage, date, val, cma] = p;
+    return `Concentration ${param} incohérente pour l'ouvrage ${cdOuvrage}, date ${date}. Valeur mesurée: ${val}, CMA année N-1: ${cma}`;
+  } else {
+    return `Date ${p[0]} invalide pour le contrôle des concentrations DBO5/DCO vs CMA N-1.`;
+  }
+};
+
+const buildErrorMessage53 = (params: string[]) => {
+  const p = params as ErrorParamsMap[ErrorCode.E2_053];
+  if (p.length === 5) {
+    const [cdOuvrage, date, total, maxRef, threshold] = p;
+    return `Débit entrant excédentaire pour l'ouvrage ${cdOuvrage}, date ${date}. Somme mesurée: ${total} m³, max(PC95, Dref): ${maxRef} m³, Seuil (2 x max): ${threshold} m³`;
+  } else {
+    return `Date ${p[0]} invalide pour le contrôle des débits entrants vs seuil.`;
+  }
+};

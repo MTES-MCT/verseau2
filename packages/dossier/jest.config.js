@@ -8,4 +8,6 @@ module.exports = {
   transform: {
     ...tsJestTransformCfg,
   },
+  testPathIgnorePatterns: ['/dist/'],
+  coveragePathIgnorePatterns: ['/dist/'],
 };

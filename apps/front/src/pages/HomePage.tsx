@@ -13,7 +13,7 @@ export function HomePage() {
       <div className={fr.cx('fr-container', 'fr-py-12w')}>
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--center')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-8', 'fr-col-lg-6')}>
-            <h1 className={fr.cx('fr-h1')}>Bienvenue sur Verseau</h1>
+            <h1 className={fr.cx('fr-h1')}>Bienvenue sur Verseau 2</h1>
             {user && (
               <div className={fr.cx('fr-mb-4w')}>
                 <p className={fr.cx('fr-text--lead', 'fr-mb-1v')}>

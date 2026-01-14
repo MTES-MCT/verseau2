@@ -45,6 +45,99 @@ export enum ErrorCode {
   E2_999 = 'E2.999',
 }
 
+export type ErrorParamsMap = {
+  [ErrorCode.E2_003]: [cdOuvrage: string];
+  [ErrorCode.E2_004]: [moa: string, cdOuvrage: string] | [moa: string];
+  [ErrorCode.E2_005]: [exploitant: string, cdOuvrage: string] | [exploitant: string];
+  [ErrorCode.E2_006]: [cdSupport: string];
+  [ErrorCode.E2_007]: [cdLieuAnalyse: string];
+  [ErrorCode.E2_008]: [cdStatut: string];
+  [ErrorCode.E2_009]: [cdQualification: string];
+  [ErrorCode.E2_010]: [cdFraction: string];
+  [ErrorCode.E2_011]: [cdMethode: string];
+  [ErrorCode.E2_012]: [cdParametre: string];
+  [ErrorCode.E2_013]: [cdUnite: string];
+  [ErrorCode.E2_014]: [cdIntervenant: string];
+  [ErrorCode.E2_015]: [cdFinalite: string];
+  [ErrorCode.E2_016]: [cdAccreditation: string];
+  [ErrorCode.E2_017]: [cdPeriode: string];
+  [ErrorCode.E2_018]: [cdTypeOuvrageAval: string];
+  [ErrorCode.E2_019]: [cdOuvrageAval: string];
+  [ErrorCode.E2_020]: [cdTypeEvenement: string];
+  [ErrorCode.E2_021]: [cdRemarque: string];
+  [ErrorCode.E2_022]: [cdScl: string];
+  [ErrorCode.E2_023]: [cdAgglo: string, cdScl: string];
+  [ErrorCode.E2_024]: [cdTypeOuvrageDepollution: string];
+  [ErrorCode.E2_025]: [cdNatureSteu: string];
+  [ErrorCode.E2_026]: [cdEmetteur: string];
+  [ErrorCode.E2_033]: [numeroPointMesure: string, cdOuvrage: string];
+  [ErrorCode.E2_034]: [cdTypeDeversoir: string];
+  [ErrorCode.E2_035]: [cdConformite: string];
+  [ErrorCode.E2_036]: [cdTypeAppareil: string];
+  [ErrorCode.E2_039]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    val1: string,
+    val2: string,
+    ratio: string,
+  ];
+  [ErrorCode.E2_040]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    val1: string,
+    val2: string,
+    ratio: string,
+  ];
+  [ErrorCode.E2_041]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_042]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_043]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_044]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_045]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_046]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_047]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    val1: string,
+    val2: string,
+  ];
+  [ErrorCode.E2_048]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    val1: string,
+    val2: string,
+  ];
+  [ErrorCode.E2_049]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    val1: string,
+    val2: string,
+  ];
+  [ErrorCode.E2_050]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    val1: string,
+    val2: string,
+  ];
+  [ErrorCode.E2_051]:
+    | [cdOuvrage: string, date: string, seuil: string, valA3: string, testA3: string, valA4: string, testA4: string]
+    | [date: string];
+  [ErrorCode.E2_052]: [param: string, cdOuvrage: string, date: string, val: string, cma: string] | [date: string];
+  [ErrorCode.E2_053]: [cdOuvrage: string, date: string, total: string, maxRef: string, threshold: string];
+  [ErrorCode.E2_999]: [message: string];
+};
+
 export enum AvertissmentCode {
   A2_001 = 'A2.001',
   A2_002 = 'A2.002',
