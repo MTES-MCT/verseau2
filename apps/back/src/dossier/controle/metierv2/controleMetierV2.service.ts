@@ -346,7 +346,7 @@ export class ControleMetierV2Service {
     const groups = new Map<string, { val1?: number; val2?: number; context: PrelevementContext }>();
 
     this.forEachPrelevement(fctAssainissement, (context, analyses) => {
-      const groupKey = `${context.cdOuvrageDepollution}|${context.numeroPointMesure}|${context.datePrlvt}|${context.cdSupport}`;
+      const groupKey = `${context.cdOuvrageDepollution}|${context.locGlobalePointMesure}|${context.datePrlvt}|${context.cdSupport}`;
 
       if (!groups.has(groupKey)) {
         groups.set(groupKey, { context });
