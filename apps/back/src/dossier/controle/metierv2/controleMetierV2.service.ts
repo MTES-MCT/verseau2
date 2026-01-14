@@ -2,7 +2,7 @@ import { FctAssainissement } from '@lib/parser';
 import { Inject, Injectable } from '@nestjs/common';
 import { ControleModel } from '../controle.model';
 import { EntityManager } from 'typeorm';
-import { ControleError, ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
+import { ControleError, ControleName, ControleType, ErrorCode, EvenementType, PrelevementContext } from '@lib/dossier';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/controle.mapper';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
@@ -203,7 +203,13 @@ export class ControleMetierV2Service {
         if (paramValue <= config.min || paramValue >= config.max) {
           errors.push({
             code: config.errorCode,
-            params: [...context, paramValue.toString()],
+            params: [
+              context.cdOuvrageDepollution,
+              context.locGlobalePointMesure,
+              context.datePrlvt,
+              context.cdSupport,
+              paramValue.toString(),
+            ],
             evenementType: EvenementType.AVERTISSEMENT,
           });
         }
@@ -235,7 +241,15 @@ export class ControleMetierV2Service {
         if (ratio <= config.min || ratio >= config.max) {
           errors.push({
             code: config.errorCode,
-            params: [...group.context, group.val1.toString(), group.val2.toString(), ratio.toFixed(2)],
+            params: [
+              group.context.cdOuvrageDepollution,
+              group.context.locGlobalePointMesure,
+              group.context.datePrlvt,
+              group.context.cdSupport,
+              group.val1.toString(),
+              group.val2.toString(),
+              ratio.toFixed(2),
+            ],
             evenementType: EvenementType.AVERTISSEMENT,
           });
         }
@@ -264,7 +278,14 @@ export class ControleMetierV2Service {
         if (!config.compare(group.val1, group.val2)) {
           errors.push({
             code: config.errorCode,
-            params: [...group.context, group.val1.toString(), group.val2.toString()],
+            params: [
+              group.context.cdOuvrageDepollution,
+              group.context.locGlobalePointMesure,
+              group.context.datePrlvt,
+              group.context.cdSupport,
+              group.val1.toString(),
+              group.val2.toString(),
+            ],
             evenementType: EvenementType.AVERTISSEMENT,
           });
         }
@@ -277,21 +298,22 @@ export class ControleMetierV2Service {
   // Itère sur tous les prélèvements et fournit le contexte et les analyses
   private forEachPrelevement(
     fctAssainissement: FctAssainissement,
-    callback: (
-      context: [string, string, string, string],
-      analyses: { cdParametre?: string; rsAnalyse?: string }[],
-    ) => void,
+    callback: (context: PrelevementContext, analyses: { cdParametre?: string; rsAnalyse?: string }[]) => void,
   ): void {
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
 
       for (const pointMesure of ouvrage.pointMesure) {
         const numeroPointMesure = pointMesure.numeroPointMesure || '';
+        const locGlobalePointMesure = pointMesure.locGlobalePointMesure || '';
 
         for (const prelevement of pointMesure.prelevement) {
           const datePrlvt = prelevement.datePrlvt ?? '';
           const cdSupport = prelevement.cdSupport ?? '';
-          callback([cdOuvrageDepollution, numeroPointMesure, datePrlvt, cdSupport], prelevement.analyse);
+          callback(
+            { cdOuvrageDepollution, numeroPointMesure, locGlobalePointMesure, datePrlvt, cdSupport },
+            prelevement.analyse,
+          );
         }
       }
     }
@@ -318,13 +340,13 @@ export class ControleMetierV2Service {
     fctAssainissement: FctAssainissement,
     paramCode1: CodeParametre,
     paramCode2: CodeParametre,
-  ): Map<string, { val1?: number; val2?: number; context: [string, string, string, string] }> {
+  ): Map<string, { val1?: number; val2?: number; context: PrelevementContext }> {
     const param1Code = paramCode1.toString();
     const param2Code = paramCode2.toString();
-    const groups = new Map<string, { val1?: number; val2?: number; context: [string, string, string, string] }>();
+    const groups = new Map<string, { val1?: number; val2?: number; context: PrelevementContext }>();
 
     this.forEachPrelevement(fctAssainissement, (context, analyses) => {
-      const groupKey = context.join('|');
+      const groupKey = `${context.cdOuvrageDepollution}|${context.numeroPointMesure}|${context.datePrlvt}|${context.cdSupport}`;
 
       if (!groups.has(groupKey)) {
         groups.set(groupKey, { context });

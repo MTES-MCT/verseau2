@@ -68,7 +68,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL047);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_047);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '100', '150']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '100', '150']);
     });
 
     it('should return no error when DCO > DBO5', () => {
@@ -157,7 +157,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL048);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_048);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '10', '15']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '10', '15']);
     });
 
     it('should return no error when NTK > N-NH4', () => {
@@ -220,7 +220,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL039);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '120', '100', '1.20']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '120', '100', '1.20']);
     });
 
     it('should return an error when ratio DCO/DBO5 is above range (ratio >= 3.5)', () => {
@@ -251,7 +251,7 @@ describe('ControleMetierV2Service', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '400', '100', '4.00']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '400', '100', '4.00']);
     });
 
     it('should return no error when ratio DCO/DBO5 is within range (1.5 < ratio < 3.5)', () => {
@@ -314,7 +314,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL040);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '50', '100', '0.50']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '50', '100', '0.50']);
     });
 
     it('should return an error when ratio MES/DBO5 is above range (ratio >= 1.5)', () => {
@@ -345,7 +345,7 @@ describe('ControleMetierV2Service', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '200', '100', '2.00']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '200', '100', '2.00']);
     });
 
     it('should return no error when ratio MES/DBO5 is within range (0.7 < ratio < 1.5)', () => {
@@ -405,7 +405,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL041);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '200']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '200']);
     });
 
     it('should return an error when DCO is above range (DCO >= 1700)', () => {
@@ -433,7 +433,7 @@ describe('ControleMetierV2Service', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU1', 'PM1', '2024-01-01', '3', '1800']);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '1800']);
     });
 
     it('should return no error when DCO is within range (300 < DCO < 1700)', () => {
@@ -1008,8 +1008,8 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL049);
       expect(result.errors).toHaveLength(2);
       expect(result.errors[0].code).toBe(ErrorCode.E2_049);
-      expect(result.errors[0].params).toEqual(['STEU_CODE', 'PM1', '2024-06-15', '3', '5', '10']);
-      expect(result.errors[1].params).toEqual(['STEU_CODE', 'PM1', '2024-06-17', '3', '1', '5']);
+      expect(result.errors[0].params).toEqual(['STEU_CODE', 'A3', '2024-06-15', '3', '5', '10']);
+      expect(result.errors[1].params).toEqual(['STEU_CODE', 'A3', '2024-06-17', '3', '1', '5']);
     });
   });
 });

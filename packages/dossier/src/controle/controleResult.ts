@@ -10,6 +10,14 @@ export interface ControleErrorDto extends ControleError {
   message: string;
 }
 
+export interface PrelevementContext {
+  cdOuvrageDepollution: string;
+  numeroPointMesure: string;
+  locGlobalePointMesure: string;
+  datePrlvt: string;
+  cdSupport: string;
+}
+
 export interface ControleIndividuel {
   success: boolean;
   name: ControleName;

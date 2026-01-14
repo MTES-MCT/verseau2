@@ -16,7 +16,7 @@ import { CodeParametre } from '@referentiel/parametre/codeParametre';
 
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
-import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
+import { startPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
 import { createReferentielDataset, clearReferentielData } from '../../../createReferentielDataset';
 import { clearDepots } from '../../../depot.helper';
 import type { Analyse, Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
@@ -254,7 +254,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL039);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual(['STEU001', 'PM001', '2024-01-15', '3', '30', '20', '1.50']);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '30', '20', '1.50']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -287,7 +287,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL039);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '70', '20', '3.50']);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '70', '20', '3.50']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -360,6 +360,7 @@ describe('ControleMetierV2Service (e2e)', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM008A',
+                locGlobalePointMesure: 'A3',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-24',
@@ -373,6 +374,7 @@ describe('ControleMetierV2Service (e2e)', () => {
               },
               {
                 numeroPointMesure: 'PM008B',
+                locGlobalePointMesure: 'A4',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-24',
@@ -412,10 +414,10 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL039);
       expect(result.errors).toHaveLength(2);
 
-      // Check errors are for different point de mesure
+      // Check errors are for different point de mesure (using locGlobalePointMesure)
       const ouvragesPMCombos = result.errors.map((e) => `${e.params[0]}-${e.params[1]}`);
-      expect(ouvragesPMCombos).toContain('STEU008-PM008A');
-      expect(ouvragesPMCombos).toContain('STEU008-PM008B');
+      expect(ouvragesPMCombos).toContain('STEU008-A3');
+      expect(ouvragesPMCombos).toContain('STEU008-A4');
     });
 
     it('should group analyses by the same (ouvrage, point_mesure, date, support) combination', () => {
@@ -522,7 +524,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL040);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual(['STEU001', 'PM001', '2024-01-15', '3', '7', '10', '0.70']);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '7', '10', '0.70']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -555,7 +557,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL040);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '15', '10', '1.50']);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '15', '10', '1.50']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -646,7 +648,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL041);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU001', 'PM001', '2024-01-15', '3', '300']);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '300']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -676,7 +678,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL041);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '1700']);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '1700']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });
@@ -735,7 +737,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL042);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_042);
-      expect(result.errors[0].params).toEqual(['STEU001', 'PM001', '2024-01-15', '3', '150']);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '150']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -765,7 +767,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL042);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_042);
-      expect(result.errors[0].params).toEqual(['STEU002', 'PM002', '2024-01-16', '3', '800']);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '800']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });
