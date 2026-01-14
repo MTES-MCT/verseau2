@@ -85,7 +85,10 @@ export function ControlePage() {
       {/* Accordion pour les contrôles V1 */}
       {controlesV1.length > 0 && (
         <div className={fr.cx('fr-mb-4w')}>
-          <ControleGroup title="Contrôles métiers" controles={controlesV1} />
+          <ControleGroup
+            title="Contrôles métiers, référentiels et de cohérence des données (ROSEAU)"
+            controles={controlesV1}
+          />
         </div>
       )}
 

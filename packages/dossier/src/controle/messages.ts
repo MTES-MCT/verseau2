@@ -66,48 +66,48 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return `Le code Sandre ${params[0]} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     case ErrorCode.E2_039:
       if (params.length === 7) {
-        return `Ratio DCO/DBO5 hors plage (1.5-3.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
+        return `Le ratio DCO/DBO5 calculé (${params[6]}) est en dehors de la plage de valeurs attendues (1,5 à 3,5) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]} (DCO = ${params[4]} mg/L, DBO5 = ${params[5]} mg/L).`;
       }
       return params[4]; // message d'erreur d'impossibilité
     case ErrorCode.E2_040:
       if (params.length === 7) {
-        return `Ratio MES/DBO5 hors plage (0.7-1.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (MES=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})`;
+        return `Le ratio MES/DBO5 calculé (${params[6]}) est en dehors de la plage de valeurs attendues (0,7 à 1,5) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]} (MES = ${params[4]} mg/L, DBO5 = ${params[5]} mg/L).`;
       }
       return params[4]; // message d'erreur d'impossibilité
     case ErrorCode.E2_041:
       if (params.length === 5) {
-        return `DCO hors plage (300-1700) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]})`;
+        return `La concentration en DCO (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (300 à 1700 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
       }
       return `Valeur DCO manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_042:
       if (params.length === 5) {
-        return `DBO5 hors plage (150-800) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DBO5=${params[4]})`;
+        return `La concentration en DBO5 (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (150 à 800 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
       }
       return `Valeur DBO5 manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_043:
       if (params.length === 5) {
-        return `MES hors plage (100-1200) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (MES=${params[4]})`;
+        return `La concentration en MES (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (100 à 1200 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
       }
       return `Valeur MES manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_044:
       if (params.length === 5) {
-        return `NTK hors plage (20-160) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]})`;
+        return `La concentration en NTK (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (20 à 160 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
       }
       return `Valeur NTK manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_045:
       if (params.length === 5) {
-        return `Ptot hors plage (4-25) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (Ptot=${params[4]})`;
+        return `La concentration en Ptot (${params[4]} mg/L) est en dehors de la plage de valeurs attendues (4 à 25 mg/L) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
       }
       return `Valeur Ptot manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_046:
       if (params.length === 5) {
-        return `pH hors plage (2-12) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (pH=${params[4]})`;
+        return `Le pH (${params[4]}) est en dehors de la plage de valeurs attendues (2 à 12) pour l'ouvrage ${params[0]}, point de mesure ${params[1]}, à la date du ${params[2]}.`;
       }
       return `Valeur pH manquante pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]}`;
     case ErrorCode.E2_047:
-      return `Incohérence : DCO ≤ DBO5 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]}, DBO5=${params[5]})`;
+      return `Incohérence : DCO ≤ DBO5 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]} mg/L, DBO5=${params[5]} mg/L)`;
     case ErrorCode.E2_048:
-      return `Incohérence : NTK ≤ N-NH4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]}, N-NH4=${params[5]})`;
+      return `Incohérence : NTK ≤ N-NH4 pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NTK=${params[4]} mg/L, N-NH4=${params[5]} mg/L)`;
     case ErrorCode.E2_049:
       return `Incohérence : NGL ≤ NTK pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (NGL=${params[4]}, NTK=${params[5]})`;
     case ErrorCode.E2_050:
