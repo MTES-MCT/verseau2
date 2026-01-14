@@ -75,8 +75,7 @@ html {
   background-image: url('/image_accueil.webp');
   background-size: cover;
   background-position: center;
-  opacity: 0.4;
-  filter: blur(4px);
+  opacity: 0.25;
   pointer-events: none;
 }
 
@@ -86,7 +85,15 @@ html {
   background-color: var(--background-default-grey);
 }
 
-.home-background {
+.home-background  h1, .home-background  p {
   text-shadow: 0 0 20px rgba(255, 255, 255);
-  font-weight: 700;
+}
+
+.home-background  h1 {
+  font-size: xxx-large !important;
+}
+
+.home-background  p {
+  font-weight: 800;
+  font-size: x-large !important;
 }
