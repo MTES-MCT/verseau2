@@ -47,8 +47,10 @@ class PgService {
     const sql = `
       DROP SCHEMA IF EXISTS custom_ingestion_roseau CASCADE;
       DROP SCHEMA IF EXISTS custom_ingestion_lanceleau CASCADE;
+      DROP SCHEMA IF EXISTS custom_ingestion_verseau CASCADE;
       CREATE SCHEMA custom_ingestion_roseau;
       CREATE SCHEMA custom_ingestion_lanceleau;
+      CREATE SCHEMA custom_ingestion_verseau;
     `;
 
     return new Promise((resolve, reject) => {
@@ -81,6 +83,7 @@ class PgService {
       '--no-acl',
       '--schema=custom_ingestion_roseau',
       '--schema=custom_ingestion_lanceleau',
+      '--schema=custom_ingestion_verseau',
       '-d',
       connectionString,
       filePath,
@@ -120,8 +123,10 @@ class PgService {
     const sql = `
       DROP SCHEMA IF EXISTS custom_ingestion_roseau_${targetColor} CASCADE;
       DROP SCHEMA IF EXISTS custom_ingestion_lanceleau_${targetColor} CASCADE;
+      DROP SCHEMA IF EXISTS custom_ingestion_verseau_${targetColor} CASCADE;
       ALTER SCHEMA custom_ingestion_roseau RENAME TO custom_ingestion_roseau_${targetColor};
       ALTER SCHEMA custom_ingestion_lanceleau RENAME TO custom_ingestion_lanceleau_${targetColor};
+      ALTER SCHEMA custom_ingestion_verseau RENAME TO custom_ingestion_verseau_${targetColor};
     `;
 
     return new Promise((resolve, reject) => {

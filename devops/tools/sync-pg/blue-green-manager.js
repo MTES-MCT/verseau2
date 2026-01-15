@@ -4,9 +4,9 @@ const { Client } = require('pg');
  * Gère la stratégie Blue-Green pour les schémas de référentiels.
  *
  * Workflow simplifié :
- * 1. Le dump est restauré normalement (crée custom_ingestion_roseau et custom_ingestion_lanceleau)
+ * 1. Le dump est restauré normalement (crée custom_ingestion_roseau, custom_ingestion_lanceleau et custom_ingestion_verseau)
  * 2. Les schémas sont renommés avec le suffixe _blue ou _green
- * 3. Les vues roseau et lanceleau pointent vers le schéma coloré actif
+ * 3. Les vues roseau, lanceleau et verseau pointent vers le schéma coloré actif
  * 4. L'ancien schéma coloré est supprimé
  */
 class BlueGreenSchemaManager {
@@ -26,10 +26,10 @@ class BlueGreenSchemaManager {
   }
 
   /**
-   * Récupère dynamiquement la liste des tables d'un schéma
+   * Récupère dynamiquement la liste des tables et vues d'un schéma
    * @param {Client} client - Client PostgreSQL déjà connecté
    * @param {string} schemaName - Nom du schéma
-   * @returns {Promise<string[]>} Liste des noms de tables
+   * @returns {Promise<string[]>} Liste des noms de tables et vues
    */
   async _getTablesFromSchema(client, schemaName) {
     const result = await client.query(
@@ -37,7 +37,7 @@ class BlueGreenSchemaManager {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = $1 
-      AND table_type = 'BASE TABLE'
+      AND table_type IN ('BASE TABLE', 'VIEW')
       ORDER BY table_name;
     `,
       [schemaName],
@@ -148,8 +148,24 @@ class BlueGreenSchemaManager {
         console.log(`  ${lanceleauSchema}.${table}: ${count} lignes`);
       }
 
+      // Valider Verseau
+      const verseauSchema = `custom_ingestion_verseau_${color}`;
+      const verseauTables = await this._getTablesFromSchema(client, verseauSchema);
+      if (verseauTables.length === 0) {
+        throw new Error(`Le schéma ${verseauSchema} ne contient aucune table !`);
+      }
+
+      for (const table of verseauTables) {
+        const result = await client.query(`
+          SELECT COUNT(*) as count 
+          FROM ${verseauSchema}.${table};
+        `);
+        const count = parseInt(result.rows[0].count);
+        console.log(`  ${verseauSchema}.${table}: ${count} lignes`);
+      }
+
       console.log(
-        `✅ Validation des schémas ${color} réussie (${roseauTables.length} tables Roseau, ${lanceleauTables.length} tables Lanceleau).`,
+        `✅ Validation des schémas ${color} réussie (${roseauTables.length} tables Roseau, ${lanceleauTables.length} tables Lanceleau, ${verseauTables.length} tables Verseau).`,
       );
     } finally {
       await client.end();
@@ -179,13 +195,16 @@ class BlueGreenSchemaManager {
       // Créer les schémas de vues s'ils n'existent pas
       await client.query(`CREATE SCHEMA IF NOT EXISTS roseau;`);
       await client.query(`CREATE SCHEMA IF NOT EXISTS lanceleau;`);
+      await client.query(`CREATE SCHEMA IF NOT EXISTS verseau;`);
 
       // Récupérer les tables du schéma coloré
       const roseauSourceSchema = `custom_ingestion_roseau_${color}`;
       const lanceleauSourceSchema = `custom_ingestion_lanceleau_${color}`;
+      const verseauSourceSchema = `custom_ingestion_verseau_${color}`;
 
       const roseauTables = await this._getTablesFromSchema(client, roseauSourceSchema);
       const lanceleauTables = await this._getTablesFromSchema(client, lanceleauSourceSchema);
+      const verseauTables = await this._getTablesFromSchema(client, verseauSourceSchema);
 
       // Créer/recréer les vues pour Roseau
       for (const table of roseauTables) {
@@ -205,13 +224,23 @@ class BlueGreenSchemaManager {
         `);
       }
 
+      // Créer/recréer les vues pour Verseau
+      for (const table of verseauTables) {
+        await client.query(`DROP VIEW IF EXISTS verseau.${table} CASCADE;`);
+        await client.query(`
+          CREATE VIEW verseau.${table} AS 
+          SELECT * FROM ${verseauSourceSchema}.${table};
+        `);
+      }
+
       // Mettre à jour le tracking
       await client.query(
         `
         INSERT INTO public.blue_green_tracking (schema_name, active_color, switched_at)
         VALUES 
           ('custom_ingestion_roseau', $1, NOW()),
-          ('custom_ingestion_lanceleau', $1, NOW())
+          ('custom_ingestion_lanceleau', $1, NOW()),
+          ('custom_ingestion_verseau', $1, NOW())
         ON CONFLICT (schema_name) 
         DO UPDATE SET 
           active_color = EXCLUDED.active_color,
@@ -223,7 +252,7 @@ class BlueGreenSchemaManager {
       await client.query('COMMIT');
 
       console.log(
-        `✅ Vues mises à jour vers ${color} (${roseauTables.length} vues Roseau, ${lanceleauTables.length} vues Lanceleau).`,
+        `✅ Vues mises à jour vers ${color} (${roseauTables.length} vues Roseau, ${lanceleauTables.length} vues Lanceleau, ${verseauTables.length} vues Verseau).`,
       );
     } catch (error) {
       await client.query('ROLLBACK');
@@ -245,11 +274,13 @@ class BlueGreenSchemaManager {
     try {
       const roseauSchema = `custom_ingestion_roseau_${color}`;
       const lanceleauSchema = `custom_ingestion_lanceleau_${color}`;
+      const verseauSchema = `custom_ingestion_verseau_${color}`;
 
       await client.query(`DROP SCHEMA IF EXISTS ${roseauSchema} CASCADE;`);
       await client.query(`DROP SCHEMA IF EXISTS ${lanceleauSchema} CASCADE;`);
+      await client.query(`DROP SCHEMA IF EXISTS ${verseauSchema} CASCADE;`);
 
-      console.log(`✅ Schémas ${roseauSchema} et ${lanceleauSchema} supprimés.`);
+      console.log(`✅ Schémas ${roseauSchema}, ${lanceleauSchema} et ${verseauSchema} supprimés.`);
     } catch (error) {
       console.error(`⚠️ Erreur lors du nettoyage du schéma ${color}:`, error);
       // Ne pas propager l'erreur, le nettoyage n'est pas critique
