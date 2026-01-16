@@ -15,6 +15,7 @@ export type DepotModel = Pick<
   | 'status'
   | 'controleStatus'
   | 'controleSandreStatus'
+  | 'itvCdn'
   | 'user'
   | 'userId'
   | 'createdAt'

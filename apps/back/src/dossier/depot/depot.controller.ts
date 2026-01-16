@@ -10,6 +10,7 @@ import {
   Param,
   UseGuards,
   Res,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
@@ -72,12 +73,18 @@ export class DepotController {
     }
 
     const userEntity = await this.userService.findBySub(user.cerbereId);
+    const itvCdn = await this.userService.resolveItvCdn(user.cerbereId);
+
+    if (!itvCdn) {
+      throw new ForbiddenException('Aucun intervenant (ITV) lié à votre compte');
+    }
 
     const depot = await this.deposerUnFichier.execute({
       nomOriginalFichier: sanitizedName,
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer,
+      itvCdn,
       utilisateur: {
         id: userEntity.id,
         nom: user.nom,
@@ -93,8 +100,11 @@ export class DepotController {
   @Get()
   async listMyDepots(@Req() req: CustomRequest): Promise<DepotDto[]> {
     const user = req.user;
-    const userEntity = await this.userService.findBySub(user.cerbereId);
-    const depots = await this.depotService.findByUserId(userEntity.id);
+    const itvCdn = await this.userService.resolveItvCdn(user.cerbereId);
+    if (!itvCdn) {
+      return [];
+    }
+    const depots = await this.depotService.findByItvCdn(itvCdn);
     return depots.map((depot) => mapDepotEntityToDepotDto(depot));
   }
 
@@ -105,7 +115,6 @@ export class DepotController {
     @Req() req: CustomRequest,
   ): Promise<{ authorized: boolean }> {
     const user = req.user;
-    console.log('Checking droits de depot for user', user);
     const cdOuvrageDepollutionList = cdOuvrageDepollution ? cdOuvrageDepollution.split(',') : [];
     const cdSystemeCollecteList = cdSystemeCollecte ? cdSystemeCollecte.split(',') : [];
     try {

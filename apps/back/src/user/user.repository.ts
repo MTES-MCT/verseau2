@@ -13,21 +13,15 @@ export class UserRepository extends Repository<UserEntity> implements UserGatewa
     return await this.findOne({ where: { sub } });
   }
 
+  async findByEmail(email: string): Promise<UserEntity | null> {
+    return await this.findOne({ where: { email } });
+  }
+
   async findById(id: string): Promise<UserEntity | null> {
     return await this.findOne({ where: { id } });
   }
 
-  async findByItvCdn(itvCdn: string): Promise<UserEntity | null> {
-    return await this.findOne({ where: { itvCdn } });
-  }
-
-  async createUser(data: {
-    sub: string;
-    itvCdn: string;
-    email?: string;
-    nom?: string;
-    prenom?: string;
-  }): Promise<UserEntity> {
+  async createUser(data: { sub: string; email?: string; nom?: string; prenom?: string }): Promise<UserEntity> {
     const newUser = this.create(data);
     return await this.save(newUser);
   }

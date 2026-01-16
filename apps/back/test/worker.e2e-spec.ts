@@ -22,10 +22,7 @@ import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseS
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { UserGateway } from '@user/user.gateway';
-import { UserRepository } from '@user/user.repository';
-import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
+import { startPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
@@ -140,7 +137,7 @@ class DroitsDepotServiceMock {
 // Mock UserService
 class UserServiceMock {
   async findById() {
-    return { id: 'user_001', email: 'test@example.com' };
+    return { id: 'user_001', email: 'test@example.com', sub: 'sub_001' };
   }
 }
 

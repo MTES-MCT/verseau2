@@ -3,7 +3,7 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('itv', { schema: 'lanceleau', synchronize: false })
 export class ItvEntity {
   @PrimaryColumn({ name: 'itv_cdn' })
-  itvCdn: string;
+  itvCdn: number;
 
   @Column({ name: 'peti_cdn', nullable: true })
   petiCdn: string;

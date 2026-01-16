@@ -28,23 +28,16 @@ export class DroitsDepotService {
       throw new ForbiddenException(`Utilisateur non trouvé : ${subId}`);
     }
 
-    const credentials = await this.lanceleauGateway.findOrionCredentialsByEmail(user.email);
-    this.logger.log('Orion credentials found', credentials);
-    if (!credentials) {
-      throw new ForbiddenException(`Utilisateur non trouvé dans Orion Credentials : ${user.email}`);
+    const ag = await this.lanceleauGateway.findAgByEmail(user.email);
+    this.logger.log('Ag entity found', ag);
+    if (!ag) {
+      throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
     }
-    const prCdn = credentials.prCdn;
 
-    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, 301);
+    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(ag.prCdn, 301);
     this.logger.log('Orion role found', role);
     if (!role) {
       throw new ForbiddenException(`L'utilisateur n'a pas le rôle 301 requis pour le dépôt`);
-    }
-
-    const ag = await this.lanceleauGateway.findAgByPrCdn(prCdn);
-    this.logger.log('Ag entity found', ag);
-    if (!ag) {
-      throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur`);
     }
 
     const itv = await this.lanceleauGateway.findByItvCdn(ag.itvCdn);

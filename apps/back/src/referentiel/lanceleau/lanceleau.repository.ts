@@ -39,11 +39,11 @@ export class LanceleauRepository implements LanceleauGateway {
     return this.itvRepository.find();
   }
 
-  async findItvById(id: string): Promise<ItvEntity | null> {
+  async findItvById(id: number): Promise<ItvEntity | null> {
     return this.itvRepository.findOne({ where: { itvCdn: id } });
   }
 
-  async findByItvCdn(itvCdn: string): Promise<ItvEntity | null> {
+  async findByItvCdn(itvCdn: number): Promise<ItvEntity | null> {
     return this.itvRepository.findOne({ where: { itvCdn } });
   }
 
@@ -71,12 +71,28 @@ export class LanceleauRepository implements LanceleauGateway {
     return this.orionCredentialsRepository.findOne({ where: { mail: email } });
   }
 
-  async findOrionRoleForPrincipal(prCdn: string, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null> {
+  async findOrionRoleForPrincipal(prCdn: number, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null> {
     return this.orionRoleForPrincipalRepository.findOne({ where: { prCdn, roleCdn } });
   }
 
-  async findAgByPrCdn(prCdn: string): Promise<AgEntity | null> {
+  async findAgByPrCdn(prCdn: number): Promise<AgEntity | null> {
     return this.agRepository.findOne({ where: { prCdn } });
+  }
+
+  async findAgByEmail(email: string): Promise<AgEntity | null> {
+    return this.agRepository
+      .createQueryBuilder('ag')
+      .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
+      .where('oc.mail = :email', { email })
+      .getOne();
+  }
+
+  async findAgsByItvCdn(itvCdn: number): Promise<AgEntity[]> {
+    return this.agRepository.find({ where: { itvCdn } });
+  }
+
+  async findOrionCredentialsByPrCdn(prCdn: number): Promise<OrionCredentialsEntity | null> {
+    return this.orionCredentialsRepository.findOne({ where: { prCdn } });
   }
 
   async findVSteuSclItvBySteu(steuCda: string): Promise<VSteuSclItvEntity | null> {

@@ -10,16 +10,19 @@ import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
 
 export interface LanceleauGateway {
   findItv(): Promise<ItvEntity[]>;
-  findItvById(id: string): Promise<ItvEntity | null>;
-  findByItvCdn(itvCdn: string): Promise<ItvEntity | null>;
+  findItvById(id: number): Promise<ItvEntity | null>;
+  findByItvCdn(itvCdn: number): Promise<ItvEntity | null>;
   findItvByRfa(itvRfa: string): Promise<ItvEntity | null>;
   findSupByRfa(supRfa: string): Promise<SupEntity | null>;
   findFanByRfa(fanRfa: string): Promise<FanEntity | null>;
   findParByRfa(parRfa: string): Promise<ParEntity | null>;
   findUrfByRfa(urfRfa: string): Promise<UrfEntity | null>;
   findOrionCredentialsByEmail(email: string): Promise<OrionCredentialsEntity | null>;
-  findOrionRoleForPrincipal(prCdn: string, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null>;
-  findAgByPrCdn(prCdn: string): Promise<AgEntity | null>;
+  findOrionRoleForPrincipal(prCdn: number, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null>;
+  findAgByPrCdn(prCdn: number): Promise<AgEntity | null>;
+  findAgByEmail(email: string): Promise<AgEntity | null>;
+  findAgsByItvCdn(itvCdn: number): Promise<AgEntity[]>;
+  findOrionCredentialsByPrCdn(prCdn: number): Promise<OrionCredentialsEntity | null>;
   findVSteuSclItvBySteu(steuCda: string): Promise<VSteuSclItvEntity | null>;
   findVSteuSclItvByScl(sclCda: string): Promise<VSteuSclItvEntity | null>;
   findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]>;

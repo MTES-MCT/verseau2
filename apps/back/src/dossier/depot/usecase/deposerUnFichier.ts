@@ -27,6 +27,7 @@ export class DeposerUnFichier implements UseCase<DepotModel> {
       tailleFichier: depotData.size,
       type: depotData.type,
       userId: depotData.utilisateur.id,
+      itvCdn: depotData.itvCdn,
     });
 
     const filePath = `${depot.id}_${depot.nomOriginalFichier}`;

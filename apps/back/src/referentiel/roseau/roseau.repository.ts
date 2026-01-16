@@ -70,12 +70,12 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
-  async findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null> {
-    return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: parseInt(itvCdn, 10) } });
+  async findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null> {
+    return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
-  async findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null> {
-    return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: parseInt(itvCdn, 10) } });
+  async findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null> {
+    return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
   async findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null> {
@@ -95,12 +95,7 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('pmo.pmo_no = :numeroPointMesure', { numeroPointMesure })
       .andWhere('t16.tlref_elt_cda = :codeLocPoint', { codeLocPoint });
 
-    const row = await query.getOne();
-
-    // TODO : suppprimer ce log après debug
-    // console.log('!!!!!!!!!!PMO Query:', query);
-
-    return row;
+    return query.getOne();
   }
 
   async findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null> {

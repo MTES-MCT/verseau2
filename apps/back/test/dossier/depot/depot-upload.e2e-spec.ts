@@ -24,7 +24,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
-import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
+import { startPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import cookieParser from 'cookie-parser';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
@@ -88,7 +88,6 @@ class UserServiceMock {
     return {
       id: 'user_123',
       sub,
-      itvCdn: 'itv_mock',
       email: 'test@example.com',
       nom: 'Test',
       prenom: 'User',
@@ -96,6 +95,12 @@ class UserServiceMock {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as UserEntity;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async resolveItvCdn(sub: string): Promise<number | null> {
+    await Promise.resolve();
+    return 100;
   }
 }
 
@@ -177,7 +182,6 @@ describe('Depot upload (e2e)', () => {
     await userRepository.save({
       id: 'user_123',
       sub: 'test-user-id',
-      itvCdn: 'itv_mock',
       email: 'test@example.com',
       nom: 'Test',
       prenom: 'User',

@@ -33,7 +33,7 @@ export class DepotService {
   }
 
   async findDepotByIdWithUser(id: string): Promise<DepotModel> {
-    const depot = await this.depotGateway.findDepotByIdWithUser(id);
+    const depot = await this.depotGateway.findDepotById(id);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${id} not found`);
     }
@@ -46,6 +46,10 @@ export class DepotService {
 
   async findByUserId(userId: string): Promise<DepotModel[]> {
     return await this.depotGateway.findByUserId(userId);
+  }
+
+  async findByItvCdn(itvCdn: number): Promise<DepotModel[]> {
+    return await this.depotGateway.findByItvCdn(itvCdn);
   }
 
   async update(id: string, updateData: Partial<Omit<DepotModel, 'id' | 'createdAt'>>): Promise<DepotModel> {

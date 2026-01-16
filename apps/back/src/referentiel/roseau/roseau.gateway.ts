@@ -15,8 +15,8 @@ export interface RoseauGateway {
   findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
   findSteuById(id: string): Promise<SteuEntity | null>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null>;
-  findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: string): Promise<CxnadmEntity | null>;
+  findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null>;
+  findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null>;
   findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null>;
   findPmoBySteuNumeroAndLocPoint(
     cdOuvrageDepollution: string,

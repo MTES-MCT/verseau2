@@ -1,7 +1,8 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { UserModel } from './user.model';
+import { DepotModel } from '@dossier/depot/depot.model';
 
 @Injectable()
 export class UserService {
@@ -10,17 +11,7 @@ export class UserService {
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
   ) {}
 
-  async findOrCreateUser(
-    sub: string,
-    itvCdn: string,
-    claims?: { email?: string; nom?: string; prenom?: string },
-  ): Promise<UserModel> {
-    // Validate ITV exists in referentiel
-    const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
-    if (!itv) {
-      throw new BadRequestException(`ITV with itvCdn ${itvCdn} does not exist in referentiel`);
-    }
-
+  async findOrCreateUser(sub: string, claims?: { email?: string; nom?: string; prenom?: string }): Promise<UserModel> {
     // Find existing user by sub
     const existingUser = await this.userGateway.findBySub(sub);
     if (existingUser) {
@@ -37,7 +28,7 @@ export class UserService {
     }
 
     // Create new user
-    return await this.userGateway.createUser({ sub, itvCdn, ...claims });
+    return await this.userGateway.createUser({ sub, ...claims });
   }
 
   async findBySub(sub: string): Promise<UserModel> {
@@ -46,6 +37,25 @@ export class UserService {
       throw new NotFoundException(`User with sub ${sub} not found`);
     }
     return user;
+  }
+
+  async resolveItvCdn(sub: string): Promise<number | null> {
+    const user = await this.userGateway.findBySub(sub);
+    if (!user || !user.email) {
+      return null;
+    }
+
+    const ag = await this.lanceleauGateway.findAgByEmail(user.email);
+    return ag ? ag.itvCdn : null;
+  }
+
+  async canConsultDepot(sub: string, depot: DepotModel): Promise<boolean> {
+    const itvCdn = await this.resolveItvCdn(sub);
+    return !!itvCdn && Number(depot.itvCdn) === itvCdn;
+  }
+
+  async canConsultControle(sub: string, depotOfControle: DepotModel): Promise<boolean> {
+    return this.canConsultDepot(sub, depotOfControle);
   }
 
   async findById(id: string): Promise<UserModel> {

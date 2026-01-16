@@ -57,7 +57,7 @@ export class AuthenticationController {
 
       // Sync user data to DB
       try {
-        await this.userService.findOrCreateUser(result.user.cerbereId, '1', {
+        await this.userService.findOrCreateUser(result.user.cerbereId, {
           email: result.user.mel,
           nom: result.user.nom,
           prenom: result.user.prenom,

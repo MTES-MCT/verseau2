@@ -46,13 +46,13 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Checking deposit rights`);
       const user = await this.userService.findById(fichierDeDepot.utilisateur.id);
-      if (!user.email) {
-        throw new Error("L'utilisateur n'a pas d'email renseigné, impossible de vérifier les droits");
+      if (!user.sub) {
+        throw new Error("L'utilisateur n'a pas de sub renseigné, impossible de vérifier les droits");
       }
 
       try {
         await this.droitsDepotService.validateDroits(
-          user.email,
+          user.sub,
           codes.cdOuvrageDepollutionList,
           codes.cdSystemeCollecteList,
         );
