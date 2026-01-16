@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any , @typescript-eslint/no-unsafe-argument */
 import { Injectable, Scope } from '@nestjs/common';
 import { ConsoleLogger } from '@nestjs/common';
+import { ClsServiceManager } from 'nestjs-cls';
+import { CustomClsStore } from './cls-store.interface';
 import { getLogLevels } from './logConfig';
 
 @Injectable({ scope: Scope.TRANSIENT })
@@ -33,7 +35,11 @@ export class LoggerService extends ConsoleLogger {
   }
 
   formatArgs(message: any, ...optionalParams: [...any, string?]): string {
-    let formattedMessage = `${message}`;
+    const cls = ClsServiceManager.getClsService<CustomClsStore>();
+    const correlationId = cls?.get('correlationId');
+    const prefix = correlationId ? `[cid: ${correlationId}] ` : '';
+
+    let formattedMessage = `${prefix}${message}`;
     if (optionalParams.length > 0) {
       const separator = ' - ';
       formattedMessage += `${separator}${optionalParams.map((param) => JSON.stringify(param)).join(separator)}`;

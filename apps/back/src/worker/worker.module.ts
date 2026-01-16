@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ClsModule } from 'nestjs-cls';
+import { CustomClsStore } from '@shared/logger/cls-store.interface';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { DossierModule } from '@dossier/dossier.module';
 import { InfraModule } from '@infra/infra.module';
@@ -13,7 +15,15 @@ import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 
 @Module({
-  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule],
+  imports: [
+    ClsModule.forRoot({
+      global: true,
+    }),
+    InfraModule,
+    DossierModule,
+    NotificationModule,
+    ReferentielModule,
+  ],
   providers: [
     FileProcessorService,
     WorkerService,
