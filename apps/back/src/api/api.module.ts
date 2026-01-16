@@ -2,8 +2,6 @@ import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { DossierModule } from '@dossier/dossier.module';
-import { ClsModule } from 'nestjs-cls';
-import { CustomClsStore } from '@shared/logger/cls-store.interface';
 import { InfraModule } from '@infra/infra.module';
 import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
@@ -16,10 +14,6 @@ import { AuthenticationMiddleware } from '@authentication/authentication.middlew
 
 @Module({
   imports: [
-    ClsModule.forRoot({
-      global: true,
-      middleware: { mount: true },
-    }),
     AuthenticationModule,
     FrontendStaticModule,
     DossierModule,
