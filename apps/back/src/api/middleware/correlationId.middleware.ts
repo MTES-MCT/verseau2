@@ -1,8 +1,8 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { NextFunction, Response } from 'express';
 import { ClsService } from 'nestjs-cls';
-import { CustomClsStore } from '../logger/cls-store.interface';
-import { CustomRequest } from '../constants/customRequest';
+import { CustomClsStore } from '@shared/logger/cls-store.interface';
+import { CustomRequest } from '@shared/constants/customRequest';
 import { ulid } from 'ulid';
 
 @Injectable()
