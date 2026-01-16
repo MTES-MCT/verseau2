@@ -3,6 +3,10 @@ import { SupEntity } from './entities/sup.entity';
 import { FanEntity } from './entities/fan.entity';
 import { ParEntity } from './entities/par.entity';
 import { UrfEntity } from './entities/urf.entity';
+import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
+import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
+import { AgEntity } from './entities/ag.entity';
+import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
 
 export interface LanceleauGateway {
   findItv(): Promise<ItvEntity[]>;
@@ -13,6 +17,12 @@ export interface LanceleauGateway {
   findFanByRfa(fanRfa: string): Promise<FanEntity | null>;
   findParByRfa(parRfa: string): Promise<ParEntity | null>;
   findUrfByRfa(urfRfa: string): Promise<UrfEntity | null>;
+  findOrionCredentialsByEmail(email: string): Promise<OrionCredentialsEntity | null>;
+  findOrionRoleForPrincipal(prCdn: string, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null>;
+  findAgByPrCdn(prCdn: string): Promise<AgEntity | null>;
+  findVSteuSclItvBySteu(steuCda: string): Promise<VSteuSclItvEntity | null>;
+  findVSteuSclItvByScl(sclCda: string): Promise<VSteuSclItvEntity | null>;
+  findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]>;
 }
 
 export const LanceleauGateway = Symbol('LanceleauGateway');

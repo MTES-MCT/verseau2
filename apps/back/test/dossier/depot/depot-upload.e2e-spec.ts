@@ -28,6 +28,10 @@ import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import cookieParser from 'cookie-parser';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { UserGateway } from '@user/user.gateway';
+import { UserRepository } from '@user/user.repository';
 
 class ConfigServiceMock {
   get(key: string) {
@@ -104,6 +108,8 @@ class RoseauGatewayMock {
   }
 }
 
+class LanceleauGatewayMock {}
+
 describe('Depot upload (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -133,10 +139,15 @@ describe('Depot upload (e2e)', () => {
       providers: [
         LoggerService,
         DeposerUnFichier,
+        DroitsDepotService,
         DepotService,
         DepotRepository,
         { provide: DepotGateway, useExisting: DepotRepository },
         { provide: QueueGateway, useClass: QueueServiceMock },
+        { provide: LanceleauGateway, useClass: LanceleauGatewayMock },
+        UserRepository,
+        { provide: UserGateway, useExisting: UserRepository },
+
         { provide: S3, useClass: S3Mock },
         { provide: Sftp, useClass: SftpProviderMock },
         { provide: Authentication, useClass: AuthenticationMockService },

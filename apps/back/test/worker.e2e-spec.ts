@@ -20,6 +20,11 @@ import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseSandre.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
+import { UserService } from '@user/user.service';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { UserGateway } from '@user/user.gateway';
+import { UserRepository } from '@user/user.repository';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
@@ -118,6 +123,27 @@ class RoseauGatewayMock {
   }
 }
 
+// Mock LanceleauGateway
+class LanceleauGatewayMock {
+  async findByItvCdn() {
+    return null;
+  }
+}
+
+// Mock DroitsDepotService
+class DroitsDepotServiceMock {
+  async validateDroits() {
+    return Promise.resolve();
+  }
+}
+
+// Mock UserService
+class UserServiceMock {
+  async findById() {
+    return { id: 'user_001', email: 'test@example.com' };
+  }
+}
+
 describe('Worker Service (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -146,6 +172,8 @@ describe('Worker Service (e2e)', () => {
         LoggerService,
         FileProcessorService,
         SftpAgentVerseauProcessorService,
+        { provide: DroitsDepotService, useClass: DroitsDepotServiceMock },
+        { provide: UserService, useClass: UserServiceMock },
         DepotService,
         DepotRepository,
         { provide: DepotGateway, useExisting: DepotRepository },

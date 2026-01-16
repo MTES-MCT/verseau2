@@ -16,6 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
+import { DroitsDepotService } from './droitsDepot.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
@@ -39,6 +40,7 @@ export class DepotController {
   constructor(
     private readonly deposerUnFichier: DeposerUnFichier,
     private readonly depotService: DepotService,
+    private readonly droitsDepotService: DroitsDepotService,
     private readonly userService: UserService,
     private readonly logger: LoggerService,
   ) {
@@ -98,13 +100,21 @@ export class DepotController {
 
   @Get('droits-de-depot')
   async checkDroitsDeDepot(
-    @Query('cdOuvrage') cdOuvrage: string,
+    @Query('cdOuvrageDepollution') cdOuvrageDepollution: string,
+    @Query('cdSystemeCollecte') cdSystemeCollecte: string,
     @Req() req: CustomRequest,
   ): Promise<{ authorized: boolean }> {
     const user = req.user;
-    const userEntity = await this.userService.findBySub(user.cerbereId);
-    const authorized = await this.depotService.checkDroitsDeDepot(cdOuvrage, userEntity.itvCdn);
-    return { authorized };
+    console.log('Checking droits de depot for user', user);
+    const cdOuvrageDepollutionList = cdOuvrageDepollution ? cdOuvrageDepollution.split(',') : [];
+    const cdSystemeCollecteList = cdSystemeCollecte ? cdSystemeCollecte.split(',') : [];
+    try {
+      await this.droitsDepotService.validateDroits(user.cerbereId, cdOuvrageDepollutionList, cdSystemeCollecteList);
+      return { authorized: true };
+    } catch (error) {
+      this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${error.message as string}`);
+      return { authorized: false };
+    }
   }
 
   // TODO : utiliser une URL signée pour sécuriser l'accès au rapport pouré éviter le back de faire passe plat

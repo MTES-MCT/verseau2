@@ -4,6 +4,7 @@ import { DepotController } from './depot/depot.controller';
 import { DepotEntity } from './depot/depot.entity';
 import { DepotRepository } from './depot/depot.repository';
 import { DepotService } from './depot/depot.service';
+import { DroitsDepotService } from './depot/droitsDepot.service';
 import { DeposerUnFichier } from './depot/usecase/deposerUnFichier';
 import { InfraModule } from '@infra/infra.module';
 import { SandreService } from './controle/technique/sandre/sandre.service';
@@ -60,6 +61,7 @@ const sandreServiceFactory = {
     // Depot
     { provide: DepotGateway, useClass: DepotRepository },
     DepotService,
+    DroitsDepotService,
     DepotCoordinatorService,
     DeposerUnFichier,
     // Sandre control
@@ -80,6 +82,7 @@ const sandreServiceFactory = {
   ],
   exports: [
     DepotService,
+    DroitsDepotService,
     DepotCoordinatorService,
     ControleSandreService,
     ControleV1Service,

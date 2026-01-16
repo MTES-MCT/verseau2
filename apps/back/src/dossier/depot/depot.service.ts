@@ -60,16 +60,6 @@ export class DepotService {
     return updatedDepot;
   }
 
-  async checkDroitsDeDepot(cdOuvrage: string, itvCdn: string): Promise<boolean> {
-    const steu = await this.roseauGateway.findSteuBySandreCda(cdOuvrage);
-    if (!steu) {
-      return false;
-    }
-    // TODO : Vérifier si cette requête est la bonne pour les droits de dépo
-    const cxnAdm = await this.roseauGateway.findCxnAdmBySteuAndItv(steu.steuCdn, itvCdn);
-    return !!cxnAdm;
-  }
-
   async downloadRapport(depotId: string): Promise<Buffer> {
     const depot = await this.findById(depotId);
 

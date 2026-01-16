@@ -13,6 +13,10 @@ export class UserRepository extends Repository<UserEntity> implements UserGatewa
     return await this.findOne({ where: { sub } });
   }
 
+  async findById(id: string): Promise<UserEntity | null> {
+    return await this.findOne({ where: { id } });
+  }
+
   async findByItvCdn(itvCdn: string): Promise<UserEntity | null> {
     return await this.findOne({ where: { itvCdn } });
   }

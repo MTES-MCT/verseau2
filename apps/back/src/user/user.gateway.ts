@@ -1,6 +1,7 @@
 import { UserModel } from './user.model';
 
 export interface UserGateway {
+  findById(id: string): Promise<UserModel | null>;
   findBySub(sub: string): Promise<UserModel | null>;
   findByItvCdn(itvCdn: string): Promise<UserModel | null>;
   createUser(data: { sub: string; itvCdn: string; email?: string; nom?: string; prenom?: string }): Promise<UserModel>;

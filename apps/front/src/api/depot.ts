@@ -39,8 +39,14 @@ export async function uploadDepot(file: File): Promise<void> {
   await apiPostFormData<void>('/depot/upload', formData);
 }
 
-export async function checkDroitsDeDepot(cdOuvrage: string): Promise<DroitsDeDepotResponse> {
-  const url = buildUrl('/depot/droits-de-depot', { cdOuvrage });
+export async function checkDroitsDeDepot(
+  cdOuvrageDepollutionList: string[],
+  cdSystemeCollecteList: string[],
+): Promise<DroitsDeDepotResponse> {
+  const url = buildUrl('/depot/droits-de-depot', {
+    cdOuvrageDepollution: cdOuvrageDepollutionList.join(','),
+    cdSystemeCollecte: cdSystemeCollecteList.join(','),
+  });
   return apiGet<DroitsDeDepotResponse>(url);
 }
 

@@ -20,6 +20,10 @@ import { CpyEntity } from '@referentiel/roseau/entities/cpy.entity';
 import { ResaEntity } from '@referentiel/roseau/entities/resa.entity';
 import { StchanEntity } from '@referentiel/roseau/entities/stchan.entity';
 import { SharedModule } from '@shared/shared.module';
+import { OrionCredentialsEntity } from '@referentiel/lanceleau/entities/orionCredentials.entity';
+import { VSteuSclItvEntity } from '@referentiel/lanceleau/entities/vSteuSclItv.entity';
+import { AgEntity } from '@referentiel/lanceleau/entities/ag.entity';
+import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
 
 export function initTestContainerImports(connectionUri: string) {
   return [
@@ -51,6 +55,11 @@ export function initTestContainerImports(connectionUri: string) {
         FanEntity,
         ParEntity,
         UrfEntity,
+        OrionCredentialsEntity,
+        OrionRoleForPrincipalEntity,
+        AgEntity,
+        // Verseau entities
+        VSteuSclItvEntity,
       ],
       synchronize: true,
     }),
@@ -75,6 +84,10 @@ export function initTestContainerImports(connectionUri: string) {
       FanEntity,
       ParEntity,
       UrfEntity,
+      OrionCredentialsEntity,
+      OrionRoleForPrincipalEntity,
+      AgEntity,
+      VSteuSclItvEntity,
     ]),
   ];
 }
