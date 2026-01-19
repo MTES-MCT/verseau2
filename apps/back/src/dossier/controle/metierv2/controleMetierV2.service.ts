@@ -4,7 +4,7 @@ import { ControleModel } from '../controle.model';
 import { EntityManager } from 'typeorm';
 import { ControleError, ControleName, ControleType, ErrorCode, EvenementType, PrelevementContext } from '@lib/dossier';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/controle.mapper';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
@@ -111,6 +111,7 @@ export class ControleMetierV2Service {
       errorCode: ErrorCode.E2_044,
       paramCode: CodeParametre.NTK,
       min: 20,
+      uniteMesureCode: CodeUniteMesure.MG_N_L,
       max: 160,
     });
   }
@@ -122,6 +123,7 @@ export class ControleMetierV2Service {
       errorCode: ErrorCode.E2_045,
       paramCode: CodeParametre.Ptot,
       min: 4,
+      uniteMesureCode: CodeUniteMesure.MG_L,
       max: 25,
     });
   }
@@ -190,13 +192,14 @@ export class ControleMetierV2Service {
       paramCode: CodeParametre;
       min: number;
       max: number;
+      uniteMesureCode?: CodeUniteMesure;
     },
   ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
     const paramCodeStr = config.paramCode.toString();
 
     this.forEachPrelevement(fctAssainissement, (context, analyses) => {
-      const paramValue = this.extractAnalyseValue(analyses, paramCodeStr);
+      const paramValue = this.extractAnalyseValue(analyses, paramCodeStr, config.uniteMesureCode);
       const hasParamAnalyse = analyses.some((a) => a.cdParametre === paramCodeStr);
 
       if (hasParamAnalyse && paramValue !== undefined) {
@@ -298,7 +301,10 @@ export class ControleMetierV2Service {
   // Itère sur tous les prélèvements et fournit le contexte et les analyses
   private forEachPrelevement(
     fctAssainissement: FctAssainissement,
-    callback: (context: PrelevementContext, analyses: { cdParametre?: string; rsAnalyse?: string }[]) => void,
+    callback: (
+      context: PrelevementContext,
+      analyses: { cdParametre?: string; rsAnalyse?: string; cdUniteMesure?: string }[],
+    ) => void,
   ): void {
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
@@ -321,11 +327,15 @@ export class ControleMetierV2Service {
 
   // Extrait la valeur numérique d'une analyse pour un paramètre donné
   private extractAnalyseValue(
-    analyses: { cdParametre?: string; rsAnalyse?: string }[],
+    analyses: { cdParametre?: string; rsAnalyse?: string; cdUniteMesure?: string }[],
     paramCode: string,
+    uniteMesureCode?: CodeUniteMesure,
   ): number | undefined {
     for (const analyse of analyses) {
       if (analyse.cdParametre === paramCode && analyse.rsAnalyse) {
+        if (uniteMesureCode && analyse.cdUniteMesure !== uniteMesureCode.toString()) {
+          continue;
+        }
         const val = parseFloat(analyse.rsAnalyse);
         if (!isNaN(val)) {
           return val;
