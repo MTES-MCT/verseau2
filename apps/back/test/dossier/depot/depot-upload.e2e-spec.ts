@@ -32,6 +32,7 @@ import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { UserGateway } from '@user/user.gateway';
 import { UserRepository } from '@user/user.repository';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 class ConfigServiceMock {
   get(key: string) {
@@ -96,7 +97,9 @@ class UserServiceMock {
       updatedAt: new Date(),
     } as UserEntity;
   }
+}
 
+class DroitsUserServiceMock {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async resolveItvCdn(sub: string): Promise<number | null> {
     await Promise.resolve();
@@ -158,6 +161,7 @@ describe('Depot upload (e2e)', () => {
         { provide: Authentication, useClass: AuthenticationMockService },
         AuthenticationMiddleware,
         { provide: UserService, useClass: UserServiceMock },
+        { provide: DroitsUserService, useClass: DroitsUserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
         loggerProviderMock,

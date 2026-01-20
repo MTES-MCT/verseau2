@@ -26,6 +26,7 @@ import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.
 import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
 import { sanitizeFilename } from '@shared/schema/filename.service';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 interface MulterFile {
   fieldname: string;
@@ -43,6 +44,7 @@ export class DepotController {
     private readonly depotService: DepotService,
     private readonly droitsDepotService: DroitsDepotService,
     private readonly userService: UserService,
+    private readonly droitsUserService: DroitsUserService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(DepotController.name);
@@ -73,7 +75,7 @@ export class DepotController {
     }
 
     const userEntity = await this.userService.findBySub(user.cerbereId);
-    const itvCdn = await this.userService.resolveItvCdn(user.cerbereId);
+    const itvCdn = await this.droitsUserService.resolveItvCdn(user.cerbereId);
 
     if (!itvCdn) {
       throw new ForbiddenException('Aucun intervenant (ITV) lié à votre compte');
@@ -100,7 +102,7 @@ export class DepotController {
   @Get()
   async listMyDepots(@Req() req: CustomRequest): Promise<DepotDto[]> {
     const user = req.user;
-    const itvCdn = await this.userService.resolveItvCdn(user.cerbereId);
+    const itvCdn = await this.droitsUserService.resolveItvCdn(user.cerbereId);
     if (!itvCdn) {
       return [];
     }

@@ -2,7 +2,6 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { UserModel } from './user.model';
-import { DepotModel } from '@dossier/depot/depot.model';
 
 @Injectable()
 export class UserService {
@@ -37,25 +36,6 @@ export class UserService {
       throw new NotFoundException(`User with sub ${sub} not found`);
     }
     return user;
-  }
-
-  async resolveItvCdn(sub: string): Promise<number | null> {
-    const user = await this.userGateway.findBySub(sub);
-    if (!user || !user.email) {
-      return null;
-    }
-
-    const ag = await this.lanceleauGateway.findAgByEmail(user.email);
-    return ag ? ag.itvCdn : null;
-  }
-
-  async canConsultDepot(sub: string, depot: DepotModel): Promise<boolean> {
-    const itvCdn = await this.resolveItvCdn(sub);
-    return !!itvCdn && Number(depot.itvCdn) === itvCdn;
-  }
-
-  async canConsultControle(sub: string, depotOfControle: DepotModel): Promise<boolean> {
-    return this.canConsultDepot(sub, depotOfControle);
   }
 
   async findById(id: string): Promise<UserModel> {
