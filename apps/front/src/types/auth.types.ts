@@ -1,7 +1,4 @@
-/**
- * Type definitions for authenticated user
- * Must match the backend AuthenticatedUser interface
- */
+// TODO : déplacer vers lib "user" (à créer) ou "dossier"
 export interface AuthenticatedUser {
   cerbereId: string; // Identifiant Cerbere interne (sub)
   login: string; // uid / preferred_username
@@ -16,4 +13,12 @@ export interface AuthenticatedUser {
   telephone?: string; // phone_number
   profils?: string[]; // cerbere_profils (format: "NOM;PORTEE;RESTRICTION")
   roles?: string[]; // cerbere_roles
+}
+
+export interface AuthenticatedUserWithIntervenant {
+  user: AuthenticatedUser;
+  intervenant: {
+    itvCdn: number;
+    nom: string;
+  } | null;
 }

@@ -33,7 +33,7 @@ export class DepotService {
   }
 
   async findDepotByIdWithUser(id: string): Promise<DepotModel> {
-    const depot = await this.depotGateway.findDepotByIdWithUser(id);
+    const depot = await this.depotGateway.findDepotById(id);
     if (!depot) {
       throw new NotFoundException(`Depot with id ${id} not found`);
     }
@@ -48,6 +48,10 @@ export class DepotService {
     return await this.depotGateway.findByUserId(userId);
   }
 
+  async findByItvCdn(itvCdn: number): Promise<DepotModel[]> {
+    return await this.depotGateway.findByItvCdn(itvCdn);
+  }
+
   async update(id: string, updateData: Partial<Omit<DepotModel, 'id' | 'createdAt'>>): Promise<DepotModel> {
     const depot = await this.depotGateway.findDepotById(id);
     if (!depot) {
@@ -58,16 +62,6 @@ export class DepotService {
       throw new NotFoundException(`Depot with id ${id} not found`);
     }
     return updatedDepot;
-  }
-
-  async checkDroitsDeDepot(cdOuvrage: string, itvCdn: string): Promise<boolean> {
-    const steu = await this.roseauGateway.findSteuBySandreCda(cdOuvrage);
-    if (!steu) {
-      return false;
-    }
-    // TODO : Vérifier si cette requête est la bonne pour les droits de dépo
-    const cxnAdm = await this.roseauGateway.findCxnAdmBySteuAndItv(steu.steuCdn, itvCdn);
-    return !!cxnAdm;
   }
 
   async downloadRapport(depotId: string): Promise<Buffer> {

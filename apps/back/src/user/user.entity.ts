@@ -8,9 +8,6 @@ export class UserEntity extends BaseEntity {
   @Index()
   sub: string; // OIDC subject claim
 
-  @Column({ type: 'varchar', name: 'itv_cdn' })
-  itvCdn: string; // External ID from referentiel
-
   @Column({ type: 'varchar', nullable: true })
   email: string;
 

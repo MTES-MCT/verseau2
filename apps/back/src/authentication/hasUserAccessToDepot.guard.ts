@@ -2,8 +2,8 @@ import { Authentication } from './authentication';
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { UserService } from '@user/user.service';
 import { CustomRequest } from '@shared/constants/customRequest';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 @Injectable()
 export class HasUserAccessToDepotGuard implements CanActivate {
@@ -11,7 +11,7 @@ export class HasUserAccessToDepotGuard implements CanActivate {
     @Inject(Authentication) private readonly authentication: Authentication,
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
-    private readonly userService: UserService,
+    private readonly droitsUserService: DroitsUserService,
   ) {
     this.logger.setContext('HasUserAccessToDepotGuard');
   }
@@ -33,17 +33,15 @@ export class HasUserAccessToDepotGuard implements CanActivate {
       throw new ForbiddenException('Depot ID is required');
     }
 
-    // TODO: improve performance by using CLS to avoid multiple database calls
-    // Find the user by their cerbereId (OIDC subject claim)
-    const user = await this.userService.findBySub(authenticatedUser.cerbereId);
-
     // Find the depot
     const depot = await this.depotService.findById(depotId);
 
-    // Check if the depot belongs to the authenticated user
-    if (depot.user?.id !== user.id) {
+    // Check if the depot belongs to the authenticated user's intervenant
+    const canConsult = await this.droitsUserService.canConsultDepot(authenticatedUser.cerbereId, depot);
+
+    if (!canConsult) {
       this.logger.warn('User does not have access to depot', {
-        userId: user.id,
+        sub: authenticatedUser.cerbereId,
         depotId: depot.id,
       });
       throw new ForbiddenException('You do not have access to this depot');

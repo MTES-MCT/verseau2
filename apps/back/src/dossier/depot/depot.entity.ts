@@ -52,6 +52,9 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'enum', enum: ControleSandreStatus, nullable: true, default: null, name: 'controle_sandre_status' })
   controleSandreStatus?: ControleSandreStatus;
 
+  @Column({ type: 'bigint', name: 'itv_cdn', nullable: true })
+  itvCdn?: number;
+
   @Column({ type: 'varchar', name: 'user_id', nullable: true })
   userId?: string;
 

@@ -1,4 +1,4 @@
-import type { AuthenticatedUser } from '../types/auth.types';
+import type { AuthenticatedUser, AuthenticatedUserWithIntervenant } from '../types/auth.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -227,7 +227,7 @@ class AuthService {
   /**
    * Get current user information
    */
-  async getCurrentUser(): Promise<AuthenticatedUser> {
+  async getCurrentUser(): Promise<AuthenticatedUserWithIntervenant> {
     const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: 'GET',
       credentials: 'include',

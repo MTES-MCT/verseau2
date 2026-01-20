@@ -54,12 +54,35 @@ export function useDepotRecap(): UseDepotRecapResult {
   }, [fileContent, mutate]);
 
   const parsedData = parseMutation.data;
+
+  const { cdOuvrageDepollutionList, cdSystemeCollecteList } = useMemo(() => {
+    if (!parsedData) {
+      return { cdOuvrageDepollutionList: [], cdSystemeCollecteList: [] };
+    }
+    const ouvrages = new Set<string>();
+    const systemes = new Set<string>();
+    parsedData.ouvrages?.forEach((o) => {
+      if (o.cdOuvrageDepollution) {
+        ouvrages.add(o.cdOuvrageDepollution);
+      }
+    });
+    parsedData.systemesCollecte?.forEach((s) => {
+      if (s.cdSystemeCollecte) {
+        systemes.add(s.cdSystemeCollecte);
+      }
+    });
+    return {
+      cdOuvrageDepollutionList: Array.from(ouvrages),
+      cdSystemeCollecteList: Array.from(systemes),
+    };
+  }, [parsedData]);
+
   const cdOuvrage = useMemo(() => parsedData?.ouvrages?.[0]?.cdOuvrageDepollution, [parsedData]);
 
   const droitsDeDepotQuery = useQuery({
-    queryKey: ['depot', 'droits-de-depot', cdOuvrage],
-    queryFn: () => checkDroitsDeDepot(cdOuvrage!),
-    enabled: Boolean(cdOuvrage) && parseMutation.isSuccess,
+    queryKey: ['depot', 'droits-de-depot', cdOuvrageDepollutionList, cdSystemeCollecteList],
+    queryFn: () => checkDroitsDeDepot(cdOuvrageDepollutionList, cdSystemeCollecteList),
+    enabled: (cdOuvrageDepollutionList.length > 0 || cdSystemeCollecteList.length > 0) && parseMutation.isSuccess,
     retry: false,
   });
 
@@ -67,8 +90,8 @@ export function useDepotRecap(): UseDepotRecapResult {
   const params = useMemo(() => (parsedData ? extractParams(parsedData) : []), [parsedData]);
 
   const droitsDeDepotStatus = useMemo(() => {
-    if (!cdOuvrage) {
-      return 'error';
+    if (cdOuvrageDepollutionList.length === 0 && cdSystemeCollecteList.length === 0) {
+      return parseMutation.isSuccess ? 'authorized' : 'error';
     }
     if (droitsDeDepotQuery.isLoading) {
       return 'loading';
@@ -77,12 +100,19 @@ export function useDepotRecap(): UseDepotRecapResult {
       return 'error';
     }
     return droitsDeDepotQuery.data?.authorized ? 'authorized' : 'unauthorized';
-  }, [cdOuvrage, droitsDeDepotQuery.isLoading, droitsDeDepotQuery.isError, droitsDeDepotQuery.data?.authorized]);
+  }, [
+    cdOuvrageDepollutionList.length,
+    cdSystemeCollecteList.length,
+    parseMutation.isSuccess,
+    droitsDeDepotQuery.isLoading,
+    droitsDeDepotQuery.isError,
+    droitsDeDepotQuery.data?.authorized,
+  ]);
 
   const handleReturn = () => navigate(AppRoutes.DEPOT_UPLOAD);
 
   const handleFinalize = () => {
-    if (!fileName || !fileContent) {
+    if (!fileName || !fileContent || droitsDeDepotStatus !== 'authorized') {
       return;
     }
     const file = buildFileFromContent(fileContent, fileName);

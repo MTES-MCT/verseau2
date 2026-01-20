@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { authService } from '../services/auth.service';
-import type { AuthenticatedUser } from '../types/auth.types';
+import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
 
 interface AuthContextValue {
-  user: AuthenticatedUser | null;
+  authenticatedUser: AuthenticatedUserWithIntervenant | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: () => Promise<void>;
@@ -18,20 +18,20 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUserWithIntervenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
     try {
       if (authService.isAuthenticated()) {
         const userData = await authService.getCurrentUser();
-        setUser(userData);
+        setAuthenticatedUser(userData);
       } else {
-        setUser(null);
+        setAuthenticatedUser(null);
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      setUser(null);
+      setAuthenticatedUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -56,18 +56,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     try {
       await authService.logout();
-      setUser(null);
+      setAuthenticatedUser(null);
     } catch (error) {
       console.error('Logout failed:', error);
-      setUser(null);
+      setAuthenticatedUser(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const value: AuthContextValue = {
-    user,
-    isAuthenticated: !!user,
+    authenticatedUser,
+    isAuthenticated: !!authenticatedUser,
     isLoading,
     login,
     logout,

@@ -24,10 +24,15 @@ import { ConfigService } from '@nestjs/config';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
-import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
+import { startPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import cookieParser from 'cookie-parser';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { UserGateway } from '@user/user.gateway';
+import { UserRepository } from '@user/user.repository';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 class ConfigServiceMock {
   get(key: string) {
@@ -84,7 +89,6 @@ class UserServiceMock {
     return {
       id: 'user_123',
       sub,
-      itvCdn: 'itv_mock',
       email: 'test@example.com',
       nom: 'Test',
       prenom: 'User',
@@ -92,6 +96,14 @@ class UserServiceMock {
       createdAt: new Date(),
       updatedAt: new Date(),
     } as UserEntity;
+  }
+}
+
+class DroitsUserServiceMock {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async resolveItvCdn(sub: string): Promise<number | null> {
+    await Promise.resolve();
+    return 100;
   }
 }
 
@@ -103,6 +115,8 @@ class RoseauGatewayMock {
     return Promise.resolve(null);
   }
 }
+
+class LanceleauGatewayMock {}
 
 describe('Depot upload (e2e)', () => {
   let app: INestApplication<App>;
@@ -133,15 +147,21 @@ describe('Depot upload (e2e)', () => {
       providers: [
         LoggerService,
         DeposerUnFichier,
+        DroitsDepotService,
         DepotService,
         DepotRepository,
         { provide: DepotGateway, useExisting: DepotRepository },
         { provide: QueueGateway, useClass: QueueServiceMock },
+        { provide: LanceleauGateway, useClass: LanceleauGatewayMock },
+        UserRepository,
+        { provide: UserGateway, useExisting: UserRepository },
+
         { provide: S3, useClass: S3Mock },
         { provide: Sftp, useClass: SftpProviderMock },
         { provide: Authentication, useClass: AuthenticationMockService },
         AuthenticationMiddleware,
         { provide: UserService, useClass: UserServiceMock },
+        { provide: DroitsUserService, useClass: DroitsUserServiceMock },
         { provide: RoseauGateway, useClass: RoseauGatewayMock },
         { provide: ConfigService, useClass: ConfigServiceMock },
         loggerProviderMock,
@@ -166,7 +186,6 @@ describe('Depot upload (e2e)', () => {
     await userRepository.save({
       id: 'user_123',
       sub: 'test-user-id',
-      itvCdn: 'itv_mock',
       email: 'test@example.com',
       nom: 'Test',
       prenom: 'User',

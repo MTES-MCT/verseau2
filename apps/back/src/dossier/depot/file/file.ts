@@ -15,5 +15,6 @@ export interface DepotDeFichier {
   size: number;
   type: string;
   buffer: Buffer;
+  itvCdn: number;
   utilisateur: UtilisateurDunEnvoi;
 }

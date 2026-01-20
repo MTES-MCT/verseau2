@@ -15,7 +15,6 @@ const customFactory = (config: ConfigService, logger: LoggerService) => {
   const emailProvider = config.getOrThrow<string>('EMAIL_PROVIDER');
   logger.log(`Provider used : ${emailProvider}`, 'EmailContactFactory');
   if (emailProvider === 'brevo') {
-    // TODO: Implement Brevo provider
     return new EmailBrevoProvider(config);
   }
   if (emailProvider === 'mock') {
