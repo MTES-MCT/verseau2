@@ -9,13 +9,16 @@ import {
   Req,
   Res,
   UseGuards,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
-import { Authentication } from './authentication';
+import { Authentication, AuthenticatedUserWithIntervenant } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
 import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
+import { DroitsUserService } from '@user/droitsUser.service';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
 @Throttle({ default: { ttl: 60000, limit: 10 } })
 @Controller('auth')
@@ -23,6 +26,8 @@ export class AuthenticationController {
   constructor(
     @Inject(Authentication) private readonly authentication: Authentication,
     private readonly userService: UserService,
+    private readonly droitsUserService: DroitsUserService,
+    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
   ) {}
 
   @Get('login')
@@ -63,8 +68,9 @@ export class AuthenticationController {
           prenom: result.user.prenom,
         });
       } catch (e) {
-        // Log but don't fail authentication if sync fails
-        console.error('Failed to sync user data', e);
+        throw new InternalServerErrorException(
+          `Failed to sync user data: ${e instanceof Error ? e.message : 'Unknown error'}`,
+        );
       }
 
       // Set cookies via AuthenticationService helper
@@ -126,8 +132,13 @@ export class AuthenticationController {
   @Get('me')
   @SkipThrottle({ default: true })
   @UseGuards(MeGuard)
-  me(@Req() req: CustomRequest) {
+  async me(@Req() req: CustomRequest): Promise<AuthenticatedUserWithIntervenant> {
     const token = req.token || '';
-    return this.authentication.getUserInfo(token);
+    const user = await this.authentication.getUserInfo(token);
+    const intervenant = await this.droitsUserService.findIntervenantByUserSub(user.cerbereId);
+    return {
+      user,
+      intervenant,
+    };
   }
 }

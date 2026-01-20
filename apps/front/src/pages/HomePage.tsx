@@ -6,7 +6,7 @@ import { AppRoutes } from '../routes';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { authenticatedUser } = useAuth();
 
   return (
     <div className="home-background">
@@ -14,24 +14,30 @@ export function HomePage() {
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--center')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-8', 'fr-col-lg-6')}>
             <h1 className={fr.cx('fr-h1')}>Bienvenue sur Verseau 2</h1>
-            {user && (
+            {authenticatedUser && (
               <div className={fr.cx('fr-mb-4w')}>
                 <p className={fr.cx('fr-text--lead', 'fr-mb-1v')}>
-                  {user.prenom || user.nom
-                    ? `Bonjour ${user.prenom} ${user.nom}`.trim()
-                    : user.login && user.login !== user.matricule
-                      ? `Bonjour ${user.login}`
+                  {authenticatedUser.user.prenom || authenticatedUser.user.nom
+                    ? `Bonjour ${authenticatedUser.user.prenom} ${authenticatedUser.user.nom}`.trim()
+                    : authenticatedUser.user.login && authenticatedUser.user.login !== authenticatedUser.user.matricule
+                      ? `Bonjour ${authenticatedUser.user.login}`
                       : 'Bienvenue sur votre espace'}
                 </p>
-                {(user.mel || user.unite || user.matricule) && (
+                {(authenticatedUser.user.mel || authenticatedUser.user.unite || authenticatedUser.user.matricule) && (
                   <p className={fr.cx('fr-text--sm', 'fr-hint-text')}>
-                    {user.mel && <span>{user.mel}</span>}
-                    {user.unite && <span>{user.mel ? ` • ${user.unite}` : user.unite}</span>}
-                    {user.matricule && (
+                    {authenticatedUser.user.mel && <span>{authenticatedUser.user.mel}</span>}
+                    {authenticatedUser.user.unite && (
                       <span>
-                        {user.mel || user.unite
-                          ? ` • Identifiant : ${user.matricule}`
-                          : `Identifiant : ${user.matricule}`}
+                        {authenticatedUser.user.mel
+                          ? ` • ${authenticatedUser.user.unite}`
+                          : authenticatedUser.user.unite}
+                      </span>
+                    )}
+                    {authenticatedUser.user.matricule && (
+                      <span>
+                        {authenticatedUser.user.mel || authenticatedUser.user.unite
+                          ? ` • Identifiant : ${authenticatedUser.user.matricule}`
+                          : `Identifiant : ${authenticatedUser.user.matricule}`}
                       </span>
                     )}
                   </p>
@@ -40,7 +46,9 @@ export function HomePage() {
             )}
             <p className={fr.cx('fr-text--lead')}>L'application d'autosurveillance des systèmes d'assainissement.</p>
             <div className={fr.cx('fr-mt-4w')}>
-              {user ? <Button onClick={() => navigate(AppRoutes.DASHBOARD)}>Accéder au tableau de bord</Button> : null}
+              {authenticatedUser ? (
+                <Button onClick={() => navigate(AppRoutes.DASHBOARD)}>Accéder au tableau de bord</Button>
+              ) : null}
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { authService } from '../services/auth.service';
 import { useAuth } from '../hooks/useAuth';
+import { AppRoutes } from '../routes';
 
 export default function CallbackPage() {
   const [searchParams] = useSearchParams();
@@ -42,7 +43,8 @@ export default function CallbackPage() {
         sessionStorage.removeItem('auth_return_to');
 
         // Sécurisation : on s'assure que le chemin est relatif et ne commence pas par //
-        const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+        const safeReturnTo =
+          returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : AppRoutes.DASHBOARD;
         navigate(safeReturnTo, { replace: true });
       } catch (err) {
         console.error('Callback error:', err);
