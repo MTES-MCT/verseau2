@@ -89,6 +89,7 @@ export class AuthenticationService implements Authentication {
 
     const user = await this.getUserInfo(tokens.access_token);
 
+    // TODO : forger un nouveau token contenant les claims : itvCdn et email pour réduire les queries DB pour le contrôle d'accès
     return {
       accessToken: tokens.access_token,
       idToken: tokens.id_token!,

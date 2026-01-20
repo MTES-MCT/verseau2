@@ -6,7 +6,7 @@ import { AppRoutes } from '../routes';
 
 export function AppHeader() {
   const location = useLocation();
-  const { isAuthenticated, login, logout, user } = useAuth();
+  const { isAuthenticated, login, logout, authenticatedUser } = useAuth();
 
   const isNavItemActive = (href: string): boolean => {
     return location.pathname.startsWith(href) && (href !== AppRoutes.HOME || location.pathname === AppRoutes.HOME);
@@ -44,21 +44,30 @@ export function AppHeader() {
             },
             text: "Paramètres d'affichage",
           },
-          isAuthenticated && user
-            ? {
-                iconId: 'ri-logout-box-line',
-                buttonProps: {
-                  onClick: () => logout(),
-                },
-                text: `${user.prenom} ${user.nom}`,
-              }
-            : {
-                iconId: 'fr-icon-lock-line',
-                buttonProps: {
-                  onClick: () => login(),
-                },
-                text: 'Se connecter',
+          isAuthenticated && authenticatedUser ? (
+            <button
+              className="fr-btn fr-btn--tertiary-no-outline ri-logout-box-line"
+              onClick={() => logout()}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.125rem' }}>
+                <span>{`${authenticatedUser.user.prenom} ${authenticatedUser.user.nom}`.trim()}</span>
+                {authenticatedUser.intervenant && (
+                  <span style={{ fontSize: '0.65rem', opacity: 0.8, lineHeight: 1 }}>
+                    {authenticatedUser.intervenant.nom}
+                  </span>
+                )}
+              </span>
+            </button>
+          ) : (
+            {
+              iconId: 'fr-icon-lock-line',
+              buttonProps: {
+                onClick: () => login(),
               },
+              text: 'Se connecter',
+            }
+          ),
         ]}
         navigation={[
           {

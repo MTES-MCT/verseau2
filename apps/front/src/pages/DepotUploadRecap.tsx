@@ -57,7 +57,11 @@ export function DepotUploadRecapPage() {
 
         <ChecksList droitsDeDepotStatus={droitsDeDepotStatus} />
 
-        <FooterActions onBack={handleReturn} onFinalize={handleFinalize} finalizeDisabled={uploadMutation.isPending} />
+        <FooterActions
+          onBack={handleReturn}
+          onFinalize={handleFinalize}
+          finalizeDisabled={uploadMutation.isPending || droitsDeDepotStatus !== 'authorized'}
+        />
       </div>
     </div>
   );

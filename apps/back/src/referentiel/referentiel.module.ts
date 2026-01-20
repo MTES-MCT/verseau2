@@ -23,6 +23,10 @@ import { SupEntity } from './lanceleau/entities/sup.entity';
 import { FanEntity } from './lanceleau/entities/fan.entity';
 import { ParEntity } from './lanceleau/entities/par.entity';
 import { UrfEntity } from './lanceleau/entities/urf.entity';
+import { OrionCredentialsEntity } from './lanceleau/entities/orionCredentials.entity';
+import { OrionRoleForPrincipalEntity } from './lanceleau/entities/orionRoleForPrincipal.entity';
+import { AgEntity } from './lanceleau/entities/ag.entity';
+import { VSteuSclItvEntity } from './lanceleau/entities/vSteuSclItv.entity';
 import { ParametreGateway } from './parametre/parametre.gateway';
 
 @Module({
@@ -43,6 +47,10 @@ import { ParametreGateway } from './parametre/parametre.gateway';
       FanEntity,
       ParEntity,
       UrfEntity,
+      OrionCredentialsEntity,
+      OrionRoleForPrincipalEntity,
+      AgEntity,
+      VSteuSclItvEntity,
     ]),
   ],
   controllers: [ReferentielController],

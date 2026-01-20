@@ -8,6 +8,7 @@ export interface DepotGateway {
   findAllDepotsByAdmin(): Promise<DepotModel[]>;
   updateDepot(id: string, updateData: Partial<DepotModel>): Promise<DepotModel | null>;
   findByUserId(userId: string): Promise<DepotModel[]>;
+  findByItvCdn(itvCdn: number): Promise<DepotModel[]>;
   updateEtapeMetier(depotId: string, etapeMetier: EtapeMetier | null): Promise<DepotModel | null>;
 }
 

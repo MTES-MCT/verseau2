@@ -4,7 +4,7 @@ import { ControleMetierV2Service } from './controleMetierV2.service';
 import { ControleGateway } from '../controle.gateway';
 import { ControleMapper } from '../isov1/controle.mapper';
 import { FctAssainissement } from '@lib/parser';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 
@@ -484,6 +484,276 @@ describe('ControleMetierV2Service', () => {
       } as unknown as FctAssainissement;
 
       const result = service.verifyDcoRange(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('verifyNtkRange', () => {
+    it('should return an error when NTK is below range (NTK <= 20)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.NTK.toString(),
+                        rsAnalyse: '15',
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyNtkRange(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL044);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_044);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '15']);
+    });
+
+    it('should return an error when NTK is above range (NTK >= 160)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.NTK.toString(),
+                        rsAnalyse: '170',
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyNtkRange(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_044);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '170']);
+    });
+
+    it('should return no error when NTK is within range (20 < NTK < 160)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.NTK.toString(), rsAnalyse: '50' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyNtkRange(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should not test analyses where cdUniteMesure is not MG_N_L for NTK', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.NTK.toString(),
+                        rsAnalyse: '500', // Out of range if tested
+                        cdUniteMesure: 'NOT_MG_N_L',
+                      },
+                      {
+                        cdParametre: CodeParametre.NTK.toString(),
+                        rsAnalyse: '100',
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyNtkRange(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.name).toBe(ControleName.CTL044);
+    });
+  });
+
+  describe('verifyPtotRange', () => {
+    it('should return an error when Ptot is below range (Ptot <= 4)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.Ptot.toString(),
+                        rsAnalyse: '3',
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPtotRange(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL045);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_045);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '3']);
+    });
+
+    it('should return an error when Ptot is above range (Ptot >= 25)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.Ptot.toString(),
+                        rsAnalyse: '30',
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPtotRange(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_045);
+      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '30']);
+    });
+
+    it('should return no error when Ptot is within range (4 < Ptot < 25)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.Ptot.toString(),
+                        rsAnalyse: '10',
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(),
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPtotRange(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should not test this analyse when cdUniteMesure is not MG_L for Ptot', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [
+                      {
+                        cdParametre: CodeParametre.Ptot.toString(),
+                        rsAnalyse: '1',
+                        cdUniteMesure: 'NOT_MG_L',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyNtkRange(xmlObj);
 
       expect(result.errors).toHaveLength(0);
     });

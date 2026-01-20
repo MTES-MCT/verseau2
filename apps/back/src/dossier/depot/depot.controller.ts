@@ -10,12 +10,14 @@ import {
   Param,
   UseGuards,
   Res,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { LoggerService } from '@shared/logger/logger.service';
 import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
+import { DroitsDepotService } from './droitsDepot.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
@@ -24,6 +26,7 @@ import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.
 import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
 import { sanitizeFilename } from '@shared/schema/filename.service';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 interface MulterFile {
   fieldname: string;
@@ -39,7 +42,9 @@ export class DepotController {
   constructor(
     private readonly deposerUnFichier: DeposerUnFichier,
     private readonly depotService: DepotService,
+    private readonly droitsDepotService: DroitsDepotService,
     private readonly userService: UserService,
+    private readonly droitsUserService: DroitsUserService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(DepotController.name);
@@ -70,12 +75,18 @@ export class DepotController {
     }
 
     const userEntity = await this.userService.findBySub(user.cerbereId);
+    const itvCdn = await this.droitsUserService.resolveItvCdn(user.cerbereId);
+
+    if (!itvCdn) {
+      throw new ForbiddenException('Aucun intervenant (ITV) lié à votre compte');
+    }
 
     const depot = await this.deposerUnFichier.execute({
       nomOriginalFichier: sanitizedName,
       size: file.size,
       type: file.mimetype,
       buffer: file.buffer,
+      itvCdn,
       utilisateur: {
         id: userEntity.id,
         nom: user.nom,
@@ -91,20 +102,30 @@ export class DepotController {
   @Get()
   async listMyDepots(@Req() req: CustomRequest): Promise<DepotDto[]> {
     const user = req.user;
-    const userEntity = await this.userService.findBySub(user.cerbereId);
-    const depots = await this.depotService.findByUserId(userEntity.id);
+    const itvCdn = await this.droitsUserService.resolveItvCdn(user.cerbereId);
+    if (!itvCdn) {
+      return [];
+    }
+    const depots = await this.depotService.findByItvCdn(itvCdn);
     return depots.map((depot) => mapDepotEntityToDepotDto(depot));
   }
 
   @Get('droits-de-depot')
   async checkDroitsDeDepot(
-    @Query('cdOuvrage') cdOuvrage: string,
+    @Query('cdOuvrageDepollution') cdOuvrageDepollution: string,
+    @Query('cdSystemeCollecte') cdSystemeCollecte: string,
     @Req() req: CustomRequest,
   ): Promise<{ authorized: boolean }> {
     const user = req.user;
-    const userEntity = await this.userService.findBySub(user.cerbereId);
-    const authorized = await this.depotService.checkDroitsDeDepot(cdOuvrage, userEntity.itvCdn);
-    return { authorized };
+    const cdOuvrageDepollutionList = cdOuvrageDepollution ? cdOuvrageDepollution.split(',') : [];
+    const cdSystemeCollecteList = cdSystemeCollecte ? cdSystemeCollecte.split(',') : [];
+    try {
+      await this.droitsDepotService.validateDroits(user.cerbereId, cdOuvrageDepollutionList, cdSystemeCollecteList);
+      return { authorized: true };
+    } catch (error) {
+      this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${error.message as string}`);
+      return { authorized: false };
+    }
   }
 
   // TODO : utiliser une URL signée pour sécuriser l'accès au rapport pouré éviter le back de faire passe plat

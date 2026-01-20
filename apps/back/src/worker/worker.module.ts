@@ -4,6 +4,7 @@ import { DossierModule } from '@dossier/dossier.module';
 import { InfraModule } from '@infra/infra.module';
 import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
+import { UserModule } from '@user/user.module';
 
 import { WorkerService } from './worker.service';
 import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
@@ -13,7 +14,7 @@ import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 
 @Module({
-  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule],
+  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule, UserModule],
   providers: [
     FileProcessorService,
     WorkerService,

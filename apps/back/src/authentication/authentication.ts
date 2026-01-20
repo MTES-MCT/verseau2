@@ -12,6 +12,7 @@ export interface OIDCConfiguration {
   scope: string;
 }
 
+import { IntervenantForAuthentication } from '@referentiel/lanceleau/lanceleau.model';
 import type { Response } from 'express';
 
 export interface Authentication {
@@ -38,6 +39,11 @@ export interface AuthenticatedUser {
   telephone?: string; // phone_number
   profils?: string[]; // cerbere_profils (format: "NOM;PORTEE;RESTRICTION")
   roles?: string[]; // cerbere_roles
+}
+
+export interface AuthenticatedUserWithIntervenant {
+  user: AuthenticatedUser;
+  intervenant: IntervenantForAuthentication | null;
 }
 
 export const Authentication = Symbol('Authentication');

@@ -20,7 +20,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   }
 
   async findDepotById(id: string): Promise<DepotModel | null> {
-    const entity = await this.findOne({ where: { id }, relations: ['user'] });
+    const entity = await this.findOne({ where: { id }, relations: ['user', 'masa'] });
     return entity ? mapDepotEntityToModel(entity) : null;
   }
 
@@ -30,7 +30,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
 
   async findAllDepotsByAdmin(): Promise<DepotModel[]> {
     const entities = await this.find({
-      relations: ['user'],
+      relations: ['user', 'masa'],
       order: {
         createdAt: 'DESC',
       },
@@ -68,6 +68,17 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   async findByUserId(userId: string): Promise<DepotModel[]> {
     const entities = await this.find({
       where: { user: { id: userId } },
+      relations: ['masa'],
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+    return entities.map(mapDepotEntityToModel);
+  }
+
+  async findByItvCdn(itvCdn: number): Promise<DepotModel[]> {
+    const entities = await this.find({
+      where: { itvCdn },
       relations: ['masa'],
       order: {
         createdAt: 'DESC',

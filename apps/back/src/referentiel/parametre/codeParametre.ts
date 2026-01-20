@@ -20,3 +20,10 @@ export enum CodeParametre {
   /** Volume (m³) */
   Volume = 1552,
 }
+export enum CodeUniteMesure {
+  //mg(N)/L
+  MG_N_L = 168,
+
+  //mg/L
+  MG_L = 162,
+}
