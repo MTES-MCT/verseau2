@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('v_steu_scl_itv', { schema: 'verseau', synchronize: false })
 export class VSteuSclItvEntity {
@@ -8,6 +8,6 @@ export class VSteuSclItvEntity {
   @PrimaryColumn({ name: 'scl_cda' })
   sclCda: string;
 
-  @Column({ name: 'mo_itv_rfa' })
+  @PrimaryColumn({ name: 'mo_itv_rfa' })
   moItvRfa: string;
 }

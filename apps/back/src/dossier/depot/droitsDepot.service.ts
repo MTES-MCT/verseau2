@@ -41,39 +41,40 @@ export class DroitsDepotService {
     }
 
     const itv = await this.lanceleauGateway.findByItvCdn(ag.itvCdn);
-    this.logger.log('Intervenant found', itv);
+    this.logger.log('Intervenant found', { itvCdn: itv?.itvCdn, itvRfa: itv?.itvRfa });
     if (!itv || !itv.itvRfa) {
       throw new ForbiddenException(`Intervenant non trouvé ou SIRET manquant`);
     }
     const userSiret = itv.itvRfa;
 
+    this.logger.log(
+      'Validating droits de depot for cdOuvrageDepollutionList',
+      cdOuvrageDepollutionList,
+      cdSystemeCollecteList,
+    );
     const matches = await this.lanceleauGateway.findVSteuSclItvByCodes(cdOuvrageDepollutionList, cdSystemeCollecteList);
     this.logger.log('VSteuSclItv entities found', matches);
 
-    // Map to easily find entity by steuCda or sclCda
-    const steuMap = new Map(matches.map((m) => [m.steuCda, m]));
-    const sclMap = new Map(matches.map((m) => [m.sclCda, m]));
-
     for (const code of cdOuvrageDepollutionList) {
-      const match = steuMap.get(code);
+      const matchesForCode = matches.filter((m) => m.steuCda === code);
 
-      if (!match) {
+      if (matchesForCode.length === 0) {
         throw new ForbiddenException(`L'ouvrage de dépollution ${code} n'a pas été trouvé`);
       }
 
-      if (match.moItvRfa !== userSiret) {
+      if (!matchesForCode.some((m) => m.moItvRfa === userSiret)) {
         throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour l'ouvrage de dépollution ${code}`);
       }
     }
 
     for (const code of cdSystemeCollecteList) {
-      const match = sclMap.get(code);
+      const matchesForCode = matches.filter((m) => m.sclCda === code);
 
-      if (!match) {
+      if (matchesForCode.length === 0) {
         throw new ForbiddenException(`Le système de collecte ${code} n'a pas été trouvé`);
       }
 
-      if (match.moItvRfa !== userSiret) {
+      if (!matchesForCode.some((m) => m.moItvRfa === userSiret)) {
         throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour le système de collecte ${code}`);
       }
     }

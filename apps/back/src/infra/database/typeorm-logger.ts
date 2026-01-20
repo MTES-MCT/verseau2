@@ -6,10 +6,10 @@ export class TypeOrmLogger implements Logger {
   private readonly logger = new LoggerService('TypeORM');
 
   logQuery(query: string, parameters?: any[]) {
-    // this.logger.log(
-    //   `Query: ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
-    // );
-    this.logger.log(`Query: ${query.substring(0, 120)}`);
+    this.logger.debug(
+      `Query: ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
+    );
+    // this.logger.debug(`Query: ${query.substring(0, 120)}`);
   }
 
   logQueryError(error: string, query: string, parameters?: any[]) {

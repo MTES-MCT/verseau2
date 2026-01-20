@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, FindOptionsWhere } from 'typeorm';
+import { Repository } from 'typeorm';
 import { LanceleauGateway } from './lanceleau.gateway';
 import { ItvEntity } from './entities/itv.entity';
 import { SupEntity } from './entities/sup.entity';
@@ -104,20 +104,20 @@ export class LanceleauRepository implements LanceleauGateway {
   }
 
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]> {
-    const where: FindOptionsWhere<VSteuSclItvEntity>[] = [];
-
-    if (steuCodes.length > 0) {
-      where.push({ steuCda: In(steuCodes) });
-    }
-
-    if (sclCodes.length > 0) {
-      where.push({ sclCda: In(sclCodes) });
-    }
-
-    if (where.length === 0) {
+    if (steuCodes.length === 0 && sclCodes.length === 0) {
       return [];
     }
 
-    return this.vSteuSclItvRepository.find({ where });
+    const qb = this.vSteuSclItvRepository.createQueryBuilder('v').distinctOn(['v.steuCda', 'v.sclCda', 'v.moItvRfa']);
+
+    if (steuCodes.length > 0 && sclCodes.length > 0) {
+      qb.where('v.steuCda IN (:...steuCodes) OR v.sclCda IN (:...sclCodes)', { steuCodes, sclCodes });
+    } else if (steuCodes.length > 0) {
+      qb.where('v.steuCda IN (:...steuCodes)', { steuCodes });
+    } else if (sclCodes.length > 0) {
+      qb.where('v.sclCda IN (:...sclCodes)', { sclCodes });
+    }
+
+    return qb.getMany();
   }
 }
