@@ -1,4 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { ClsService } from 'nestjs-cls';
+import { CustomClsStore } from '@shared/logger/cls-store.interface';
 import { QueueGateway, QueueName, QueueOptions } from '@queue/queue';
 import type { EmailJobData, Queue } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
@@ -29,6 +31,7 @@ export class WorkerService implements OnModuleInit {
     private readonly controleSandreProcessorService: ControleSandreProcessorService,
     private readonly masaProcessorService: MasaWebhookProcessorService,
     @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
+    private readonly cls: ClsService<CustomClsStore>,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(WorkerService.name);
@@ -41,93 +44,125 @@ export class WorkerService implements OnModuleInit {
 
       switch (queueName) {
         case QueueName.process_file:
-          await this.queueService.work<FichierDeDepot>(queueName, options, async ([job]) => {
-            this.logger.log('Processing jobId', job.id);
-            try {
-              return await this.fileProcessorService.process(job.data);
-            } catch (error) {
-              this.logger.error('Job processing failed', {
-                jobId: job.id,
-                error: error instanceof Error ? error.message : (error as string),
-                stack: error instanceof Error ? error.stack : undefined,
+          await this.queueService.work<FichierDeDepot & { correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                this.logger.log('Processing jobId', job.id);
+                try {
+                  return await this.fileProcessorService.process(job.data);
+                } catch (error) {
+                  this.logger.error('Job processing failed', {
+                    jobId: job.id,
+                    error: error instanceof Error ? error.message : (error as string),
+                    stack: error instanceof Error ? error.stack : undefined,
+                  });
+                  throw error; // Re-throw so pg-boss still marks it as failed for retry
+                }
               });
-              throw error; // Re-throw so pg-boss still marks it as failed for retry
-            }
-          });
+            },
+          );
           break;
         case QueueName.email:
-          await this.queueService.work<EmailJobData>(queueName, options, async ([job]) => {
-            this.logger.log('Processing email jobId', job.id);
-            try {
-              return await this.emailProvider.send(job.data.template, job.data.params);
-            } catch (error) {
-              this.logger.error('Email job processing failed', {
-                jobId: job.id,
-                error: error instanceof Error ? error.message : (error as string),
-              });
-              throw error;
-            }
+          await this.queueService.work<EmailJobData & { correlationId?: string }>(queueName, options, async ([job]) => {
+            return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+              this.logger.log('Processing email jobId', job.id);
+              try {
+                return await this.emailProvider.send(job.data.template, job.data.params);
+              } catch (error) {
+                this.logger.error('Email job processing failed', {
+                  jobId: job.id,
+                  error: error instanceof Error ? error.message : (error as string),
+                });
+                throw error;
+              }
+            });
           });
           break;
         case QueueName.send_to_sftp:
-          await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
-            this.logger.log('Processing jobId', job.id);
-            try {
-              return await this.sftpProcessorService.process(job.data);
-            } catch (error) {
-              this.logger.error('Job processing failed', {
-                jobId: job.id,
-                error: error instanceof Error ? error.message : (error as string),
-                stack: error instanceof Error ? error.stack : undefined,
+          await this.queueService.work<{ depotId: string; filePath: string; correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                this.logger.log('Processing jobId', job.id);
+                try {
+                  return await this.sftpProcessorService.process(job.data);
+                } catch (error) {
+                  this.logger.error('Job processing failed', {
+                    jobId: job.id,
+                    error: error instanceof Error ? error.message : (error as string),
+                    stack: error instanceof Error ? error.stack : undefined,
+                  });
+                  throw error; // Re-throw so pg-boss still marks it as failed for retry
+                }
               });
-              throw error; // Re-throw so pg-boss still marks it as failed for retry
-            }
-          });
+            },
+          );
           break;
         case QueueName.controle_metier:
-          await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
-            this.logger.log('Processing jobId', job.id);
-            try {
-              return await this.controleMetierProcessorService.process(job.data);
-            } catch (error) {
-              this.logger.error('Job processing failed', {
-                jobId: job.id,
-                error: error instanceof Error ? error.message : (error as string),
-                stack: error instanceof Error ? error.stack : undefined,
+          await this.queueService.work<{ depotId: string; filePath: string; correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                this.logger.log('Processing jobId', job.id);
+                try {
+                  return await this.controleMetierProcessorService.process(job.data);
+                } catch (error) {
+                  this.logger.error('Job processing failed', {
+                    jobId: job.id,
+                    error: error instanceof Error ? error.message : (error as string),
+                    stack: error instanceof Error ? error.stack : undefined,
+                  });
+                  throw error; // Re-throw so pg-boss still marks it as failed for retry
+                }
               });
-              throw error; // Re-throw so pg-boss still marks it as failed for retry
-            }
-          });
+            },
+          );
           break;
         case QueueName.controle_sandre:
-          await this.queueService.work<{ depotId: string; filePath: string }>(queueName, options, async ([job]) => {
-            this.logger.log('Processing jobId', job.id);
-            try {
-              return await this.controleSandreProcessorService.process(job.data);
-            } catch (error) {
-              this.logger.error('Job processing failed', {
-                jobId: job.id,
-                error: error instanceof Error ? error.message : (error as string),
-                stack: error instanceof Error ? error.stack : undefined,
+          await this.queueService.work<{ depotId: string; filePath: string; correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                this.logger.log('Processing jobId', job.id);
+                try {
+                  return await this.controleSandreProcessorService.process(job.data);
+                } catch (error) {
+                  this.logger.error('Job processing failed', {
+                    jobId: job.id,
+                    error: error instanceof Error ? error.message : (error as string),
+                    stack: error instanceof Error ? error.stack : undefined,
+                  });
+                  throw error; // Re-throw so pg-boss still marks it as failed for retry
+                }
               });
-              throw error; // Re-throw so pg-boss still marks it as failed for retry
-            }
-          });
+            },
+          );
           break;
         case QueueName.process_after_masa_webhook:
-          await this.queueService.work<{ masaId: string; depotId: string }>(queueName, options, async ([job]) => {
-            this.logger.log('Processing after MASA webhook jobId', job.id);
-            try {
-              return await this.masaProcessorService.process(job.data);
-            } catch (error) {
-              this.logger.error('After MASA webhook processing failed', {
-                jobId: job.id,
-                error: error instanceof Error ? error.message : (error as string),
-                stack: error instanceof Error ? error.stack : undefined,
+          await this.queueService.work<{ masaId: string; depotId: string; correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                this.logger.log('Processing after MASA webhook jobId', job.id);
+                try {
+                  return await this.masaProcessorService.process(job.data);
+                } catch (error) {
+                  this.logger.error('After MASA webhook processing failed', {
+                    jobId: job.id,
+                    error: error instanceof Error ? error.message : (error as string),
+                    stack: error instanceof Error ? error.stack : undefined,
+                  });
+                  throw error;
+                }
               });
-              throw error;
-            }
-          });
+            },
+          );
           break;
         default:
           break;

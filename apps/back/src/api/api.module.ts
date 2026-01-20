@@ -6,8 +6,8 @@ import { InfraModule } from '@infra/infra.module';
 import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 import { FrontendStaticModule } from './frontend/frontend-static.module';
-import { CorrelationIdMiddleware } from '@shared/middlleware/correlationId.middleware';
-import { LoggerRequestMiddleware } from '@shared/middlleware/loggerRequest.middleware';
+import { CorrelationIdMiddleware } from './middleware/correlationId.middleware';
+import { LoggerRequestMiddleware } from './middleware/loggerRequest.middleware';
 import { VersionController } from './version.controller';
 import { AuthenticationModule } from '@authentication/authentication.module';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
@@ -23,6 +23,8 @@ import { AuthenticationMiddleware } from '@authentication/authentication.middlew
   ],
   controllers: [VersionController],
   providers: [
+    CorrelationIdMiddleware,
+    LoggerRequestMiddleware,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
