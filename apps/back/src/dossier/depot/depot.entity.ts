@@ -1,5 +1,15 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
+import {
+  BeforeInsert,
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryColumn,
+} from 'typeorm';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
@@ -53,9 +63,11 @@ export class DepotEntity extends BaseEntity {
   controleSandreStatus?: ControleSandreStatus;
 
   @Column({ type: 'bigint', name: 'itv_cdn', nullable: true })
+  @Index()
   itvCdn?: number;
 
   @Column({ type: 'varchar', name: 'user_id', nullable: true })
+  @Index()
   userId?: string;
 
   @ManyToOne(() => UserEntity, (user) => user.depots)

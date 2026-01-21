@@ -1,5 +1,5 @@
 import { BaseEntity } from '@shared/repository/base-entity';
-import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 import { ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
 
@@ -27,6 +27,7 @@ export class ControleEntity extends BaseEntity {
   errorParams?: string[];
 
   @Column({ type: 'varchar', nullable: true, name: 'depot_id' })
+  @Index()
   depotId?: string;
 
   @ManyToOne(() => DepotEntity, (depot) => depot.controles)
