@@ -14,6 +14,10 @@ export default class PgBoss {
     // no-op
   }
 
+  on(event: string, handler: (error: Error) => void): void {
+    // no-op
+  }
+
   send(name: string, data?: unknown, options?: unknown): string | null {
     return 'mock-job';
   }

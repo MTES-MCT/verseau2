@@ -2,44 +2,53 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { DepotController } from '@dossier/depot/depot.controller';
-import { DeposerUnFichier } from '@dossier/depot/usecase/deposerUnFichier';
-import { DepotService } from '@dossier/depot/depot.service';
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import { DepotGateway } from '@dossier/depot/depot.gateway';
-import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
-import { SftpProviderMock } from '@infra/sftp/sftp.provider.mock';
-import { Authentication } from '@authentication/authentication';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
-import { AuthenticationMockService } from '@authentication/authentication.mock.service';
-import { LoggerService } from '@shared/logger/logger.service';
 import { UserService } from '@user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { UserEntity } from '@user/user.entity';
-import { ControleEntity } from '@dossier/controle/controle.entity';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { startPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
-import { MasaEntity } from '@dossier/masa/masa.entity';
 import cookieParser from 'cookie-parser';
-import { loggerProviderMock } from '@shared/logger/logger.mock';
-import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { UserGateway } from '@user/user.gateway';
-import { UserRepository } from '@user/user.repository';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { DossierModule } from '@dossier/dossier.module';
+
+import { S3_CLIENT } from '@infra/s3/s3.service';
 
 class ConfigServiceMock {
   get(key: string) {
-    if (key === 'FAKE_TOKEN_STORAGE_KEY') {
-      return 'test-token';
-    }
+    if (key === 'DATABASE_URL') return getPostgresConnectionUri();
+    if (key === 'DDL_SYNC') return 'true';
+    if (key === 'FAKE_TOKEN_STORAGE_KEY') return 'test-token';
+    if (key === 'S3_PROVIDER') return 'mock';
+    if (key === 'SFTP_PROVIDER') return 'mock';
+    if (key === 'S3_BUCKET') return 'test-bucket';
+    if (key === 'S3_ENDPOINT') return 'http://localhost:9000';
+    if (key === 'S3_REGION') return 'us-east-1';
+    if (key === 'S3_ACCESS_KEY') return 'minio';
+    if (key === 'S3_SECRET_KEY') return 'minio123';
+    if (key === 'SFTP_HOST') return 'localhost';
+    if (key === 'SFTP_PORT') return '22';
+    if (key === 'SFTP_USERNAME') return 'user';
+    if (key === 'SFTP_PRIVATE_KEY') return 'key';
+    if (key === 'SFTP_AGENCY_CONFIG') return '{}';
+    if (key === 'OIDC_MOCK') return 'true';
+    if (key === 'OIDC_ISSUER_URL') return 'https://mock-issuer';
+    if (key === 'OIDC_CLIENT_ID') return 'mock-client';
+    if (key === 'OIDC_CLIENT_SECRET') return 'mock-secret';
+    if (key === 'OIDC_REDIRECT_URI') return 'http://mock-redirect';
     return null;
+  }
+  getOrThrow(key: string) {
+    const val = this.get(key);
+    if (!val) throw new Error(`Config key ${key} missing`);
+    return val;
   }
 }
 
@@ -118,6 +127,8 @@ class RoseauGatewayMock {
 
 class LanceleauGatewayMock {}
 
+class SftpMock {}
+
 describe('Depot upload (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
@@ -133,40 +144,27 @@ describe('Depot upload (e2e)', () => {
     await startPostgresContainer();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        TypeOrmModule.forRoot({
-          type: 'postgres',
-          url: getPostgresConnectionUri(),
-          dropSchema: true,
-          entities: [DepotEntity, UserEntity, ControleEntity, MasaEntity],
-          synchronize: true,
-        }),
-        TypeOrmModule.forFeature([DepotEntity, UserEntity, ControleEntity, MasaEntity]),
-      ],
-      controllers: [DepotController],
-      providers: [
-        LoggerService,
-        DeposerUnFichier,
-        DroitsDepotService,
-        DepotService,
-        DepotRepository,
-        { provide: DepotGateway, useExisting: DepotRepository },
-        { provide: QueueGateway, useClass: QueueServiceMock },
-        { provide: LanceleauGateway, useClass: LanceleauGatewayMock },
-        UserRepository,
-        { provide: UserGateway, useExisting: UserRepository },
-
-        { provide: S3, useClass: S3Mock },
-        { provide: Sftp, useClass: SftpProviderMock },
-        { provide: Authentication, useClass: AuthenticationMockService },
-        AuthenticationMiddleware,
-        { provide: UserService, useClass: UserServiceMock },
-        { provide: DroitsUserService, useClass: DroitsUserServiceMock },
-        { provide: RoseauGateway, useClass: RoseauGatewayMock },
-        { provide: ConfigService, useClass: ConfigServiceMock },
-        loggerProviderMock,
-      ],
-    }).compile();
+      imports: [DossierModule],
+    })
+      .overrideProvider(ConfigService)
+      .useClass(ConfigServiceMock)
+      .overrideProvider(QueueGateway)
+      .useClass(QueueServiceMock)
+      .overrideProvider(S3_CLIENT)
+      .useValue({})
+      .overrideProvider(S3)
+      .useClass(S3Mock)
+      .overrideProvider(Sftp)
+      .useClass(SftpMock)
+      .overrideProvider(UserService)
+      .useClass(UserServiceMock)
+      .overrideProvider(DroitsUserService)
+      .useClass(DroitsUserServiceMock)
+      .overrideProvider(RoseauGateway)
+      .useClass(RoseauGatewayMock)
+      .overrideProvider(LanceleauGateway)
+      .useClass(LanceleauGatewayMock)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.use(cookieParser());
