@@ -22,12 +22,19 @@ export class RapportPdfGeneratorService {
       const doc = new PDFDocument({ margin: 50, bufferPages: true, autoFirstPage: false });
       const chunks: Buffer[] = [];
 
-      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
       doc.addPage();
-      doc.font('Helvetica');
+
+      try {
+        doc.registerFont('MainFont', '/System/Library/Fonts/Helvetica.ttc', 'Helvetica');
+        doc.registerFont('MainFont-Bold', '/System/Library/Fonts/Helvetica.ttc', 'Helvetica-Bold');
+        doc.font('MainFont');
+      } catch (e) {
+        doc.font('Helvetica');
+      }
 
       this.drawHeader(doc, depot, masa);
 
