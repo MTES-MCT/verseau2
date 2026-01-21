@@ -19,73 +19,11 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { startPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
 import { createReferentielDataset, clearReferentielData } from '../../../createReferentielDataset';
 import { clearDepots } from '../../../depot.helper';
-import type { Analyse, Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
 import { initTestContainerImports } from '../../../init/initTestContainer';
 
-type PartialFctAssainissement = {
-  scenario?: {
-    emetteur: Partial<Emetteur>;
-    destinataire?: Partial<Emetteur>;
-    codeScenario: string;
-    versionScenario: string;
-    dateDebutReference?: string;
-  };
-  ouvrages?: Partial<OuvrageDepollution>[];
-  systemesCollecte?: Partial<SystemeCollecte>;
-};
-
-// Helper to create minimal Analyse for testing
-function createTestAnalyse(cdParametre: string, rsAnalyse: string): Analyse {
-  return {
-    cdParametre,
-    rsAnalyse,
-    inSituAnalyse: '',
-    statutRsAnalyse: '',
-    qualRsAnalyse: '',
-    cdMethode: '',
-    cdUniteMesure: '',
-    finalite: '',
-    accreAna: '',
-    cdRemAnalyse: '',
-  };
-}
-
-// Helper to create minimal FctAssainissement for testing
-function createTestFctAssainissement(overrides: PartialFctAssainissement = {}): FctAssainissement {
-  const fct = {
-    scenario: {
-      emetteur: {},
-      codeScenario: SandreScenarioCode.FCT_ASSAIN,
-      versionScenario: SandreScenarioVersion.V4,
-      // dateDebutReference and dateFinReference commented out - unused by controleV1 and controleMetierV2 services
-    },
-    ouvrages: [],
-    systemesCollecte: [],
-    ...overrides,
-  } as FctAssainissement;
-
-  // Default values so existing tests continue to exercise controls even with filtering enabled.
-  // Individual tests can override these to assert filtering behavior.
-  for (const ouvrage of fct.ouvrages ?? []) {
-    for (const pointMesure of ouvrage.pointMesure ?? []) {
-      pointMesure.locGlobalePointMesure ??= 'A3';
-      for (const prelevement of pointMesure.prelevement ?? []) {
-        prelevement.cdSupport ??= '3';
-      }
-    }
-  }
-  for (const systemeCollecte of fct.systemesCollecte ?? []) {
-    for (const pointMesure of systemeCollecte.pointMesure ?? []) {
-      pointMesure.locGlobalePointMesure ??= 'A3';
-      for (const prelevement of pointMesure.prelevement ?? []) {
-        prelevement.cdSupport ??= '3';
-      }
-    }
-  }
-
-  return fct;
-}
+// Import shared fixtures
+import { createTestFctAssainissement, createTestAnalyse } from '../../../fixtures/fctAssainissement.fixture';
 
 describe('ControleMetierV2Service (e2e)', () => {
   let app: INestApplication<App>;

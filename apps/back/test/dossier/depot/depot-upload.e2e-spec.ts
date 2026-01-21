@@ -18,122 +18,26 @@ import cookieParser from 'cookie-parser';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { DossierModule } from '@dossier/dossier.module';
-
 import { S3_CLIENT } from '@infra/s3/s3.service';
 
-class ConfigServiceMock {
-  get(key: string) {
-    if (key === 'DATABASE_URL') return getPostgresConnectionUri();
-    if (key === 'DDL_SYNC') return 'true';
-    if (key === 'FAKE_TOKEN_STORAGE_KEY') return 'test-token';
-    if (key === 'S3_PROVIDER') return 'mock';
-    if (key === 'SFTP_PROVIDER') return 'mock';
-    if (key === 'S3_BUCKET') return 'test-bucket';
-    if (key === 'S3_ENDPOINT') return 'http://localhost:9000';
-    if (key === 'S3_REGION') return 'us-east-1';
-    if (key === 'S3_ACCESS_KEY') return 'minio';
-    if (key === 'S3_SECRET_KEY') return 'minio123';
-    if (key === 'SFTP_HOST') return 'localhost';
-    if (key === 'SFTP_PORT') return '22';
-    if (key === 'SFTP_USERNAME') return 'user';
-    if (key === 'SFTP_PRIVATE_KEY') return 'key';
-    if (key === 'SFTP_AGENCY_CONFIG') return '{}';
-    if (key === 'OIDC_MOCK') return 'true';
-    if (key === 'OIDC_ISSUER_URL') return 'https://mock-issuer';
-    if (key === 'OIDC_CLIENT_ID') return 'mock-client';
-    if (key === 'OIDC_CLIENT_SECRET') return 'mock-secret';
-    if (key === 'OIDC_REDIRECT_URI') return 'http://mock-redirect';
-    return null;
-  }
-  getOrThrow(key: string) {
-    const val = this.get(key);
-    if (!val) throw new Error(`Config key ${key} missing`);
-    return val;
-  }
-}
-
-class S3Mock implements S3 {
-  uploads: Array<{ key: string; body: Buffer | Uint8Array | string; contentType?: string }> = [];
-
-  async upload(key: string, body: Buffer | Uint8Array | string, contentType?: string): Promise<void> {
-    this.uploads.push({ key, body, contentType });
-    await Promise.resolve();
-  }
-
-  async download(): Promise<Buffer> {
-    await Promise.resolve();
-    throw new Error('Not implemented in mock');
-  }
-}
-
-class QueueServiceMock {
-  calls: Array<{ name: string; data?: object }> = [];
-  private resolver?: () => void;
-
-  async send<TData = object>(name: string, data?: TData): Promise<string | null> {
-    this.calls.push({ name, data: data as object });
-    this.resolver?.();
-    await Promise.resolve();
-    return 'job-id';
-  }
-
-  async work(): Promise<string> {
-    await Promise.resolve();
-    throw new Error('Not implemented in mock');
-  }
-
-  waitForSend(): Promise<void> {
-    if (this.calls.length > 0) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-      this.resolver = resolve;
-    });
-  }
-}
-
-class UserServiceMock {
-  async findBySub(sub: string): Promise<UserEntity> {
-    await Promise.resolve();
-    return {
-      id: 'user_123',
-      sub,
-      email: 'test@example.com',
-      nom: 'Test',
-      prenom: 'User',
-      depots: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as UserEntity;
-  }
-}
-
-class DroitsUserServiceMock {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async resolveItvCdn(sub: string): Promise<number | null> {
-    await Promise.resolve();
-    return 100;
-  }
-}
-
-class RoseauGatewayMock {
-  findSteuBySandreCda() {
-    return Promise.resolve(null);
-  }
-  findCxnAdmBySteuAndItv() {
-    return Promise.resolve(null);
-  }
-}
-
-class LanceleauGatewayMock {}
-
-class SftpMock {}
+// Import shared mocks
+import {
+  S3TestMock,
+  SftpTestMock,
+  QueueTestMock,
+  ConfigServiceTestMock,
+  UserServiceTestMock,
+  DroitsUserServiceTestMock,
+  RoseauGatewayTestMock,
+  LanceleauGatewayTestMock,
+} from '../../mock/shared-mocks';
 
 describe('Depot upload (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
-  let s3Mock: S3Mock;
-  let queueMock: QueueServiceMock;
+  let s3Mock: S3TestMock;
+  let queueMock: QueueTestMock;
+  let configMock: ConfigServiceTestMock;
 
   beforeAll(async () => {
     process.env.USE_SANDRE_MOCK = 'true';
@@ -143,27 +47,33 @@ describe('Depot upload (e2e)', () => {
 
     await startPostgresContainer();
 
+    s3Mock = new S3TestMock();
+    queueMock = new QueueTestMock();
+    configMock = new ConfigServiceTestMock({
+      DATABASE_URL: getPostgresConnectionUri(),
+    });
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [DossierModule],
     })
       .overrideProvider(ConfigService)
-      .useClass(ConfigServiceMock)
+      .useValue(configMock)
       .overrideProvider(QueueGateway)
-      .useClass(QueueServiceMock)
+      .useValue(queueMock)
       .overrideProvider(S3_CLIENT)
       .useValue({})
       .overrideProvider(S3)
-      .useClass(S3Mock)
+      .useValue(s3Mock)
       .overrideProvider(Sftp)
-      .useClass(SftpMock)
+      .useClass(SftpTestMock)
       .overrideProvider(UserService)
-      .useClass(UserServiceMock)
+      .useClass(UserServiceTestMock)
       .overrideProvider(DroitsUserService)
-      .useClass(DroitsUserServiceMock)
+      .useClass(DroitsUserServiceTestMock)
       .overrideProvider(RoseauGateway)
-      .useClass(RoseauGatewayMock)
+      .useClass(RoseauGatewayTestMock)
       .overrideProvider(LanceleauGateway)
-      .useClass(LanceleauGatewayMock)
+      .useClass(LanceleauGatewayTestMock)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -174,11 +84,13 @@ describe('Depot upload (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
-    s3Mock = moduleFixture.get<S3>(S3) as S3Mock;
-    queueMock = moduleFixture.get<QueueServiceMock>(QueueGateway);
   });
 
   beforeEach(async () => {
+    // Reset mocks
+    s3Mock.reset();
+    queueMock.reset();
+
     // Seed user
     const userRepository = dataSource.getRepository(UserEntity);
     await userRepository.save({
@@ -195,10 +107,6 @@ describe('Depot upload (e2e)', () => {
   });
 
   it('uploads an XML file and enqueues processing', async () => {
-    // Reset mocks
-    s3Mock.uploads = [];
-    queueMock.calls = [];
-
     const xmlContent = '<root></root>';
 
     const response = await request(app.getHttpServer())
@@ -213,7 +121,7 @@ describe('Depot upload (e2e)', () => {
     expect(responseBody.type).toBe('application/xml');
 
     // Wait for the async uploadAndEnqueue chain to complete
-    await queueMock.waitForSend();
+    await queueMock.waitForJob();
 
     const depot = await dataSource.getRepository(DepotEntity).findOneOrFail({
       where: { id: responseBody.id },
@@ -227,8 +135,8 @@ describe('Depot upload (e2e)', () => {
     expect(s3Mock.uploads).toHaveLength(1);
     expect((s3Mock.uploads[0] as { key: string }).key).toBe(expectedPath);
 
-    expect(queueMock.calls).toHaveLength(1);
-    expect(queueMock.calls[0]).toMatchObject({
+    expect(queueMock.jobs).toHaveLength(1);
+    expect(queueMock.jobs[0]).toMatchObject({
       name: QueueName.process_file,
       data: {
         depotId: depot.id,
@@ -239,10 +147,6 @@ describe('Depot upload (e2e)', () => {
   });
 
   it('rejects non-XML uploads', async () => {
-    // Reset mocks
-    s3Mock.uploads = [];
-    queueMock.calls = [];
-
     await request(app.getHttpServer())
       .post('/depot/upload')
       .set('Cookie', ['access_token=test-token'])
@@ -250,13 +154,10 @@ describe('Depot upload (e2e)', () => {
       .expect(400);
 
     expect(s3Mock.uploads).toHaveLength(0);
-    expect(queueMock.calls).toHaveLength(0);
+    expect(queueMock.jobs).toHaveLength(0);
   });
 
   it('uploads a file with accents in the name and preserves encoding', async () => {
-    s3Mock.uploads = [];
-    queueMock.calls = [];
-
     const xmlContent = '<root></root>';
     const filenameWithAccents = 'panissières.xml';
 

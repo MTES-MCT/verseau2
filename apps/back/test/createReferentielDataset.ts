@@ -205,12 +205,64 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
       itv_cdn INTEGER
     )
   `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.sup CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.sup (
+      sup_rfa VARCHAR PRIMARY KEY
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.fan CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.fan (
+      fan_rfa VARCHAR PRIMARY KEY
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.par CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.par (
+      par_rfa VARCHAR PRIMARY KEY
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.urf CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.urf (
+      urf_rfa VARCHAR PRIMARY KEY
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.t_orion_role_for_principal CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.t_orion_role_for_principal (
+      pr_cdn INTEGER,
+      role_cdn INTEGER,
+      PRIMARY KEY (pr_cdn, role_cdn)
+    )
+  `);
+}
+
+export async function createVerseauTables(dataSource: DataSource): Promise<void> {
+  await dataSource.query(`CREATE SCHEMA IF NOT EXISTS verseau`);
+
+  await dataSource.query(`DROP TABLE IF EXISTS verseau.v_steu_scl_itv CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE verseau.v_steu_scl_itv (
+      steu_cda VARCHAR,
+      scl_cda VARCHAR,
+      mo_itv_rfa VARCHAR,
+      PRIMARY KEY (steu_cda, scl_cda, mo_itv_rfa)
+    )
+  `);
 }
 
 export async function createReferentielDataset(dataSource: DataSource): Promise<void> {
   await createReferentielSchemas(dataSource);
   await createRoseauTables(dataSource);
   await createLanceleauTables(dataSource);
+  await createVerseauTables(dataSource);
 }
 
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {

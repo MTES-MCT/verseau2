@@ -27,132 +27,35 @@ import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 
-// Mock S3 service
-class S3Mock implements S3 {
-  private files: Map<string, Buffer> = new Map();
-
-  async upload(key: string, body: Buffer | Uint8Array | string): Promise<void> {
-    const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
-    this.files.set(key, buffer);
-    await Promise.resolve();
-  }
-
-  async download(key: string): Promise<Buffer> {
-    const file = this.files.get(key);
-    if (!file) {
-      throw new Error(`File not found: ${key}`);
-    }
-    await Promise.resolve();
-    return file;
-  }
-
-  // Helper to seed files for tests
-  seed(key: string, content: string): void {
-    this.files.set(key, Buffer.from(content));
-  }
-}
-
-// Mock SFTP service
-class SftpMock implements Sftp {
-  calls: Array<{ file: Buffer; depotId: string }> = [];
-  shouldFail = false;
-
-  async sendToAgentVerseau(file: Buffer, depotId: string): Promise<void> {
-    if (this.shouldFail) {
-      throw new Error('SFTP send failed');
-    }
-    this.calls.push({ file, depotId });
-    await Promise.resolve();
-  }
-}
-
-// Mock QueueService
-class QueueServiceMock {
-  calls: Array<{ name: string; data?: object }> = [];
-  shouldFail = false;
-
-  async send<TData = object>(name: string, data?: TData): Promise<string | null> {
-    if (this.shouldFail) {
-      throw new Error('Queue send failed');
-    }
-    this.calls.push({ name, data: data as object });
-    await Promise.resolve();
-    return 'job-id';
-  }
-
-  async work(): Promise<string> {
-    await Promise.resolve();
-    throw new Error('Not implemented in mock');
-  }
-}
-
-// Mock ControleSandreService
-class ControleSandreMock {
-  acceptationStatus: SandreAcceptationStatus = SandreAcceptationStatus.CONFORMANT;
-
-  async execute() {
-    await Promise.resolve();
-    return {
-      isConformant: this.acceptationStatus === SandreAcceptationStatus.CONFORMANT,
-      acceptationStatus: this.acceptationStatus,
-      jeton: 'mock-jeton',
-      codeScenario: '2A',
-      versionScenario: '2024.1',
-    };
-  }
-}
-
-// Mock ControleV1Service
-class ControleV1Mock {
-  async execute() {
-    await Promise.resolve();
-    return [];
-  }
-}
-
-// Mock RoseauGateway
-class RoseauGatewayMock {
-  findSteuBySandreCda() {
-    return Promise.resolve(null);
-  }
-  findCxnAdmBySteuAndItv() {
-    return Promise.resolve(null);
-  }
-}
-
-// Mock LanceleauGateway
-class LanceleauGatewayMock {
-  async findByItvCdn() {
-    return null;
-  }
-}
-
-// Mock DroitsDepotService
-class DroitsDepotServiceMock {
-  async validateDroits() {
-    return Promise.resolve();
-  }
-}
-
-// Mock UserService
-class UserServiceMock {
-  async findById() {
-    return { id: 'user_001', email: 'test@example.com', sub: 'sub_001' };
-  }
-}
+// Import shared mocks
+import {
+  S3TestMock,
+  SftpTestMock,
+  QueueTestMock,
+  RoseauGatewayTestMock,
+  ControleSandreTestMock,
+  ControleV1TestMock,
+  DroitsDepotServiceTestMock,
+  UserServiceTestMock,
+} from './mock/shared-mocks';
 
 describe('Worker Service (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
-  let s3Mock: S3Mock;
-  let sftpMock: SftpMock;
-  let queueMock: QueueServiceMock;
-  let sandreMock: ControleSandreMock;
+  let s3Mock: S3TestMock;
+  let sftpMock: SftpTestMock;
+  let queueMock: QueueTestMock;
+  let sandreMock: ControleSandreTestMock;
   let fileProcessorService: FileProcessorService;
   let sftpProcessorService: SftpAgentVerseauProcessorService;
 
   beforeAll(async () => {
     await startPostgresContainer();
+
+    s3Mock = new S3TestMock();
+    sftpMock = new SftpTestMock();
+    queueMock = new QueueTestMock();
+    sandreMock = new ControleSandreTestMock();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -169,17 +72,17 @@ describe('Worker Service (e2e)', () => {
         LoggerService,
         FileProcessorService,
         SftpAgentVerseauProcessorService,
-        { provide: DroitsDepotService, useClass: DroitsDepotServiceMock },
-        { provide: UserService, useClass: UserServiceMock },
+        { provide: DroitsDepotService, useClass: DroitsDepotServiceTestMock },
+        { provide: UserService, useClass: UserServiceTestMock },
         DepotService,
         DepotRepository,
         { provide: DepotGateway, useExisting: DepotRepository },
-        { provide: S3, useClass: S3Mock },
-        { provide: Sftp, useClass: SftpMock },
-        { provide: QueueGateway, useClass: QueueServiceMock },
-        { provide: ControleSandreService, useClass: ControleSandreMock },
-        { provide: ControleV1Service, useClass: ControleV1Mock },
-        { provide: RoseauGateway, useClass: RoseauGatewayMock },
+        { provide: S3, useValue: s3Mock },
+        { provide: Sftp, useValue: sftpMock },
+        { provide: QueueGateway, useValue: queueMock },
+        { provide: ControleSandreService, useValue: sandreMock },
+        { provide: ControleV1Service, useClass: ControleV1TestMock },
+        { provide: RoseauGateway, useClass: RoseauGatewayTestMock },
         loggerProviderMock,
       ],
     }).compile();
@@ -188,10 +91,6 @@ describe('Worker Service (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
-    s3Mock = moduleFixture.get<S3>(S3) as S3Mock;
-    sftpMock = moduleFixture.get<Sftp>(Sftp) as SftpMock;
-    queueMock = moduleFixture.get<QueueServiceMock>(QueueGateway);
-    sandreMock = moduleFixture.get<ControleSandreMock>(ControleSandreService);
     fileProcessorService = moduleFixture.get(FileProcessorService);
     sftpProcessorService = moduleFixture.get(SftpAgentVerseauProcessorService);
   });
@@ -225,7 +124,7 @@ describe('Worker Service (e2e)', () => {
       s3Mock.seed('test_file.xml', xmlContent);
 
       // Reset mocks
-      queueMock.calls = [];
+      queueMock.reset();
       sandreMock.acceptationStatus = SandreAcceptationStatus.CONFORMANT;
 
       // Process file
@@ -243,8 +142,8 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
 
       // Verify jobs enqueued
-      expect(queueMock.calls).toHaveLength(2);
-      expect(queueMock.calls).toEqual(
+      expect(queueMock.jobs).toHaveLength(2);
+      expect(queueMock.jobs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             name: QueueName.controle_metier,
@@ -277,7 +176,7 @@ describe('Worker Service (e2e)', () => {
       });
 
       // Don't seed S3 - file will not be found
-      queueMock.shouldFail = true;
+      queueMock.setFailure(true);
 
       // Process file (should throw)
       await expect(
@@ -294,6 +193,9 @@ describe('Worker Service (e2e)', () => {
       });
       expect(updatedDepot.status).toBe(DepotStatus.REJETE);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_FAILED);
+
+      // Reset failure state
+      queueMock.setFailure(false);
     });
   });
 
@@ -314,8 +216,7 @@ describe('Worker Service (e2e)', () => {
       s3Mock.seed('sftp_test.xml', '<data>test</data>');
 
       // Reset mocks
-      sftpMock.calls = [];
-      sftpMock.shouldFail = false;
+      sftpMock.reset();
 
       // Process SFTP
       await sftpProcessorService.process({
@@ -350,9 +251,9 @@ describe('Worker Service (e2e)', () => {
       // Seed S3 with file
       s3Mock.seed('sftp_fail.xml', '<data>test</data>');
 
-      // Reset mocks
-      sftpMock.calls = [];
-      sftpMock.shouldFail = true;
+      // Reset mocks and configure failure
+      sftpMock.reset();
+      sftpMock.setFailure(true);
 
       // Process SFTP (should throw)
       await expect(

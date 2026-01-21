@@ -24,7 +24,6 @@ import { DepotStatus } from '@lib/dossier';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { QueueGateway, PGBOSS, QueueName } from '@infra/queue/queue';
-import type { Queue, QueueJob, QueueOptions } from '@infra/queue/queue';
 import { ApiModule } from '../../src/api/api.module';
 import { InfraModule } from '@infra/infra.module';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
@@ -38,123 +37,17 @@ import { initTestContainerImports } from '../init/initTestContainer';
 import { createReferentielDataset } from '../createReferentielDataset';
 import { seedUserWithDroits, seedUserWithoutDroits, clearUserWithDroits } from '../userWithDroitsDataset.helper';
 
-// ============= Mock Classes =============
-
-/**
- * In-memory S3 mock that stores uploaded files
- */
-class S3Mock implements S3 {
-  private files: Map<string, Buffer> = new Map();
-  uploads: Array<{ key: string; body: Buffer | Uint8Array | string; contentType?: string }> = [];
-
-  async upload(key: string, body: Buffer | Uint8Array | string, contentType?: string): Promise<void> {
-    const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
-    this.files.set(key, buffer);
-    this.uploads.push({ key, body, contentType });
-    await Promise.resolve();
-  }
-
-  async download(key: string): Promise<Buffer> {
-    const file = this.files.get(key);
-    if (!file) {
-      throw new Error(`File not found in S3Mock: ${key}`);
-    }
-    await Promise.resolve();
-    return file;
-  }
-
-  reset(): void {
-    this.files.clear();
-    this.uploads = [];
-  }
-}
-
-/**
- * SFTP mock that tracks calls
- */
-class SftpMock implements Sftp {
-  calls: Array<{ file: Buffer; depotId: string }> = [];
-  shouldFail = false;
-
-  async sendToAgentVerseau(file: Buffer, depotId: string): Promise<void> {
-    if (this.shouldFail) {
-      throw new Error('SFTP send failed');
-    }
-    this.calls.push({ file, depotId });
-    await Promise.resolve();
-  }
-
-  reset(): void {
-    this.calls = [];
-    this.shouldFail = false;
-  }
-}
-
-/**
- * Queue mock that tracks sent jobs and allows waiting for job dispatch
- */
-class QueueMock implements Queue {
-  jobs: Array<{ name: string; data: object }> = [];
-  private resolvers: Array<() => void> = [];
-
-  async send<TData = object>(name: string, data?: TData): Promise<string | null> {
-    this.jobs.push({ name, data: data as object });
-    // Notify any waiters
-    this.resolvers.forEach((resolve) => resolve());
-    this.resolvers = [];
-    await Promise.resolve();
-    return `mock-job-${Date.now()}`;
-  }
-
-  async work<TData = object>(
-    _name: string,
-    _options: QueueOptions,
-    _handler: (job: QueueJob<TData>[]) => Promise<unknown>,
-  ): Promise<string> {
-    void _name;
-    void _options;
-    void _handler;
-    await Promise.resolve();
-    return 'mock-worker-id';
-  }
-
-  /**
-   * Wait for at least one job to be sent
-   */
-  waitForJob(timeoutMs: number = 5000): Promise<void> {
-    if (this.jobs.length > 0) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Timeout waiting for queue job'));
-      }, timeoutMs);
-
-      this.resolvers.push(() => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    });
-  }
-
-  reset(): void {
-    this.jobs = [];
-    this.resolvers = [];
-  }
-
-  getJobsByName(name: string): Array<{ name: string; data: object }> {
-    return this.jobs.filter((job) => job.name === name);
-  }
-}
+// Import shared mocks
+import { S3TestMock, SftpTestMock, QueueTestMock } from '../mock/shared-mocks';
 
 // ============= Test Suite =============
 
 describe('Dossier E2E - Depot Upload', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
-  let s3Mock: S3Mock;
-  let sftpMock: SftpMock;
-  let queueMock: QueueMock;
+  let s3Mock: S3TestMock;
+  let sftpMock: SftpTestMock;
+  let queueMock: QueueTestMock;
 
   // Test user data matching AuthenticationMockService.getMockUser()
   const TEST_USER = {
@@ -169,9 +62,9 @@ describe('Dossier E2E - Depot Upload', () => {
     await startPostgresContainer();
     const connectionUri = getPostgresConnectionUri();
 
-    s3Mock = new S3Mock();
-    sftpMock = new SftpMock();
-    queueMock = new QueueMock();
+    s3Mock = new S3TestMock();
+    sftpMock = new SftpTestMock();
+    queueMock = new QueueTestMock();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [...initTestContainerImports(connectionUri), ApiModule, ThrottlerConfigModule],

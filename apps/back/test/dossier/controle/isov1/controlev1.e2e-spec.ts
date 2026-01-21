@@ -14,7 +14,7 @@ import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository
 
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
-import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
+import { startPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
 import {
   createReferentielDataset,
   clearReferentielData,
@@ -25,36 +25,12 @@ import {
   seedTlref,
 } from '../../../createReferentielDataset';
 import { seedDepot, clearDepots } from '../../../depot.helper';
-import type { Analyse, Emetteur, FctAssainissement, OuvrageDepollution, SystemeCollecte } from '@lib/parser';
-import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
+import type { Analyse } from '@lib/parser';
 import { initTestContainerImports } from '../../../init/initTestContainer';
 import { LoggerServiceMock } from '@shared/logger/logger.mock';
 
-type PartialFctAssainissement = {
-  scenario?: {
-    emetteur: Partial<Emetteur>;
-    destinataire: Partial<Emetteur>;
-    codeScenario: string;
-    versionScenario: string;
-  };
-  ouvrages?: Partial<OuvrageDepollution>[];
-  systemesCollecte?: Partial<SystemeCollecte>;
-};
-
-// Helper to create minimal FctAssainissement for testing
-function createTestFctAssainissement(overrides: PartialFctAssainissement = {}): FctAssainissement {
-  return {
-    scenario: {
-      emetteur: {},
-      codeScenario: SandreScenarioCode.FCT_ASSAIN,
-      versionScenario: SandreScenarioVersion.V4,
-      // dateDebutReference and dateFinReference commented out - unused by controleV1 and controleMetierV2 services
-    },
-    ouvrages: [],
-    systemesCollecte: [],
-    ...overrides,
-  } as FctAssainissement;
-}
+// Import shared fixtures
+import { createTestFctAssainissement } from '../../../fixtures/fctAssainissement.fixture';
 
 describe('ControleV1Service (e2e)', () => {
   let app: INestApplication<App>;
