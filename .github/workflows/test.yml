@@ -44,3 +44,6 @@ jobs:
 
       - name: Run tests
         run: npm run test --workspace=${{ matrix.workspace }} --if-present
+
+      - name: Run E2E tests API and Worker
+        run: npm run test:e2e:api-worker --workspace=${{ matrix.workspace }} --if-present

@@ -384,4 +384,5 @@ export async function clearLanceleauData(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DELETE FROM lanceleau.ag`);
   await dataSource.query(`DELETE FROM lanceleau.t_orion_credentials`);
   await dataSource.query(`DELETE FROM lanceleau.itv`);
+  await dataSource.query(`DELETE FROM lanceleau.t_orion_role_for_principal`);
 }

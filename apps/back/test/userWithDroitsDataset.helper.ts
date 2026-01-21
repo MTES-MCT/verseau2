@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { seedOrionCredentials, seedAg, clearLanceleauData } from './createReferentielDataset';
+import { seedOrionCredentials, seedAg, seedItv, clearLanceleauData } from './createReferentielDataset';
 
 export interface UserWithDroitsData {
   sub: string;
@@ -8,6 +8,8 @@ export interface UserWithDroitsData {
   prenom?: string;
   itvCdn: number;
   prCdn?: number;
+  /** SIRET for the intervenant (itvRfa). If provided, ItvEntity and role 301 will be seeded */
+  itvRfa?: string;
 }
 
 /**
@@ -16,9 +18,15 @@ export interface UserWithDroitsData {
  * - UserEntity with given sub and email
  * - OrionCredentialsEntity linking email to prCdn
  * - AgEntity linking prCdn to itvCdn
+ * - If itvRfa is provided:
+ *   - ItvEntity with itvCdn and itvRfa (SIRET)
+ *   - OrionRoleForPrincipal with role 301 (required for depot)
  *
  * This establishes the chain: User.email → OrionCredentials.mail → AgEntity.prCdn → AgEntity.itvCdn
  * which is used by DroitsUserService.resolveItvCdn()
+ *
+ * For DroitsDepotService.validateDroits(), you also need:
+ * - VSteuSclItvEntity entries linking STEU/SCL codes to the user's SIRET (use seedVSteuSclItv)
  */
 export async function seedUserWithDroits(dataSource: DataSource, data: UserWithDroitsData): Promise<string> {
   const userId = `user_${Date.now()}`;
@@ -39,7 +47,47 @@ export async function seedUserWithDroits(dataSource: DataSource, data: UserWithD
   // Create ag linking prCdn to itvCdn
   await seedAg(dataSource, prCdn, data.itvCdn);
 
+  // If itvRfa is provided, create the ItvEntity and role 301
+  if (data.itvRfa) {
+    // Create ItvEntity with the SIRET
+    await seedItv(dataSource, String(data.itvCdn), data.itvRfa);
+
+    // Create role 301 for depot permission
+    await seedOrionRoleForPrincipal(dataSource, prCdn, 301);
+  }
+
   return userId;
+}
+
+/**
+ * Seeds OrionRoleForPrincipal entry.
+ */
+export async function seedOrionRoleForPrincipal(dataSource: DataSource, prCdn: number, roleCdn: number): Promise<void> {
+  await dataSource.query(`INSERT INTO lanceleau.t_orion_role_for_principal (pr_cdn, role_cdn) VALUES ($1, $2)`, [
+    prCdn,
+    roleCdn,
+  ]);
+}
+
+/**
+ * Seeds VSteuSclItv entry to authorize a SIRET for specific STEU and/or SCL codes.
+ * This is required for DroitsDepotService.validateDroits() to pass.
+ *
+ * @param steuCda - Code ouvrage de depollution (STEU), use empty string if not applicable
+ * @param sclCda - Code systeme de collecte (SCL), use empty string if not applicable
+ * @param moItvRfa - SIRET of the authorized intervenant
+ */
+export async function seedVSteuSclItv(
+  dataSource: DataSource,
+  steuCda: string,
+  sclCda: string,
+  moItvRfa: string,
+): Promise<void> {
+  await dataSource.query(`INSERT INTO verseau.v_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa) VALUES ($1, $2, $3)`, [
+    steuCda,
+    sclCda,
+    moItvRfa,
+  ]);
 }
 
 /**
@@ -69,5 +117,6 @@ export async function seedUserWithoutDroits(
 export async function clearUserWithDroits(dataSource: DataSource): Promise<void> {
   await dataSource.query(`DELETE FROM depot`);
   await dataSource.query(`DELETE FROM "user"`);
+  await dataSource.query(`DELETE FROM verseau.v_steu_scl_itv`);
   await clearLanceleauData(dataSource);
 }

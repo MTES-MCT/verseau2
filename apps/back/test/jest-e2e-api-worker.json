@@ -1,0 +1,29 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testMatch": ["<rootDir>/test/**/*.e2e-spec-api-worker.ts"],
+  "testTimeout": 120000,
+  "globalSetup": "<rootDir>/test/global-setup.ts",
+  "globalTeardown": "<rootDir>/test/global-teardown.ts",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "transformIgnorePatterns": ["node_modules/(?!(openid-client|oauth4webapi|jose|pg-boss|serialize-error)/)"],
+  "moduleNameMapper": {
+    "^@queue/(.*)$": "<rootDir>/src/infra/queue/$1",
+    "^@database/(.*)$": "<rootDir>/src/infra/database/$1",
+    "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@worker/(.*)$": "<rootDir>/src/worker/$1",
+    "^@depot/(.*)$": "<rootDir>/src/dossier/depot/$1",
+    "^@s3/(.*)$": "<rootDir>/src/infra/s3/$1",
+    "^@dossier/(.*)$": "<rootDir>/src/dossier/$1",
+    "^@referentiel/(.*)$": "<rootDir>/src/referentiel/$1",
+    "^@notification/(.*)$": "<rootDir>/src/notification/$1",
+    "^@infra/(.*)$": "<rootDir>/src/infra/$1",
+    "^@authentication/(.*)$": "<rootDir>/src/authentication/$1",
+    "^@user/(.*)$": "<rootDir>/src/user/$1",
+    "^@lib/dossier$": "<rootDir>/../../packages/dossier/src/index.ts",
+    "^@lib/parser$": "<rootDir>/../../packages/parser/src/index.ts"
+  }
+}
