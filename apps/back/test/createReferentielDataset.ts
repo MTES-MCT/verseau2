@@ -188,6 +188,23 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
       itv_serv_corres_rfa VARCHAR
     )
   `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.t_orion_credentials CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.t_orion_credentials (
+      pr_cdn INTEGER PRIMARY KEY,
+      mail VARCHAR,
+      login_lb VARCHAR
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS lanceleau.ag CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE lanceleau.ag (
+      pr_cdn INTEGER PRIMARY KEY,
+      itv_cdn INTEGER
+    )
+  `);
 }
 
 export async function createReferentielDataset(dataSource: DataSource): Promise<void> {
@@ -282,4 +299,37 @@ export async function seedResa(
   `,
     [resaCdn, steuCdn, resaAn, parRfa, resaCmaVal],
   );
+}
+
+// ============= Lanceleau Seed Functions =============
+
+export async function seedOrionCredentials(
+  dataSource: DataSource,
+  prCdn: number,
+  mail: string,
+  loginLb: string,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.t_orion_credentials (pr_cdn, mail, login_lb)
+    VALUES ($1, $2, $3)
+  `,
+    [prCdn, mail, loginLb],
+  );
+}
+
+export async function seedAg(dataSource: DataSource, prCdn: number, itvCdn: number): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.ag (pr_cdn, itv_cdn)
+    VALUES ($1, $2)
+  `,
+    [prCdn, itvCdn],
+  );
+}
+
+export async function clearLanceleauData(dataSource: DataSource): Promise<void> {
+  await dataSource.query(`DELETE FROM lanceleau.ag`);
+  await dataSource.query(`DELETE FROM lanceleau.t_orion_credentials`);
+  await dataSource.query(`DELETE FROM lanceleau.itv`);
 }
