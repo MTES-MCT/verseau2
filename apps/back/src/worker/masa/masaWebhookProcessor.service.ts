@@ -33,6 +33,7 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
     this.logger.setContext(MasaWebhookProcessorService.name);
   }
 
+  // Gérer les cas d'erreur pour l'envoi au SFTP et le téléchargement depuis S3. Processor dédié ?
   async process(data: MasaProcessorData): Promise<void> {
     const { masaId, depotId } = data;
     this.logger.log(`Processing MASA report`, { masaId, depotId });
@@ -69,16 +70,15 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
 
       await this.depotGateway.updateDepot(depotId, { rapportPath: pdfPath });
 
-      // 5. Send email to déposant
+      // 5. Send to Agence de l'eau SFTP
+      await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
+
+      // 6. Send email to déposant
       await this.sendEmailToDeposant(depot, masa, pdfBuffer);
 
-      // 6. Download XML file from S3
       if (!depot.path) {
         throw new Error(`No XML file path for depot: ${depotId}`);
       }
-
-      // 7. Send to Agence de l'eau SFTP
-      await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
 
       this.logger.log(`MASA report processing completed`, { masaId, depotId });
     } catch (error) {
@@ -109,7 +109,7 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
   private async sendEmailToDeposant(depot: DepotModel, masa: MasaModel, pdfBuffer: Buffer): Promise<void> {
     const user = depot.user;
     if (!user || !user.email) {
-      this.logger.warn('User email not available, skipping email notification', {
+      this.logger.error('User email not available, skipping email notification', {
         userId: depot.user?.id,
       });
       return;
@@ -135,23 +135,34 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       EmailTemplate.RAPPORT,
     );
     this.logger.log('Email sent to déposant', { email: user.email });
+    await this.depotGateway.updateDepot(depot.id, {
+      step: DepotStep.SEND_EMAIL_TO_DEPOSANT,
+    });
   }
 
   private async sendToAgenceDeEauSftp(depot: DepotModel, pdfBuffer: Buffer): Promise<void> {
-    if (!depot.path) {
-      throw new Error(`No XML file path for depot: ${depot.id}`);
+    try {
+      if (!depot.path) {
+        throw new Error(`No XML file path for depot: ${depot.id}`);
+      }
+      const xmlBuffer = await this.s3.download(depot.path);
+
+      const remotePath = `verseau2/${depot.id}`;
+
+      // TODO: Send to different SFTP based on agency configuration
+      // // Send XML
+      // await this.sftpService.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
+
+      // // Send PDF
+      // await this.sftpService.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
+
+      this.logger.log("Files sent to Agence de l'eau SFTP", { remotePath });
+    } catch (error) {
+      this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {
+        depotId: depot.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
-    const xmlBuffer = await this.s3.download(depot.path);
-
-    const remotePath = `verseau2/${depot.id}`;
-
-    // TODO: Send to different SFTP based on agency configuration
-    // // Send XML
-    // await this.sftpService.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
-
-    // // Send PDF
-    // await this.sftpService.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
-
-    this.logger.log("Files sent to Agence de l'eau SFTP", { remotePath });
   }
 }
