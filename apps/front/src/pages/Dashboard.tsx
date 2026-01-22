@@ -14,6 +14,7 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { usePagination } from '../hooks/usePagination';
 import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
+import { IndicateursTable } from '../components/IndicateursTable';
 
 const DEPOT_POLLING_INTERVAL_MS = 2000;
 const PAGE_SIZE = 10;
@@ -171,6 +172,8 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      <IndicateursTable />
 
       <div className={fr.cx('fr-py-2w')}>
         <div className="fr-mb-2w">

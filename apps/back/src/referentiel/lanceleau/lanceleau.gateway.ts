@@ -26,6 +26,7 @@ export interface LanceleauGateway {
   findVSteuSclItvBySteu(steuCda: string): Promise<VSteuSclItvEntity | null>;
   findVSteuSclItvByScl(sclCda: string): Promise<VSteuSclItvEntity | null>;
   findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]>;
+  findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvEntity[]>;
 }
 
 export const LanceleauGateway = Symbol('LanceleauGateway');

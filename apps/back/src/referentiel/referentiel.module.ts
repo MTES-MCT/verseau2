@@ -19,6 +19,9 @@ import { CxntechEntity } from './roseau/entities/cxntech.entity';
 import { CpyEntity } from './roseau/entities/cpy.entity';
 import { ResaEntity } from './roseau/entities/resa.entity';
 import { StchanEntity } from './roseau/entities/stchan.entity';
+import { AgacEntity } from './roseau/entities/agac.entity';
+import { TltoblEntity } from './roseau/entities/tltobl.entity';
+import { AgatEntity } from './roseau/entities/agat.entity';
 import { SupEntity } from './lanceleau/entities/sup.entity';
 import { FanEntity } from './lanceleau/entities/fan.entity';
 import { ParEntity } from './lanceleau/entities/par.entity';
@@ -27,6 +30,8 @@ import { OrionCredentialsEntity } from './lanceleau/entities/orionCredentials.en
 import { OrionRoleForPrincipalEntity } from './lanceleau/entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './lanceleau/entities/ag.entity';
 import { VSteuSclItvEntity } from './lanceleau/entities/vSteuSclItv.entity';
+import { CdbEntity } from './lanceleau/entities/cdb.entity';
+import { RegEntity } from './lanceleau/entities/reg.entity';
 import { ParametreGateway } from './parametre/parametre.gateway';
 
 @Module({
@@ -43,6 +48,9 @@ import { ParametreGateway } from './parametre/parametre.gateway';
       CxntechEntity,
       ResaEntity,
       StchanEntity,
+      AgacEntity,
+      TltoblEntity,
+      AgatEntity,
       SupEntity,
       FanEntity,
       ParEntity,
@@ -51,6 +59,8 @@ import { ParametreGateway } from './parametre/parametre.gateway';
       OrionRoleForPrincipalEntity,
       AgEntity,
       VSteuSclItvEntity,
+      CdbEntity,
+      RegEntity,
     ]),
   ],
   controllers: [ReferentielController],
