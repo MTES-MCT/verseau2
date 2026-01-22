@@ -5,3 +5,4 @@ export * from './controle/controle.dto';
 export * from './depot/depot.dto';
 export * from './depot/depot.status';
 export * from './masa/masa.dto';
+export * from './indicateur/indicateur.dto';

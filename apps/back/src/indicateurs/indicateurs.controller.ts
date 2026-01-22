@@ -2,7 +2,7 @@ import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { IndicateursService } from './indicateurs.service';
-import { IndicateurSteuDto } from './dto/indicateur-steu.dto';
+import { IndicateurSteuDto } from '@lib/dossier';
 
 @Controller('indicateurs')
 @UseGuards(MeGuard)

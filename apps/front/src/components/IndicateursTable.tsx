@@ -27,7 +27,7 @@ export function IndicateursTable() {
   ];
 
   // Placeholder rows to prevent layout shift during loading
-  const loadingData = Array(3).fill([
+  const loadingData = Array(1).fill([
     <div key="s1" className="fr-skeleton" style={{ width: '100px', height: '1rem' }} />,
     <div key="s2" className="fr-skeleton" style={{ width: '80px', height: '1rem' }} />,
     <div key="s3" className="fr-skeleton" style={{ width: '60px', height: '1rem' }} />,

@@ -1,4 +1,4 @@
-export class IndicateurSteuDto {
+export interface IndicateurSteuDto {
   bassin: string;
   region: string;
   departement: string;
@@ -14,6 +14,6 @@ export class IndicateurSteuDto {
   capaciteNominaleEhAnN: number;
   debitReference: number;
   chargeEntranteEhAnN: number;
-  pc95Retenu: number;
+  pc95Retenu: number | null;
   nbAnneesMaxPc95: number;
 }

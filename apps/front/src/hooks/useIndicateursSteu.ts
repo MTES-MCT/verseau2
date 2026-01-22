@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchIndicateursSteu, type IndicateurSteuDto } from '../api/indicateurs';
+import { fetchIndicateursSteu } from '../api/indicateurs';
+import { type IndicateurSteuDto } from '@lib/dossier';
 
 export function useIndicateursSteu() {
   return useQuery<IndicateurSteuDto[]>({
