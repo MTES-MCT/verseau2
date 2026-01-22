@@ -23,7 +23,7 @@ function App() {
       <div className={`${fr.cx('fr-container')} app-container`}>
         <Breadcrumb />
 
-        <main className={fr.cx('fr-py-4w', 'fr-px-0')}>
+        <main className={fr.cx('fr-py-2w', 'fr-px-0')}>
           <Routes>
             <Route path={AppRoutes.CALLBACK} element={<CallbackPage />} />
             <Route path={AppRoutes.HOME} element={<HomePage />} />
