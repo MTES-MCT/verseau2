@@ -155,4 +155,16 @@ describe('Controller (e2e) - Unauthorized', () => {
       return request(app.getHttpServer()).get('/referentiel/codes-to-parametres').expect(401);
     });
   });
+
+  describe('IndicateursController (e2e)', () => {
+    it('/indicateurs/steu (GET) - Should return 401 Unauthorized when no token is provided', async () => {
+      return request(app.getHttpServer()).get('/indicateurs/steu').expect(401);
+    });
+    it('/indicateurs/steu (GET) - Should return 200 when a token is provided', async () => {
+      return request(app.getHttpServer())
+        .get('/indicateurs/steu')
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+  });
 });

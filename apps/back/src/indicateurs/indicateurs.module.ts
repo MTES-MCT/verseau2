@@ -5,9 +5,10 @@ import { IndicateursController } from './indicateurs.controller';
 import { IndicateursService } from './indicateurs.service';
 import { IndicateursGateway } from './indicateurs.gateway';
 import { IndicateursRepository } from './indicateurs.repository';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
-  imports: [UserModule, ReferentielModule],
+  imports: [UserModule, ReferentielModule, CacheModule.register({ ttl: 5000 })],
   controllers: [IndicateursController],
   providers: [IndicateursService, { provide: IndicateursGateway, useClass: IndicateursRepository }],
 })
