@@ -16,4 +16,5 @@ export interface IndicateurSteuDto {
   chargeEntranteEhAnN: number;
   pc95Retenu: number | null;
   nbAnneesMaxPc95: number;
+  annee: number;
 }

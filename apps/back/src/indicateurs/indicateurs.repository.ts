@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { IndicateurSteuDto } from '@lib/dossier';
 import { IndicateursGateway } from './indicateurs.gateway';
-import { getPreviousYear } from '@lib/shared';
+import { getYearMinus } from '@lib/shared';
 
 interface IndicateurSteuRecord {
   bassin: string;
@@ -22,6 +22,7 @@ interface IndicateurSteuRecord {
   charge_entrante_eh_an_n: number;
   pc95_retenu: number | null;
   nb_annees_max_pc95: number;
+  annee: number;
 }
 @Injectable()
 export class IndicateursRepository implements IndicateursGateway {
@@ -34,7 +35,7 @@ export class IndicateursRepository implements IndicateursGateway {
 
     const placeholders = steuCodes.map((_, i) => `$${i + 1}`).join(',');
 
-    const previousYear = getPreviousYear();
+    const twoYearsAgo = getYearMinus(2);
     const query = `
 SELECT
     TRIM(cdb.cdb_nom_lb)                       AS bassin,
@@ -73,10 +74,10 @@ JOIN roseau.tlref t09 ON t09.tlref_cdn = steu.tlref_09_cdn
 JOIN roseau.tlref t10 ON t10.tlref_cdn = steu.tlref_10_cdn
 JOIN roseau.cxntech cxn
     ON cxn.aval_steu_cdn = steu.steu_cdn
-   AND date_part('year', cxn.cxntech_creation_dt) <= ${previousYear}
-   AND (cxn.cxntech_retrait_dt IS NULL OR date_part('year', cxn.cxntech_retrait_dt) >= ${previousYear})
+   AND date_part('year', cxn.cxntech_creation_dt) <= ${twoYearsAgo}
+   AND (cxn.cxntech_retrait_dt IS NULL OR date_part('year', cxn.cxntech_retrait_dt) >= ${twoYearsAgo})
 JOIN roseau.aga aga ON aga.zgc_cdn = cxn.amont_zgc_cdn
-JOIN roseau.agac agac ON agac.aga_cdn = aga.aga_cdn AND agac.agac_conf_an = ${previousYear}
+JOIN roseau.agac agac ON agac.aga_cdn = aga.aga_cdn AND agac.agac_conf_an = ${twoYearsAgo}
 JOIN roseau.agat agat ON agat.aga_cdn = aga.aga_cdn AND agat.agat_taille_an = agac.agac_conf_an
 JOIN roseau.cpy cpy ON cpy.steu_cdn = steu.steu_cdn AND cpy.cpy_an = agac.agac_conf_an
 JOIN roseau.stchan stchan ON stchan.steu_cdn = steu.steu_cdn AND stchan.stchan_an = agac.agac_conf_an
@@ -108,6 +109,7 @@ WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders});
       chargeEntranteEhAnN: Number(r.charge_entrante_eh_an_n),
       pc95Retenu: r.pc95_retenu !== null ? Number(r.pc95_retenu) : null,
       nbAnneesMaxPc95: Number(r.nb_annees_max_pc95),
+      annee: twoYearsAgo,
     }));
   }
 }

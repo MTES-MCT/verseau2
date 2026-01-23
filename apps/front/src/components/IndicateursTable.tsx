@@ -58,7 +58,10 @@ export function IndicateursTable() {
       <div className="fr-grid-row fr-grid-row--middle fr-mb-2w">
         <div className="fr-col">
           <h2 className="fr-h4 fr-mb-0">
-            Principaux indicateurs utilisés pour l'évaluation des conformités station et système de collecte
+            Principaux indicateurs
+            <h3 className="fr-h6 fr-mb-0">
+              Évaluation des conformités station et système de collecte - année {indicateurs?.[0]?.annee}
+            </h3>
           </h2>
         </div>
         <div className="fr-col-auto">
