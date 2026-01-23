@@ -1,7 +1,9 @@
 import { fr } from '@codegouvfr/react-dsfr';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { EvenementType } from '@lib/dossier';
+import { useState, memo } from 'react';
 import type { TableDataRow } from '../hooks/useControleTableData';
 import type { ControleFilterSet } from '../types/controle.types';
 
@@ -9,8 +11,10 @@ type ControleMessageCellProps = {
   row: TableDataRow;
   activeFilters: ControleFilterSet;
 };
+const ADD_MORE_COUNT = 100;
+export const ControleMessageCell = memo(function ControleMessageCell({ row, activeFilters }: ControleMessageCellProps) {
+  const [visibleCount, setVisibleCount] = useState(5);
 
-export function ControleMessageCell({ row, activeFilters }: ControleMessageCellProps) {
   if (!row.isGroup) {
     return <>{row.message}</>;
   }
@@ -79,10 +83,13 @@ export function ControleMessageCell({ row, activeFilters }: ControleMessageCellP
     return { icon: 'fr-icon-error-fill', color: 'var(--text-default-error)' };
   };
 
+  const allItems = Object.values(messageGroups);
+  const visibleItems = allItems.slice(0, visibleCount);
+
   return (
     <Accordion label={label} key={row.name} className={`${fr.cx('fr-m-0')} accordion-no-border`}>
       <ul className="zebra-list fr-p-0 fr-m-0">
-        {Object.values(messageGroups).map((item, index) => {
+        {visibleItems.map((item, index) => {
           const { icon, color } = getIconInfo(item.success, item.evenementType);
           return (
             <li key={`${index}`} className="fr-flex fr-align-items-start fr-p-1w">
@@ -94,6 +101,18 @@ export function ControleMessageCell({ row, activeFilters }: ControleMessageCellP
           );
         })}
       </ul>
+      {allItems.length > visibleCount && (
+        <div className="fr-mt-2w fr-flex fr-justify-center">
+          <Button
+            priority="tertiary no outline"
+            size="small"
+            onClick={() => setVisibleCount((prev) => prev + ADD_MORE_COUNT)}
+          >
+            Afficher {allItems.length - visibleCount > ADD_MORE_COUNT ? ADD_MORE_COUNT : allItems.length - visibleCount}{' '}
+            suivants ({allItems.length - visibleCount} restants)
+          </Button>
+        </div>
+      )}
     </Accordion>
   );
-}
+});
