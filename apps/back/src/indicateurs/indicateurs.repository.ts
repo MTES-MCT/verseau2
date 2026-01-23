@@ -2,7 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { IndicateurSteuDto } from '@lib/dossier';
 import { IndicateursGateway } from './indicateurs.gateway';
+import { getPreviousYear } from '@lib/shared';
 
+interface IndicateurSteuRecord {
+  bassin: string;
+  region: string;
+  departement: string;
+  code_sandre_agglo: string;
+  nom_agglo: string;
+  nature: string;
+  tranche_obligation: string;
+  etat_agglo: string;
+  taille_agglo_eh_an_n: number;
+  somme_charges_max_entrantes_eh: number;
+  code_sandre_steu: string;
+  nom_steu: string;
+  capacite_nominale_eh_an_n: number;
+  debit_reference: number;
+  charge_entrante_eh_an_n: number;
+  pc95_retenu: number | null;
+  nb_annees_max_pc95: number;
+}
 @Injectable()
 export class IndicateursRepository implements IndicateursGateway {
   constructor(private readonly dataSource: DataSource) {}
@@ -12,6 +32,9 @@ export class IndicateursRepository implements IndicateursGateway {
       return [];
     }
 
+    const placeholders = steuCodes.map((_, i) => `$${i + 1}`).join(',');
+
+    const previousYear = getPreviousYear();
     const query = `
 SELECT
     TRIM(cdb.cdb_nom_lb)                       AS bassin,
@@ -45,33 +68,29 @@ SELECT
         WHEN stchan.stchan_r_1an_jr_deb_95_perc_val IS NOT NULL THEN 1
         ELSE 0
     END AS nb_annees_max_pc95
-FROM roseau.aga aga
+FROM roseau.steu steu
+JOIN roseau.tlref t09 ON t09.tlref_cdn = steu.tlref_09_cdn
+JOIN roseau.tlref t10 ON t10.tlref_cdn = steu.tlref_10_cdn
+JOIN roseau.cxntech cxn
+    ON cxn.aval_steu_cdn = steu.steu_cdn
+   AND date_part('year', cxn.cxntech_creation_dt) <= ${previousYear}
+   AND (cxn.cxntech_retrait_dt IS NULL OR date_part('year', cxn.cxntech_retrait_dt) >= ${previousYear})
+JOIN roseau.aga aga ON aga.zgc_cdn = cxn.amont_zgc_cdn
+JOIN roseau.agac agac ON agac.aga_cdn = aga.aga_cdn AND agac.agac_conf_an = ${previousYear}
+JOIN roseau.agat agat ON agat.aga_cdn = aga.aga_cdn AND agat.agat_taille_an = agac.agac_conf_an
+JOIN roseau.cpy cpy ON cpy.steu_cdn = steu.steu_cdn AND cpy.cpy_an = agac.agac_conf_an
+JOIN roseau.stchan stchan ON stchan.steu_cdn = steu.steu_cdn AND stchan.stchan_an = agac.agac_conf_an
 JOIN lanceleau.cdb cdb ON cdb.cdb_rfa = aga.aga_cdb_rfa
 JOIN lanceleau.reg reg ON reg.reg_rfa = aga.aga_reg_rfa
 JOIN roseau.tlref t64 ON t64.tlref_cdn = aga.tlref_64_cdn
-JOIN roseau.agac agac ON agac.aga_cdn = aga.aga_cdn AND agac.agac_conf_an = 2024
 JOIN roseau.tlref t03 ON t03.tlref_cdn = aga.tlref_03_cdn
 JOIN roseau.tltobl tltobl ON tltobl.tltobl_rfa = aga.tltobl_rfa
-JOIN roseau.agat agat ON agat.aga_cdn = aga.aga_cdn AND agat.agat_taille_an = agac.agac_conf_an
-JOIN roseau.cxntech cxn
-    ON cxn.aval_steu_cdn IS NOT NULL
-   AND cxn.amont_zgc_cdn = aga.zgc_cdn
-   AND date_part('year', cxn.cxntech_creation_dt) <= agac.agac_conf_an
-   AND (cxn.cxntech_retrait_dt IS NULL OR date_part('year', cxn.cxntech_retrait_dt) >= agac.agac_conf_an)
-JOIN roseau.steu steu ON steu.steu_cdn = cxn.aval_steu_cdn
-JOIN roseau.tlref t09 ON t09.tlref_cdn = steu.tlref_09_cdn
-JOIN roseau.tlref t10 ON t10.tlref_cdn = steu.tlref_10_cdn
-JOIN roseau.cpy cpy ON cpy.steu_cdn = steu.steu_cdn AND cpy.cpy_an = agac.agac_conf_an
-JOIN roseau.stchan stchan ON stchan.steu_cdn = steu.steu_cdn AND stchan.stchan_an = agac.agac_conf_an
-WHERE RTRIM(steu.steu_sandre_cda) IN ($1);
+WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders});
     `;
 
-    const placeholders = steuCodes.map((_, i) => `$${i + 1}`).join(',');
-    const dynamicQuery = query.replace('IN ($1)', `IN (${placeholders})`);
+    const results: IndicateurSteuRecord[] = await this.dataSource.query(query, steuCodes);
 
-    const results = await this.dataSource.query(dynamicQuery, steuCodes);
-
-    return results.map((r: any) => ({
+    return results.map((r: IndicateurSteuRecord) => ({
       bassin: r.bassin,
       region: r.region,
       departement: r.departement,
