@@ -14,9 +14,10 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { usePagination } from '../hooks/usePagination';
 import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
+import { IndicateursTable } from '../components/IndicateursTable';
 
 const DEPOT_POLLING_INTERVAL_MS = 2000;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 
 function getStatusBadge(depot: DepotDto) {
   switch (depot.status) {
@@ -173,13 +174,6 @@ export function Dashboard() {
       </div>
 
       <div className={fr.cx('fr-py-2w')}>
-        <div className="fr-mb-2w">
-          <p className="fr-text--sm">
-            Affichage de {(currentPage - 1) * PAGE_SIZE + 1} à {Math.min(currentPage * PAGE_SIZE, depots.length)} sur{' '}
-            {depots.length} entrée{depots.length > 1 ? 's' : ''}
-          </p>
-        </div>
-
         {downloadError && (
           <div className="fr-mb-2w">
             <Alert
@@ -191,6 +185,7 @@ export function Dashboard() {
             />
           </div>
         )}
+        <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
         <Table
           caption="Liste des dépôts d'auto-surveillance"
           noCaption
@@ -198,18 +193,31 @@ export function Dashboard() {
           headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
           data={tableData}
           noScroll={false}
+          className={fr.cx('fr-mb-1w')}
         />
 
         {totalPages > 1 && (
           <div className="fr-mt-4w">
-            <Pagination
-              count={totalPages}
-              defaultPage={currentPage}
-              getPageLinkProps={getPageLinkProps}
-              showFirstLast={true}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Pagination
+                count={totalPages}
+                defaultPage={currentPage}
+                getPageLinkProps={getPageLinkProps}
+                showFirstLast={true}
+              />
+              <div className="fr-mb-2w fr-pt-1w" style={{ marginLeft: '1.5rem' }}>
+                <p className="fr-text--sm">
+                  Affichage de {(currentPage - 1) * PAGE_SIZE + 1} à {Math.min(currentPage * PAGE_SIZE, depots.length)}{' '}
+                  sur {depots.length} entrée{depots.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
           </div>
         )}
+      </div>
+
+      <div className={fr.cx('fr-my-4w')}>
+        <IndicateursTable />
       </div>
     </>
   );

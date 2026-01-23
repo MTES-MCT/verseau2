@@ -8,8 +8,14 @@ export class CxntechEntity {
   @Column({ name: 'aval_scl_cdn', nullable: true })
   avalSclCdn: string;
 
+  @Column({ name: 'aval_steu_cdn', nullable: true })
+  avalSteuCdn: string;
+
   @Column({ name: 'amont_zgc_cdn', nullable: true })
   amontZgcCdn: string;
+
+  @Column({ name: 'cxntech_creation_dt', type: 'date', nullable: true })
+  cxntechCreationDt: Date;
 
   @Column({ name: 'cxntech_retrait_dt', type: 'date', nullable: true })
   cxntechRetraitDt: Date;

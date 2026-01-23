@@ -11,6 +11,7 @@ import { LoggerRequestMiddleware } from './middleware/loggerRequest.middleware';
 import { VersionController } from './version.controller';
 import { AuthenticationModule } from '@authentication/authentication.module';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
+import { IndicateursModule } from '../indicateurs/indicateurs.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthenticationMiddleware } from '@authentication/authentication.middlew
     InfraModule,
     NotificationModule,
     ReferentielModule,
+    IndicateursModule,
   ],
   controllers: [VersionController],
   providers: [

@@ -120,4 +120,8 @@ export class LanceleauRepository implements LanceleauGateway {
 
     return qb.getMany();
   }
+
+  async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvEntity[]> {
+    return this.vSteuSclItvRepository.find({ where: { moItvRfa: itvRfa } });
+  }
 }

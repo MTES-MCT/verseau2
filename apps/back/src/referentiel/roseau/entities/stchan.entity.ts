@@ -13,4 +13,19 @@ export class StchanEntity {
 
   @Column({ name: 'stchan_pc95_val', nullable: true, type: 'numeric' })
   stchanPc95Val: number | null;
+
+  @Column({ name: 'stchan_r_1an_jr_deb_95_perc_val', nullable: true, type: 'numeric' })
+  stchanR1anJrDeb95PercVal: number | null;
+
+  @Column({ name: 'stchan_r_2ans_jr_deb_95_perc_val', nullable: true, type: 'numeric' })
+  stchanR2ansJrDeb95PercVal: number | null;
+
+  @Column({ name: 'stchan_r_3ans_jr_deb_95_perc_val', nullable: true, type: 'numeric' })
+  stchanR3ansJrDeb95PercVal: number | null;
+
+  @Column({ name: 'stchan_r_4ans_jr_deb_95_perc_val', nullable: true, type: 'numeric' })
+  stchanR4ansJrDeb95PercVal: number | null;
+
+  @Column({ name: 'stchan_r_5ans_jr_deb_95_perc_val', nullable: true, type: 'numeric' })
+  stchanR5ansJrDeb95PercVal: number | null;
 }
