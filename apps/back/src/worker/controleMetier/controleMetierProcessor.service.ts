@@ -93,7 +93,6 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         step: DepotStep.CONTROLE_FAILED,
         controleStatus: ControleStatus.FAILED,
       });
-      throw error;
     }
   }
 

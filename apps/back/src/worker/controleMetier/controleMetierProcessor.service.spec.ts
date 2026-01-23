@@ -90,11 +90,7 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
     (mockDepotService.update as jest.Mock).mockResolvedValue({});
     (mockControleGateway.createControle as jest.Mock).mockResolvedValue({});
 
-    try {
-      await service.process({ depotId, filePath });
-    } catch (error) {
-      expect(error).toBe(testError);
-    }
+    await service.process({ depotId, filePath });
 
     expect(mockControleGateway.createControle).toHaveBeenCalledWith(
       expect.objectContaining({
