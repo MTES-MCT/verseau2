@@ -41,6 +41,50 @@ class PgService {
     console.log('Database restore completed successfully.');
   }
 
+  async verifyDumpContents(filePath) {
+    console.log(`Verifying dump contents for ${filePath}...`);
+    const env = { ...process.env };
+    const args = ['-l', filePath];
+
+    return new Promise((resolve, reject) => {
+      const listProcess = spawn('pg_restore', args, { env });
+      let stdout = '';
+      let stderr = '';
+
+      listProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      listProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      listProcess.on('close', (code) => {
+        if (code !== 0) {
+          console.error('pg_restore -l stderr:', stderr);
+          return reject(new Error(`pg_restore -l exited with code ${code}`));
+        }
+
+        const requiredSchemas = ['custom_ingestion_roseau', 'custom_ingestion_lanceleau', 'custom_ingestion_verseau'];
+
+        const missingSchemas = requiredSchemas.filter((schema) => {
+          // Matches either "SCHEMA - schema_name" or "TYPE schema_name object_name" (e.g. TABLE custom_ingestion_roseau table_name)
+          const pattern = new RegExp(`\\b(SCHEMA\\s+-\\s+${schema}|[A-Z]+\\s+${schema}\\s+\\S+)\\b`);
+          return !pattern.test(stdout);
+        });
+
+        if (missingSchemas.length > 0) {
+          return reject(new Error(`Dump is missing required schemas: ${missingSchemas.join(', ')}`));
+        }
+
+        console.log('✅ Dump verification successful: all required schemas found.');
+        resolve();
+      });
+
+      listProcess.on('error', (err) => reject(err));
+    });
+  }
+
   async _dropStandardSchemas(connectionString) {
     const env = { ...process.env };
 

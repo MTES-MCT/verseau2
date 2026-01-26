@@ -25,6 +25,9 @@ async function main() {
     tempFilePath = await s3Service.downloadFile();
     console.log('Downloaded file:', tempFilePath);
 
+    // Étape 1.1 : Vérifier que le dump contient les schémas requis
+    await pgService.verifyDumpContents(tempFilePath);
+
     // Étape 2 : Déterminer la couleur cible et restaurer le dump
     console.log('\n=== Étape 2/4 : Restauration du dump ===');
     const currentColor = await blueGreenManager.getCurrentActiveColor();
