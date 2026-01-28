@@ -37,7 +37,7 @@ import { WorkerModule } from '@worker/worker.module';
 
 import { startPostgresContainer, getPostgresConnectionUri } from '../testcontainer.config';
 import { initTestContainerImports } from '../init/initTestContainer';
-import { createReferentielDataset } from '../createReferentielDataset';
+import { clearReferentielData, createReferentielDataset } from '../createReferentielDataset';
 import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../userWithDroitsDataset.helper';
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 
@@ -140,7 +140,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
 </FctAssain>`;
 
   beforeAll(async () => {
-    await startPostgresContainer();
+    await startPostgresContainer({ new: true });
     const connectionUri = getPostgresConnectionUri();
 
     // Set DATABASE_URL for PgBoss to use the testcontainer
@@ -228,6 +228,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
     await seedUserWithDroits(dataSource, TEST_USER);
     await clearControles(dataSource);
     await clearDepots(dataSource);
+    // await clearReferentielData(dataSource);
+    // await createReferentielDataset(dataSource);
   });
 
   afterAll(async () => {

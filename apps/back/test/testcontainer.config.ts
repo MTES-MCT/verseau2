@@ -4,11 +4,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ulid } from 'ulid';
 import { Client } from 'pg';
+import { Logger } from '@nestjs/common';
 
 let postgresContainer: StartedPostgreSqlContainer | null = null;
 
-export async function startPostgresContainer(): Promise<StartedPostgreSqlContainer> {
-  if (postgresContainer) {
+interface PostgreSqlContainerConfig {
+  new: boolean;
+}
+export async function startPostgresContainer(
+  config: PostgreSqlContainerConfig = { new: false },
+): Promise<StartedPostgreSqlContainer> {
+  if (postgresContainer && !(config && config.new)) {
     return postgresContainer;
   }
 
@@ -18,8 +24,9 @@ export async function startPostgresContainer(): Promise<StartedPostgreSqlContain
     const baseUri = config.uri;
 
     // Create a unique database for this worker/test suite
-    const dbName = `test_${ulid().toLowerCase()}`;
-
+    const dbName = `test_${ulid().toLowerCase().substring(18, 25)}`;
+    const logger = new Logger('PostgreSqlContainer');
+    logger.log(`Creating new database "${dbName}" for test worker`);
     const client = new Client({ connectionString: baseUri });
     await client.connect();
     await client.query(`CREATE DATABASE "${dbName}"`);
