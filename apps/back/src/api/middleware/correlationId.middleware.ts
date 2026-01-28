@@ -10,7 +10,7 @@ export class CorrelationIdMiddleware implements NestMiddleware {
   constructor(private readonly cls: ClsService<CustomClsStore>) {}
 
   use(req: CustomRequest, _: Response, next: NextFunction) {
-    const correlationId = ulid().toLowerCase();
+    const correlationId = ulid().toLowerCase().substring(16, 25);
     req.correlationId = correlationId;
     this.cls.set('correlationId', correlationId);
     next();
