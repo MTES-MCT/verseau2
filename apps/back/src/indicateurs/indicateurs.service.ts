@@ -1,7 +1,8 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS, Logger } from '@nestjs/common';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { UserGateway } from '@user/user.gateway';
 import { IndicateurSteuDto } from '@lib/dossier';
+import { TraceCalls } from '../shared/logger/traceCalls.decorator';
 import { IndicateursGateway } from './indicateurs.gateway';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class IndicateursService {
     @Inject(UserGateway) private readonly userGateway: UserGateway,
   ) {}
 
+  @TraceCalls(LOG_LEVELS[2])
   async getIndicateursSteu(subId: string): Promise<IndicateurSteuDto[]> {
     const user = await this.userGateway.findBySub(subId);
     if (!user) {
