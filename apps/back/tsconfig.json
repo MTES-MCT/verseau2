@@ -22,6 +22,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@lib/parser": ["../../packages/parser/src/index.ts"],
+      "@lib/dossier": ["../../packages/dossier/src/index.ts"],
+      "@lib/shared": ["../../packages/shared/src/index.ts"],
       "@queue/*": ["src/infra/queue/*"],
       "@database/*": ["src/infra/database/*"],
       "@shared/*": ["src/shared/*"],

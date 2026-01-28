@@ -1,5 +1,11 @@
 {
-  "watch": ["src", "../../packages/parser/dist", ".env.local"],
+  "watch": [
+    "src",
+    "../../packages/parser/src",
+    "../../packages/dossier/src",
+    "../../packages/shared/src",
+    ".env.local"
+  ],
   "ext": "ts,js,json",
   "ignore": ["src/**/*.spec.ts"],
   "exec": "node --inspect=9229 -r ts-node/register -r tsconfig-paths/register src/mainServer.ts",

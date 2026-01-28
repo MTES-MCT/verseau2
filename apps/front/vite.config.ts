@@ -13,8 +13,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@lib/parser'],
-    exclude: ['@lib/dossier'],
+    exclude: ['@lib/parser', '@lib/dossier'],
   },
   test: {
     globals: true,
