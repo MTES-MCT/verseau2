@@ -1,18 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
 import { EmailParams, EmailTemplate, EmailWithMessage } from '../notification';
 import * as nodemailer from 'nodemailer';
 import * as brevo from '@getbrevo/brevo';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class EmailBrevoCatcherProvider implements EmailProvider {
   private transporter: nodemailer.Transporter;
-  private readonly logger = new Logger(EmailBrevoCatcherProvider.name);
   private emailsApi: brevo.TransactionalEmailsApi;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly logger: LoggerService,
+  ) {
     const host = this.config.get<string>('MAILCATCHER_HOST', 'localhost');
     const port = this.config.get<number>('MAILCATCHER_PORT', 1025);
 
@@ -25,6 +28,7 @@ export class EmailBrevoCatcherProvider implements EmailProvider {
       port,
       ignoreTLS: true,
     });
+    this.logger.setContext(EmailBrevoCatcherProvider.name);
   }
 
   async send(template: EmailTemplate, emailParams: EmailParams): Promise<{ response: object; body: object }> {

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any , @typescript-eslint/no-unsafe-argument */
-import { Injectable, Scope } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConsoleLogger } from '@nestjs/common';
 import { ClsServiceManager } from 'nestjs-cls';
 import { CustomClsStore } from './cls-store.interface';
 import { getLogLevels } from './logConfig';
 
-@Injectable({ scope: Scope.TRANSIENT })
+@Injectable()
 export class LoggerService extends ConsoleLogger {
   constructor(context: string) {
     super(context);
@@ -15,9 +15,12 @@ export class LoggerService extends ConsoleLogger {
     }
   }
 
-  // protected getTimestamp(): string {
-  //   return super.getTimestamp();
-  // }
+  protected getTimestamp(): string {
+    if (process.env.TIMESTAMP_LOGGING === 'true') {
+      return super.getTimestamp();
+    }
+    return '';
+  }
 
   log(message: any, ...optionalParams: [...any, string?]): void {
     const logMessage = this.formatArgs(message, ...optionalParams);

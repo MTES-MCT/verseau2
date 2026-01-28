@@ -2,9 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { ApiModule } from './api/api.module';
 import { MigrationService } from './infra/database/migration.service';
 import cookieParser from 'cookie-parser';
+import { LoggerService } from '@shared/logger/logger.service';
 
 async function bootstrapServer() {
-  const app = await NestFactory.create(ApiModule);
+  const app = await NestFactory.create(ApiModule, {
+    logger: new LoggerService('Bootstrap'),
+  });
 
   app.use(cookieParser());
 

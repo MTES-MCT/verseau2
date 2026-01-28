@@ -5,6 +5,7 @@ import { ClsServiceManager } from 'nestjs-cls';
 import { performance } from 'perf_hooks';
 import { CustomClsStore } from './cls-store.interface';
 import { ulid } from 'ulid';
+import { LoggerService } from './logger.service';
 //
 /**
  * Decorator that logs all method calls made within the decorated method.
@@ -19,7 +20,7 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
     const callIdPrefix = `[callId: ${ulid().substring(20, 25).toLowerCase()}]`;
 
     descriptor.value = function (this: Record<string, unknown>, ...args: unknown[]) {
-      const logger = new Logger(className);
+      const logger = new LoggerService(className);
       const propName = String(propertyKey);
       const startTime = performance.now();
 

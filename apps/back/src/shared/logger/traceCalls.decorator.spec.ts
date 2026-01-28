@@ -1,22 +1,11 @@
-import { Logger } from '@nestjs/common';
 import { ClsServiceManager } from 'nestjs-cls';
+import { LoggerService } from './logger.service';
 import { TraceCalls } from './traceCalls.decorator';
 
-// Mock NestJS Logger
-jest.mock('@nestjs/common', () => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const actual = jest.requireActual('@nestjs/common');
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return {
-    ...actual,
-    Logger: jest.fn().mockImplementation(function (this: any) {
-      this.log = jest.fn();
-      this.debug = jest.fn();
-      this.error = jest.fn();
-      this.warn = jest.fn();
-    }),
-  };
-});
+// Mock LoggerService
+jest.mock('./logger.service', () => ({
+  LoggerService: jest.fn(),
+}));
 
 // Mock nestjs-cls
 jest.mock('nestjs-cls', () => ({
@@ -44,12 +33,12 @@ describe('TraceCalls Decorator', () => {
       error: jest.fn(),
     };
 
-    (Logger as any).mockImplementation(function (this: any) {
-      this.log = mockLogger.log;
-      this.debug = mockLogger.debug;
-      this.error = mockLogger.error;
-      this.warn = jest.fn();
-    });
+    (LoggerService as unknown as jest.Mock).mockImplementation(() => ({
+      log: mockLogger.log,
+      debug: mockLogger.debug,
+      error: mockLogger.error,
+      warn: jest.fn(),
+    }));
 
     mockClsService = {
       get: jest.fn().mockReturnValue('test-cid'),
@@ -121,72 +110,6 @@ describe('TraceCalls Decorator', () => {
     expect(mockLogger.log).toHaveBeenCalledWith(
       expect.stringMatching(/\[cid: test-cid\] \[callId: [a-z0-9]+\]<<< \[END\] mainMethod \| Duration: \d+\.\d+ms/),
     );
-  });
-
-  it('should work with synchronous methods and different log levels', () => {
-    const example = new Example();
-    example.syncMain();
-
-    expect(mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/\[cid: test-cid\] \[callId: [a-z0-9]+\]>>> \[START\] syncMain/),
-    );
-    expect(mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.syncMethod\(\) - \d+\.\d+ms/),
-    );
-  });
-
-  it('should log errors with duration', async () => {
-    const example = new Example();
-
-    await expect(example.errorMethod()).rejects.toThrow('Failure');
-
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /\[cid: test-cid\] \[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/,
-      ),
-    );
-  });
-
-  it('should handle missing CID gracefully', async () => {
-    mockClsService.get.mockReturnValue(undefined);
-    const example = new Example();
-    await example.mainMethod('test');
-
-    expect(mockLogger.log).not.toHaveBeenCalledWith(expect.stringContaining('[cid:'));
-    expect(mockLogger.log).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/));
-  });
-
-  it('should work with synchronous methods and different log levels', () => {
-    const example = new Example();
-    example.syncMain();
-
-    expect(mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/\[cid: test-cid\] \[callId: [a-z0-9]+\]>>> \[START\] syncMain/),
-    );
-    expect(mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.syncMethod\(\) - \d+\.\d+ms/),
-    );
-  });
-
-  it('should log errors with duration', async () => {
-    const example = new Example();
-
-    await expect(example.errorMethod()).rejects.toThrow('Failure');
-
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /\[cid: test-cid\] \[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/,
-      ),
-    );
-  });
-
-  it('should handle missing CID gracefully', async () => {
-    mockClsService.get.mockReturnValue(undefined);
-    const example = new Example();
-    await example.mainMethod('test');
-
-    expect(mockLogger.log).not.toHaveBeenCalledWith(expect.stringContaining('[cid:'));
-    expect(mockLogger.log).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/));
   });
 
   it('should work with synchronous methods and different log levels', () => {

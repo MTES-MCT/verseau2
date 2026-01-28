@@ -1,18 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
 import { EmailParams, EmailTemplate } from '../notification';
 import * as brevo from '@getbrevo/brevo';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class EmailBrevoProvider implements EmailProvider {
   private emailsApi: brevo.TransactionalEmailsApi;
-  private readonly logger = new Logger(EmailBrevoProvider.name);
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly logger: LoggerService,
+  ) {
     const apiKey = this.config.getOrThrow<string>('BREVO_API_KEY');
     this.emailsApi = new brevo.TransactionalEmailsApi();
     this.emailsApi.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, apiKey);
+    this.logger.setContext(EmailBrevoProvider.name);
   }
 
   async send(template: EmailTemplate, emailParams: EmailParams): Promise<{ response: object; body: object }> {
