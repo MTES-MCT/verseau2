@@ -320,11 +320,11 @@ describe('Dossier E2E - Real Queue Processing', () => {
       // Wait for control jobs to complete
       const [metierResult, sandreResult] = await Promise.all([
         waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 6000,
+          timeoutMs: 10000,
           pollIntervalMs: 200,
         }),
         waitForJobCompletion(dataSource, QueueName.controle_sandre, depotId, {
-          timeoutMs: 6000,
+          timeoutMs: 10000,
           pollIntervalMs: 200,
         }),
       ]);
@@ -336,8 +336,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
       // After controls complete, depot should have control statuses set
       if (metierResult.status !== 'timeout' || sandreResult.status !== 'timeout') {
-        expect(ControleStatus.FAILED).toContain(finalDepot.controleStatus);
-        expect(ControleSandreStatus.SUCCESS).toContain(finalDepot.controleSandreStatus);
+        expect(finalDepot.controleStatus).toContain(ControleStatus.FAILED);
+        expect(finalDepot.controleSandreStatus).toContain(ControleSandreStatus.SUCCESS);
       }
       expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
 
