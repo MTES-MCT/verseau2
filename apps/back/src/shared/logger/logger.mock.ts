@@ -16,7 +16,7 @@ export const loggerProviderMock = {
   useValue: loggerValueMock,
 };
 
-export class LoggerServiceMock extends ConsoleLogger {
+export class LoggerServiceMock extends LoggerService {
   constructor() {
     super('LoggerServiceMock');
   }
@@ -34,6 +34,10 @@ export class LoggerServiceMock extends ConsoleLogger {
   }
 
   formatArgs(message: any, ...optionalParams: [...any, string?]): string {
+    return '';
+  }
+
+  protected getTimestamp(): string {
     return '';
   }
 }
