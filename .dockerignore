@@ -1,0 +1,10 @@
+# Exclude node_modules and build artifacts from apps/back
+apps/back/node_modules
+apps/back/dist
+apps/back/coverage
+
+# Exclude other workspace artifacts
+**/node_modules
+**/dist
+**/coverage
+**/.DS_Store
