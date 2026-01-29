@@ -24,3 +24,4 @@ export type DepotModel = Pick<
 > & { etapeMetier?: EtapeMetier };
 
 export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'step' | 'status' | 'user'>;
+export type UpdateDepotModel = Partial<DepotEntity>;

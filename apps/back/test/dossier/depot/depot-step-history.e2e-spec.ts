@@ -4,7 +4,7 @@ import { DataSource } from 'typeorm';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import { DepotStep, DepotStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { MasaEntity } from '@dossier/masa/masa.entity';
@@ -19,6 +19,10 @@ describe('DepotRepository - Step History Integration Tests', () => {
     await startPostgresContainer();
     postgresUri = getPostgresConnectionUri();
   }, 60_000);
+
+  afterAll(async () => {
+    await stopPostgresContainer();
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -229,6 +233,102 @@ describe('DepotRepository - Step History Integration Tests', () => {
         DepotStep.CONTROLE_IN_PROGRESS,
         DepotStep.CONTROLE_FAILED,
       ]);
+    });
+
+    it('should handle concurrent updates to step (race condition) using pessimistic locking', async () => {
+      // Create initial depot
+      const depot = await depotGateway.createDepot({
+        nomOriginalFichier: 'race-test.xml',
+        tailleFichier: 1024,
+        type: 'application/xml',
+      });
+
+      // Launch multiple updates in parallel
+      const stepsToUpdate = [
+        DepotStep.CONTROLE_IN_PROGRESS,
+        DepotStep.CONTROLE_COMPLETED,
+        DepotStep.READY_FOR_SFTP,
+        DepotStep.SFTP_IN_PROGRESS,
+      ];
+
+      // We use Promise.all to trigger them concurrently
+      // The pessimistic lock in updateDepot should ensure they are processed one after another
+      await Promise.all(
+        stepsToUpdate.map((step) =>
+          depotGateway.updateDepot(depot.id, {
+            step,
+          }),
+        ),
+      );
+
+      const updated = await depotGateway.findDepotById(depot.id);
+
+      // The final step should be one of the steps (the last one processed)
+      expect(stepsToUpdate).toContain(updated?.step);
+
+      // The history should contain PENDING + all 4 steps, in some order
+      // (The order depends on which transaction got the lock first, but all should be present)
+      expect(updated?.stepHistory).toHaveLength(5); // PENDING + 4 updates
+      expect(updated?.stepHistory).toContain(DepotStep.PENDING);
+      stepsToUpdate.forEach((step) => {
+        expect(updated?.stepHistory).toContain(step);
+      });
+    });
+
+    it('should handle concurrent updates to DepotStatus (race condition) using pessimistic locking', async () => {
+      // Create initial depot
+      const depot = await depotGateway.createDepot({
+        nomOriginalFichier: 'status-race.xml',
+        tailleFichier: 1024,
+        type: 'application/xml',
+      });
+
+      const updateA = { status: DepotStatus.INTEGRE, step: DepotStep.CONTROLE_COMPLETED };
+      const updateB = { status: DepotStatus.REJETE, step: DepotStep.CONTROLE_IN_PROGRESS };
+      const updateC = {
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.CONTROLE_SANDRE_COMPLETED,
+      };
+      const updateD = {
+        status: DepotStatus.INTEGRE_PARTIELLEMENT,
+        step: DepotStep.SEND_TO_AGENCE_DE_L_EAU,
+      };
+
+      // We run them concurrently. Pessimistic locking must ensure that one
+      // transaction fully completes before the other starts, preventing a "mixed" state
+      // where we could have status=INTEGRE but step:CONTROLE_IN_PROGRESS.
+      await Promise.all([
+        depotGateway.updateDepot(depot.id, updateA),
+        depotGateway.updateDepot(depot.id, updateB),
+        depotGateway.updateDepot(depot.id, updateC),
+        depotGateway.updateDepot(depot.id, updateD),
+      ]);
+
+      const updated = await depotGateway.findDepotById(depot.id);
+
+      // The state must match exactly one of the four updates, never a mix.
+      const isStateA = updated?.status === updateA.status && updated?.step === updateA.step;
+      const isStateB = updated?.status === updateB.status && updated?.step === updateB.step;
+      const isStateC = updated?.status === updateC.status && updated?.step === updateC.step;
+      const isStateD = updated?.status === updateD.status && updated?.step === updateD.step;
+
+      expect(isStateA || isStateB || isStateC || isStateD).toBe(true);
+    });
+
+    // TODO : déplacer dans un autre fichier de test
+    it('should update etapeMetier of depot to undefined', async () => {
+      const depot = await depotGateway.createDepot({
+        nomOriginalFichier: 'depot.xml',
+        tailleFichier: 1024,
+        type: 'application/xml',
+        etapeMetier: EtapeMetier.CONTROLE_REFERENTIEL,
+      });
+
+      await depotGateway.updateDepot(depot.id, { etapeMetier: null });
+
+      const updated = await depotGateway.findDepotById(depot.id);
+      console.log(updated);
+      expect(updated?.etapeMetier).toBeUndefined();
     });
   });
 });

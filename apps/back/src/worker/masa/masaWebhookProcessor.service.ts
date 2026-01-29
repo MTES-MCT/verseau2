@@ -55,8 +55,8 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       await this.depotGateway.updateDepot(depotId, {
         status: newStatus,
         step: DepotStep.MASA_CALLED_ENPOINT,
+        etapeMetier: null,
       });
-      await this.depotGateway.updateEtapeMetier(depotId, null);
 
       // 3. Generate PDF report
       const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);

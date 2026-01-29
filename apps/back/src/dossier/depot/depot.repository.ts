@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { DepotEntity } from './depot.entity';
-import { DepotModel } from './depot.model';
+import { DepotModel, UpdateDepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
-import { DepotStep, EtapeMetier } from '@lib/dossier';
+import { DepotStep } from '@lib/dossier';
 import { mapDepotEntityToModel } from './depot.mapper';
 
 @Injectable()
@@ -37,32 +37,25 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
     });
     return entities.map(mapDepotEntityToModel);
   }
+  async updateDepot(id: string, updateData: UpdateDepotModel): Promise<DepotModel | null> {
+    return await this.manager.transaction(async (manager) => {
+      const entity = await manager.findOne(DepotEntity, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-  async updateDepot(id: string, updateData: Partial<DepotModel>): Promise<DepotModel | null> {
-    if (updateData.step !== undefined) {
-      const entity = await this.findOne({ where: { id } });
       if (entity) {
-        entity.updateStep(updateData.step);
+        if (updateData.step !== undefined) {
+          entity.updateStep(updateData.step);
+        }
         Object.assign(entity, updateData);
 
-        await this.save(entity);
+        await manager.save(entity);
+        console.log('Updated depot entity:', entity);
         return mapDepotEntityToModel(entity);
       }
       return null;
-    }
-
-    await this.update(id, updateData);
-    return await this.findDepotById(id);
-  }
-
-  async updateEtapeMetier(depotId: string, etapeMetier: EtapeMetier | null): Promise<DepotModel | null> {
-    const entity = await this.findOne({ where: { id: depotId } });
-    if (!entity) {
-      return null;
-    }
-    entity.etapeMetier = etapeMetier;
-    await this.save(entity);
-    return mapDepotEntityToModel(entity);
+    });
   }
 
   async findByUserId(userId: string): Promise<DepotModel[]> {
