@@ -89,12 +89,12 @@ export interface SandreErreurAttributes {
 }
 
 export interface SandreErreur {
-  '@attributes': SandreErreurAttributes;
+  '@attributes'?: SandreErreurAttributes;
   CdErreur: string;
-  LocationErreur: string;
+  LocationErreur?: string;
   DescriptifErreur: string;
-  LigneErreur: string;
-  ColonneErreur: string;
+  LigneErreur?: string;
+  ColonneErreur?: string;
 }
 
 export interface SandreErreurAttributesWrapper {
@@ -143,10 +143,10 @@ export interface SandreValidationResult {
 export interface SandreValidationError {
   code: string;
   message: string;
-  location: string;
-  ligne: string;
-  colonne: string;
-  severite: string;
+  location?: string;
+  ligne?: string;
+  colonne?: string;
+  severite?: string;
 }
 
 export interface SandreValidationSummary {

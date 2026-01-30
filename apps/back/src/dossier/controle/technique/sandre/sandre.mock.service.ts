@@ -239,7 +239,7 @@ export class SandreMockService {
           location: validationResult.ACQ.AccuseReception.Erreur.LocationErreur,
           ligne: validationResult.ACQ.AccuseReception.Erreur.LigneErreur,
           colonne: validationResult.ACQ.AccuseReception.Erreur.ColonneErreur,
-          severite: validationResult.ACQ.AccuseReception.Erreur['@attributes'].SeveriteErreur,
+          severite: validationResult.ACQ.AccuseReception.Erreur['@attributes']?.SeveriteErreur,
         }
       : undefined;
 

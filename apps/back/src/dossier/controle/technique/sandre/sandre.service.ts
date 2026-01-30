@@ -183,14 +183,17 @@ export class SandreService {
     const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
 
     // Extract error information if present
-    const error = validationResult.ACQ.AccuseReception.Erreur
+    const erreur = validationResult.ACQ.AccuseReception.Erreur;
+    const error = erreur
       ? {
-          code: validationResult.ACQ.AccuseReception.Erreur.CdErreur,
-          message: validationResult.ACQ.AccuseReception.Erreur.DescriptifErreur,
-          location: validationResult.ACQ.AccuseReception.Erreur.LocationErreur,
-          ligne: validationResult.ACQ.AccuseReception.Erreur.LigneErreur,
-          colonne: validationResult.ACQ.AccuseReception.Erreur.ColonneErreur,
-          severite: validationResult.ACQ.AccuseReception.Erreur['@attributes'].SeveriteErreur,
+          code: erreur.CdErreur,
+          message: erreur.DescriptifErreur,
+          location: erreur.LocationErreur,
+          ligne: erreur.LigneErreur,
+          colonne: erreur.ColonneErreur,
+          severite:
+            erreur['@attributes']?.SeveriteErreur ??
+            validationResult.ACQ.AccuseReception['Erreur@attributes']?.SeveriteErreur,
         }
       : undefined;
 
