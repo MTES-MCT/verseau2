@@ -2,9 +2,10 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
-import { type ControleDto } from '@lib/dossier';
+import { EvenementType, type ControleDto } from '@lib/dossier';
 import { useMemo } from 'react';
 import './ControleGroup.css';
+import { getIconInfo } from '../helper/controleIconHelper';
 
 type ControleGroupSandreProps = {
   title: string;
@@ -24,7 +25,7 @@ function getResultBadge(success: boolean) {
   }
   return (
     <Badge severity="error" small>
-      Échec
+      Rejeté
     </Badge>
   );
 }
@@ -92,16 +93,19 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
         getResultBadge(groupErrorCount === 0),
         <Accordion label={label} key={name} className={`${fr.cx('fr-m-0')} accordion-no-border`} defaultExpanded={true}>
           <ul className="zebra-list fr-p-0 fr-m-0">
-            {Object.entries(messageCounts).map(([msg, count], index) => (
-              <li key={index} className="fr-flex fr-align-items-start fr-p-1w">
-                <div className="fr-mr-2w" style={{ flexShrink: 0 }}>
-                  {getResultBadge(group.find((c) => (c.message || '-') === msg)?.success ?? true)}
-                </div>
-                <span>
-                  {msg} {count > 1 ? <Badge small>{count}</Badge> : null}
-                </span>
-              </li>
-            ))}
+            {Object.entries(messageCounts).map(([msg, count], index) => {
+              const success = group.find((c) => (c.message || '-') === msg)?.success ?? true;
+              const { icon, color } = getIconInfo(success, EvenementType.ERREUR);
+
+              return (
+                <li key={index} className="fr-flex fr-align-items-start fr-p-1w">
+                  <span className={`${icon} fr-mr-1w`} style={{ color }} aria-hidden="true" />
+                  <span>
+                    {msg} {count > 1 ? <Badge small>{count}</Badge> : null}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </Accordion>,
       ];
@@ -117,7 +121,7 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
       <h2 className={fr.cx('fr-h4', 'fr-mb-2w')}>{title}</h2>
 
       <div className="controle-table-container">
-        <Table headers={['Contrôle', 'Résultat', 'Message']} data={tableData} className={fr.cx('fr-mb-4w')} fixed />
+        <Table headers={['Contrôle', 'Résultat', 'Message']} data={tableData} className={fr.cx('fr-mb-4w')} />
       </div>
     </div>
   );

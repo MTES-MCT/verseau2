@@ -6,6 +6,7 @@ import { EvenementType } from '@lib/dossier';
 import { useState, memo } from 'react';
 import type { TableDataRow } from '../hooks/useControleTableData';
 import type { ControleFilterSet } from '../types/controle.types';
+import { getIconInfo } from '../helper/controleIconHelper';
 
 type ControleMessageCellProps = {
   row: TableDataRow;
@@ -72,16 +73,6 @@ export const ControleMessageCell = memo(function ControleMessageCell({ row, acti
       { message: string; count: number; success: boolean; evenementType: EvenementType | undefined }
     >,
   );
-
-  const getIconInfo = (success: boolean, evenementType: EvenementType | undefined) => {
-    if (success) {
-      return { icon: 'fr-icon-checkbox-circle-fill', color: 'var(--text-default-success)' };
-    }
-    if (evenementType === EvenementType.AVERTISSEMENT) {
-      return { icon: 'fr-icon-warning-fill', color: 'var(--text-default-warning)' };
-    }
-    return { icon: 'fr-icon-error-fill', color: 'var(--text-default-error)' };
-  };
 
   const allItems = Object.values(messageGroups);
   const visibleItems = allItems.slice(0, visibleCount);
