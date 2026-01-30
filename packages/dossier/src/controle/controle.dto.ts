@@ -11,16 +11,20 @@ export interface ControleDto extends BaseEntity {
   evenementType?: EvenementType | undefined;
 }
 
+export interface SandreValidationErrorDto {
+  code: string;
+  message: string;
+  location?: string;
+  ligne?: string;
+  colonne?: string;
+  severite?: string;
+}
+
 export interface ControleSandreDto extends BaseEntity {
   id: string;
   acceptationStatus: SandreAcceptationStatus;
   isConformant: boolean;
-  errorCode?: string;
-  errorMessage?: string;
-  errorLocation?: string;
-  errorLigne?: string;
-  errorColonne?: string;
-  errorSeverite?: string;
+  errors?: SandreValidationErrorDto[];
 }
 
 export enum SandreAcceptationStatus {

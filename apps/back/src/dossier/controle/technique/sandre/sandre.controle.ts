@@ -68,12 +68,8 @@ export class ControleSandreService implements FileControl<SandreValidationSummar
         isConformant: validationSummary.isConformant,
         codeScenario: validationSummary.codeScenario,
         versionScenario: validationSummary.versionScenario,
-        errorCode: validationSummary.error?.code,
-        errorMessage: validationSummary.error?.message,
-        errorLocation: validationSummary.error?.location,
-        errorLigne: validationSummary.error?.ligne,
-        errorColonne: validationSummary.error?.colonne,
-        errorSeverite: validationSummary.error?.severite,
+        errors: validationSummary.errors,
+        raw: validationSummary.raw,
       });
 
       return validationSummary;

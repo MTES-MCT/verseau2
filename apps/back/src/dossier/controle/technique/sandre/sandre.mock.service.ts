@@ -232,16 +232,21 @@ export class SandreMockService {
     const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
 
     // Extract error information if present
-    const error = validationResult.ACQ.AccuseReception.Erreur
-      ? {
-          code: validationResult.ACQ.AccuseReception.Erreur.CdErreur,
-          message: validationResult.ACQ.AccuseReception.Erreur.DescriptifErreur,
-          location: validationResult.ACQ.AccuseReception.Erreur.LocationErreur,
-          ligne: validationResult.ACQ.AccuseReception.Erreur.LigneErreur,
-          colonne: validationResult.ACQ.AccuseReception.Erreur.ColonneErreur,
-          severite: validationResult.ACQ.AccuseReception.Erreur['@attributes']?.SeveriteErreur,
-        }
-      : undefined;
+    const rawErreur = validationResult.ACQ.AccuseReception.Erreur;
+    let error;
+
+    if (rawErreur && !Array.isArray(rawErreur)) {
+      error = {
+        code: rawErreur.CdErreur,
+        message: rawErreur.DescriptifErreur,
+        location: rawErreur.LocationErreur,
+        ligne: rawErreur.LigneErreur,
+        colonne: rawErreur.ColonneErreur,
+        severite: rawErreur['@attributes']?.SeveriteErreur,
+      };
+    }
+
+    const errors = error ? [error] : [];
 
     return {
       isConformant,
@@ -249,7 +254,8 @@ export class SandreMockService {
       jeton: validationResult.ACQ.AccuseReception.Jeton,
       codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
       versionScenario: validationResult.ACQ.AccuseReception.VersionScenario,
-      error,
+      errors,
+      raw: validationResult,
     };
   }
 

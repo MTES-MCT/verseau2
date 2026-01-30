@@ -2,7 +2,13 @@ import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import { SandreAcceptationStatus } from '@lib/dossier';
-import { SandreTokenResponse, SandreUploadParams, SandreValidationResult, SandreValidationSummary } from './sandre';
+import {
+  SandreTokenResponse,
+  SandreUploadParams,
+  SandreValidationError,
+  SandreValidationResult,
+  SandreValidationSummary,
+} from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
@@ -183,19 +189,53 @@ export class SandreService {
     const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
 
     // Extract error information if present
-    const erreur = validationResult.ACQ.AccuseReception.Erreur;
-    const error = erreur
-      ? {
-          code: erreur.CdErreur,
-          message: erreur.DescriptifErreur,
-          location: erreur.LocationErreur,
-          ligne: erreur.LigneErreur,
-          colonne: erreur.ColonneErreur,
-          severite:
-            erreur['@attributes']?.SeveriteErreur ??
-            validationResult.ACQ.AccuseReception['Erreur@attributes']?.SeveriteErreur,
+    const rawErreur = validationResult.ACQ.AccuseReception.Erreur;
+    const globalSeverity = validationResult.ACQ.AccuseReception['Erreur@attributes']?.SeveriteErreur;
+
+    let errors: SandreValidationError[] = [];
+
+    if (Array.isArray(rawErreur)) {
+      errors = rawErreur.map((item) => {
+        if ('Erreur' in item) {
+          const nested = item;
+          return {
+            code: nested.Erreur.CdErreur,
+            message: nested.Erreur.DescriptifErreur,
+            location: nested.Erreur.LocationErreur,
+            ligne: nested.Erreur.LigneErreur,
+            colonne: nested.Erreur.ColonneErreur,
+            severite:
+              nested.Erreur['@attributes']?.SeveriteErreur ??
+              nested['Erreur@attributes']?.SeveriteErreur ??
+              globalSeverity,
+          };
+        } else {
+          const simple = item;
+          return {
+            code: simple.CdErreur,
+            message: simple.DescriptifErreur,
+            location: simple.LocationErreur,
+            ligne: simple.LigneErreur,
+            colonne: simple.ColonneErreur,
+            severite: simple['@attributes']?.SeveriteErreur ?? globalSeverity,
+          };
         }
-      : undefined;
+      });
+    } else if (rawErreur) {
+      const simple = rawErreur;
+      errors = [
+        {
+          code: simple.CdErreur,
+          message: simple.DescriptifErreur,
+          location: simple.LocationErreur,
+          ligne: simple.LigneErreur,
+          colonne: simple.ColonneErreur,
+          severite: simple['@attributes']?.SeveriteErreur ?? globalSeverity,
+        },
+      ];
+    }
+
+    const error = errors.length > 0 ? errors[0] : undefined;
 
     return {
       isConformant,
@@ -204,6 +244,8 @@ export class SandreService {
       codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
       versionScenario: validationResult.ACQ.AccuseReception.VersionScenario,
       error,
+      errors,
+      raw: validationResult,
     };
   }
 }

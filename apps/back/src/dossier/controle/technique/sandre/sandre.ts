@@ -97,6 +97,11 @@ export interface SandreErreur {
   ColonneErreur?: string;
 }
 
+export interface SandreNestedErreur {
+  'Erreur@attributes'?: SandreErreurAttributes;
+  Erreur: SandreErreur;
+}
+
 export interface SandreErreurAttributesWrapper {
   SeveriteErreur: string;
 }
@@ -116,7 +121,7 @@ export interface SandreAccuseReception {
   ReferenceFichierEnvoi: string;
   CleSecuFichierEnvoi: string;
   'Erreur@attributes'?: SandreErreurAttributesWrapper;
-  Erreur?: SandreErreur;
+  Erreur?: SandreErreur | (SandreErreur | SandreNestedErreur)[];
   Jeton: string;
   TailleFichier: string;
   DateMAJSchemaXML: string;
@@ -162,4 +167,8 @@ export interface SandreValidationSummary {
   versionScenario: string;
   /** Error information if validation failed */
   error?: SandreValidationError;
+  /** List of errors if validation failed */
+  errors?: SandreValidationError[];
+  /** Raw JSON response from SANDRE */
+  raw: SandreValidationResult;
 }

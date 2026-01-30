@@ -11,26 +11,40 @@ const acceptationLabel: Record<SandreAcceptationStatus, string> = {
 };
 
 export function mapSandreControles(controles: ControleSandreDto[]): ControleDto[] {
-  return controles.map((controle) => {
-    const errorParams = [
-      controle.errorMessage,
-      controle.errorLocation,
-      controle.errorLigne ? `Ligne ${controle.errorLigne}` : null,
-      controle.errorColonne ? `Colonne ${controle.errorColonne}` : null,
-      controle.errorSeverite ? `Sévérité ${controle.errorSeverite}` : null,
-    ].filter(Boolean) as string[];
+  return controles.flatMap((controle) => {
+    const name = (acceptationLabel[controle.acceptationStatus] ?? 'Acceptation: Inconnue') as ControleName;
 
-    const name = acceptationLabel[controle.acceptationStatus] ?? 'Acceptation: Inconnue';
+    if (!controle.errors || controle.errors.length === 0) {
+      return [
+        {
+          id: controle.id,
+          name,
+          success: controle.isConformant,
+          createdAt: controle.createdAt,
+          updatedAt: controle.updatedAt,
+        },
+      ];
+    }
 
-    return {
-      id: controle.id,
-      name: name as ControleName,
-      success: controle.isConformant,
-      error: controle.errorCode as ErrorCode | undefined,
-      errorParams: errorParams.length ? errorParams : undefined,
-      createdAt: controle.createdAt,
-      updatedAt: controle.updatedAt,
-    };
+    return controle.errors.map((error, index) => {
+      const errorParams = [
+        error.message,
+        error.location,
+        error.ligne ? `Ligne ${error.ligne}` : null,
+        error.colonne ? `Colonne ${error.colonne}` : null,
+        error.severite ? `Sévérité ${error.severite}` : null,
+      ].filter(Boolean) as string[];
+
+      return {
+        id: `${controle.id}_${index}`,
+        name,
+        success: false,
+        error: error.code as ErrorCode | undefined,
+        errorParams: errorParams.length ? errorParams : undefined,
+        createdAt: controle.createdAt,
+        updatedAt: controle.updatedAt,
+      };
+    });
   });
 }
 

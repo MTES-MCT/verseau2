@@ -2,6 +2,7 @@ import { BaseEntity } from '@shared/repository/base-entity';
 import { Entity, PrimaryColumn, Column, BeforeInsert, JoinColumn, OneToOne } from 'typeorm';
 import { SandreAcceptationStatus } from '@lib/dossier';
 import { DepotEntity } from '@dossier/depot/depot.entity';
+import type { SandreValidationError, SandreValidationResult } from './sandre';
 
 @Entity('reponse_sandre')
 export class ReponseSandreEntity extends BaseEntity {
@@ -23,23 +24,11 @@ export class ReponseSandreEntity extends BaseEntity {
   @Column({ type: 'varchar', name: 'version_scenario' })
   versionScenario: string;
 
-  @Column({ type: 'varchar', nullable: true, name: 'error_code' })
-  errorCode?: string;
+  @Column({ type: 'jsonb', nullable: true })
+  errors?: SandreValidationError[];
 
-  @Column({ type: 'text', nullable: true, name: 'error_message' })
-  errorMessage?: string;
-
-  @Column({ type: 'varchar', nullable: true, name: 'error_location' })
-  errorLocation?: string;
-
-  @Column({ type: 'varchar', nullable: true, name: 'error_ligne' })
-  errorLigne?: string;
-
-  @Column({ type: 'varchar', nullable: true, name: 'error_colonne' })
-  errorColonne?: string;
-
-  @Column({ type: 'varchar', nullable: true, name: 'error_severite' })
-  errorSeverite?: string;
+  @Column({ type: 'jsonb', nullable: true })
+  raw?: SandreValidationResult;
 
   @OneToOne(() => DepotEntity, { nullable: true })
   @JoinColumn({ name: 'depot_id' })
