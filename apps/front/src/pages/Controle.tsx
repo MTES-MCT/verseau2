@@ -84,7 +84,7 @@ export function ControlePage() {
 
       {/* Accordion pour les contrôles V1 */}
       {controlesV1.length > 0 && (
-        <div className={fr.cx('fr-mb-4w')}>
+        <div className={fr.cx('fr-pb-4w')}>
           <ControleGroup
             title="Contrôles métiers, référentiels et de cohérence des données (ROSEAU)"
             controles={controlesV1}
@@ -92,15 +92,17 @@ export function ControlePage() {
         </div>
       )}
 
+      <hr className="fr-separator-6v" />
       {/* Accordion pour les contrôles Sandre */}
       {sandreControlesMapped.length > 0 && (
-        <div className={fr.cx('fr-mb-4w')}>
+        <div className={fr.cx('fr-pb-4w', 'fr-pt-4w')}>
           <ControleSandreGroup title="Contrôles SANDRE" controles={sandreControlesMapped} />
         </div>
       )}
+      <hr className="fr-separator-6v" />
 
       {/* Section Intégration MASA */}
-      <div className={fr.cx('fr-mb-4w')}>
+      <div className={fr.cx('fr-mb-4w', 'fr-pt-4w')}>
         <MasaIntegrationStatus title="Intégration des données" masa={masa} />
       </div>
 
