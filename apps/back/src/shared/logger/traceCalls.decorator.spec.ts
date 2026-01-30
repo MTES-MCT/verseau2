@@ -81,34 +81,28 @@ describe('TraceCalls Decorator', () => {
     }
   }
 
-  it('should log start, internal calls, service calls and end with CID', async () => {
+  it('should log start, internal calls, service calls', async () => {
     const example = new Example();
     const result = await example.mainMethod('input');
 
     expect(result).toBe('service-internal-input');
 
     // Check Start log
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/\[cid: test-cid\] \[callId: [a-z0-9]+\]>>> \[START\] mainMethod/),
-    );
+    expect(mockLogger.log).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/));
 
     // Check Internal call log
     expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /\[cid: test-cid\] \[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethod\(\) - \d+\.\d+ms/,
-      ),
+      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethod\(\) - \d+\.\d+ms/),
     );
 
     // Check Service call log
     expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /\[cid: test-cid\] \[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.doSomething\(\) - \d+\.\d+ms/,
-      ),
+      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.doSomething\(\) - \d+\.\d+ms/),
     );
 
     // Check End log with duration
     expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/\[cid: test-cid\] \[callId: [a-z0-9]+\]<<< \[END\] mainMethod \| Duration: \d+\.\d+ms/),
+      expect.stringMatching(/\[callId: [a-z0-9]+\]<<< \[END\] mainMethod \| Duration: \d+\.\d+ms/),
     );
   });
 
@@ -116,9 +110,7 @@ describe('TraceCalls Decorator', () => {
     const example = new Example();
     example.syncMain();
 
-    expect(mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/\[cid: test-cid\] \[callId: [a-z0-9]+\]>>> \[START\] syncMain/),
-    );
+    expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] syncMain/));
     expect(mockLogger.debug).toHaveBeenCalledWith(
       expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.syncMethod\(\) - \d+\.\d+ms/),
     );
@@ -130,9 +122,7 @@ describe('TraceCalls Decorator', () => {
     await expect(example.errorMethod()).rejects.toThrow('Failure');
 
     expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /\[cid: test-cid\] \[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/,
-      ),
+      expect.stringMatching(/\[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/),
     );
   });
 

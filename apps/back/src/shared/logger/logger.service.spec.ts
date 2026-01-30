@@ -9,7 +9,7 @@ describe('LoggerService', () => {
   beforeEach(async () => {
     jest.spyOn(ClsServiceManager, 'getClsService').mockReturnValue({
       get: jest.fn().mockReturnValue('test-cid'),
-    } as any);
+    } as never);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

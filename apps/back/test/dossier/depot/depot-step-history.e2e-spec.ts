@@ -327,7 +327,6 @@ describe('DepotRepository - Step History Integration Tests', () => {
       await depotGateway.updateDepot(depot.id, { etapeMetier: null });
 
       const updated = await depotGateway.findDepotById(depot.id);
-      console.log(updated);
       expect(updated?.etapeMetier).toBeUndefined();
     });
   });

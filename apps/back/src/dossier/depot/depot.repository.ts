@@ -51,7 +51,6 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
         Object.assign(entity, updateData);
 
         await manager.save(entity);
-        console.log('Updated depot entity:', entity);
         return mapDepotEntityToModel(entity);
       }
       return null;

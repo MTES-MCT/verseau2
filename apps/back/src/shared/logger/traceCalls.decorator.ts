@@ -1,9 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Logger, LogLevel } from '@nestjs/common';
-import { ClsServiceManager } from 'nestjs-cls';
 import { performance } from 'perf_hooks';
-import { CustomClsStore } from './cls-store.interface';
 import { ulid } from 'ulid';
 import { LoggerService } from './logger.service';
 //
@@ -24,25 +20,17 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
       const propName = String(propertyKey);
       const startTime = performance.now();
 
-      const getCidPrefix = (): string => {
-        const cls = ClsServiceManager.getClsService<CustomClsStore>();
-        const correlationId = cls?.get('correlationId');
-        return correlationId ? `[cid: ${correlationId}] ` : '';
-      };
-
       const log = (msg: string) => {
-        const prefix = getCidPrefix();
         const logMethod = logger[level as keyof Logger] as (msg: string) => void;
         if (typeof logMethod === 'function') {
-          logMethod.call(logger, `${prefix}${callIdPrefix}${msg}`);
+          logMethod.call(logger, `${callIdPrefix}${msg}`);
         } else {
-          logger.log(`${prefix}${callIdPrefix}${msg}`);
+          logger.log(`${callIdPrefix}${msg}`);
         }
       };
 
       const logError = (msg: string) => {
-        const prefix = getCidPrefix();
-        logger.error(`${prefix}${callIdPrefix} ${msg}`);
+        logger.error(`${callIdPrefix} ${msg}`);
       };
 
       log(`>>> [START] ${propName}`);
