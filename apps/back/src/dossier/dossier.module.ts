@@ -39,6 +39,7 @@ const sandreServiceFactory = {
   provide: SandreService,
   inject: [LoggerService],
   useFactory: (logger: LoggerService): SandreService => {
+    logger.setContext('SandreServiceFactory');
     const useMock = process.env.USE_SANDRE_MOCK === 'true';
     if (useMock) {
       logger.warn('MOCK SANDRE - Using SandreMockService');
