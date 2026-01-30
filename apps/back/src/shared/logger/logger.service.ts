@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any , @typescript-eslint/no-unsafe-argument */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Scope } from '@nestjs/common';
 import { ConsoleLogger } from '@nestjs/common';
 import { ClsServiceManager } from 'nestjs-cls';
 import { CustomClsStore } from './cls-store.interface';
 import { getLogLevels } from './logConfig';
 
-@Injectable()
+@Injectable({ scope: Scope.TRANSIENT })
 export class LoggerService extends ConsoleLogger {
   constructor(context: string) {
     super(context);
