@@ -7,7 +7,6 @@ import { CustomClsStore } from '@shared/logger/cls-store.interface';
 
 describe('LoggerService', () => {
   let app: INestApplication;
-  let logger: LoggerService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -21,7 +20,6 @@ describe('LoggerService', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    logger = app.get<LoggerService>(LoggerService);
     await app.init();
   });
 
@@ -31,6 +29,7 @@ describe('LoggerService', () => {
 
     const runInContext = async (id: string, message: string) => {
       return cls.runWith({ correlationId: id }, async () => {
+        const logger = await app.resolve<LoggerService>(LoggerService);
         await new Promise((resolve) => setTimeout(resolve));
         logger.log(message);
       });
