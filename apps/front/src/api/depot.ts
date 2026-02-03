@@ -51,7 +51,7 @@ export async function checkDroitsDeDepot(
 }
 
 export async function downloadRapport(depotId: string): Promise<Blob> {
-  const url = `/admin/depot/${depotId}/rapport`;
+  const url = `/depot/${depotId}/rapport`;
   return apiDownload(url);
 }
 

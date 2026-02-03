@@ -1,8 +1,13 @@
 import { RelativePath } from 'arch-unit-ts/dist/arch-unit/core/domain/RelativePath';
 import { TypeScriptProject } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptProject';
 import { TypeScriptClass } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptClass';
+import { DescribedPredicate } from 'arch-unit-ts/dist/arch-unit/base/DescribedPredicate';
+import { ArchCondition } from 'arch-unit-ts/dist/arch-unit/lang/ArchCondition';
+import { ConditionEvents } from 'arch-unit-ts/dist/arch-unit/lang/ConditionEvents';
+import { SimpleConditionEvent } from 'arch-unit-ts/dist/arch-unit/lang/SimpleConditionEvent';
 import { classes, noClasses } from 'arch-unit-ts/dist/main';
 import { MatchingPattern } from './MatchingPattern';
+import { ControllerGuardParser } from './ControllerGuardParser';
 
 describe('Architecture test', () => {
   const srcProject = new TypeScriptProject(RelativePath.of('src'), '**/*.spec.ts'); // Ignore tests files
@@ -215,6 +220,70 @@ describe('Architecture test', () => {
         .should()
         .haveSimpleNameEndingWith(MatchingPattern.CONTROLLER_SUFFIX)
         .because('Infra module should not have controllers')
+        .check(srcProject.allClasses());
+    });
+  });
+
+  describe('Controllers or Endpoints', () => {
+    // Endpoints excluded from guard check (with justification)
+    const excludedEndpoints: Set<string> = new Set(['checkDroitsDeDepot', 'uploadFile', 'listMyDepots']);
+
+    it('Should be protected by guard except AuthenticationController, ReferentielController and VersionController', () => {
+      const beProtectedByGuard = new (class extends ArchCondition<TypeScriptClass> {
+        constructor() {
+          super('be protected by @UseGuards (at class or method level)');
+        }
+
+        check(item: TypeScriptClass, events: ConditionEvents): void {
+          const parser = new ControllerGuardParser(item.getPath().get());
+
+          if (parser.hasClassLevelGuard()) {
+            events.add(
+              new SimpleConditionEvent(`${item.getSimpleName()} is protected by class-level @UseGuards`, false),
+            );
+            return;
+          }
+
+          const endpoints = parser.findEndpoints();
+
+          if (endpoints.length === 0) {
+            events.add(new SimpleConditionEvent(`${item.getSimpleName()} has no HTTP endpoints`, false));
+            return;
+          }
+
+          const unprotectedEndpoints = endpoints.filter(
+            (endpoint) => !excludedEndpoints.has(endpoint.methodName) && !parser.endpointHasGuard(endpoint),
+          );
+
+          if (unprotectedEndpoints.length > 0) {
+            const details = unprotectedEndpoints.map((e) => e.methodName).join(', ');
+            events.add(
+              SimpleConditionEvent.violated(
+                `${item.getSimpleName()} has ${unprotectedEndpoints.length} unprotected endpoint(s): [${details}] in ${item.getPath().get()}`,
+              ),
+            );
+          } else {
+            events.add(
+              new SimpleConditionEvent(`${item.getSimpleName()} has all endpoints protected by @UseGuards`, false),
+            );
+          }
+        }
+      })();
+
+      const isController = TypeScriptClass.simpleNameEndingWith(MatchingPattern.CONTROLLER_SUFFIX);
+      const exceptControllerAndEndpoint = DescribedPredicate.not(
+        TypeScriptClass.simpleNameStartingWith('authentication')
+          .or(TypeScriptClass.simpleNameStartingWith('referentiel'))
+          .or(TypeScriptClass.simpleNameStartingWith('version')),
+      );
+
+      classes()
+        .thatWithPredicate(isController.and(exceptControllerAndEndpoint))
+        .shouldWithConjunction(beProtectedByGuard)
+        .allowEmptyShould(false)
+        .because(
+          'All controllers should be protected by @UseGuards, except AuthenticationController, ReferentielController and VersionController',
+        )
         .check(srcProject.allClasses());
     });
   });

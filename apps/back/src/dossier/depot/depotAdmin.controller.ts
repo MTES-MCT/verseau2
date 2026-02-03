@@ -1,8 +1,10 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
 import { DepotModel } from './depot.model';
 import { DepotService } from './depot.service';
 import type { Response } from 'express';
+import { IsAdminGuard } from '@authentication/isAdmin.guard';
 
+@UseGuards(IsAdminGuard)
 @Controller('admin/depot')
 export class DepotAdminController {
   constructor(private readonly depotService: DepotService) {}
@@ -13,6 +15,7 @@ export class DepotAdminController {
   }
 
   // TODO : utiliser une URL signée pour sécuriser l'accès au rapport pouré éviter le back de faire passe plat
+  // TODO: ajouter un guard admin
   @Get(':id/rapport')
   async downloadRapport(@Param('id') id: string, @Res() res: Response): Promise<void> {
     const pdfBuffer = await this.depotService.downloadRapport(id);
