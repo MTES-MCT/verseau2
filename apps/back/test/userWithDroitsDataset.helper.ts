@@ -75,19 +75,22 @@ export async function seedOrionRoleForPrincipal(dataSource: DataSource, prCdn: n
  *
  * @param steuCda - Code ouvrage de depollution (STEU), use empty string if not applicable
  * @param sclCda - Code systeme de collecte (SCL), use empty string if not applicable
- * @param moItvRfa - SIRET of the authorized intervenant
+ * @param moItvRfa - SIRET of the authorized intervenant (maitre d'ouvrage)
+ * @param satItvRfa - SIRET of the SAT intervenant (optional)
+ * @param aeItvRfa - SIRET of the AE intervenant (optional)
  */
 export async function seedVSteuSclItv(
   dataSource: DataSource,
   steuCda: string,
   sclCda: string,
   moItvRfa: string,
+  satItvRfa?: string,
+  aeItvRfa?: string,
 ): Promise<void> {
-  await dataSource.query(`INSERT INTO verseau.v_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa) VALUES ($1, $2, $3)`, [
-    steuCda,
-    sclCda,
-    moItvRfa,
-  ]);
+  await dataSource.query(
+    `INSERT INTO verseau.v_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa, sat_itv_rfa, ae_itv_rfa) VALUES ($1, $2, $3, $4, $5)`,
+    [steuCda, sclCda, moItvRfa, satItvRfa ?? '', aeItvRfa ?? ''],
+  );
 }
 
 /**

@@ -62,7 +62,10 @@ export class DroitsDepotService {
         throw new ForbiddenException(`L'ouvrage de dépollution ${code} n'a pas été trouvé`);
       }
 
-      if (!matchesForCode.some((m) => m.moItvRfa === userSiret)) {
+      const hasRights = matchesForCode.some(
+        (m) => m.moItvRfa === userSiret || m.satItvRfa === userSiret || m.aeItvRfa === userSiret,
+      );
+      if (!hasRights) {
         throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour l'ouvrage de dépollution ${code}`);
       }
     }
@@ -74,7 +77,10 @@ export class DroitsDepotService {
         throw new ForbiddenException(`Le système de collecte ${code} n'a pas été trouvé`);
       }
 
-      if (!matchesForCode.some((m) => m.moItvRfa === userSiret)) {
+      const hasRights = matchesForCode.some(
+        (m) => m.moItvRfa === userSiret || m.satItvRfa === userSiret || m.aeItvRfa === userSiret,
+      );
+      if (!hasRights) {
         throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour le système de collecte ${code}`);
       }
     }

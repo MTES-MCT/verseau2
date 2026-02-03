@@ -108,13 +108,13 @@ export class LanceleauRepository implements LanceleauGateway {
       return [];
     }
 
-    const qb = this.vSteuSclItvRepository.createQueryBuilder('v').distinctOn(['v.steuCda', 'v.sclCda', 'v.moItvRfa']);
+    const qb = this.vSteuSclItvRepository.createQueryBuilder('v');
 
     if (steuCodes.length > 0 && sclCodes.length > 0) {
       qb.where('v.steuCda IN (:...steuCodes) OR v.sclCda IN (:...sclCodes)', { steuCodes, sclCodes });
     } else if (steuCodes.length > 0) {
       qb.where('v.steuCda IN (:...steuCodes)', { steuCodes });
-    } else if (sclCodes.length > 0) {
+    } else {
       qb.where('v.sclCda IN (:...sclCodes)', { sclCodes });
     }
 
@@ -122,6 +122,9 @@ export class LanceleauRepository implements LanceleauGateway {
   }
 
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvEntity[]> {
-    return this.vSteuSclItvRepository.find({ where: { moItvRfa: itvRfa } });
+    return this.vSteuSclItvRepository
+      .createQueryBuilder('v')
+      .where('v.moItvRfa = :itvRfa OR v.satItvRfa = :itvRfa OR v.aeItvRfa = :itvRfa', { itvRfa })
+      .getMany();
   }
 }

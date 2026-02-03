@@ -253,7 +253,8 @@ export async function createVerseauTables(dataSource: DataSource): Promise<void>
       steu_cda VARCHAR,
       scl_cda VARCHAR,
       mo_itv_rfa VARCHAR,
-      PRIMARY KEY (steu_cda, scl_cda, mo_itv_rfa)
+      sat_itv_rfa VARCHAR,
+      ae_itv_rfa VARCHAR
     )
   `);
 }
