@@ -201,21 +201,21 @@ export class ControleV1Service {
       if (!cdOuvrageDepollution) continue;
 
       for (const pmo of ouvrage.pointMesure) {
-        const numeroPointMesure = parseInt(pmo.numeroPointMesure, 10);
-        const codeLocPoint = pmo.locGlobalePointMesure;
+        const numeroPointMesure = pmo.numeroPointMesure;
+        const locGlobalePointMesure = pmo.locGlobalePointMesure;
 
-        if (!codeLocPoint) continue;
+        if (!locGlobalePointMesure) continue;
 
         const pmoEntity = await this.roseauGateway.findPmoBySteuNumeroAndLocPoint(
           cdOuvrageDepollution,
           numeroPointMesure,
-          codeLocPoint,
+          locGlobalePointMesure,
         );
 
         if (!pmoEntity) {
           errors.push({
             code: ErrorCode.E2_033,
-            params: [pmo.numeroPointMesure, codeLocPoint, cdOuvrageDepollution],
+            params: [numeroPointMesure, locGlobalePointMesure, cdOuvrageDepollution],
             evenementType: EvenementType.ERREUR,
           });
         }

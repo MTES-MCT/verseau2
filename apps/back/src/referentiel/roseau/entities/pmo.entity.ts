@@ -6,13 +6,13 @@ export class PmoEntity {
   pmoCdn: string;
 
   @Column({ name: 'steu_cdn', nullable: true })
-  steuCdn: string;
+  steuCdn: number;
 
   @Column({ name: 'pmo_no', nullable: true })
-  pmoNo: number;
+  pmoNo: string;
 
   @Column({ name: 'tlref_16_cdn', nullable: true })
-  tlref16Cdn: string;
+  tlref16Cdn: number;
 
   @Column({ name: 'pmo_val_deb_dt', type: 'date', nullable: true })
   pmoValDebDt: Date;

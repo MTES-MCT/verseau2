@@ -78,13 +78,13 @@ export class RoseauRepository implements RoseauGateway {
     return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
-  async findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null> {
+  async findPmoBySteuAndNumero(steuCdn: number, pmoNo: string): Promise<PmoEntity | null> {
     return this.pmoRepository.findOne({ where: { steuCdn: steuCdn, pmoNo: pmoNo } });
   }
 
   async findPmoBySteuNumeroAndLocPoint(
     cdOuvrageDepollution: string,
-    numeroPointMesure: number,
+    numeroPointMesure: string,
     codeLocPoint: string,
   ): Promise<PmoEntity | null> {
     const query = this.pmoRepository
@@ -92,8 +92,8 @@ export class RoseauRepository implements RoseauGateway {
       .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
       .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
       .where('steu.steu_sandre_cda = :cdOuvrageDepollution', { cdOuvrageDepollution })
-      .andWhere('pmo.pmo_no = :numeroPointMesure', { numeroPointMesure })
-      .andWhere('t16.tlref_elt_cda = :codeLocPoint', { codeLocPoint });
+      .andWhere('pmo.pmo_no = :numeroPointMesure', { numeroPointMesure }) // ex: 14 ou 0229000001
+      .andWhere('t16.tlref_elt_cda = :codeLocPoint', { codeLocPoint }); // ex: S14 ou S15
 
     return query.getOne();
   }

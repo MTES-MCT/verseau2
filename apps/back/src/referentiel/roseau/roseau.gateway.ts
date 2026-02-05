@@ -17,10 +17,10 @@ export interface RoseauGateway {
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
   findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null>;
   findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null>;
-  findPmoBySteuAndNumero(steuCdn: string, pmoNo: number): Promise<PmoEntity | null>;
+  findPmoBySteuAndNumero(steuCdn: number, pmoNo: string): Promise<PmoEntity | null>;
   findPmoBySteuNumeroAndLocPoint(
     cdOuvrageDepollution: string,
-    numeroPointMesure: number,
+    numeroPointMesure: string,
     codeLocPoint: string,
   ): Promise<PmoEntity | null>;
   findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null>;
