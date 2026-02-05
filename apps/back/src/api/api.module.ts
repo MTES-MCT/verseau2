@@ -3,7 +3,6 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { DossierModule } from '@dossier/dossier.module';
 import { InfraModule } from '@infra/infra.module';
-import { NotificationModule } from '@notification/notification.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 import { FrontendStaticModule } from './frontend/frontend-static.module';
 import { CorrelationIdMiddleware } from './middleware/correlationId.middleware';
@@ -19,7 +18,6 @@ import { IndicateursModule } from '../indicateurs/indicateurs.module';
     FrontendStaticModule,
     DossierModule,
     InfraModule,
-    NotificationModule,
     ReferentielModule,
     IndicateursModule,
   ],
