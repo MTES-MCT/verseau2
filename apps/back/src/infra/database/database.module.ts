@@ -31,7 +31,7 @@ const getLogging = (configService: ConfigService) => {
           synchronize: getDdlSync(configService),
           logging: getLogging(configService),
           logger: new TypeOrmLogger(),
-          poolSize: 10, // TODO: à gérer selon l'environnement, web: PROCESS_TYPE=api node apps/back/dist/mainServer.js
+          poolSize: 5, // TODO: à gérer selon l'environnement, web: PROCESS_TYPE=api node apps/back/dist/mainServer.js
           migrations: [migrationsPath],
         };
         return config;

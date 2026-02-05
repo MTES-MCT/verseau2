@@ -29,7 +29,7 @@ export const queueProvider = {
     logger.setContext('QueueModule');
     const connectionString = configService.getOrThrow<string>('DATABASE_URL');
 
-    const boss = new PgBoss(connectionString);
+    const boss = new PgBoss({ connectionString, max: 4 });
 
     // Error handler for pg-boss background operations
     boss.on('error', (error) => {
