@@ -3,28 +3,28 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('aga', { schema: 'roseau', synchronize: false })
 export class AgaEntity {
   @PrimaryColumn({ name: 'aga_cdn' })
-  agaCdn: string;
+  agaCdn: number;
 
   @Column({ name: 'tltobl_rfa', nullable: true })
   tltoblRfa: string;
 
   @Column({ name: 'itv_cdn', nullable: true })
-  itvCdn: string;
+  itvCdn: number;
 
   @Column({ name: 'zgc_cdn', nullable: true })
-  zgcCdn: string;
+  zgcCdn: number;
 
   @Column({ name: 'ag_cdn', nullable: true })
-  agCdn: string;
+  agCdn: number;
 
   @Column({ name: 'tlr_01_cdn', nullable: true })
-  tlr01Cdn: string;
+  tlr01Cdn: number;
 
   @Column({ name: 'tlref_03_cdn', nullable: true })
-  tlref03Cdn: string;
+  tlref03Cdn: number;
 
   @Column({ name: 'maj_ag_cdn', nullable: true })
-  majAgCdn: string;
+  majAgCdn: number;
 
   @Column({ name: 'aga_sandre_cda', nullable: true })
   agaSandreCda: string;
@@ -47,20 +47,20 @@ export class AgaEntity {
   @Column({ name: 'aga_com_rfa', nullable: true })
   agaComRfa: string;
 
-  @Column({ name: 'aga_crea_an', nullable: true })
-  agaCreaAn: string;
+  @Column({ name: 'aga_crea_an', nullable: true, type: 'numeric' })
+  agaCreaAn: number;
 
-  @Column({ name: 'aga_clos_an', nullable: true })
-  agaClosAn: string;
+  @Column({ name: 'aga_clos_an', nullable: true, type: 'numeric' })
+  agaClosAn: number;
 
-  @Column({ name: 'aga_encours_an', nullable: true })
-  agaEncoursAn: string;
+  @Column({ name: 'aga_encours_an', nullable: true, type: 'numeric' })
+  agaEncoursAn: number;
 
-  @Column({ name: 'aga_eh_cbpo_val', nullable: true })
-  agaEhCbpoVal: string;
+  @Column({ name: 'aga_eh_cbpo_val', nullable: true, type: 'numeric' })
+  agaEhCbpoVal: number;
 
-  @Column({ name: 'aga_steu_nomi_capa_som_val', nullable: true })
-  agaSteuNomiCapaSomVal: string;
+  @Column({ name: 'aga_steu_nomi_capa_som_val', nullable: true, type: 'numeric' })
+  agaSteuNomiCapaSomVal: number;
 
   @Column({ name: 'aga_conf_in', nullable: true })
   agaConfIn: string;
@@ -72,37 +72,37 @@ export class AgaEntity {
   agaEquipConfIn: string;
 
   @Column({ name: 'aga_equip_conf_dt', nullable: true })
-  agaEquipConfDt: string;
+  agaEquipConfDt: Date;
 
   @Column({ name: 'aga_zgc_conf_in', nullable: true })
   agaZgcConfIn: string;
 
   @Column({ name: 'aga_zgc_conf_dt', nullable: true })
-  agaZgcConfDt: string;
+  agaZgcConfDt: Date;
 
   @Column({ name: 'aga_com_txt', nullable: true })
   agaComTxt: string;
 
-  @Column({ name: 'aga_steu_nb', nullable: true })
-  agaSteuNb: string;
+  @Column({ name: 'aga_steu_nb', nullable: true, type: 'numeric' })
+  agaSteuNb: number;
 
   @Column({ name: 'aga_cre_dt', nullable: true })
-  agaCreDt: string;
+  agaCreDt: Date;
 
   @Column({ name: 'aga_maj_dt', nullable: true })
-  agaMajDt: string;
+  agaMajDt: Date;
 
   @Column({ name: 'tlref_64_cdn', nullable: true })
-  tlref64Cdn: string;
+  tlref64Cdn: number;
 
   @Column({ name: 'aga_concat_com_txt', nullable: true })
   agaConcatComTxt: string;
 
   @Column({ name: 'aga_desc_maj_dt', nullable: true })
-  agaDescMajDt: string;
+  agaDescMajDt: Date;
 
   @Column({ name: 'aga_suiv_maj_dt', nullable: true })
-  agaSuivMajDt: string;
+  agaSuivMajDt: Date;
 
   @Column({ name: 'aga_loc_conf_in', nullable: true })
   agaLocConfIn: string;
@@ -114,13 +114,13 @@ export class AgaEntity {
   agaLocEquipConfIn: string;
 
   @Column({ name: 'aga_loc_equip_conf_dt', nullable: true })
-  agaLocEquipConfDt: string;
+  agaLocEquipConfDt: Date;
 
   @Column({ name: 'aga_zgc_loc_conf_in', nullable: true })
   agaZgcLocConfIn: string;
 
   @Column({ name: 'aga_zgc_loc_conf_dt', nullable: true })
-  agaZgcLocConfDt: string;
+  agaZgcLocConfDt: Date;
 
   @Column({ name: 'aga_big_city_rfa', nullable: true })
   agaBigCityRfa: string;
@@ -129,11 +129,11 @@ export class AgaEntity {
   agaNutsRfa: string;
 
   @Column({ name: 'aga_recept_cdn', nullable: true })
-  agaReceptCdn: string;
+  agaReceptCdn: number;
 
-  @Column({ name: 'aga_cent_x_coord_no', nullable: true })
-  agaCentXCoordNo: string;
+  @Column({ name: 'aga_cent_x_coord_no', nullable: true, type: 'numeric' })
+  agaCentXCoordNo: number;
 
-  @Column({ name: 'aga_cent_y_coord_no', nullable: true })
-  agaCentYCoordNo: string;
+  @Column({ name: 'aga_cent_y_coord_no', nullable: true, type: 'numeric' })
+  agaCentYCoordNo: number;
 }

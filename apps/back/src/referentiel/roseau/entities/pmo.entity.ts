@@ -3,7 +3,7 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('pmo', { schema: 'roseau', synchronize: false })
 export class PmoEntity {
   @PrimaryColumn({ name: 'pmo_cdn' })
-  pmoCdn: string;
+  pmoCdn: number;
 
   @Column({ name: 'steu_cdn', nullable: true })
   steuCdn: number;

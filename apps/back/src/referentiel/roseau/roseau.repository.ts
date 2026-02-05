@@ -50,11 +50,11 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.find();
   }
 
-  async findAgaById(id: string): Promise<AgaEntity | null> {
+  async findAgaById(id: number): Promise<AgaEntity | null> {
     return this.agaRepository.findOne({ where: { agaCdn: id } });
   }
 
-  async findSclById(id: string): Promise<SclEntity | null> {
+  async findSclById(id: number): Promise<SclEntity | null> {
     return this.sclRepository.findOne({ where: { sclCdn: id } });
   }
 
@@ -62,7 +62,7 @@ export class RoseauRepository implements RoseauGateway {
     return this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
   }
 
-  async findSteuById(id: string): Promise<SteuEntity | null> {
+  async findSteuById(id: number): Promise<SteuEntity | null> {
     return this.steuRepository.findOne({ where: { steuCdn: id } });
   }
 
@@ -70,11 +70,11 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
-  async findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null> {
+  async findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
     return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
-  async findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null> {
+  async findCxnAdmByExpSteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
     return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
@@ -102,7 +102,7 @@ export class RoseauRepository implements RoseauGateway {
     return this.tlrefRepository.findOne({ where: { trlRfa: trlRfa, tlrefEltCda: tlrefEltCda } });
   }
 
-  async findCxnTechBySclAndAga(sclCdn: string, agaZgcCdn: string): Promise<CxntechEntity | null> {
+  async findCxnTechBySclAndAga(sclCdn: number, agaZgcCdn: number): Promise<CxntechEntity | null> {
     return this.cxntechRepository.findOne({ where: { avalSclCdn: sclCdn, amontZgcCdn: agaZgcCdn } });
   }
 

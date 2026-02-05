@@ -3,9 +3,9 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('stchan', { schema: 'roseau', synchronize: false })
 export class StchanEntity {
   @PrimaryColumn({ name: 'steu_cdn' })
-  steuCdn: string;
+  steuCdn: number;
 
-  @PrimaryColumn({ name: 'stchan_an', type: 'int' })
+  @PrimaryColumn({ name: 'stchan_an', type: 'numeric' })
   stchanAn: number;
 
   @Column({ name: 'stchan_r_eh_max_chg_val', nullable: true, type: 'numeric' })

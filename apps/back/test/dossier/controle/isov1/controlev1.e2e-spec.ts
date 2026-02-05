@@ -83,7 +83,7 @@ describe('ControleV1Service (e2e)', () => {
   describe('CTL002 - verifySteuExists', () => {
     it('should pass when STEU exists', async () => {
       // Seed STEU
-      await seedSteu(dataSource, 'STEU001', '0600000001');
+      await seedSteu(dataSource, 1, '0600000001');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_001');
@@ -117,7 +117,7 @@ describe('ControleV1Service (e2e)', () => {
 
     it('should allow partial integration when multiple ouvrages exist but some are missing from database', async () => {
       // Seed only one STEU out of two
-      await seedSteu(dataSource, 'STEU001', '0600000001');
+      await seedSteu(dataSource, 1, '0600000001');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_009');
@@ -144,9 +144,9 @@ describe('ControleV1Service (e2e)', () => {
   describe('CTL003 - verifyMoSteuExists', () => {
     it('should pass when MO connection exists', async () => {
       // Seed data
-      await seedSteu(dataSource, 'STEU001', '0600000001');
-      await seedItv(dataSource, '1001', 'SIRET123');
-      await seedCxnadm(dataSource, 'CXNADM001', 'STEU001', '1001');
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedItv(dataSource, 1001, 'SIRET123');
+      await seedCxnadm(dataSource, 1, 1, 1001);
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_003');
@@ -170,7 +170,7 @@ describe('ControleV1Service (e2e)', () => {
 
     it('should fail when ITV does not exist', async () => {
       // Seed STEU only
-      await seedSteu(dataSource, 'STEU001', '0600000001');
+      await seedSteu(dataSource, 1, '0600000001');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_004');
@@ -197,9 +197,9 @@ describe('ControleV1Service (e2e)', () => {
   describe('CTL005 - verifyPmoExists', () => {
     it.skip('should pass when PMO exists', async () => {
       // Seed data
-      await seedSteu(dataSource, 'STEU001', '0600000001');
-      await seedPmo(dataSource, 'PMO001', 'STEU001', 1);
-      await seedTlref(dataSource, 'TLREF001', 'LREF_44', '1A');
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedPmo(dataSource, 1, 1, '1');
+      await seedTlref(dataSource, 1, 'LREF_44', '1A');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_005');
@@ -222,7 +222,7 @@ describe('ControleV1Service (e2e)', () => {
 
     it('should fail when PMO does not exist', async () => {
       // Seed STEU only
-      await seedSteu(dataSource, 'STEU001', '0600000001');
+      await seedSteu(dataSource, 1, '0600000001');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_006');
@@ -249,7 +249,7 @@ describe('ControleV1Service (e2e)', () => {
   describe('CTL014 - verifyIntervenantExists', () => {
     it('should pass when intervenant exists', async () => {
       // Seed ITV
-      await seedItv(dataSource, 'ITV001', 'SIRET123');
+      await seedItv(dataSource, 1, 'SIRET123');
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_007');
@@ -296,9 +296,9 @@ describe('ControleV1Service (e2e)', () => {
 
   describe('CTL016 - verifyAccreAnalyseExists', () => {
     it('should pass when accreditation code exists in TLREF (LREF_44)', async () => {
-      await seedSteu(dataSource, 'STEU001', '0600000001');
-      await seedPmo(dataSource, 'PMO001', 'STEU001', 1);
-      await seedTlref(dataSource, 'TLREF001', 'LREF_44', 'ACC001');
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedPmo(dataSource, 1, 1, '1');
+      await seedTlref(dataSource, 1, 'LREF_44', 'ACC001');
 
       await seedDepot(dataSource, 'dep_test_016_001');
 
@@ -328,8 +328,8 @@ describe('ControleV1Service (e2e)', () => {
     });
 
     it('should fail when accreditation code does not exist in TLREF (LREF_44)', async () => {
-      await seedSteu(dataSource, 'STEU001', '0600000001');
-      await seedPmo(dataSource, 'PMO001', 'STEU001', 1);
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedPmo(dataSource, 1, 1, '1');
 
       await seedDepot(dataSource, 'dep_test_016_002');
 

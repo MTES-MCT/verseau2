@@ -3,22 +3,22 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('scl', { schema: 'roseau', synchronize: false })
 export class SclEntity {
   @PrimaryColumn({ name: 'scl_cdn' })
-  sclCdn: string;
+  sclCdn: number;
 
   @Column({ name: 'tlref_02_cdn', nullable: true })
-  tlref02Cdn: string;
+  tlref02Cdn: number;
 
   @Column({ name: 'zgc_cdn', nullable: true })
-  zgcCdn: string;
+  zgcCdn: number;
 
   @Column({ name: 'tlref_05_cdn', nullable: true })
-  tlref05Cdn: string;
+  tlref05Cdn: number;
 
   @Column({ name: 'steu_cdn', nullable: true })
-  steuCdn: string;
+  steuCdn: number;
 
   @Column({ name: 'tlref_01_cdn', nullable: true })
-  tlref01Cdn: string;
+  tlref01Cdn: number;
 
   @Column({ name: 'scl_sandre_cda', nullable: true })
   sclSandreCda: string;
@@ -39,41 +39,41 @@ export class SclEntity {
   sclDirectRejetExistIn: string;
 
   @Column({ name: 'scl_as_manuel_on', nullable: true })
-  sclAsManuelOn: string;
+  sclAsManuelOn: boolean;
 
   @Column({ name: 'scl_as_manuel_val_dt', nullable: true })
-  sclAsManuelValDt: string;
+  sclAsManuelValDt: Date;
 
   @Column({ name: 'tlref_66_cdn', nullable: true })
-  tlref66Cdn: string;
+  tlref66Cdn: number;
 
   @Column({ name: 'scl_old_sandre_cda', nullable: true })
   sclOldSandreCda: string;
 
-  @Column({ name: 'scl_encours_an', nullable: true })
-  sclEncoursAn: string;
+  @Column({ name: 'scl_encours_an', nullable: true, type: 'numeric' })
+  sclEncoursAn: number;
 
   @Column({ name: 'scl_ts_trx_desc_txt', nullable: true })
   sclTsTrxDescTxt: string;
 
   @Column({ name: 'tlref_ts_66_cdn', nullable: true })
-  tlrefTs66Cdn: string;
+  tlrefTs66Cdn: number;
 
-  @Column({ name: 'scl_mt_prev_trx_ts_val', nullable: true })
-  sclMtPrevTrxTsVal: string;
+  @Column({ name: 'scl_mt_prev_trx_ts_val', nullable: true, type: 'numeric' })
+  sclMtPrevTrxTsVal: number;
 
-  @Column({ name: 'scl_mt_prev_trx_ts_maj_dt', nullable: true })
-  sclMtPrevTrxTsMajDt: string;
+  @Column({ name: 'scl_mt_prev_trx_ts_maj_dt', type: 'date', nullable: true })
+  sclMtPrevTrxTsMajDt: Date;
 
-  @Column({ name: 'scl_mt_prev_trx_tp_val', nullable: true })
-  sclMtPrevTrxTpVal: string;
+  @Column({ name: 'scl_mt_prev_trx_tp_val', nullable: true, type: 'numeric' })
+  sclMtPrevTrxTpVal: number;
 
-  @Column({ name: 'scl_mt_prev_trx_tp_maj_dt', nullable: true })
-  sclMtPrevTrxTpMajDt: string;
+  @Column({ name: 'scl_mt_prev_trx_tp_maj_dt', type: 'date', nullable: true })
+  sclMtPrevTrxTpMajDt: Date;
 
-  @Column({ name: 'scl_suivi_trx_ts_maj_dt', nullable: true })
-  sclSuiviTrxTsMajDt: string;
+  @Column({ name: 'scl_suivi_trx_ts_maj_dt', type: 'date', nullable: true })
+  sclSuiviTrxTsMajDt: Date;
 
-  @Column({ name: 'scl_suivi_trx_tp_maj_dt', nullable: true })
-  sclSuiviTrxTpMajDt: string;
+  @Column({ name: 'scl_suivi_trx_tp_maj_dt', type: 'date', nullable: true })
+  sclSuiviTrxTpMajDt: Date;
 }

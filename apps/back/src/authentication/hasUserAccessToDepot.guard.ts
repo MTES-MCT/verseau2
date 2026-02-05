@@ -13,7 +13,6 @@ export class HasUserAccessToDepotGuard implements CanActivate {
     private readonly depotService: DepotService,
     private readonly droitsUserService: DroitsUserService,
   ) {
-    console.log('HasUserAccessToDepotGuard instantiated');
     this.logger.setContext('HasUserAccessToDepotGuard');
   }
 

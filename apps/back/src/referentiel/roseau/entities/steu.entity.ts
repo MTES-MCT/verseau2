@@ -3,52 +3,52 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('steu', { schema: 'roseau', synchronize: false })
 export class SteuEntity {
   @PrimaryColumn({ name: 'steu_cdn' })
-  steuCdn: string;
+  steuCdn: number;
 
   @Column({ name: 'ag_cdn', nullable: true })
-  agCdn: string;
+  agCdn: number;
 
   @Column({ name: 'inst_ag_cdn', nullable: true })
-  instAgCdn: string;
+  instAgCdn: number;
 
   @Column({ name: 'tlref_35_cdn', nullable: true })
-  tlref35Cdn: string;
+  tlref35Cdn: number;
 
   @Column({ name: 'sti_cdn', nullable: true })
-  stiCdn: string;
+  stiCdn: number;
 
   @Column({ name: 'tlref_01_cdn', nullable: true })
-  tlref01Cdn: string;
+  tlref01Cdn: number;
 
   @Column({ name: 'tlref_11_cdn', nullable: true })
-  tlref11Cdn: string;
+  tlref11Cdn: number;
 
   @Column({ name: 'tlref_12_cdn', nullable: true })
-  tlref12Cdn: string;
+  tlref12Cdn: number;
 
   @Column({ name: 'zgc_cdn', nullable: true })
-  zgcCdn: string;
+  zgcCdn: number;
 
   @Column({ name: 'orm_cdn', nullable: true })
-  ormCdn: string;
+  ormCdn: number;
 
   @Column({ name: 'tlref_07_cdn', nullable: true })
-  tlref07Cdn: string;
+  tlref07Cdn: number;
 
   @Column({ name: 'inst_itv_cdn', nullable: true })
-  instItvCdn: string;
+  instItvCdn: number;
 
   @Column({ name: 'tlref_10_cdn', nullable: true })
-  tlref10Cdn: string;
+  tlref10Cdn: number;
 
   @Column({ name: 'tlref_09_cdn', nullable: true })
-  tlref09Cdn: string;
+  tlref09Cdn: number;
 
   @Column({ name: 'tlref_06_cdn', nullable: true })
-  tlref06Cdn: string;
+  tlref06Cdn: number;
 
   @Column({ name: 'ae_itv_cdn', nullable: true })
-  aeItvCdn: string;
+  aeItvCdn: number;
 
   @Column({ name: 'steu_sandre_cda', nullable: true })
   steuSandreCda: string;
@@ -56,17 +56,17 @@ export class SteuEntity {
   @Column({ name: 'steu_nom_lb', nullable: true })
   steuNomLb: string;
 
-  @Column({ name: 'steu_x_coord_no', nullable: true })
-  steuXCoordNo: string;
+  @Column({ name: 'steu_x_coord_no', nullable: true, type: 'numeric' })
+  steuXCoordNo: number;
 
-  @Column({ name: 'steu_y_coord_no', nullable: true })
-  steuYCoordNo: string;
+  @Column({ name: 'steu_y_coord_no', nullable: true, type: 'numeric' })
+  steuYCoordNo: number;
 
   @Column({ name: 'steu_serv_en_mise_dt', nullable: true })
-  steuServEnMiseDt: string;
+  steuServEnMiseDt: Date;
 
   @Column({ name: 'steu_serv_hors_mise_dt', nullable: true })
-  steuServHorsMiseDt: string;
+  steuServHorsMiseDt: Date;
 
   @Column({ name: 'steu_cdb_rfa', nullable: true })
   steuCdbRfa: string;
@@ -84,10 +84,10 @@ export class SteuEntity {
   steuLieuDitLb: string;
 
   @Column({ name: 'steu_as_manuel_on', nullable: true })
-  steuAsManuelOn: string;
+  steuAsManuelOn: boolean;
 
   @Column({ name: 'steu_as_manuel_val_dt', nullable: true })
-  steuAsManuelValDt: string;
+  steuAsManuelValDt: Date;
 
   @Column({ name: 'steu_pe_exist_in', nullable: true })
   steuPeExistIn: string;
@@ -99,34 +99,34 @@ export class SteuEntity {
   steuEchTravDescTxt: string;
 
   @Column({ name: 'steu_maj_dt', nullable: true })
-  steuMajDt: string;
+  steuMajDt: Date;
 
-  @Column({ name: 'steu_eh_val_ent_max_chg_val', nullable: true })
-  steuEhValEntMaxChgVal: string;
+  @Column({ name: 'steu_eh_val_ent_max_chg_val', nullable: true, type: 'numeric' })
+  steuEhValEntMaxChgVal: number;
 
-  @Column({ name: 'steu_eh_trait_nom_cap_val', nullable: true })
-  steuEhTraitNomCapVal: string;
+  @Column({ name: 'steu_eh_trait_nom_cap_val', nullable: true, type: 'numeric' })
+  steuEhTraitNomCapVal: number;
 
-  @Column({ name: 'steu_encours_an', nullable: true })
-  steuEncoursAn: string;
+  @Column({ name: 'steu_encours_an', nullable: true, type: 'numeric' })
+  steuEncoursAn: number;
 
   @Column({ name: 'steu_ae_certif_code_on', nullable: true })
-  steuAeCertifCodeOn: string;
+  steuAeCertifCodeOn: boolean;
 
-  @Column({ name: 'steu_lon_coord_no', nullable: true })
-  steuLonCoordNo: string;
+  @Column({ name: 'steu_lon_coord_no', nullable: true, type: 'numeric' })
+  steuLonCoordNo: number;
 
-  @Column({ name: 'steu_lat_coord_no', nullable: true })
-  steuLatCoordNo: string;
+  @Column({ name: 'steu_lat_coord_no', nullable: true, type: 'numeric' })
+  steuLatCoordNo: number;
 
   @Column({ name: 'tlref_65_cdn', nullable: true })
-  tlref65Cdn: string;
+  tlref65Cdn: number;
 
   @Column({ name: 'steu_desc_maj_dt', nullable: true })
-  steuDescMajDt: string;
+  steuDescMajDt: Date;
 
   @Column({ name: 'steu_suiv_maj_dt', nullable: true })
-  steuSuivMajDt: string;
+  steuSuivMajDt: Date;
 
   @Column({ name: 'steu_concat_com_txt', nullable: true })
   steuConcatComTxt: string;
@@ -135,28 +135,28 @@ export class SteuEntity {
   steuOldSandreCda: string;
 
   @Column({ name: 'steu_abs_a2_on', nullable: true })
-  steuAbsA2On: string;
+  steuAbsA2On: boolean;
 
   @Column({ name: 'steu_devers_a2_on', nullable: true })
-  steuDeversA2On: string;
+  steuDeversA2On: boolean;
 
-  @Column({ name: 'steu_proj_dt', nullable: true })
-  steuProjDt: string;
+  @Column({ name: 'steu_proj_dt', type: 'date', nullable: true })
+  steuProjDt: Date;
 
-  @Column({ name: 'steu_service_an', nullable: true })
-  steuServiceAn: string;
+  @Column({ name: 'steu_service_an', nullable: true, type: 'numeric' })
+  steuServiceAn: number;
 
   @Column({ name: 'steu_avis_motive_on', nullable: true })
-  steuAvisMotiveOn: string;
+  steuAvisMotiveOn: boolean;
 
-  @Column({ name: 'steu_mt_prev_trx_val', nullable: true })
-  steuMtPrevTrxVal: string;
+  @Column({ name: 'steu_mt_prev_trx_val', nullable: true, type: 'numeric' })
+  steuMtPrevTrxVal: number;
 
-  @Column({ name: 'steu_mt_prev_trx_maj_dt', nullable: true })
-  steuMtPrevTrxMajDt: string;
+  @Column({ name: 'steu_mt_prev_trx_maj_dt', type: 'date', nullable: true })
+  steuMtPrevTrxMajDt: Date;
 
-  @Column({ name: 'steu_suivi_trx_maj_dt', nullable: true })
-  steuSuiviTrxMajDt: string;
+  @Column({ name: 'steu_suivi_trx_maj_dt', type: 'date', nullable: true })
+  steuSuiviTrxMajDt: Date;
 
   @Column({ name: 'steu_e_prtr_cda', nullable: true })
   steuEPrtrCda: string;
@@ -165,5 +165,5 @@ export class SteuEntity {
   steuInspireId: string;
 
   @Column({ name: 'steu_recept_cdn', nullable: true })
-  steuReceptCdn: string;
+  steuReceptCdn: number;
 }

@@ -50,7 +50,7 @@ export async function seedUserWithDroits(dataSource: DataSource, data: UserWithD
   // If itvRfa is provided, create the ItvEntity and role 301
   if (data.itvRfa) {
     // Create ItvEntity with the SIRET
-    await seedItv(dataSource, String(data.itvCdn), data.itvRfa);
+    await seedItv(dataSource, data.itvCdn, data.itvRfa);
 
     // Create role 301 for depot permission
     await seedOrionRoleForPrincipal(dataSource, prCdn, 301);

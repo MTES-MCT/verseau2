@@ -10,13 +10,13 @@ export interface RoseauGateway {
   findAga(): Promise<AgaEntity[]>;
   findScl(): Promise<SclEntity[]>;
   findSteu(): Promise<SteuEntity[]>;
-  findAgaById(id: string): Promise<AgaEntity | null>;
-  findSclById(id: string): Promise<SclEntity | null>;
+  findAgaById(id: number): Promise<AgaEntity | null>;
+  findSclById(id: number): Promise<SclEntity | null>;
   findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
-  findSteuById(id: string): Promise<SteuEntity | null>;
+  findSteuById(id: number): Promise<SteuEntity | null>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findCxnAdmBySteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null>;
-  findCxnAdmByExpSteuAndItv(steuCdn: string, itvCdn: number): Promise<CxnadmEntity | null>;
+  findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
+  findCxnAdmByExpSteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
   findPmoBySteuAndNumero(steuCdn: number, pmoNo: string): Promise<PmoEntity | null>;
   findPmoBySteuNumeroAndLocPoint(
     cdOuvrageDepollution: string,
@@ -24,7 +24,7 @@ export interface RoseauGateway {
     codeLocPoint: string,
   ): Promise<PmoEntity | null>;
   findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null>;
-  findCxnTechBySclAndAga(sclCdn: string, agaZgcCdn: string): Promise<CxntechEntity | null>;
+  findCxnTechBySclAndAga(sclCdn: number, agaZgcCdn: number): Promise<CxntechEntity | null>;
   isSystemeCollecteLinkedToAgglomeration(
     cdSystemeCollecte: string,
     cdAgglomerationAssainissement: string,

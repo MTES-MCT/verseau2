@@ -3,9 +3,9 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('agat', { schema: 'roseau', synchronize: false })
 export class AgatEntity {
   @PrimaryColumn({ name: 'aga_cdn' })
-  agaCdn: string;
+  agaCdn: number;
 
-  @PrimaryColumn({ name: 'agat_taille_an' })
+  @PrimaryColumn({ name: 'agat_taille_an', type: 'numeric' })
   agatTailleAn: number;
 
   @Column({ name: 'agat_cbpo_val', type: 'numeric', nullable: true })

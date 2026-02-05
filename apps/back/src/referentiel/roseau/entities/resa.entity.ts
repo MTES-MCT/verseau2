@@ -3,12 +3,12 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('resa', { schema: 'roseau', synchronize: false })
 export class ResaEntity {
   @PrimaryColumn({ name: 'resa_cdn' })
-  resaCdn: string;
+  resaCdn: number;
 
   @Column({ name: 'steu_cdn', nullable: true })
-  steuCdn: string;
+  steuCdn: number;
 
-  @Column({ name: 'resa_an', nullable: true })
+  @Column({ name: 'resa_an', nullable: true, type: 'numeric' })
   resaAn: number;
 
   @Column({ name: 'par_rfa', nullable: true })

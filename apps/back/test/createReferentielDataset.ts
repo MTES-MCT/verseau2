@@ -9,68 +9,68 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.steu CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.steu (
-      steu_cdn VARCHAR PRIMARY KEY,
-      ag_cdn VARCHAR,
-      inst_ag_cdn VARCHAR,
-      tlref_35_cdn VARCHAR,
-      sti_cdn VARCHAR,
-      tlref_01_cdn VARCHAR,
-      tlref_11_cdn VARCHAR,
-      tlref_12_cdn VARCHAR,
-      zgc_cdn VARCHAR,
-      orm_cdn VARCHAR,
-      tlref_07_cdn VARCHAR,
-      inst_itv_cdn VARCHAR,
-      tlref_10_cdn VARCHAR,
-      tlref_09_cdn VARCHAR,
-      tlref_06_cdn VARCHAR,
-      ae_itv_cdn VARCHAR,
+      steu_cdn INTEGER PRIMARY KEY,
+      ag_cdn INTEGER,
+      inst_ag_cdn INTEGER,
+      tlref_35_cdn INTEGER,
+      sti_cdn INTEGER,
+      tlref_01_cdn INTEGER,
+      tlref_11_cdn INTEGER,
+      tlref_12_cdn INTEGER,
+      zgc_cdn INTEGER,
+      orm_cdn INTEGER,
+      tlref_07_cdn INTEGER,
+      inst_itv_cdn INTEGER,
+      tlref_10_cdn INTEGER,
+      tlref_09_cdn INTEGER,
+      tlref_06_cdn INTEGER,
+      ae_itv_cdn INTEGER,
       steu_sandre_cda VARCHAR,
       steu_nom_lb VARCHAR,
-      steu_x_coord_no VARCHAR,
-      steu_y_coord_no VARCHAR,
-      steu_serv_en_mise_dt VARCHAR,
-      steu_serv_hors_mise_dt VARCHAR,
+      steu_x_coord_no NUMERIC,
+      steu_y_coord_no NUMERIC,
+      steu_serv_en_mise_dt TIMESTAMP,
+      steu_serv_hors_mise_dt TIMESTAMP,
       steu_cdb_rfa VARCHAR,
       steu_reg_rfa VARCHAR,
       steu_dep_rfa VARCHAR,
       steu_com_rfa VARCHAR,
       steu_lieu_dit_lb VARCHAR,
-      steu_as_manuel_on VARCHAR,
-      steu_as_manuel_val_dt VARCHAR,
+      steu_as_manuel_on BOOLEAN,
+      steu_as_manuel_val_dt TIMESTAMP,
       steu_pe_exist_in VARCHAR,
-      steu_com_txt VARCHAR,
-      steu_ech_trav_desc_txt VARCHAR,
-      steu_maj_dt VARCHAR,
-      steu_eh_val_ent_max_chg_val VARCHAR,
-      steu_eh_trait_nom_cap_val VARCHAR,
-      steu_encours_an VARCHAR,
-      steu_ae_certif_code_on VARCHAR,
-      steu_lon_coord_no VARCHAR,
-      steu_lat_coord_no VARCHAR,
-      tlref_65_cdn VARCHAR,
-      steu_desc_maj_dt VARCHAR,
-      steu_suiv_maj_dt VARCHAR,
-      steu_concat_com_txt VARCHAR,
+      steu_com_txt TEXT,
+      steu_ech_trav_desc_txt TEXT,
+      steu_maj_dt TIMESTAMP,
+      steu_eh_val_ent_max_chg_val NUMERIC,
+      steu_eh_trait_nom_cap_val NUMERIC,
+      steu_encours_an NUMERIC,
+      steu_ae_certif_code_on BOOLEAN,
+      steu_lon_coord_no NUMERIC,
+      steu_lat_coord_no NUMERIC,
+      tlref_65_cdn INTEGER,
+      steu_desc_maj_dt TIMESTAMP,
+      steu_suiv_maj_dt TIMESTAMP,
+      steu_concat_com_txt TEXT,
       steu_old_sandre_cda VARCHAR,
-      steu_abs_a2_on VARCHAR,
-      steu_devers_a2_on VARCHAR,
-      steu_proj_dt VARCHAR,
-      steu_service_an VARCHAR,
-      steu_avis_motive_on VARCHAR,
-      steu_mt_prev_trx_val VARCHAR,
-      steu_mt_prev_trx_maj_dt VARCHAR,
-      steu_suivi_trx_maj_dt VARCHAR,
+      steu_abs_a2_on BOOLEAN,
+      steu_devers_a2_on BOOLEAN,
+      steu_proj_dt DATE,
+      steu_service_an NUMERIC,
+      steu_avis_motive_on BOOLEAN,
+      steu_mt_prev_trx_val NUMERIC,
+      steu_mt_prev_trx_maj_dt DATE,
+      steu_suivi_trx_maj_dt DATE,
       steu_e_prtr_cda VARCHAR,
       steu_inspire_id VARCHAR,
-      steu_recept_cdn VARCHAR
+      steu_recept_cdn INTEGER
     )
   `);
 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.tlref CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.tlref (
-      tlref_cdn VARCHAR PRIMARY KEY,
+      tlref_cdn INTEGER PRIMARY KEY,
       trl_rfa VARCHAR,
       tlref_elt_cda VARCHAR
     )
@@ -79,20 +79,20 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.cxnadm CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.cxnadm (
-      cxnadm_cdn VARCHAR PRIMARY KEY,
-      mo_steu_cdn VARCHAR,
-      steu_itv_cdn VARCHAR,
-      exp_steu_cdn VARCHAR
+      cxnadm_cdn INTEGER PRIMARY KEY,
+      mo_steu_cdn INTEGER,
+      steu_itv_cdn INTEGER,
+      exp_steu_cdn INTEGER
     )
   `);
 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.pmo CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.pmo (
-      pmo_cdn VARCHAR PRIMARY KEY,
-      steu_cdn VARCHAR,
-      pmo_no INTEGER,
-      tlref_16_cdn VARCHAR,
+      pmo_cdn INTEGER PRIMARY KEY,
+      steu_cdn INTEGER,
+      pmo_no VARCHAR,
+      tlref_16_cdn INTEGER,
       pmo_val_deb_dt DATE,
       pmo_val_fin_dt DATE
     )
@@ -101,9 +101,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.cpy CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.cpy (
-      cpy_cdn VARCHAR PRIMARY KEY,
-      steu_cdn VARCHAR,
-      cpy_an INTEGER,
+      cpy_cdn INTEGER PRIMARY KEY,
+      steu_cdn INTEGER,
+      cpy_an NUMERIC,
       cpy_eh_trait_nom_cap_mt NUMERIC
     )
   `);
@@ -111,18 +111,18 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.cxntech CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.cxntech (
-      cxntech_cdn VARCHAR PRIMARY KEY,
-      aval_scl_cdn VARCHAR,
-      amont_zgc_cdn VARCHAR,
-      cxntech_retrait_dt VARCHAR
+      cxntech_cdn INTEGER PRIMARY KEY,
+      aval_scl_cdn INTEGER,
+      amont_zgc_cdn INTEGER,
+      cxntech_retrait_dt TIMESTAMP
     )
   `);
 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.aga CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.aga (
-      aga_cdn VARCHAR PRIMARY KEY,
-      zgc_cdn VARCHAR,
+      aga_cdn INTEGER PRIMARY KEY,
+      zgc_cdn INTEGER,
       aga_sandre_cda VARCHAR
     )
   `);
@@ -130,7 +130,7 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.scl CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.scl (
-      scl_cdn VARCHAR PRIMARY KEY,
+      scl_cdn INTEGER PRIMARY KEY,
       scl_sandre_cda VARCHAR
     )
   `);
@@ -138,9 +138,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.resa CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.resa (
-      resa_cdn VARCHAR PRIMARY KEY,
-      steu_cdn VARCHAR,
-      resa_an INTEGER,
+      resa_cdn INTEGER PRIMARY KEY,
+      steu_cdn INTEGER,
+      resa_an NUMERIC,
       par_rfa VARCHAR,
       resa_cma_val NUMERIC
     )
@@ -151,40 +151,40 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
   await dataSource.query(`DROP TABLE IF EXISTS lanceleau.itv CASCADE`);
   await dataSource.query(`
     CREATE TABLE lanceleau.itv (
-      itv_cdn VARCHAR PRIMARY KEY,
-      peti_cdn VARCHAR,
-      dir_itv_cdn VARCHAR,
-      actpe_cdn VARCHAR,
+      itv_cdn INTEGER PRIMARY KEY,
+      peti_cdn INTEGER,
+      dir_itv_cdn INTEGER,
+      actpe_cdn INTEGER,
       titv_rfa VARCHAR,
-      adr_cdn VARCHAR,
+      adr_cdn INTEGER,
       itv_rfa VARCHAR,
       itv_origine_lb VARCHAR,
       itv_nom_lb VARCHAR,
       itv_statut_lb VARCHAR,
-      itv_cre_dt VARCHAR,
-      itv_maj_dt VARCHAR,
+      itv_cre_dt TIMESTAMP,
+      itv_maj_dt TIMESTAMP,
       itv_mnemo_lb VARCHAR,
-      itv_com_txt VARCHAR,
+      itv_com_txt TEXT,
       itv_nom_inter_lb VARCHAR,
       itv_siret_rfa VARCHAR,
       itv_orig_rfa VARCHAR,
-      itv_val_deb_dt VARCHAR,
-      itv_val_fin_dt VARCHAR,
+      itv_val_deb_dt TIMESTAMP,
+      itv_val_fin_dt TIMESTAMP,
       itv_pacage_cda VARCHAR,
-      itv_etranger_on VARCHAR,
-      itv_attente_sandre_on VARCHAR,
-      itv_histo_pr_cdn VARCHAR,
-      itv_crea_cdn VARCHAR,
+      itv_etranger_on BOOLEAN,
+      itv_attente_sandre_on BOOLEAN,
+      itv_histo_pr_cdn NUMERIC,
+      itv_crea_cdn NUMERIC,
       naf_rfa VARCHAR,
-      w_bdnu_uf_cdn VARCHAR,
-      itv_id VARCHAR,
-      orga_cdn VARCHAR,
-      w_bdnu_uf_2014_cdn VARCHAR,
-      ougc_cdn VARCHAR,
-      itv_confiance_on VARCHAR,
+      w_bdnu_uf_cdn INTEGER,
+      itv_id INTEGER,
+      orga_cdn INTEGER,
+      w_bdnu_uf_2014_cdn INTEGER,
+      ougc_cdn INTEGER,
+      itv_confiance_on BOOLEAN,
       itv_nom_phonetise_lb VARCHAR,
-      itv_siege_on VARCHAR,
-      itv_diffusible_on VARCHAR,
+      itv_siege_on BOOLEAN,
+      itv_diffusible_on BOOLEAN,
       itv_serv_corres_rfa VARCHAR
     )
   `);
@@ -276,7 +276,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
 
 // ============= Seed Data Functions =============
 
-export async function seedSteu(dataSource: DataSource, steuCdn: string, steuSandreCda: string): Promise<void> {
+export async function seedSteu(dataSource: DataSource, steuCdn: number, steuSandreCda: string): Promise<void> {
   await dataSource.query(
     `
     INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
@@ -286,7 +286,7 @@ export async function seedSteu(dataSource: DataSource, steuCdn: string, steuSand
   );
 }
 
-export async function seedItv(dataSource: DataSource, itvCdn: string, itvRfa: string): Promise<void> {
+export async function seedItv(dataSource: DataSource, itvCdn: number, itvRfa: string): Promise<void> {
   await dataSource.query(
     `
     INSERT INTO lanceleau.itv (itv_cdn, itv_rfa)
@@ -298,10 +298,10 @@ export async function seedItv(dataSource: DataSource, itvCdn: string, itvRfa: st
 
 export async function seedCxnadm(
   dataSource: DataSource,
-  cxnadmCdn: string,
-  moSteuCdn: string,
-  steuItvCdn: string,
-  expSteuCdn?: string,
+  cxnadmCdn: number,
+  moSteuCdn: number,
+  steuItvCdn: number,
+  expSteuCdn?: number,
 ): Promise<void> {
   await dataSource.query(
     `
@@ -312,7 +312,7 @@ export async function seedCxnadm(
   );
 }
 
-export async function seedPmo(dataSource: DataSource, pmoCdn: string, steuCdn: string, pmoNo: number): Promise<void> {
+export async function seedPmo(dataSource: DataSource, pmoCdn: number, steuCdn: number, pmoNo: string): Promise<void> {
   await dataSource.query(
     `
     INSERT INTO roseau.pmo (pmo_cdn, steu_cdn, pmo_no)
@@ -324,7 +324,7 @@ export async function seedPmo(dataSource: DataSource, pmoCdn: string, steuCdn: s
 
 export async function seedTlref(
   dataSource: DataSource,
-  tlrefCdn: string,
+  tlrefCdn: number,
   trlRfa: string,
   tlrefEltCda: string,
 ): Promise<void> {
@@ -339,8 +339,8 @@ export async function seedTlref(
 
 export async function seedResa(
   dataSource: DataSource,
-  resaCdn: string,
-  steuCdn: string,
+  resaCdn: number,
+  steuCdn: number,
   resaAn: number,
   parRfa: string,
   resaCmaVal: number,

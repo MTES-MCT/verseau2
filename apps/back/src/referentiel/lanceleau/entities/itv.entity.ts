@@ -6,19 +6,19 @@ export class ItvEntity {
   itvCdn: number;
 
   @Column({ name: 'peti_cdn', nullable: true })
-  petiCdn: string;
+  petiCdn: number;
 
   @Column({ name: 'dir_itv_cdn', nullable: true })
-  dirItvCdn: string;
+  dirItvCdn: number;
 
   @Column({ name: 'actpe_cdn', nullable: true })
-  actpeCdn: string;
+  actpeCdn: number;
 
   @Column({ name: 'titv_rfa', nullable: true })
   titvRfa: string;
 
   @Column({ name: 'adr_cdn', nullable: true })
-  adrCdn: string;
+  adrCdn: number;
 
   @Column({ name: 'itv_rfa', nullable: true })
   itvRfa: string;
@@ -33,10 +33,10 @@ export class ItvEntity {
   itvStatutLb: string;
 
   @Column({ name: 'itv_cre_dt', nullable: true })
-  itvCreDt: string;
+  itvCreDt: Date;
 
   @Column({ name: 'itv_maj_dt', nullable: true })
-  itvMajDt: string;
+  itvMajDt: Date;
 
   @Column({ name: 'itv_mnemo_lb', nullable: true })
   itvMnemoLb: string;
@@ -54,55 +54,55 @@ export class ItvEntity {
   itvOrigRfa: string;
 
   @Column({ name: 'itv_val_deb_dt', nullable: true })
-  itvValDebDt: string;
+  itvValDebDt: Date;
 
   @Column({ name: 'itv_val_fin_dt', nullable: true })
-  itvValFinDt: string;
+  itvValFinDt: Date;
 
   @Column({ name: 'itv_pacage_cda', nullable: true })
   itvPacageCda: string;
 
   @Column({ name: 'itv_etranger_on', nullable: true })
-  itvEtrangerOn: string;
+  itvEtrangerOn: boolean;
 
   @Column({ name: 'itv_attente_sandre_on', nullable: true })
-  itvAttenteSandreOn: string;
+  itvAttenteSandreOn: boolean;
 
-  @Column({ name: 'itv_histo_pr_cdn', nullable: true })
-  itvHistoPrCdn: string;
+  @Column({ name: 'itv_histo_pr_cdn', nullable: true, type: 'numeric' })
+  itvHistoPrCdn: number;
 
-  @Column({ name: 'itv_crea_cdn', nullable: true })
-  itvCreaCdn: string;
+  @Column({ name: 'itv_crea_cdn', nullable: true, type: 'numeric' })
+  itvCreaCdn: number;
 
   @Column({ name: 'naf_rfa', nullable: true })
   nafRfa: string;
 
   @Column({ name: 'w_bdnu_uf_cdn', nullable: true })
-  wBdnuUfCdn: string;
+  wBdnuUfCdn: number;
 
   @Column({ name: 'itv_id', nullable: true })
-  itvId: string;
+  itvId: number;
 
   @Column({ name: 'orga_cdn', nullable: true })
-  orgaCdn: string;
+  orgaCdn: number;
 
   @Column({ name: 'w_bdnu_uf_2014_cdn', nullable: true })
-  wBdnuUf2014Cdn: string;
+  wBdnuUf2014Cdn: number;
 
   @Column({ name: 'ougc_cdn', nullable: true })
-  ougcCdn: string;
+  ougcCdn: number;
 
   @Column({ name: 'itv_confiance_on', nullable: true })
-  itvConfianceOn: string;
+  itvConfianceOn: boolean;
 
   @Column({ name: 'itv_nom_phonetise_lb', nullable: true })
   itvNomPhonetiseLb: string;
 
   @Column({ name: 'itv_siege_on', nullable: true })
-  itvSiegeOn: string;
+  itvSiegeOn: boolean;
 
   @Column({ name: 'itv_diffusible_on', nullable: true })
-  itvDiffusibleOn: string;
+  itvDiffusibleOn: boolean;
 
   @Column({ name: 'itv_serv_corres_rfa', nullable: true })
   itvServCorresRfa: string;
