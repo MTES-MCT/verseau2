@@ -1,3 +1,5 @@
+import { QueueOptions } from 'pg-boss/dist/types';
+
 export type SendOptions = {
   id?: string;
   priority?: number;
@@ -28,7 +30,7 @@ export type ReqData = unknown;
 export type WorkHandler<ReqData> = (job: ReqData[]) => Promise<unknown>;
 
 export interface PgBoss<TData = object> {
-  createQueue(name: string): Promise<void>;
+  createQueue(name: string, options?: QueueOptions): Promise<void>;
   send(name: string, data?: TData, options?: SendOptions): Promise<string | null>;
   work<ReqData = TData>(name: string, options: WorkOptions, handler: WorkHandler<ReqData>): Promise<string>;
   start(): Promise<void>;

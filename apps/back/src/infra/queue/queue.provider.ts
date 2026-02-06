@@ -2,6 +2,16 @@ import { ConfigService } from '@nestjs/config';
 import { PgBoss } from 'pg-boss';
 import { PGBOSS, QueueName } from './queue';
 import { LoggerService } from '@shared/logger/logger.service';
+import { UpdateQueueOptions } from 'pg-boss/dist/types';
+
+const TWO_HOURS_IN_SECONDS = 2 * 60 * 60;
+
+const queueOptions: Partial<Record<QueueName, UpdateQueueOptions>> = {
+  [QueueName.controle_sandre]: {
+    expireInSeconds: TWO_HOURS_IN_SECONDS,
+    retryLimit: 0,
+  },
+};
 
 /**
  * Create and initialize all required queues
@@ -10,7 +20,13 @@ async function initializeQueues(boss: PgBoss, logger: LoggerService): Promise<vo
   const queueNames = Object.values(QueueName);
   const createQueuePromises = queueNames.map(async (queueName) => {
     try {
-      await boss.createQueue(queueName);
+      const options = queueOptions[queueName];
+      await boss.createQueue(queueName, options);
+
+      if (options) {
+        await boss.updateQueue(queueName, options);
+      }
+
       logger.log(`Queue "${queueName}" initialized`);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -42,6 +58,19 @@ export const queueProvider = {
 
     // Initialize all queues and fail-fast if any fail
     await initializeQueues(boss, logger);
+
+    // Log effective queue configuration from database
+    for (const queueName of Object.values(QueueName)) {
+      const queue = await boss.getQueue(queueName);
+      if (queue) {
+        logger.log(`Queue "${queueName}" effective config`, {
+          expireInSeconds: queue.expireInSeconds,
+          retryLimit: queue.retryLimit,
+          retryDelay: queue.retryDelay,
+          retryBackoff: queue.retryBackoff,
+        });
+      }
+    }
 
     return boss;
   },
