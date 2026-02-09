@@ -27,6 +27,11 @@ export class LoggerService extends ConsoleLogger {
     super.log(logMessage);
   }
 
+  warn(message: any, ...optionalParams: [...any, string?]): void {
+    const warnMessage = this.formatArgs(message, ...optionalParams);
+    super.warn(warnMessage);
+  }
+
   error(message: any, ...optionalParams: [...any, string?]): void {
     const errorMessage = this.formatArgs(message, ...optionalParams);
     super.error(errorMessage);

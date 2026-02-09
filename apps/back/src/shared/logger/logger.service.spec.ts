@@ -47,6 +47,12 @@ describe('LoggerService', () => {
     expect(spy).toHaveBeenCalledWith('[cid: test-cid] hello - {"a":1}');
   });
 
+  it('delegates warn with formatted message', () => {
+    const spy = jest.spyOn(ConsoleLogger.prototype, 'warn').mockImplementation(() => undefined);
+    service.warn('hello', { a: 1 });
+    expect(spy).toHaveBeenCalledWith('[cid: test-cid] hello - {"a":1}');
+  });
+
   it('delegates error with formatted message', () => {
     const spy = jest.spyOn(ConsoleLogger.prototype, 'error').mockImplementation(() => undefined);
     service.error('oops', { reason: 'fail' });
