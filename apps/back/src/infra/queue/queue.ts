@@ -30,6 +30,11 @@ export interface QueueOptions {
 
 export const QueueGateway = Symbol('QUEUE');
 export const PGBOSS = Symbol('PGBOSS');
+export const QUEUE_PREFIX = Symbol('QUEUE_PREFIX');
+
+export function resolveQueueName(name: string, prefix?: string): string {
+  return prefix ? `${prefix}__${name}` : name;
+}
 
 export interface EmailJobData {
   params: EmailParams;
