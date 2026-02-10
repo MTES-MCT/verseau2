@@ -8,9 +8,9 @@ import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponse
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
-import type { SandreValidationError } from '@dossier/controle/technique/sandre/sandre';
+import { mapSandreErrors } from '@dossier/controle/technique/sandre/sandre.mapper';
 
-const POLL_INTERVAL_SECONDS = 2;
+const POLL_INTERVAL_SECONDS = 30;
 const MAX_ATTEMPTS = 240; // 240 * 30s = 2 hours
 
 @Injectable()
@@ -96,53 +96,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
       // Result is final (CONFORMANT or NON_CONFORMANT) - process and finalize
       const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
-
-      // Extract error information if present
-      const rawErreur = validationResult.ACQ.AccuseReception.Erreur;
-      const globalSeverity = validationResult.ACQ.AccuseReception['Erreur@attributes']?.SeveriteErreur;
-
-      let errors: SandreValidationError[] = [];
-
-      if (Array.isArray(rawErreur)) {
-        errors = rawErreur.map((item) => {
-          if ('Erreur' in item) {
-            const nested = item;
-            return {
-              code: nested.Erreur.CdErreur,
-              message: nested.Erreur.DescriptifErreur,
-              location: nested.Erreur.LocationErreur,
-              ligne: nested.Erreur.LigneErreur,
-              colonne: nested.Erreur.ColonneErreur,
-              severite:
-                nested.Erreur['@attributes']?.SeveriteErreur ??
-                nested['Erreur@attributes']?.SeveriteErreur ??
-                globalSeverity,
-            };
-          } else {
-            const simple = item;
-            return {
-              code: simple.CdErreur,
-              message: simple.DescriptifErreur,
-              location: simple.LocationErreur,
-              ligne: simple.LigneErreur,
-              colonne: simple.ColonneErreur,
-              severite: simple['@attributes']?.SeveriteErreur ?? globalSeverity,
-            };
-          }
-        });
-      } else if (rawErreur) {
-        const simple = rawErreur;
-        errors = [
-          {
-            code: simple.CdErreur,
-            message: simple.DescriptifErreur,
-            location: simple.LocationErreur,
-            ligne: simple.LigneErreur,
-            colonne: simple.ColonneErreur,
-            severite: simple['@attributes']?.SeveriteErreur ?? globalSeverity,
-          },
-        ];
-      }
+      const errors = mapSandreErrors(validationResult.ACQ.AccuseReception);
 
       this.logger.log(`Depot ${depotId} - SANDRE validation result`, {
         acceptationStatus,
@@ -153,18 +107,17 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         errorsCount: errors.length,
       });
 
-      // Update reponse_sandre with final result
-      const existingResponse = await this.reponseSandreGateway.findByJeton(jeton);
-      if (existingResponse) {
-        await this.reponseSandreGateway.updateReponseSandre(existingResponse.id, {
-          acceptationStatus,
-          isConformant,
-          codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
-          versionScenario: validationResult.ACQ.AccuseReception.VersionScenario,
-          errors,
-          raw: validationResult,
-        });
-      }
+      // Create reponse_sandre with final result
+      await this.reponseSandreGateway.createReponseSandre({
+        depotId,
+        jeton,
+        acceptationStatus,
+        isConformant,
+        codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
+        versionScenario: validationResult.ACQ.AccuseReception.VersionScenario,
+        errors,
+        raw: validationResult,
+      });
 
       // Update depot with SANDRE control result
       await this.depotService.update(depotId, {

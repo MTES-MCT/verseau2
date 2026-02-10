@@ -4,8 +4,7 @@ import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, SandreAcceptationStatus } from '@lib/dossier';
-import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
+import { DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 
@@ -15,7 +14,6 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
     @Inject(S3) private readonly s3: S3,
     private readonly sandreService: SandreService,
     private readonly depotService: DepotService,
-    @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly logger: LoggerService,
   ) {
@@ -23,13 +21,6 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
   }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
-    // Check if already processed (idempotency)
-    const hasAlreadyBeenProcessed = await this.reponseSandreGateway.findByDepotId(depotId);
-    if (hasAlreadyBeenProcessed.length > 0) {
-      this.logger.log(`Depot ${depotId} - File has already been uploaded to SANDRE`, { depotId });
-      return;
-    }
-
     await this.depotService.update(depotId, {
       status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
@@ -52,19 +43,6 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
 
       this.logger.log(`Depot ${depotId} - File uploaded to SANDRE`, {
         jeton: tokenResponse.jeton,
-      });
-
-      // Create initial reponse_sandre record with WAITING status
-      // We'll update this when the poll job gets the final result
-      await this.reponseSandreGateway.createReponseSandre({
-        depotId,
-        jeton: tokenResponse.jeton,
-        acceptationStatus: SandreAcceptationStatus.WAITING,
-        isConformant: false,
-        codeScenario: '', // Will be updated by poll job
-        versionScenario: '', // Will be updated by poll job
-        errors: [],
-        raw: undefined,
       });
 
       // Enqueue the poll job with startAfter: 30 seconds
