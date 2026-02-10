@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SandreAcceptationStatus } from '@lib/dossier';
-import { SandreTokenResponse, SandreUploadParams, SandreValidationResult, SandreValidationSummary } from './sandre';
+import { SandreTokenResponse, SandreUploadParams, SandreValidationResult } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
 interface MockValidationData {
@@ -51,8 +51,8 @@ export class SandreMockService {
    * @param params Upload parameters including file and scenario information
    * @returns Token response with links to check validation status
    */
-  validateFile(params: SandreUploadParams): SandreTokenResponse {
-    this.logger.log('Mock: Validating file with SANDRE', {
+  async validateFile(params: SandreUploadParams): Promise<SandreTokenResponse> {
+    this.logger.warn('MOCK: Validating file with SANDRE', {
       xsd: params.xsd,
       nomSI: params.nomSI,
       versionSI: params.versionSI,
@@ -91,17 +91,21 @@ export class SandreMockService {
 
     this.validationResults.set(jeton, validationData);
 
-    this.logger.log('Mock: File uploaded successfully', {
+    this.logger.warn('MOCK: File uploaded successfully', {
       jeton,
       isConformant,
       acceptationStatus,
     });
 
-    return {
-      jeton,
-      lienAcquittement: `http://mock.sandre.eaufrance.fr/acquittement/${jeton}`,
-      lienCertificat: `http://mock.sandre.eaufrance.fr/certificat/${jeton}`,
-    };
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          jeton,
+          lienAcquittement: `http://mock.sandre.eaufrance.fr/acquittement/${jeton}`,
+          lienCertificat: `http://mock.sandre.eaufrance.fr/certificat/${jeton}`,
+        });
+      }, 100); // Simulate async delay
+    });
   }
 
   /**
@@ -109,8 +113,8 @@ export class SandreMockService {
    * @param token The jeton token from validateFile response
    * @returns Validation result with status and errors
    */
-  getValidationResult(token: string): SandreValidationResult {
-    this.logger.log('Mock: Fetching validation result', { token });
+  async getValidationResult(token: string): Promise<SandreValidationResult> {
+    this.logger.warn('MOCK: Fetching validation result', { token });
 
     const validationData = this.validationResults.get(token);
     if (!validationData) {
@@ -205,58 +209,11 @@ export class SandreMockService {
       },
     };
 
-    return mockResult;
-  }
-
-  /**
-   * Validate a file with SANDRE and wait for the validation result (mock)
-   * This method uploads the file and immediately returns a summary (no polling)
-   * @param params Upload parameters including file and scenario information
-   * @param options Optional configuration (ignored in mock - always returns immediately)
-   * @returns Validation summary with status, conformance, and error information
-   */
-  validateFileAndWait(params: SandreUploadParams): SandreValidationSummary {
-    this.logger.log('Mock: validateFileAndWait called (returning immediately)', {
-      xsd: params.xsd,
-      nomSI: params.nomSI,
-      versionSI: params.versionSI,
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(mockResult);
+      }, 100); // Simulate async delay
     });
-
-    // Upload file and get token
-    const tokenResponse = this.validateFile(params);
-
-    // Immediately get validation result (no polling)
-    const validationResult = this.getValidationResult(tokenResponse.jeton);
-
-    const acceptationStatus = parseInt(validationResult.ACQ.AccuseReception.Acceptation, 10) as SandreAcceptationStatus;
-    const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
-
-    // Extract error information if present
-    const rawErreur = validationResult.ACQ.AccuseReception.Erreur;
-    let error;
-
-    if (rawErreur && !Array.isArray(rawErreur)) {
-      error = {
-        code: rawErreur.CdErreur,
-        message: rawErreur.DescriptifErreur,
-        location: rawErreur.LocationErreur,
-        ligne: rawErreur.LigneErreur,
-        colonne: rawErreur.ColonneErreur,
-        severite: rawErreur['@attributes']?.SeveriteErreur,
-      };
-    }
-
-    const errors = error ? [error] : [];
-
-    return {
-      isConformant,
-      acceptationStatus,
-      jeton: validationResult.ACQ.AccuseReception.Jeton,
-      codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
-      versionScenario: validationResult.ACQ.AccuseReception.VersionScenario,
-      errors,
-      raw: validationResult,
-    };
   }
 
   /**

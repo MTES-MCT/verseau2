@@ -12,7 +12,6 @@ import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauP
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
-import { ControleSandreService } from '@dossier/controle/technique/sandre/sandre.controle';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { SandreAcceptationStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -33,7 +32,6 @@ import {
   SftpTestMock,
   QueueTestMock,
   RoseauGatewayTestMock,
-  ControleSandreTestMock,
   ControleV1TestMock,
   DroitsDepotServiceTestMock,
   UserServiceTestMock,
@@ -45,7 +43,6 @@ describe('Worker Service (e2e)', () => {
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
   let queueMock: QueueTestMock;
-  let sandreMock: ControleSandreTestMock;
   let fileProcessorService: FileProcessorService;
   let sftpProcessorService: SftpAgentVerseauProcessorService;
 
@@ -55,7 +52,6 @@ describe('Worker Service (e2e)', () => {
     s3Mock = new S3TestMock();
     sftpMock = new SftpTestMock();
     queueMock = new QueueTestMock();
-    sandreMock = new ControleSandreTestMock();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -80,7 +76,6 @@ describe('Worker Service (e2e)', () => {
         { provide: S3, useValue: s3Mock },
         { provide: Sftp, useValue: sftpMock },
         { provide: QueueGateway, useValue: queueMock },
-        { provide: ControleSandreService, useValue: sandreMock },
         { provide: ControleV1Service, useClass: ControleV1TestMock },
         { provide: RoseauGateway, useClass: RoseauGatewayTestMock },
         loggerProviderMock,
@@ -125,7 +120,6 @@ describe('Worker Service (e2e)', () => {
 
       // Reset mocks
       queueMock.reset();
-      sandreMock.acceptationStatus = SandreAcceptationStatus.CONFORMANT;
 
       // Process file
       await fileProcessorService.process({
@@ -153,7 +147,7 @@ describe('Worker Service (e2e)', () => {
             },
           }),
           expect.objectContaining({
-            name: QueueName.controle_sandre,
+            name: QueueName.controle_sandre_upload,
             data: {
               depotId: depot.id,
               filePath: 'test_file.xml',

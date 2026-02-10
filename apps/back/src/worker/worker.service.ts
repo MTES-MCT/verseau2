@@ -8,7 +8,8 @@ import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
-import { ControleSandreProcessorService } from './controleSandre/controle-sandre.processor.service';
+import { ControleSandreUploadProcessorService } from './controleSandre/controle-sandre-upload.processor.service';
+import { ControleSandrePollProcessorService } from './controleSandre/controle-sandre-poll.processor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import { EmailProvider } from '@notification/email.provider';
 
@@ -19,7 +20,8 @@ export class WorkerService implements OnModuleInit {
     [QueueName.email]: { batchSize: 10 },
     [QueueName.send_to_sftp]: { batchSize: 5 },
     [QueueName.controle_metier]: { batchSize: 5 },
-    [QueueName.controle_sandre]: { batchSize: 5 },
+    [QueueName.controle_sandre_upload]: { batchSize: 1 },
+    [QueueName.controle_sandre_poll]: { batchSize: 1 },
     [QueueName.process_after_masa_webhook]: { batchSize: 3 },
   };
 
@@ -28,7 +30,8 @@ export class WorkerService implements OnModuleInit {
     private readonly fileProcessorService: FileProcessorService,
     private readonly sftpProcessorService: SftpAgentVerseauProcessorService,
     private readonly controleMetierProcessorService: ControleMetierProcessorService,
-    private readonly controleSandreProcessorService: ControleSandreProcessorService,
+    private readonly controleSandreUploadProcessorService: ControleSandreUploadProcessorService,
+    private readonly controleSandrePollProcessorService: ControleSandrePollProcessorService,
     private readonly masaProcessorService: MasaWebhookProcessorService,
     @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
     private readonly cls: ClsService<CustomClsStore>,
@@ -122,17 +125,17 @@ export class WorkerService implements OnModuleInit {
             },
           );
           break;
-        case QueueName.controle_sandre:
+        case QueueName.controle_sandre_upload:
           await this.queueService.work<{ depotId: string; filePath: string; correlationId?: string }>(
             queueName,
             options,
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing jobId', job.id);
+                this.logger.log('Processing SANDRE upload jobId', job.id);
                 try {
-                  return await this.controleSandreProcessorService.process(job.data);
+                  return await this.controleSandreUploadProcessorService.process(job.data);
                 } catch (error) {
-                  this.logger.error('Job processing failed', {
+                  this.logger.error('SANDRE upload job processing failed', {
                     jobId: job.id,
                     error: error instanceof Error ? error.message : (error as string),
                     stack: error instanceof Error ? error.stack : undefined,
@@ -142,6 +145,28 @@ export class WorkerService implements OnModuleInit {
               });
             },
           );
+          break;
+        case QueueName.controle_sandre_poll:
+          await this.queueService.work<{
+            depotId: string;
+            jeton: string;
+            attemptCount: number;
+            correlationId?: string;
+          }>(queueName, options, async ([job]) => {
+            return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+              this.logger.log('Processing SANDRE poll jobId', job.id);
+              try {
+                return await this.controleSandrePollProcessorService.process(job.data);
+              } catch (error) {
+                this.logger.error('SANDRE poll job processing failed', {
+                  jobId: job.id,
+                  error: error instanceof Error ? error.message : (error as string),
+                  stack: error instanceof Error ? error.stack : undefined,
+                });
+                throw error; // Re-throw so pg-boss still marks it as failed for retry
+              }
+            });
+          });
           break;
         case QueueName.process_after_masa_webhook:
           await this.queueService.work<{ masaId: string; depotId: string; correlationId?: string }>(

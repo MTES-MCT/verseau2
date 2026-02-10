@@ -74,7 +74,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
           depotId: fichierDeDepot.depotId,
           filePath: fichierDeDepot.filePath,
         }),
-        this.queueService.send(QueueName.controle_sandre, {
+        this.queueService.send(QueueName.controle_sandre_upload, {
           depotId: fichierDeDepot.depotId,
           filePath: fichierDeDepot.filePath,
         }),
