@@ -1,7 +1,8 @@
 import { Inject, Module, OnModuleDestroy } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseModule } from '@database/database.module';
 import { QueueService } from './queue.service';
-import { QueueGateway, PGBOSS } from './queue';
+import { QueueGateway, PGBOSS, QUEUE_PREFIX } from './queue';
 import { queueProvider } from './queue.provider';
 import { LoggerService } from '@shared/logger/logger.service';
 import type { PgBoss } from './pgboss';
@@ -31,7 +32,17 @@ class QueueShutdownService implements OnModuleDestroy {
 
 @Module({
   imports: [DatabaseModule],
-  providers: [queueProvider, QueueService, QueueShutdownService, { provide: QueueGateway, useExisting: QueueService }],
+  providers: [
+    queueProvider,
+    {
+      provide: QUEUE_PREFIX,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => configService.get<string>('QUEUE_PREFIX'),
+    },
+    QueueService,
+    QueueShutdownService,
+    { provide: QueueGateway, useExisting: QueueService },
+  ],
   exports: [QueueGateway],
 })
 export class QueueModule {}
