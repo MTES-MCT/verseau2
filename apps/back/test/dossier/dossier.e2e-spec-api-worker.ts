@@ -274,7 +274,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       });
 
       const metierJobs = await getJobsForDepot(dataSource, QueueName.controle_metier, depotId);
-      const sandreJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre, depotId);
+      const sandreJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_upload, depotId);
       expect(metierJobs.length).toBe(0);
       expect(sandreJobs.length).toBe(0);
 
@@ -309,11 +309,11 @@ describe('Dossier E2E - Real Queue Processing', () => {
         where: { id: depotId },
       });
       // Check that control jobs were created in the pgboss.job table
-      // FileProcessor dispatches to controle_metier and controle_sandre queues
+      // FileProcessor dispatches to controle_metier and controle_sandre_upload queues
       const controlJobs = await dataSource.query(
         `SELECT name, data, state FROM pgboss.job 
          WHERE (name = $1 OR name = $2) AND data->>'depotId' = $3`,
-        [QueueName.controle_metier, QueueName.controle_sandre, depotId],
+        [QueueName.controle_metier, QueueName.controle_sandre_upload, depotId],
       );
 
       // At least one control job should exist (both should be dispatched if rights check passes)
@@ -325,7 +325,11 @@ describe('Dossier E2E - Real Queue Processing', () => {
           timeoutMs: 10000,
           pollIntervalMs: 200,
         }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre, depotId, {
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
           timeoutMs: 10000,
           pollIntervalMs: 200,
         }),

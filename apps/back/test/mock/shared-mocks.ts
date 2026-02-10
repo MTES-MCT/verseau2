@@ -8,8 +8,6 @@ import type { S3 } from '@infra/s3/s3';
 import type { Sftp } from '@infra/sftp/sftp';
 import type { Queue, QueueJob, QueueOptions } from '@infra/queue/queue';
 import type { UserEntity } from '@user/user.entity';
-import { SandreAcceptationStatus } from '@lib/dossier';
-
 // ============= Infrastructure Mocks =============
 
 /**
@@ -296,28 +294,6 @@ export class DroitsUserServiceTestMock {
   reset(): void {
     this.mockItvCdn = 100;
     this.resolveItvCdn.mockClear().mockImplementation(() => Promise.resolve(this.mockItvCdn));
-  }
-}
-
-/**
- * Mock for ControleSandreService.
- */
-export class ControleSandreTestMock {
-  acceptationStatus: SandreAcceptationStatus = SandreAcceptationStatus.CONFORMANT;
-
-  async execute() {
-    await Promise.resolve();
-    return {
-      isConformant: this.acceptationStatus === SandreAcceptationStatus.CONFORMANT,
-      acceptationStatus: this.acceptationStatus,
-      jeton: 'mock-jeton',
-      codeScenario: '2A',
-      versionScenario: '2024.1',
-    };
-  }
-
-  reset(): void {
-    this.acceptationStatus = SandreAcceptationStatus.CONFORMANT;
   }
 }
 

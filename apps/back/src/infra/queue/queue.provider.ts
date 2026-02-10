@@ -4,12 +4,14 @@ import { PGBOSS, QueueName, resolveQueueName } from './queue';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UpdateQueueOptions } from 'pg-boss/dist/types';
 
-const TWO_HOURS_IN_SECONDS = 2 * 60 * 60;
-
 const queueOptions: Partial<Record<QueueName, UpdateQueueOptions>> = {
-  [QueueName.controle_sandre]: {
-    expireInSeconds: TWO_HOURS_IN_SECONDS,
-    retryLimit: 0,
+  [QueueName.controle_sandre_upload]: {
+    expireInSeconds: 120, // 2 minutes
+    retryLimit: 2,
+  },
+  [QueueName.controle_sandre_poll]: {
+    expireInSeconds: 60, // 1 minute
+    retryLimit: 2,
   },
 };
 

@@ -12,7 +12,6 @@ import { SandreMockService } from './controle/technique/sandre/sandre.mock.servi
 import { ReponseSandreEntity } from './controle/technique/sandre/reponseSandre.entity';
 import { ReponseSandreRepository } from './controle/technique/sandre/reponseSandre.repository';
 import { ReponseSandreGateway } from './controle/technique/sandre/reponseSandre.gateway';
-import { ControleSandreService } from './controle/technique/sandre/sandre.controle';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserModule } from '@user/user.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
@@ -68,7 +67,6 @@ const sandreServiceFactory = {
     // Sandre control
     sandreServiceFactory,
     { provide: ReponseSandreGateway, useClass: ReponseSandreRepository },
-    ControleSandreService,
     // ISO V1 control
     ControleV1Service,
     ControleMetierV2Service,
@@ -85,7 +83,8 @@ const sandreServiceFactory = {
     DepotService,
     DroitsDepotService,
     DepotCoordinatorService,
-    ControleSandreService,
+    SandreService,
+    ReponseSandreGateway,
     ControleV1Service,
     ControleMetierV2Service,
     RapportPdfGeneratorService,

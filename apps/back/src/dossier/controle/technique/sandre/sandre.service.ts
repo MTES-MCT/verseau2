@@ -1,14 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
-import { SandreAcceptationStatus } from '@lib/dossier';
-import {
-  SandreTokenResponse,
-  SandreUploadParams,
-  SandreValidationError,
-  SandreValidationResult,
-  SandreValidationSummary,
-} from './sandre';
+import { SandreTokenResponse, SandreUploadParams, SandreValidationResult } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
@@ -132,120 +125,5 @@ export class SandreService {
       }
       throw error;
     }
-  }
-
-  /**
-   * Validate a file with SANDRE and wait for the validation result
-   * This method uploads the file, polls for results, and returns a summary
-   * @param params Upload parameters including file and scenario information
-   * @param options Optional configuration for polling behavior
-   * @returns Validation summary with status, conformance, and error information
-   */
-  async validateFileAndWait(
-    params: SandreUploadParams,
-    options?: {
-      /** Polling interval in milliseconds (default: 10000) */
-      pollInterval?: number;
-      /** Maximum number of polling attempts (default: 600, which is 10 minutes at 10s intervals) */
-      maxAttempts?: number;
-    },
-  ): Promise<SandreValidationSummary> {
-    const pollInterval = options?.pollInterval ?? 10000; // 10 seconds
-    const maxAttempts = options?.maxAttempts ?? 600; // 10 minutes
-
-    // Upload file and get token
-    const tokenResponse = await this.validateFile(params);
-
-    this.logger.log('File uploaded to SANDRE', {
-      jeton: tokenResponse.jeton,
-      lienAcquittement: tokenResponse.lienAcquittement,
-    });
-
-    // Poll for validation result
-    let validationResult: SandreValidationResult | null = null;
-    for (let i = 0; i < maxAttempts; i++) {
-      const validation = await this.getValidationResult(tokenResponse.jeton);
-      const acceptationStatus = Number(validation.ACQ.AccuseReception.Acceptation) as SandreAcceptationStatus;
-
-      validationResult = validation;
-
-      // Check if validation is complete (not waiting or processing)
-      if (
-        acceptationStatus === SandreAcceptationStatus.CONFORMANT ||
-        acceptationStatus === SandreAcceptationStatus.NON_CONFORMANT
-      ) {
-        break;
-      }
-
-      // Wait before next poll
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
-    }
-
-    if (!validationResult) {
-      throw new Error('Failed to get validation result from SANDRE');
-    }
-
-    const acceptationStatus = Number(validationResult.ACQ.AccuseReception.Acceptation) as SandreAcceptationStatus;
-    const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
-
-    // Extract error information if present
-    const rawErreur = validationResult.ACQ.AccuseReception.Erreur;
-    const globalSeverity = validationResult.ACQ.AccuseReception['Erreur@attributes']?.SeveriteErreur;
-
-    let errors: SandreValidationError[] = [];
-
-    if (Array.isArray(rawErreur)) {
-      errors = rawErreur.map((item) => {
-        if ('Erreur' in item) {
-          const nested = item;
-          return {
-            code: nested.Erreur.CdErreur,
-            message: nested.Erreur.DescriptifErreur,
-            location: nested.Erreur.LocationErreur,
-            ligne: nested.Erreur.LigneErreur,
-            colonne: nested.Erreur.ColonneErreur,
-            severite:
-              nested.Erreur['@attributes']?.SeveriteErreur ??
-              nested['Erreur@attributes']?.SeveriteErreur ??
-              globalSeverity,
-          };
-        } else {
-          const simple = item;
-          return {
-            code: simple.CdErreur,
-            message: simple.DescriptifErreur,
-            location: simple.LocationErreur,
-            ligne: simple.LigneErreur,
-            colonne: simple.ColonneErreur,
-            severite: simple['@attributes']?.SeveriteErreur ?? globalSeverity,
-          };
-        }
-      });
-    } else if (rawErreur) {
-      const simple = rawErreur;
-      errors = [
-        {
-          code: simple.CdErreur,
-          message: simple.DescriptifErreur,
-          location: simple.LocationErreur,
-          ligne: simple.LigneErreur,
-          colonne: simple.ColonneErreur,
-          severite: simple['@attributes']?.SeveriteErreur ?? globalSeverity,
-        },
-      ];
-    }
-
-    const error = errors.length > 0 ? errors[0] : undefined;
-
-    return {
-      isConformant,
-      acceptationStatus,
-      jeton: validationResult.ACQ.AccuseReception.Jeton,
-      codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
-      versionScenario: validationResult.ACQ.AccuseReception.VersionScenario,
-      error,
-      errors,
-      raw: validationResult,
-    };
   }
 }
