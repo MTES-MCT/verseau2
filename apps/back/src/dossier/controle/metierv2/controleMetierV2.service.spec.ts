@@ -817,7 +817,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '400' }], // Volume A3 = 40 m³ (40*6=240 > 200)
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '2500' }],
                   },
                 ],
               },
@@ -826,7 +826,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '180' }], // Volume A4 = 18 m³
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '180' }],
                   },
                 ],
               },
@@ -840,7 +840,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL051);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '400.20', '400', '≥', '180', '≥']);
+      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '2500', '≥', '180', '<']);
     });
 
     it('should return an error when volume A4 exceeds threshold', async () => {
@@ -859,7 +859,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '200' }], // Volume A3 = 20 m³
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '200' }],
                   },
                 ],
               },
@@ -868,7 +868,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '500' }], // Volume A4 = 50 m³ (50*6=300 > 200)
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '3000' }],
                   },
                 ],
               },
@@ -882,7 +882,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL051);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '400.20', '200', '≥', '500', '≥']);
+      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '200', '<', '3000', '≥']);
     });
 
     it('should return an error when both volumes exceed threshold', async () => {
@@ -901,7 +901,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '400' }],
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '2500' }],
                   },
                 ],
               },
@@ -910,7 +910,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '500' }],
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '3000' }],
                   },
                 ],
               },
@@ -924,7 +924,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL051);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '400.20', '400', '≥', '500', '≥']);
+      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '2500', '≥', '3000', '≥']);
     });
 
     it('should return no error when capacity is not found', async () => {
@@ -1065,7 +1065,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '100' }], // Volume élevé (100*6=600 > 400.2)
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '2500' }],
                   },
                 ],
               },
@@ -1074,7 +1074,7 @@ describe('ControleMetierV2Service', () => {
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
-                    analyse: [{ cdParametre: '1552', rsAnalyse: '100' }], // Volume élevé (100*6=600 > 400.2)
+                    analyse: [{ cdParametre: '1552', rsAnalyse: '2500' }],
                   },
                 ],
               },

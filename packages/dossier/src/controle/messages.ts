@@ -255,7 +255,7 @@ const buildErrorMessage51 = (params: string[]) => {
   const p = params as ErrorParamsMap[ErrorCode.E2_051];
   if (p.length === 7) {
     const [cdOuvrage, date, seuil, valA3, testA3, valA4, testA4] = p;
-    return `Volume A3/A4 incohérent vs capacité EH pour l'ouvrage ${cdOuvrage}, date ${date}. Seuil = ${seuil} EH. A3: ${valA3}*6 ${testA3} seuil ; A4: ${valA4}*6 ${testA4} seuil`;
+    return `Volume A3/A4 incohérent vs capacité EH pour l'ouvrage ${cdOuvrage}, date ${date}. Seuil = ${seuil} m³/j. A3: ${valA3} ${testA3} seuil ; A4: ${valA4} ${testA4} seuil`;
   } else {
     return `Date ${p[0]} invalide pour le contrôle des volumes A3/A4 vs capacité EH.`;
   }

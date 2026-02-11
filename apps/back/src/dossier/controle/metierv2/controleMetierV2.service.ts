@@ -441,9 +441,9 @@ export class ControleMetierV2Service {
         const { volumeA3, volumeA4 } = volumes;
 
         if (volumeA3 !== undefined && volumeA4 !== undefined) {
-          const seuil = capaciteEH * 0.2;
-          const testA3 = volumeA3 * 6 < seuil;
-          const testA4 = volumeA4 * 6 < seuil;
+          const seuil = capaciteEH * 0.2 * 6;
+          const testA3 = volumeA3 < seuil;
+          const testA4 = volumeA4 < seuil;
 
           if (!testA3 || !testA4) {
             errors.push({

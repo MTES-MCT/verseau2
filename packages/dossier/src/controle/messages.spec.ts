@@ -102,9 +102,9 @@ describe('buildMessage', () => {
     expect(result).toContain('Volume A3/A4 incohérent vs capacité EH');
     expect(result).toContain('ouvrage OUV444');
     expect(result).toContain('date 2024-07-01');
-    expect(result).toContain('Seuil = 5000 EH');
-    expect(result).toContain('A3: 6500*6 > seuil');
-    expect(result).toContain('A4: 7000*6 < seuil');
+    expect(result).toContain('Seuil = 5000 m³/j');
+    expect(result).toContain('A3: 6500 > seuil');
+    expect(result).toContain('A4: 7000 < seuil');
   });
 
   it('devrait retourner le message pour E2_999 (erreur technique)', () => {
