@@ -342,13 +342,19 @@ export async function seedCxnadm(
   );
 }
 
-export async function seedPmo(dataSource: DataSource, pmoCdn: number, steuCdn: number, pmoNo: string): Promise<void> {
+export async function seedPmo(
+  dataSource: DataSource,
+  pmoCdn: number,
+  steuCdn: number,
+  pmoNo: string,
+  tlref16Cdn?: number,
+): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.pmo (pmo_cdn, steu_cdn, pmo_no)
-    VALUES ($1, $2, $3)
+    INSERT INTO roseau.pmo (pmo_cdn, steu_cdn, pmo_no, tlref_16_cdn)
+    VALUES ($1, $2, $3, $4)
   `,
-    [pmoCdn, steuCdn, pmoNo],
+    [pmoCdn, steuCdn, pmoNo, tlref16Cdn ?? null],
   );
 }
 

@@ -298,11 +298,13 @@ describe('ControleV1Service (e2e)', () => {
   });
 
   describe('CTL005 - verifyPmoExists', () => {
-    it.skip('should pass when PMO exists', async () => {
-      // Seed data
+    it('should pass when PMO exists', async () => {
+      // Seed data: STEU, TLREF for the location point, and PMO linked to both
       await seedSteu(dataSource, 1, '0600000001');
-      await seedPmo(dataSource, 1, 1, '1');
-      await seedTlref(dataSource, 1, 'LREF_44', '1A');
+      // TLREF with tlref_cdn=1 holds the location code '1A'
+      await seedTlref(dataSource, 1, 'LREF_16', '1A');
+      // PMO linked to steu_cdn=1, pmo_no='1', and tlref_16_cdn=1 (the location TLREF)
+      await seedPmo(dataSource, 1, 1, '1', 1);
 
       // Create depot
       await seedDepot(dataSource, 'dep_test_005');
