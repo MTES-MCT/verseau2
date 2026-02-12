@@ -23,6 +23,13 @@ import {
   seedCxnadm,
   seedPmo,
   seedTlref,
+  seedSup,
+  seedFan,
+  seedPar,
+  seedUrf,
+  seedScl,
+  seedAga,
+  seedCxntech,
 } from '../../../createReferentielDataset';
 import { seedDepot, clearDepots } from '../../../depot.helper';
 import type { Analyse } from '@lib/parser';
@@ -194,6 +201,102 @@ describe('ControleV1Service (e2e)', () => {
     });
   });
 
+  describe('CTL004 - verifyExpSteuExists', () => {
+    it('should pass when exploitant connection exists', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedItv(dataSource, 1001, 'EXP_SIRET');
+      // cxnadm with exp_steu_cdn = 1 (steu_cdn) and steu_itv_cdn = 1001 (itv_cdn)
+      await seedCxnadm(dataSource, 1, 0, 1001, 1);
+
+      await seedDepot(dataSource, 'dep_test_ctl004_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            exploitant: { cdIntervenant: 'EXP_SIRET' },
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl004_pass', fctAssainissement);
+
+      const ctl004 = controles.find((c) => c.name === ControleName.CTL004);
+      expect(ctl004).toBeDefined();
+      expect(ctl004?.success).toBe(true);
+    });
+
+    it('should fail when exploitant ITV does not exist', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl004_fail_itv');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            exploitant: { cdIntervenant: 'UNKNOWN_EXP' },
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl004_fail_itv', fctAssainissement);
+
+      const ctl004 = controles.find((c) => c.name === ControleName.CTL004);
+      expect(ctl004).toBeDefined();
+      expect(ctl004?.success).toBe(false);
+      expect(ctl004?.error).toBe(ErrorCode.E2_005);
+    });
+
+    it('should fail when cxnadm link does not exist for exploitant', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedItv(dataSource, 1001, 'EXP_SIRET');
+      // No cxnadm with exp_steu_cdn matching
+
+      await seedDepot(dataSource, 'dep_test_ctl004_fail_cxn');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            exploitant: { cdIntervenant: 'EXP_SIRET' },
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl004_fail_cxn', fctAssainissement);
+
+      const ctl004 = controles.find((c) => c.name === ControleName.CTL004);
+      expect(ctl004).toBeDefined();
+      expect(ctl004?.success).toBe(false);
+      expect(ctl004?.error).toBe(ErrorCode.E2_005);
+    });
+
+    it('should pass when no exploitant is provided (skipped)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl004_skip');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl004_skip', fctAssainissement);
+
+      const ctl004 = controles.find((c) => c.name === ControleName.CTL004);
+      expect(ctl004).toBeDefined();
+      expect(ctl004?.success).toBe(true);
+    });
+  });
+
   describe('CTL005 - verifyPmoExists', () => {
     it.skip('should pass when PMO exists', async () => {
       // Seed data
@@ -246,6 +349,520 @@ describe('ControleV1Service (e2e)', () => {
     });
   });
 
+  describe('CTL006 - verifySupExists', () => {
+    it('should pass when support exists', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedSup(dataSource, 'SUP001');
+
+      await seedDepot(dataSource, 'dep_test_ctl006_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    cdSupport: 'SUP001',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl006_pass', fctAssainissement);
+
+      const ctl006 = controles.find((c) => c.name === ControleName.CTL006);
+      expect(ctl006).toBeDefined();
+      expect(ctl006?.success).toBe(true);
+    });
+
+    it('should fail when support does not exist', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl006_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    cdSupport: 'UNKNOWN_SUP',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl006_fail', fctAssainissement);
+
+      const ctl006 = controles.find((c) => c.name === ControleName.CTL006);
+      expect(ctl006).toBeDefined();
+      expect(ctl006?.success).toBe(false);
+      expect(ctl006?.error).toBe(ErrorCode.E2_006);
+    });
+  });
+
+  describe('CTL007 - verifyLieuAnalyseExists', () => {
+    it('should pass when lieu analyse exists in TLREF (LREF_43)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_43', 'LIEU001');
+
+      await seedDepot(dataSource, 'dep_test_ctl007_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ inSituAnalyse: 'LIEU001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl007_pass', fctAssainissement);
+
+      const ctl007 = controles.find((c) => c.name === ControleName.CTL007);
+      expect(ctl007).toBeDefined();
+      expect(ctl007?.success).toBe(true);
+    });
+
+    it('should fail when lieu analyse does not exist in TLREF (LREF_43)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl007_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ inSituAnalyse: 'UNKNOWN_LIEU' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl007_fail', fctAssainissement);
+
+      const ctl007 = controles.find((c) => c.name === ControleName.CTL007);
+      expect(ctl007).toBeDefined();
+      expect(ctl007?.success).toBe(false);
+      expect(ctl007?.error).toBe(ErrorCode.E2_007);
+    });
+  });
+
+  describe('CTL008 - verifyStatutAnalyseExists', () => {
+    it('should pass when statut analyse exists in TLREF (LREF_20)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_20', 'STAT001');
+
+      await seedDepot(dataSource, 'dep_test_ctl008_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ statutRsAnalyse: 'STAT001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl008_pass', fctAssainissement);
+
+      const ctl008 = controles.find((c) => c.name === ControleName.CTL008);
+      expect(ctl008).toBeDefined();
+      expect(ctl008?.success).toBe(true);
+    });
+
+    it('should fail when statut analyse does not exist in TLREF (LREF_20)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl008_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ statutRsAnalyse: 'UNKNOWN_STATUT' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl008_fail', fctAssainissement);
+
+      const ctl008 = controles.find((c) => c.name === ControleName.CTL008);
+      expect(ctl008).toBeDefined();
+      expect(ctl008?.success).toBe(false);
+      expect(ctl008?.error).toBe(ErrorCode.E2_008);
+    });
+  });
+
+  describe('CTL009 - verifyQualAnalyseExists', () => {
+    it('should pass when qualification analyse exists in TLREF (LREF_18)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_18', 'QUAL001');
+
+      await seedDepot(dataSource, 'dep_test_ctl009_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ qualRsAnalyse: 'QUAL001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl009_pass', fctAssainissement);
+
+      const ctl009 = controles.find((c) => c.name === ControleName.CTL009);
+      expect(ctl009).toBeDefined();
+      expect(ctl009?.success).toBe(true);
+    });
+
+    it('should fail when qualification analyse does not exist in TLREF (LREF_18)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl009_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ qualRsAnalyse: 'UNKNOWN_QUAL' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl009_fail', fctAssainissement);
+
+      const ctl009 = controles.find((c) => c.name === ControleName.CTL009);
+      expect(ctl009).toBeDefined();
+      expect(ctl009?.success).toBe(false);
+      expect(ctl009?.error).toBe(ErrorCode.E2_009);
+    });
+  });
+
+  describe('CTL010 - verifyFanExists', () => {
+    it('should pass when fraction analysee exists', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedFan(dataSource, 'FAN001');
+
+      await seedDepot(dataSource, 'dep_test_ctl010_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdFractionAnalysee: 'FAN001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl010_pass', fctAssainissement);
+
+      const ctl010 = controles.find((c) => c.name === ControleName.CTL010);
+      expect(ctl010).toBeDefined();
+      expect(ctl010?.success).toBe(true);
+    });
+
+    it('should fail when fraction analysee does not exist', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl010_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdFractionAnalysee: 'UNKNOWN_FAN' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl010_fail', fctAssainissement);
+
+      const ctl010 = controles.find((c) => c.name === ControleName.CTL010);
+      expect(ctl010).toBeDefined();
+      expect(ctl010?.success).toBe(false);
+      expect(ctl010?.error).toBe(ErrorCode.E2_010);
+    });
+  });
+
+  describe('CTL011 - verifyMethodeAnalyseExists', () => {
+    it('should pass when methode analyse exists in TLREF (LREF_45)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_45', 'METH001');
+
+      await seedDepot(dataSource, 'dep_test_ctl011_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdMethode: 'METH001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl011_pass', fctAssainissement);
+
+      const ctl011 = controles.find((c) => c.name === ControleName.CTL011);
+      expect(ctl011).toBeDefined();
+      expect(ctl011?.success).toBe(true);
+    });
+
+    it('should fail when methode analyse does not exist in TLREF (LREF_45)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl011_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdMethode: 'UNKNOWN_METH' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl011_fail', fctAssainissement);
+
+      const ctl011 = controles.find((c) => c.name === ControleName.CTL011);
+      expect(ctl011).toBeDefined();
+      expect(ctl011?.success).toBe(false);
+      expect(ctl011?.error).toBe(ErrorCode.E2_011);
+    });
+  });
+
+  describe('CTL012 - verifyParametreExists', () => {
+    it('should pass when parametre exists', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedPar(dataSource, 'PAR001');
+
+      await seedDepot(dataSource, 'dep_test_ctl012_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdParametre: 'PAR001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl012_pass', fctAssainissement);
+
+      const ctl012 = controles.find((c) => c.name === ControleName.CTL012);
+      expect(ctl012).toBeDefined();
+      expect(ctl012?.success).toBe(true);
+    });
+
+    it('should fail when parametre does not exist', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl012_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdParametre: 'UNKNOWN_PAR' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl012_fail', fctAssainissement);
+
+      const ctl012 = controles.find((c) => c.name === ControleName.CTL012);
+      expect(ctl012).toBeDefined();
+      expect(ctl012?.success).toBe(false);
+      expect(ctl012?.error).toBe(ErrorCode.E2_012);
+    });
+  });
+
+  describe('CTL013 - verifyUniteMesureExists', () => {
+    it('should pass when unite de mesure exists', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedUrf(dataSource, 'URF001');
+
+      await seedDepot(dataSource, 'dep_test_ctl013_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdUniteMesure: 'URF001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl013_pass', fctAssainissement);
+
+      const ctl013 = controles.find((c) => c.name === ControleName.CTL013);
+      expect(ctl013).toBeDefined();
+      expect(ctl013?.success).toBe(true);
+    });
+
+    it('should fail when unite de mesure does not exist', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl013_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdUniteMesure: 'UNKNOWN_URF' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl013_fail', fctAssainissement);
+
+      const ctl013 = controles.find((c) => c.name === ControleName.CTL013);
+      expect(ctl013).toBeDefined();
+      expect(ctl013?.success).toBe(false);
+      expect(ctl013?.error).toBe(ErrorCode.E2_013);
+    });
+  });
+
   describe('CTL014 - verifyIntervenantExists', () => {
     it('should pass when intervenant exists', async () => {
       // Seed ITV
@@ -291,6 +908,70 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl014).toBeDefined();
       expect(ctl014?.success).toBe(false);
       expect(ctl014?.error).toBe(ErrorCode.E2_014);
+    });
+  });
+
+  describe('CTL015 - verifyFinaliteAnalyseExists', () => {
+    it('should pass when finalite analyse exists in TLREF (LREF_17)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_17', 'FIN001');
+
+      await seedDepot(dataSource, 'dep_test_ctl015_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ finalite: 'FIN001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl015_pass', fctAssainissement);
+
+      const ctl015 = controles.find((c) => c.name === ControleName.CTL015);
+      expect(ctl015).toBeDefined();
+      expect(ctl015?.success).toBe(true);
+    });
+
+    it('should fail when finalite analyse does not exist in TLREF (LREF_17)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl015_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ finalite: 'UNKNOWN_FIN' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl015_fail', fctAssainissement);
+
+      const ctl015 = controles.find((c) => c.name === ControleName.CTL015);
+      expect(ctl015).toBeDefined();
+      expect(ctl015?.success).toBe(false);
+      expect(ctl015?.error).toBe(ErrorCode.E2_015);
     });
   });
 
@@ -357,6 +1038,768 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl016).toBeDefined();
       expect(ctl016?.success).toBe(false);
       expect(ctl016?.error).toBe(ErrorCode.E2_016);
+    });
+  });
+
+  describe('CTL017 - verifyPeriodeCalculBouesExists', () => {
+    it('should pass when periode de calcul exists in TLREF (LREF_61)', async () => {
+      await seedTlref(dataSource, 1, 'LREF_61', 'PERIOD001');
+
+      await seedDepot(dataSource, 'dep_test_ctl017_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            valeurCaracteristiqueRejets: [
+              {
+                periodeCalcul: 'PERIOD001',
+                destination: { cdOuvrageAval: '', typeOuvrageAval: '' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl017_pass', fctAssainissement);
+
+      const ctl017 = controles.find((c) => c.name === ControleName.CTL017);
+      expect(ctl017).toBeDefined();
+      expect(ctl017?.success).toBe(true);
+    });
+
+    it('should fail when periode de calcul does not exist in TLREF (LREF_61)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl017_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            valeurCaracteristiqueRejets: [
+              {
+                periodeCalcul: 'UNKNOWN_PERIOD',
+                destination: { cdOuvrageAval: '', typeOuvrageAval: '' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl017_fail', fctAssainissement);
+
+      const ctl017 = controles.find((c) => c.name === ControleName.CTL017);
+      expect(ctl017).toBeDefined();
+      expect(ctl017?.success).toBe(false);
+      expect(ctl017?.error).toBe(ErrorCode.E2_017);
+    });
+  });
+
+  describe('CTL018 - verifyTypeOuvrageAvalBouesExists', () => {
+    it('should pass when type ouvrage aval exists in TLREF (LREF_15)', async () => {
+      await seedTlref(dataSource, 1, 'LREF_15', 'TOA001');
+
+      await seedDepot(dataSource, 'dep_test_ctl018_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            valeurCaracteristiqueRejets: [
+              {
+                periodeCalcul: '',
+                destination: { cdOuvrageAval: '', typeOuvrageAval: 'TOA001' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl018_pass', fctAssainissement);
+
+      const ctl018 = controles.find((c) => c.name === ControleName.CTL018);
+      expect(ctl018).toBeDefined();
+      expect(ctl018?.success).toBe(true);
+    });
+
+    it('should fail when type ouvrage aval does not exist in TLREF (LREF_15)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl018_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            valeurCaracteristiqueRejets: [
+              {
+                periodeCalcul: '',
+                destination: { cdOuvrageAval: '', typeOuvrageAval: 'UNKNOWN_TOA' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl018_fail', fctAssainissement);
+
+      const ctl018 = controles.find((c) => c.name === ControleName.CTL018);
+      expect(ctl018).toBeDefined();
+      expect(ctl018?.success).toBe(false);
+      expect(ctl018?.error).toBe(ErrorCode.E2_018);
+    });
+  });
+
+  describe('CTL019 - verifyOuvrageAvalBouesExists', () => {
+    it('should pass when ouvrage aval (STEU) exists', async () => {
+      await seedSteu(dataSource, 1, 'AVAL001');
+
+      await seedDepot(dataSource, 'dep_test_ctl019_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            valeurCaracteristiqueRejets: [
+              {
+                periodeCalcul: '',
+                destination: { cdOuvrageAval: 'AVAL001' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl019_pass', fctAssainissement);
+
+      const ctl019 = controles.find((c) => c.name === ControleName.CTL019);
+      expect(ctl019).toBeDefined();
+      expect(ctl019?.success).toBe(true);
+    });
+
+    it('should fail when ouvrage aval (STEU) does not exist', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl019_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            valeurCaracteristiqueRejets: [
+              {
+                periodeCalcul: '',
+                destination: { cdOuvrageAval: 'UNKNOWN_AVAL' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl019_fail', fctAssainissement);
+
+      const ctl019 = controles.find((c) => c.name === ControleName.CTL019);
+      expect(ctl019).toBeDefined();
+      expect(ctl019?.success).toBe(false);
+      expect(ctl019?.error).toBe(ErrorCode.E2_019);
+    });
+  });
+
+  describe('CTL020 - verifyTypeEvenementExists', () => {
+    it('should pass when type evenement exists in TLREF (LREF_46)', async () => {
+      await seedTlref(dataSource, 1, 'LREF_46', 'EVT001');
+
+      await seedDepot(dataSource, 'dep_test_ctl020_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            evenOuvragesAssainissement: [
+              {
+                typeEvenOuvrageAssainissement: 'EVT001',
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl020_pass', fctAssainissement);
+
+      const ctl020 = controles.find((c) => c.name === ControleName.CTL020);
+      expect(ctl020).toBeDefined();
+      expect(ctl020?.success).toBe(true);
+    });
+
+    it('should fail when type evenement does not exist in TLREF (LREF_46)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl020_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [],
+            evenOuvragesAssainissement: [
+              {
+                typeEvenOuvrageAssainissement: 'UNKNOWN_EVT',
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl020_fail', fctAssainissement);
+
+      const ctl020 = controles.find((c) => c.name === ControleName.CTL020);
+      expect(ctl020).toBeDefined();
+      expect(ctl020?.success).toBe(false);
+      expect(ctl020?.error).toBe(ErrorCode.E2_020);
+    });
+  });
+
+  describe('CTL021 - verifyCodeRemarqueExists', () => {
+    it('should pass when code remarque exists in TLREF (LREF_21)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_21', 'REM001');
+
+      await seedDepot(dataSource, 'dep_test_ctl021_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdRemAnalyse: 'REM001' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl021_pass', fctAssainissement);
+
+      const ctl021 = controles.find((c) => c.name === ControleName.CTL021);
+      expect(ctl021).toBeDefined();
+      expect(ctl021?.success).toBe(true);
+    });
+
+    it('should fail when code remarque does not exist in TLREF (LREF_21)', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl021_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    analyse: [{ cdRemAnalyse: 'UNKNOWN_REM' } as Analyse],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl021_fail', fctAssainissement);
+
+      const ctl021 = controles.find((c) => c.name === ControleName.CTL021);
+      expect(ctl021).toBeDefined();
+      expect(ctl021?.success).toBe(false);
+      expect(ctl021?.error).toBe(ErrorCode.E2_021);
+    });
+  });
+
+  describe('CTL022 - verifySystemeDeCollecteExists', () => {
+    it('should pass when systeme de collecte exists', async () => {
+      await seedScl(dataSource, 1, 'SCL001');
+
+      await seedDepot(dataSource, 'dep_test_ctl022_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl022_pass', fctAssainissement);
+
+      const ctl022 = controles.find((c) => c.name === ControleName.CTL022);
+      expect(ctl022).toBeDefined();
+      expect(ctl022?.success).toBe(true);
+    });
+
+    it('should fail when systeme de collecte does not exist', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl022_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'UNKNOWN_SCL',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl022_fail', fctAssainissement);
+
+      const ctl022 = controles.find((c) => c.name === ControleName.CTL022);
+      expect(ctl022).toBeDefined();
+      expect(ctl022?.success).toBe(false);
+      expect(ctl022?.error).toBe(ErrorCode.E2_022);
+    });
+  });
+
+  describe('CTL023 - verifySystemeCollecteLinkedToAgglomeration', () => {
+    it('should pass when systeme collecte is linked to agglomeration', async () => {
+      // Create SCL, AGA, and CXNTECH linking them
+      await seedScl(dataSource, 1, 'SCL001');
+      await seedAga(dataSource, 1, 100, 'AGG001'); // zgc_cdn = 100
+      await seedCxntech(dataSource, 1, 1, 100); // aval_scl_cdn = 1 (scl_cdn), amont_zgc_cdn = 100
+
+      await seedDepot(dataSource, 'dep_test_ctl023_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [],
+            agglomerationAssainissement: {
+              cdAgglomerationAssainissement: 'AGG001',
+            },
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl023_pass', fctAssainissement);
+
+      const ctl023 = controles.find((c) => c.name === ControleName.CTL023);
+      expect(ctl023).toBeDefined();
+      expect(ctl023?.success).toBe(true);
+    });
+
+    it('should fail when systeme collecte is not linked to agglomeration', async () => {
+      await seedScl(dataSource, 1, 'SCL001');
+      await seedAga(dataSource, 1, 100, 'AGG001');
+      // No cxntech linking them
+
+      await seedDepot(dataSource, 'dep_test_ctl023_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [],
+            agglomerationAssainissement: {
+              cdAgglomerationAssainissement: 'AGG001',
+            },
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl023_fail', fctAssainissement);
+
+      const ctl023 = controles.find((c) => c.name === ControleName.CTL023);
+      expect(ctl023).toBeDefined();
+      expect(ctl023?.success).toBe(false);
+      expect(ctl023?.error).toBe(ErrorCode.E2_023);
+    });
+
+    it('should fail when cxntech has a retrait date (inactive link)', async () => {
+      await seedScl(dataSource, 1, 'SCL001');
+      await seedAga(dataSource, 1, 100, 'AGG001');
+      // cxntech with retrait date = link is inactive
+      await seedCxntech(dataSource, 1, 1, 100, new Date('2023-01-01'));
+
+      await seedDepot(dataSource, 'dep_test_ctl023_retrait');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [],
+            agglomerationAssainissement: {
+              cdAgglomerationAssainissement: 'AGG001',
+            },
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl023_retrait', fctAssainissement);
+
+      const ctl023 = controles.find((c) => c.name === ControleName.CTL023);
+      expect(ctl023).toBeDefined();
+      expect(ctl023?.success).toBe(false);
+      expect(ctl023?.error).toBe(ErrorCode.E2_023);
+    });
+  });
+
+  describe('CTL024 - verifyTypeOuvrageExists', () => {
+    it('should pass when type ouvrage exists in TLREF (LREF_01)', async () => {
+      await seedTlref(dataSource, 1, 'LREF_01', 'TYPE001');
+
+      await seedDepot(dataSource, 'dep_test_ctl024_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            typeOuvrageDepollution: 'TYPE001',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl024_pass', fctAssainissement);
+
+      const ctl024 = controles.find((c) => c.name === ControleName.CTL024);
+      expect(ctl024).toBeDefined();
+      expect(ctl024?.success).toBe(true);
+    });
+
+    it('should fail when type ouvrage does not exist in TLREF (LREF_01)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl024_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            typeOuvrageDepollution: 'UNKNOWN_TYPE',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl024_fail', fctAssainissement);
+
+      const ctl024 = controles.find((c) => c.name === ControleName.CTL024);
+      expect(ctl024).toBeDefined();
+      expect(ctl024?.success).toBe(false);
+      expect(ctl024?.error).toBe(ErrorCode.E2_024);
+    });
+  });
+
+  describe('CTL025 - verifyNatureSystemeCollecteExists', () => {
+    it('should pass when nature systeme traitement exists in TLREF (LREF_09)', async () => {
+      await seedTlref(dataSource, 1, 'LREF_09', 'NAT001');
+
+      await seedDepot(dataSource, 'dep_test_ctl025_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            natureSystTraitementEauxUsees: 'NAT001',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl025_pass', fctAssainissement);
+
+      const ctl025 = controles.find((c) => c.name === ControleName.CTL025);
+      expect(ctl025).toBeDefined();
+      expect(ctl025?.success).toBe(true);
+    });
+
+    it('should fail when nature systeme traitement does not exist in TLREF (LREF_09)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl025_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            natureSystTraitementEauxUsees: 'UNKNOWN_NAT',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl025_fail', fctAssainissement);
+
+      const ctl025 = controles.find((c) => c.name === ControleName.CTL025);
+      expect(ctl025).toBeDefined();
+      expect(ctl025?.success).toBe(false);
+      expect(ctl025?.error).toBe(ErrorCode.E2_025);
+    });
+  });
+
+  describe('CTL026 - verifyIntervenantEmetteurExists', () => {
+    it('should pass when emetteur intervenant exists', async () => {
+      await seedItv(dataSource, 1, 'EMIT001');
+
+      await seedDepot(dataSource, 'dep_test_ctl026_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: { cdIntervenant: 'EMIT001' },
+          codeScenario: '2A',
+          versionScenario: '2024.1',
+        },
+        ouvrages: [],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl026_pass', fctAssainissement);
+
+      const ctl026 = controles.find((c) => c.name === ControleName.CTL026);
+      expect(ctl026).toBeDefined();
+      expect(ctl026?.success).toBe(true);
+    });
+
+    it('should fail when emetteur intervenant does not exist', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl026_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: { cdIntervenant: 'UNKNOWN_EMIT' },
+          codeScenario: '2A',
+          versionScenario: '2024.1',
+        },
+        ouvrages: [],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl026_fail', fctAssainissement);
+
+      const ctl026 = controles.find((c) => c.name === ControleName.CTL026);
+      expect(ctl026).toBeDefined();
+      expect(ctl026?.success).toBe(false);
+      expect(ctl026?.error).toBe(ErrorCode.E2_026);
+    });
+
+    it('should pass when no emetteur is provided (skipped)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl026_skip');
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: '2A',
+          versionScenario: '2024.1',
+        },
+        ouvrages: [],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl026_skip', fctAssainissement);
+
+      const ctl026 = controles.find((c) => c.name === ControleName.CTL026);
+      expect(ctl026).toBeDefined();
+      expect(ctl026?.success).toBe(true);
+    });
+  });
+
+  describe('CTL035 - verifyCodeConformitePrelevement', () => {
+    it('should pass when conformite prelevement exists in TLREF (LREF_92)', async () => {
+      await seedScl(dataSource, 1, 'SCL001');
+      await seedTlref(dataSource, 1, 'LREF_92', 'CONF001');
+
+      await seedDepot(dataSource, 'dep_test_ctl035_pass');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    conformitePrlvt: 'CONF001',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl035_pass', fctAssainissement);
+
+      const ctl035 = controles.find((c) => c.name === ControleName.CTL035);
+      expect(ctl035).toBeDefined();
+      expect(ctl035?.success).toBe(true);
+    });
+
+    it('should fail when conformite prelevement does not exist in TLREF (LREF_92)', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl035_fail');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    conformitePrlvt: 'UNKNOWN_CONF',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl035_fail', fctAssainissement);
+
+      const ctl035 = controles.find((c) => c.name === ControleName.CTL035);
+      expect(ctl035).toBeDefined();
+      expect(ctl035?.success).toBe(false);
+      expect(ctl035?.error).toBe(ErrorCode.E2_035);
+    });
+  });
+
+  describe('CTL036 - verifyCodeAccreditationExists', () => {
+    it('should pass when accreditation prelevement exists in TLREF (LREF_44) for ouvrage', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+      await seedTlref(dataSource, 1, 'LREF_44', 'ACCR001');
+
+      await seedDepot(dataSource, 'dep_test_ctl036_pass_ouv');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    accrePrlvt: 'ACCR001',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl036_pass_ouv', fctAssainissement);
+
+      const ctl036 = controles.find((c) => c.name === ControleName.CTL036);
+      expect(ctl036).toBeDefined();
+      expect(ctl036?.success).toBe(true);
+    });
+
+    it('should fail when accreditation prelevement does not exist in TLREF (LREF_44) for ouvrage', async () => {
+      await seedSteu(dataSource, 1, '0600000001');
+
+      await seedDepot(dataSource, 'dep_test_ctl036_fail_ouv');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0600000001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    accrePrlvt: 'UNKNOWN_ACCR',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl036_fail_ouv', fctAssainissement);
+
+      const ctl036 = controles.find((c) => c.name === ControleName.CTL036);
+      expect(ctl036).toBeDefined();
+      expect(ctl036?.success).toBe(false);
+      expect(ctl036?.error).toBe(ErrorCode.E2_036);
+    });
+
+    it('should pass when accreditation prelevement exists in TLREF (LREF_44) for systeme collecte', async () => {
+      await seedScl(dataSource, 1, 'SCL001');
+      await seedTlref(dataSource, 1, 'LREF_44', 'ACCR001');
+
+      await seedDepot(dataSource, 'dep_test_ctl036_pass_scl');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    accrePrlvt: 'ACCR001',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl036_pass_scl', fctAssainissement);
+
+      const ctl036 = controles.find((c) => c.name === ControleName.CTL036);
+      expect(ctl036).toBeDefined();
+      expect(ctl036?.success).toBe(true);
+    });
+
+    it('should fail when accreditation prelevement does not exist in TLREF (LREF_44) for systeme collecte', async () => {
+      await seedDepot(dataSource, 'dep_test_ctl036_fail_scl');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL001',
+            pointMesure: [
+              {
+                numeroPointMesure: '1',
+                prelevement: [
+                  {
+                    accrePrlvt: 'UNKNOWN_ACCR',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_test_ctl036_fail_scl', fctAssainissement);
+
+      const ctl036 = controles.find((c) => c.name === ControleName.CTL036);
+      expect(ctl036).toBeDefined();
+      expect(ctl036?.success).toBe(false);
+      expect(ctl036?.error).toBe(ErrorCode.E2_036);
     });
   });
 });

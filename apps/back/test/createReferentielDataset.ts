@@ -131,7 +131,30 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
   await dataSource.query(`
     CREATE TABLE roseau.scl (
       scl_cdn INTEGER PRIMARY KEY,
-      scl_sandre_cda VARCHAR
+      tlref_02_cdn INTEGER,
+      zgc_cdn INTEGER,
+      tlref_05_cdn INTEGER,
+      steu_cdn INTEGER,
+      tlref_01_cdn INTEGER,
+      scl_sandre_cda VARCHAR,
+      scl_lb VARCHAR,
+      scl_com_txt TEXT,
+      scl_trx_desc_txt TEXT,
+      scl_autosurv_val_in VARCHAR,
+      scl_direct_rejet_exist_in VARCHAR,
+      scl_as_manuel_on BOOLEAN,
+      scl_as_manuel_val_dt TIMESTAMP,
+      tlref_66_cdn INTEGER,
+      scl_old_sandre_cda VARCHAR,
+      scl_encours_an NUMERIC,
+      scl_ts_trx_desc_txt TEXT,
+      tlref_ts_66_cdn INTEGER,
+      scl_mt_prev_trx_ts_val NUMERIC,
+      scl_mt_prev_trx_ts_maj_dt DATE,
+      scl_mt_prev_trx_tp_val NUMERIC,
+      scl_mt_prev_trx_tp_maj_dt DATE,
+      scl_suivi_trx_ts_maj_dt DATE,
+      scl_suivi_trx_tp_maj_dt DATE
     )
   `);
 
@@ -267,10 +290,17 @@ export async function createReferentielDataset(dataSource: DataSource): Promise<
 }
 
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {
-  await dataSource.query(`DELETE FROM roseau.steu`);
+  await dataSource.query(`DELETE FROM roseau.cxntech`);
   await dataSource.query(`DELETE FROM roseau.cxnadm`);
   await dataSource.query(`DELETE FROM roseau.pmo`);
   await dataSource.query(`DELETE FROM roseau.tlref`);
+  await dataSource.query(`DELETE FROM roseau.aga`);
+  await dataSource.query(`DELETE FROM roseau.scl`);
+  await dataSource.query(`DELETE FROM roseau.steu`);
+  await dataSource.query(`DELETE FROM lanceleau.sup`);
+  await dataSource.query(`DELETE FROM lanceleau.fan`);
+  await dataSource.query(`DELETE FROM lanceleau.par`);
+  await dataSource.query(`DELETE FROM lanceleau.urf`);
   await dataSource.query(`DELETE FROM lanceleau.itv`);
 }
 
@@ -378,6 +408,91 @@ export async function seedAg(dataSource: DataSource, prCdn: number, itvCdn: numb
     VALUES ($1, $2)
   `,
     [prCdn, itvCdn],
+  );
+}
+
+// ============= Roseau Additional Seed Functions =============
+
+export async function seedScl(dataSource: DataSource, sclCdn: number, sclSandreCda: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.scl (scl_cdn, scl_sandre_cda)
+    VALUES ($1, $2)
+  `,
+    [sclCdn, sclSandreCda],
+  );
+}
+
+export async function seedAga(
+  dataSource: DataSource,
+  agaCdn: number,
+  zgcCdn: number,
+  agaSandreCda: string,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.aga (aga_cdn, zgc_cdn, aga_sandre_cda)
+    VALUES ($1, $2, $3)
+  `,
+    [agaCdn, zgcCdn, agaSandreCda],
+  );
+}
+
+export async function seedCxntech(
+  dataSource: DataSource,
+  cxntechCdn: number,
+  avalSclCdn: number,
+  amontZgcCdn: number,
+  cxntechRetraitDt: Date | null = null,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.cxntech (cxntech_cdn, aval_scl_cdn, amont_zgc_cdn, cxntech_retrait_dt)
+    VALUES ($1, $2, $3, $4)
+  `,
+    [cxntechCdn, avalSclCdn, amontZgcCdn, cxntechRetraitDt],
+  );
+}
+
+// ============= Lanceleau Additional Seed Functions =============
+
+export async function seedSup(dataSource: DataSource, supRfa: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.sup (sup_rfa)
+    VALUES ($1)
+  `,
+    [supRfa],
+  );
+}
+
+export async function seedFan(dataSource: DataSource, fanRfa: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.fan (fan_rfa)
+    VALUES ($1)
+  `,
+    [fanRfa],
+  );
+}
+
+export async function seedPar(dataSource: DataSource, parRfa: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.par (par_rfa)
+    VALUES ($1)
+  `,
+    [parRfa],
+  );
+}
+
+export async function seedUrf(dataSource: DataSource, urfRfa: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.urf (urf_rfa)
+    VALUES ($1)
+  `,
+    [urfRfa],
   );
 }
 

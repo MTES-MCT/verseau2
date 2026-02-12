@@ -350,7 +350,18 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const controles = await dataSource.getRepository(ControleEntity).find({
         where: { depotId: depotId },
       });
-      expect(controles.every((controle) => controle.error === ErrorCode.E2_999)).toBe(true);
+
+      // Controles should have been created (dispatched and processed)
+      expect(controles.length).toBeGreaterThan(0);
+
+      // Some V1 controles should fail because referentiel data is not seeded
+      // (e.g. CTL002 for STEU, CTL022 for SCL, CTL024 for type ouvrage)
+      const failedControles = controles.filter((c) => c.success === false);
+      expect(failedControles.length).toBeGreaterThan(0);
+
+      // No technical error should occur since the system processes controles correctly
+      const technicalErrors = controles.filter((c) => c.error === ErrorCode.E2_999);
+      expect(technicalErrors.length).toBe(0);
     }, 12000);
   });
 });
