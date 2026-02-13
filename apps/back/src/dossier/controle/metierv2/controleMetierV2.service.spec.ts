@@ -7,10 +7,12 @@ import { FctAssainissement } from '@lib/parser';
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { MasaProvider } from '@dossier/masa/api/masa.provider';
 
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
   let roseauGateway: jest.Mocked<RoseauGateway>;
+  let masaProvider: jest.Mocked<MasaProvider>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,6 +30,12 @@ describe('ControleMetierV2Service', () => {
           },
         },
         {
+          provide: MasaProvider,
+          useValue: {
+            findChargeEntranteMaxAndTranche: jest.fn(),
+          },
+        },
+        {
           provide: ControleMapper,
           useValue: {},
         },
@@ -36,6 +44,7 @@ describe('ControleMetierV2Service', () => {
 
     service = module.get<ControleMetierV2Service>(ControleMetierV2Service);
     roseauGateway = module.get(RoseauGateway);
+    masaProvider = module.get(MasaProvider);
   });
 
   describe('verifyDcoGreaterThanDbo5', () => {
@@ -1280,6 +1289,28 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors[0].code).toBe(ErrorCode.E2_049);
       expect(result.errors[0].params).toEqual(['STEU_CODE', 'A3', '2024-06-15', '3', '5', '10']);
       expect(result.errors[1].params).toEqual(['STEU_CODE', 'A3', '2024-06-17', '3', '1', '5']);
+    });
+  });
+
+  describe('verifyChargeEntranteVsTranche', () => {
+    it('should use MasaProvider to check charge entrante vs tranche', async () => {
+      masaProvider.findChargeEntranteMaxAndTranche.mockResolvedValue({
+        chargeMax: 12000,
+        trancheLabel: 'Tranche 2',
+        trancheRfa: '2',
+      });
+
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargeEntranteVsTranche(xmlObj);
+
+      expect(masaProvider.findChargeEntranteMaxAndTranche).toHaveBeenCalledWith('STEU1', 2024);
+      // Tranche 2 limit is 10000. 12000 > 10000 -> Error
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
     });
   });
 });
