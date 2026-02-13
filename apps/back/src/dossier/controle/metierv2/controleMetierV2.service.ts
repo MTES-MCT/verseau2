@@ -7,6 +7,7 @@ import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/contr
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { MasaProvider } from '@dossier/masa/api/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ControleMetierV2Service {
   constructor(
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(MasaProvider) private readonly masaProvider: MasaProvider,
     private readonly controleMapper: ControleMapper,
   ) {}
 
@@ -655,7 +657,7 @@ export class ControleMetierV2Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const result = await this.roseauGateway.findChargeEntranteMaxAndTranche(cdOuvrageDepollution, year);
+      const result = await this.masaProvider.findChargeEntranteMaxAndTranche(cdOuvrageDepollution, year);
       if (!result) continue;
 
       const { chargeMax, trancheLabel, trancheRfa } = result;

@@ -11,6 +11,7 @@ import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
+import { MasaProvider } from '@dossier/masa/api/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 
@@ -50,6 +51,7 @@ describe('ControleMetierV2Service (e2e)', () => {
         ControleRepository,
         RoseauRepository,
         LanceleauRepository,
+        MasaProvider,
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
