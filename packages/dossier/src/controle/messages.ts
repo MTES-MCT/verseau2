@@ -150,6 +150,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage52(params);
     case ErrorCode.E2_053:
       return buildErrorMessage53(params);
+    case ErrorCode.E2_054:
+      return buildErrorMessage54(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -279,4 +281,9 @@ const buildErrorMessage53 = (params: string[]) => {
   } else {
     return `Date ${p[0]} invalide pour le contrôle des débits entrants vs seuil.`;
   }
+};
+
+const buildErrorMessage54 = (params: string[]) => {
+  const [cdOuvrage, chargeMax, trancheLabel, seuilSup] = params as ErrorParamsMap[ErrorCode.E2_054];
+  return `La charge entrante retenue (CBPO max) de ${chargeMax} EH pour l'ouvrage ${cdOuvrage} dépasse le seuil supérieur (${seuilSup} EH) de la tranche d'obligation "${trancheLabel}".`;
 };

@@ -42,6 +42,7 @@ export enum ErrorCode {
   E2_051 = 'E2.051',
   E2_052 = 'E2.052',
   E2_053 = 'E2.053',
+  E2_054 = 'E2.054',
   E2_999 = 'E2.999',
 }
 
@@ -135,6 +136,7 @@ export type ErrorParamsMap = {
     | [date: string];
   [ErrorCode.E2_052]: [param: string, cdOuvrage: string, date: string, val: string, cma: string] | [date: string];
   [ErrorCode.E2_053]: [cdOuvrage: string, date: string, total: string, maxRef: string, threshold: string];
+  [ErrorCode.E2_054]: [cdOuvrage: string, chargeMax: string, trancheLabel: string, seuilSup: string];
   [ErrorCode.E2_999]: [message: string];
 };
 

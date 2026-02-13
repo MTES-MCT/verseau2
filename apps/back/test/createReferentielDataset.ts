@@ -119,12 +119,21 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.tltobl CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE roseau.tltobl (
+      tltobl_rfa VARCHAR PRIMARY KEY,
+      tltobl_lb VARCHAR
+    )
+  `);
+
   await dataSource.query(`DROP TABLE IF EXISTS roseau.aga CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.aga (
       aga_cdn INTEGER PRIMARY KEY,
       zgc_cdn INTEGER,
-      aga_sandre_cda VARCHAR
+      aga_sandre_cda VARCHAR,
+      tltobl_rfa VARCHAR
     )
   `);
 
@@ -315,6 +324,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
   await dataSource.query(`DELETE FROM roseau.pmo`);
   await dataSource.query(`DELETE FROM roseau.tlref`);
   await dataSource.query(`DELETE FROM roseau.aga`);
+  await dataSource.query(`DELETE FROM roseau.tltobl`);
   await dataSource.query(`DELETE FROM roseau.scl`);
   await dataSource.query(`DELETE FROM roseau.steu`);
   await dataSource.query(`DELETE FROM lanceleau.sup`);
@@ -432,13 +442,14 @@ export async function seedStchan(
   steuCdn: number,
   stchanAn: number,
   stchanPc95Val?: number | null,
+  stchanREhMaxChgVal?: number | null,
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.stchan (steu_cdn, stchan_an, stchan_pc95_val)
-    VALUES ($1, $2, $3)
+    INSERT INTO roseau.stchan (steu_cdn, stchan_an, stchan_pc95_val, stchan_r_eh_max_chg_val)
+    VALUES ($1, $2, $3, $4)
   `,
-    [steuCdn, stchanAn, stchanPc95Val ?? null],
+    [steuCdn, stchanAn, stchanPc95Val ?? null, stchanREhMaxChgVal ?? null],
   );
 }
 
@@ -486,13 +497,24 @@ export async function seedAga(
   agaCdn: number,
   zgcCdn: number,
   agaSandreCda: string,
+  tltoblRfa?: string | null,
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.aga (aga_cdn, zgc_cdn, aga_sandre_cda)
-    VALUES ($1, $2, $3)
+    INSERT INTO roseau.aga (aga_cdn, zgc_cdn, aga_sandre_cda, tltobl_rfa)
+    VALUES ($1, $2, $3, $4)
   `,
-    [agaCdn, zgcCdn, agaSandreCda],
+    [agaCdn, zgcCdn, agaSandreCda, tltoblRfa ?? null],
+  );
+}
+
+export async function seedTltobl(dataSource: DataSource, tltoblRfa: string, tltoblLb: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.tltobl (tltobl_rfa, tltobl_lb)
+    VALUES ($1, $2)
+  `,
+    [tltoblRfa, tltoblLb],
   );
 }
 

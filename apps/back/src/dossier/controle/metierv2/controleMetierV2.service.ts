@@ -37,6 +37,7 @@ export class ControleMetierV2Service {
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
       this.verifyCmaComparisonForDcoDbo5(xmlObj),
       // this.verifyDebitEntrantVsChargeMax(xmlObj),
+      this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -626,5 +627,52 @@ export class ControleMetierV2Service {
     }
 
     return { name: ControleName.CTL053, errors };
+  }
+
+  // Seuils supérieurs DERU par tranche d'obligation (en EH)
+  // T1: < 2 000 EH, T2: 2 000 - 10 000 EH, T3: 10 000 - 100 000 EH, T4: > 100 000 EH
+  private static readonly TRANCHE_SEUILS_SUP: Map<string, number> = new Map([
+    ['1', 2_000],
+    ['2', 10_000],
+    ['3', 100_000],
+  ]);
+
+  // CTL054: Vérification que la charge entrante retenue (CBPO max) correspond à la tranche d'obligation
+  async verifyChargeEntranteVsTranche(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+    const errors: ControleError[] = [];
+
+    const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
+    if (!dateDebutReference) {
+      return { name: ControleName.CTL054, errors };
+    }
+
+    const year = parseInt(dateDebutReference.substring(0, 4), 10);
+    if (isNaN(year)) {
+      return { name: ControleName.CTL054, errors };
+    }
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!cdOuvrageDepollution) continue;
+
+      const result = await this.roseauGateway.findChargeEntranteMaxAndTranche(cdOuvrageDepollution, year);
+      if (!result) continue;
+
+      const { chargeMax, trancheLabel, trancheRfa } = result;
+
+      // Tranche T4 (> 100 000 EH) n'a pas de seuil supérieur, on ignore
+      const seuilSup = ControleMetierV2Service.TRANCHE_SEUILS_SUP.get(trancheRfa);
+      if (seuilSup === undefined) continue;
+
+      if (chargeMax > seuilSup) {
+        errors.push({
+          code: ErrorCode.E2_054,
+          params: [cdOuvrageDepollution, chargeMax.toString(), trancheLabel, seuilSup.toString()],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
+      }
+    }
+
+    return { name: ControleName.CTL054, errors };
   }
 }
