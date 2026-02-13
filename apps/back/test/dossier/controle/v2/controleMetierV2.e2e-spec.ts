@@ -12,12 +12,12 @@ import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 import { startPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
-import { createReferentielDataset, clearReferentielData } from '../../../createReferentielDataset';
+import { createReferentielDataset, clearReferentielData, seedStchan, seedCpy } from '../../../createReferentielDataset';
 import { clearDepots } from '../../../depot.helper';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
 import { initTestContainerImports } from '../../../init/initTestContainer';
@@ -944,6 +944,1428 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors[0].code).toBe(ErrorCode.E2_052);
       expect(result.errors[0].params).toEqual([undefined]);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+  });
+
+  describe('CTL043 - verifyMesRange', () => {
+    it('should pass when MES is within valid range (100 < MES < 1200)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '500')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyMesRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL043);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when MES is too low (MES <= 100)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '100')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyMesRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL043);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_043);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '100']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when MES is too high (MES >= 1200)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.MES.toString(), '1200')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyMesRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL043);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_043);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '1200']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+  });
+
+  describe('CTL044 - verifyNtkRange', () => {
+    it('should pass when NTK is within valid range (20 < NTK < 160) with correct unit', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '50', {
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(),
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL044);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when NTK is too low (NTK <= 20)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '20', {
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(),
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL044);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_044);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '20']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when NTK is too high (NTK >= 160)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '160', {
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(),
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL044);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_044);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '160']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should skip NTK with wrong unit (not mg(N)/L)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '5', {
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(), // wrong unit
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL044);
+      expect(result.errors).toHaveLength(0); // Skipped because unit doesn't match
+    });
+  });
+
+  describe('CTL045 - verifyPtotRange', () => {
+    it('should pass when Ptot is within valid range (4 < Ptot < 25) with correct unit', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '10', {
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(),
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPtotRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL045);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when Ptot is too low (Ptot <= 4)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '4', {
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(),
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPtotRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL045);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_045);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '4']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when Ptot is too high (Ptot >= 25)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '25', {
+                        cdUniteMesure: CodeUniteMesure.MG_L.toString(),
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPtotRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL045);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_045);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '25']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should skip Ptot with wrong unit (not mg/L)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '1', {
+                        cdUniteMesure: CodeUniteMesure.MG_N_L.toString(), // wrong unit
+                      }),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPtotRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL045);
+      expect(result.errors).toHaveLength(0); // Skipped because unit doesn't match
+    });
+  });
+
+  describe('CTL046 - verifyPhRange', () => {
+    it('should pass when pH is within valid range (2 < pH < 12)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.pH.toString(), '7')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPhRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL046);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when pH is too low (pH <= 2)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.pH.toString(), '2')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPhRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL046);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_046);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '2']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when pH is too high (pH >= 12)', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.pH.toString(), '12')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPhRange(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL046);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_046);
+      expect(result.errors[0].params).toEqual(['STEU002', 'A3', '2024-01-16', '3', '12']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+  });
+
+  describe('CTL047 - verifyDcoGreaterThanDbo5', () => {
+    it('should pass when DCO > DBO5', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DCO.toString(), '500'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '200'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDcoGreaterThanDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL047);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when DCO <= DBO5', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DCO.toString(), '200'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '250'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDcoGreaterThanDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL047);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_047);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '200', '250']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when DCO equals DBO5', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DCO.toString(), '200'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '200'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDcoGreaterThanDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL047);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_047);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '200', '200']);
+    });
+
+    it('should not report error when only one parameter is present', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '200')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyDcoGreaterThanDbo5(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL047);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('CTL048 - verifyNtkGreaterThanNnh4', () => {
+    it('should pass when NTK > N-NH4', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '50'),
+                      createTestAnalyse(CodeParametre.N_NH4.toString(), '30'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkGreaterThanNnh4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL048);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when NTK <= N-NH4', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '30'),
+                      createTestAnalyse(CodeParametre.N_NH4.toString(), '40'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkGreaterThanNnh4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL048);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_048);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '30', '40']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when NTK equals N-NH4', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NTK.toString(), '40'),
+                      createTestAnalyse(CodeParametre.N_NH4.toString(), '40'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNtkGreaterThanNnh4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL048);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_048);
+    });
+  });
+
+  describe('CTL049 - verifyNglGreaterThanNtk', () => {
+    it('should pass when NGL > NTK', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NGL.toString(), '80'),
+                      createTestAnalyse(CodeParametre.NTK.toString(), '50'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNglGreaterThanNtk(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL049);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when NGL <= NTK', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NGL.toString(), '40'),
+                      createTestAnalyse(CodeParametre.NTK.toString(), '50'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNglGreaterThanNtk(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL049);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_049);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '40', '50']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when NGL equals NTK', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.NGL.toString(), '50'),
+                      createTestAnalyse(CodeParametre.NTK.toString(), '50'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyNglGreaterThanNtk(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL049);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_049);
+    });
+  });
+
+  describe('CTL050 - verifyPGreaterThanPO4', () => {
+    it('should pass when Ptot > PO4', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '15'),
+                      createTestAnalyse(CodeParametre.PO4.toString(), '8'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPGreaterThanPO4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL050);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when Ptot <= PO4', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '5'),
+                      createTestAnalyse(CodeParametre.PO4.toString(), '8'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPGreaterThanPO4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL050);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_050);
+      expect(result.errors[0].params).toEqual(['STEU001', 'A3', '2024-01-15', '3', '5', '8']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when Ptot equals PO4', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.Ptot.toString(), '10'),
+                      createTestAnalyse(CodeParametre.PO4.toString(), '10'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPGreaterThanPO4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL050);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_050);
+    });
+
+    it('should not report error when only one parameter is present', () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Ptot.toString(), '5')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = controleMetierV2Service.verifyPGreaterThanPO4(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL050);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('CTL051 - verifyVolumeA3A4VsCapaciteEH', () => {
+    it('should pass when volumes are below threshold (capaciteEH * 0.2 * 6)', async () => {
+      // capaciteEH = 3000 (> 2000), seuil = 3000 * 0.2 * 6 = 3600
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (1, 'STEU001')
+      `);
+      await seedCpy(dataSource, 1, 1, 2024, 3000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '3000')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '3000')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyVolumeA3A4VsCapaciteEH(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when volumes exceed threshold', async () => {
+      // capaciteEH = 3000, seuil = 3600
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (2, 'STEU002')
+      `);
+      await seedCpy(dataSource, 2, 2, 2024, 3000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '4000')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '3500')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyVolumeA3A4VsCapaciteEH(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result.errors[0].params).toEqual([
+        'STEU002',
+        '2024-01-15',
+        '3600.00',
+        '4000',
+        '\u2265', // ≥
+        '3500',
+        '<',
+      ]);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should skip when capaciteEH <= 2000', async () => {
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (3, 'STEU003')
+      `);
+      await seedCpy(dataSource, 3, 3, 2024, 2000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU003',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '99999')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '99999')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyVolumeA3A4VsCapaciteEH(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip when capaciteEH is null (STEU not found)', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU_UNKNOWN',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '99999')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '99999')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyVolumeA3A4VsCapaciteEH(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when dateDebutReference is missing', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '5000')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyVolumeA3A4VsCapaciteEH(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result.errors[0].params).toEqual([undefined]);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should only check when both A3 and A4 volumes are present for the same date', async () => {
+      // capaciteEH = 3000, seuil = 3600
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
+        VALUES (4, 'STEU004')
+      `);
+      await seedCpy(dataSource, 4, 4, 2024, 3000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU004',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '99999')],
+                  },
+                ],
+              },
+              // No A4 point de mesure
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyVolumeA3A4VsCapaciteEH(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL051);
+      expect(result.errors).toHaveLength(0); // No error because A4 volume is missing
+    });
+  });
+
+  describe('CTL053 - verifyDebitEntrantVsChargeMax', () => {
+    it('should pass when total debit is below threshold (2 * maxDebitRef)', async () => {
+      // maxDebitRef = max(pc95=500, dref=400) = 500, threshold = 1000
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
+        VALUES (1, 'STEU001', 2024)
+      `);
+      await seedCpy(dataSource, 1, 1, 2024, undefined, 400);
+      await seedStchan(dataSource, 1, 2024, 500);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '900')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL053);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when total debit exceeds threshold', async () => {
+      // maxDebitRef = max(pc95=500, dref=400) = 500, threshold = 1000
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
+        VALUES (2, 'STEU002', 2024)
+      `);
+      await seedCpy(dataSource, 2, 2, 2024, undefined, 400);
+      await seedStchan(dataSource, 2, 2024, 500);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '1100')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL053);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_053);
+      expect(result.errors[0].params).toEqual(['STEU002', '2024-01-15', '1100.00', '500.00', '1000.00']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should sum debits across A3, A2, A7 for the same date', async () => {
+      // maxDebitRef = 500, threshold = 1000
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
+        VALUES (3, 'STEU003', 2024)
+      `);
+      await seedCpy(dataSource, 3, 3, 2024, undefined, 300);
+      await seedStchan(dataSource, 3, 2024, 500);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU003',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '400')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A2',
+                locGlobalePointMesure: 'A2',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '400')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A7',
+                locGlobalePointMesure: 'A7',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '300')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL053);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_053);
+      // Total = 400 + 400 + 300 = 1100 > 1000
+      expect(result.errors[0].params).toEqual(['STEU003', '2024-01-15', '1100.00', '500.00', '1000.00']);
+    });
+
+    it('should skip locations other than A3, A2, A7', async () => {
+      // maxDebitRef = 500, threshold = 1000
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
+        VALUES (4, 'STEU004', 2024)
+      `);
+      await seedCpy(dataSource, 4, 4, 2024, undefined, 400);
+      await seedStchan(dataSource, 4, 2024, 500);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU004',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '5000')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_S7',
+                locGlobalePointMesure: 'S7',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '5000')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL053);
+      expect(result.errors).toHaveLength(0); // A4 and S7 are not included
+    });
+
+    it('should skip when no maxDebitRef data exists', async () => {
+      // No stchan or cpy data for this STEU
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
+        VALUES (5, 'STEU005', 2024)
+      `);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU005',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '99999')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL053);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip prelevements with cdSupport != 3', async () => {
+      // maxDebitRef = 500, threshold = 1000
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
+        VALUES (6, 'STEU006', 2024)
+      `);
+      await seedCpy(dataSource, 6, 6, 2024, undefined, 400);
+      await seedStchan(dataSource, 6, 2024, 500);
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU006',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '33', // Wrong support
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '5000')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL053);
+      expect(result.errors).toHaveLength(0);
     });
   });
 });

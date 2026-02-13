@@ -104,7 +104,8 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       cpy_cdn INTEGER PRIMARY KEY,
       steu_cdn INTEGER,
       cpy_an NUMERIC,
-      cpy_eh_trait_nom_cap_mt NUMERIC
+      cpy_eh_trait_nom_cap_mt NUMERIC,
+      cpy_ref_debit_mt NUMERIC
     )
   `);
 
@@ -166,6 +167,22 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       resa_an NUMERIC,
       par_rfa VARCHAR,
       resa_cma_val NUMERIC
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.stchan CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE roseau.stchan (
+      steu_cdn INTEGER NOT NULL,
+      stchan_an NUMERIC NOT NULL,
+      stchan_r_eh_max_chg_val NUMERIC,
+      stchan_pc95_val NUMERIC,
+      stchan_r_1an_jr_deb_95_perc_val NUMERIC,
+      stchan_r_2ans_jr_deb_95_perc_val NUMERIC,
+      stchan_r_3ans_jr_deb_95_perc_val NUMERIC,
+      stchan_r_4ans_jr_deb_95_perc_val NUMERIC,
+      stchan_r_5ans_jr_deb_95_perc_val NUMERIC,
+      PRIMARY KEY (steu_cdn, stchan_an)
     )
   `);
 }
@@ -290,6 +307,9 @@ export async function createReferentielDataset(dataSource: DataSource): Promise<
 }
 
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {
+  await dataSource.query(`DELETE FROM roseau.stchan`);
+  await dataSource.query(`DELETE FROM roseau.resa`);
+  await dataSource.query(`DELETE FROM roseau.cpy`);
   await dataSource.query(`DELETE FROM roseau.cxntech`);
   await dataSource.query(`DELETE FROM roseau.cxnadm`);
   await dataSource.query(`DELETE FROM roseau.pmo`);
@@ -387,6 +407,38 @@ export async function seedResa(
     VALUES ($1, $2, $3, $4, $5)
   `,
     [resaCdn, steuCdn, resaAn, parRfa, resaCmaVal],
+  );
+}
+
+export async function seedCpy(
+  dataSource: DataSource,
+  cpyCdn: number,
+  steuCdn: number,
+  cpyAn: number,
+  cpyEhTraitNomCapMt?: number | null,
+  cpyRefDebitMt?: number | null,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.cpy (cpy_cdn, steu_cdn, cpy_an, cpy_eh_trait_nom_cap_mt, cpy_ref_debit_mt)
+    VALUES ($1, $2, $3, $4, $5)
+  `,
+    [cpyCdn, steuCdn, cpyAn, cpyEhTraitNomCapMt ?? null, cpyRefDebitMt ?? null],
+  );
+}
+
+export async function seedStchan(
+  dataSource: DataSource,
+  steuCdn: number,
+  stchanAn: number,
+  stchanPc95Val?: number | null,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.stchan (steu_cdn, stchan_an, stchan_pc95_val)
+    VALUES ($1, $2, $3)
+  `,
+    [steuCdn, stchanAn, stchanPc95Val ?? null],
   );
 }
 
