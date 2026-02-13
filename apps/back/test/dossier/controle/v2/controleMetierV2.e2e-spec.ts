@@ -17,7 +17,14 @@ import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParam
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 import { startPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
-import { createReferentielDataset, clearReferentielData, seedStchan, seedCpy } from '../../../createReferentielDataset';
+import {
+  createReferentielDataset,
+  clearReferentielData,
+  seedStchan,
+  seedCpy,
+  seedAga,
+  seedTltobl,
+} from '../../../createReferentielDataset';
 import { clearDepots } from '../../../depot.helper';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
 import { initTestContainerImports } from '../../../init/initTestContainer';
@@ -2366,6 +2373,209 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       expect(result.name).toBe(ControleName.CTL053);
       expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('CTL054 - verifyChargeEntranteVsTranche', () => {
+    it('should pass when charge max is within tranche bounds', async () => {
+      // Tranche 2: seuil sup = 10 000 EH, charge max = 8000 EH -> OK
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
+        VALUES (1, 'STEU001', 100, 2024)
+      `);
+      await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
+      await seedAga(dataSource, 1, 100, 'AGA001', '2');
+      await seedStchan(dataSource, 1, 2024, null, 8000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error when charge max exceeds tranche upper bound', async () => {
+      // Tranche 2: seuil sup = 10 000 EH, charge max = 12000 EH -> AVERTISSEMENT
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
+        VALUES (2, 'STEU002', 200, 2024)
+      `);
+      await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
+      await seedAga(dataSource, 2, 200, 'AGA002', '2');
+      await seedStchan(dataSource, 2, 2024, null, 12000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result.errors[0].params).toEqual(['STEU002', '12000', 'De 2 000 à 10 000 EH', '10000']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report error when charge max exceeds tranche 1 upper bound', async () => {
+      // Tranche 1: seuil sup = 2 000 EH, charge max = 3000 EH -> AVERTISSEMENT
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
+        VALUES (3, 'STEU003', 300, 2024)
+      `);
+      await seedTltobl(dataSource, '1', 'Moins de 2 000 EH');
+      await seedAga(dataSource, 3, 300, 'AGA003', '1');
+      await seedStchan(dataSource, 3, 2024, null, 3000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU003',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result.errors[0].params).toEqual(['STEU003', '3000', 'Moins de 2 000 EH', '2000']);
+    });
+
+    it('should not report error for tranche 4 (no upper bound)', async () => {
+      // Tranche 4: pas de seuil supérieur, charge max = 999999 EH -> OK
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
+        VALUES (4, 'STEU004', 400, 2024)
+      `);
+      await seedTltobl(dataSource, '4', 'Plus de 100 000 EH');
+      await seedAga(dataSource, 4, 400, 'AGA004', '4');
+      await seedStchan(dataSource, 4, 2024, null, 999999);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU004',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip when no referentiel data exists for the ouvrage', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU_UNKNOWN',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip when dateDebutReference is missing', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should report error for tranche 3 when charge exceeds 100 000 EH', async () => {
+      // Tranche 3: seuil sup = 100 000 EH, charge max = 120000 EH -> AVERTISSEMENT
+      await dataSource.query(`
+        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
+        VALUES (5, 'STEU005', 500, 2024)
+      `);
+      await seedTltobl(dataSource, '3', 'De 10 000 à 100 000 EH');
+      await seedAga(dataSource, 5, 500, 'AGA005', '3');
+      await seedStchan(dataSource, 5, 2024, null, 120000);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU005',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result.errors[0].params).toEqual(['STEU005', '120000', 'De 10 000 à 100 000 EH', '100000']);
+      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });
 });

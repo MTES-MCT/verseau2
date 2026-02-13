@@ -73,6 +73,7 @@ export enum ControleName {
   CTL051 = 'CTL051',
   CTL052 = 'CTL052',
   CTL053 = 'CTL053',
+  CTL054 = 'CTL054',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -122,5 +123,7 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL051]: 'Vérification que les volumes A3/A4 sont cohérents avec la capacité nominale en EH',
   [ControleName.CTL052]: 'Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1',
   [ControleName.CTL053]: 'Vérification du débit entrant A3/A4/A7 vs 2 x max(PC95, Dref)',
+  [ControleName.CTL054]:
+    "Vérification que la charge entrante retenue (CBPO max) correspond à la tranche d'obligation de l'agglomération",
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };
