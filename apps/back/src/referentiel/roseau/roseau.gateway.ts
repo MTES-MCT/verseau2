@@ -5,6 +5,7 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
+import { ChargeEntranteMaxAndTranche } from '@masa/controleMetier.dto';
 
 export interface RoseauGateway {
   findAga(): Promise<AgaEntity[]>;
@@ -36,10 +37,11 @@ export interface RoseauGateway {
     parametreCodes: string[],
   ): Promise<Map<string, number>>;
   findMaxDebitReference(steuSandreCda: string): Promise<number | null>;
-  findChargeEntranteMaxAndTranche(
-    steuSandreCda: string,
+  findChargeEntranteMaxAndTranche(steuSandreCda: string, year: number): Promise<ChargeEntranteMaxAndTranche | null>;
+  findChargeEntranteMaxAndTrancheBatch(
+    steuSandreCdas: string[],
     year: number,
-  ): Promise<{ chargeMax: number; trancheLabel: string; trancheRfa: string } | null>;
+  ): Promise<Map<string, ChargeEntranteMaxAndTranche>>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

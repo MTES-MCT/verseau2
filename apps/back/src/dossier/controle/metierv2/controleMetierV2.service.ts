@@ -7,7 +7,7 @@ import { ControleIndividuelWithoutSuccess, ControleMapper } from '../isov1/contr
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
-import { MasaProvider } from '@dossier/masa/api/masa.provider';
+import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 
 @Injectable()
@@ -39,7 +39,7 @@ export class ControleMetierV2Service {
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
       this.verifyCmaComparisonForDcoDbo5(xmlObj),
       // this.verifyDebitEntrantVsChargeMax(xmlObj),
-      this.verifyChargeEntranteVsTranche(xmlObj),
+      // this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -631,6 +631,7 @@ export class ControleMetierV2Service {
     return { name: ControleName.CTL053, errors };
   }
 
+  // TODO : revoir la gestion des tranches
   // Seuils supérieurs DERU par tranche d'obligation (en EH)
   // T1: < 2 000 EH, T2: 2 000 - 10 000 EH, T3: 10 000 - 100 000 EH, T4: > 100 000 EH
   private static readonly TRANCHE_SEUILS_SUP: Map<string, number> = new Map([
@@ -639,6 +640,7 @@ export class ControleMetierV2Service {
     ['3', 100_000],
   ]);
 
+  // TODO : revoir les règles
   // CTL054: Vérification que la charge entrante retenue (CBPO max) correspond à la tranche d'obligation
   async verifyChargeEntranteVsTranche(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
@@ -653,11 +655,17 @@ export class ControleMetierV2Service {
       return { name: ControleName.CTL054, errors };
     }
 
+    const steuCodes = fctAssainissement.ouvrages
+      .map((ouvrage) => ouvrage.cdOuvrageDepollution)
+      .filter((code): code is string => !!code);
+
+    const chargeEntranteBySteu = await this.masaProvider.findChargeEntranteMaxAndTranche(steuCodes, year);
+
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const result = await this.masaProvider.findChargeEntranteMaxAndTranche(cdOuvrageDepollution, year);
+      const result = chargeEntranteBySteu.get(cdOuvrageDepollution);
       if (!result) continue;
 
       const { chargeMax, trancheLabel, trancheRfa } = result;
