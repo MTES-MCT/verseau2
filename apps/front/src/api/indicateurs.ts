@@ -1,6 +1,6 @@
-import { apiGet } from './apiClient';
-import type { IndicateurSteuDto } from '@lib/dossier';
+import { getIndicateursSteu } from '@lib/dossier';
+import { apiCall } from './apiClient';
 
-export async function fetchIndicateursSteu(): Promise<IndicateurSteuDto[]> {
-  return apiGet<IndicateurSteuDto[]>('/indicateurs/steu');
+export async function fetchIndicateursSteu() {
+  return apiCall(getIndicateursSteu);
 }

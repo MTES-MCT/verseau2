@@ -1,8 +1,11 @@
 import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
-import { DepotModel } from './depot.model';
 import { DepotService } from './depot.service';
 import type { Response } from 'express';
 import { IsAdminGuard } from '@authentication/isAdmin.guard';
+import type { RouteParams, RouteResponse } from '@lib/dossier';
+import { listAllDepots, downloadAdminRapport } from '@lib/dossier';
+import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
+import { mapDepotEntityToDepotDto } from './depot.mapper';
 
 @UseGuards(IsAdminGuard)
 @Controller('admin/depot')
@@ -10,14 +13,17 @@ export class DepotAdminController {
   constructor(private readonly depotService: DepotService) {}
 
   @Get()
-  async listAllDepots(): Promise<DepotModel[]> {
-    return this.depotService.findAllByAdmin();
+  async listDepots(): Promise<RouteResponse<typeof listAllDepots>> {
+    const depots = await this.depotService.findAllByAdmin();
+    return depots.map((depot) => mapDepotEntityToDepotDto(depot));
   }
 
   // TODO : utiliser une URL signée pour sécuriser l'accès au rapport pouré éviter le back de faire passe plat
-  // TODO: ajouter un guard admin
   @Get(':id/rapport')
-  async downloadRapport(@Param('id') id: string, @Res() res: Response): Promise<void> {
+  async downloadRapportFile(
+    @Param(new ZodValidationPipe(downloadAdminRapport['params'])) { id }: RouteParams<typeof downloadAdminRapport>,
+    @Res() res: Response,
+  ): Promise<void> {
     const pdfBuffer = await this.depotService.downloadRapport(id);
     const depot = await this.depotService.findById(id);
 

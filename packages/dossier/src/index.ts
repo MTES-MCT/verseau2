@@ -8,5 +8,7 @@ export * from './masa/masa.dto';
 export * from './indicateur/indicateur.dto';
 export * from './routes/route.types';
 export * from './routes/depot.routes';
+export * from './routes/depotAdmin.routes';
 export * from './routes/referentiel.routes';
 export * from './routes/controle.routes';
+export * from './routes/indicateurs.routes';

@@ -21,8 +21,14 @@ import { DroitsDepotService } from './droitsDepot.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
-import type { RouteQuery, RouteResponse } from '@lib/dossier';
-import { listDepots, uploadDepot, checkDroitsDeDepot as checkDroitsRoute } from '@lib/dossier';
+import type { RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
+import {
+  listDepots,
+  uploadDepot,
+  checkDroitsDeDepot as checkDroitsRoute,
+  downloadRapport,
+  downloadXml,
+} from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 
 import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
@@ -137,7 +143,10 @@ export class DepotController {
   // TODO : utiliser une URL signée pour sécuriser l'accès au rapport pouré éviter le back de faire passe plat
   @Get(':id/rapport')
   @UseGuards(HasUserAccessToDepotGuard)
-  async downloadRapport(@Param('id') id: string, @Res() res: Response): Promise<void> {
+  async downloadRapportFile(
+    @Param(new ZodValidationPipe(downloadRapport['params'])) { id }: RouteParams<typeof downloadRapport>,
+    @Res() res: Response,
+  ): Promise<void> {
     const pdfBuffer = await this.depotService.downloadRapport(id);
     const depot = await this.depotService.findById(id);
 
@@ -151,7 +160,10 @@ export class DepotController {
 
   @Get(':id/xml')
   @UseGuards(HasUserAccessToDepotGuard)
-  async downloadXml(@Param('id') id: string, @Res() res: Response): Promise<void> {
+  async downloadXmlFile(
+    @Param(new ZodValidationPipe(downloadXml['params'])) { id }: RouteParams<typeof downloadXml>,
+    @Res() res: Response,
+  ): Promise<void> {
     const xmlBuffer = await this.depotService.downloadXml(id);
     const depot = await this.depotService.findById(id);
 
