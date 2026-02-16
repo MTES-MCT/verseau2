@@ -178,21 +178,3 @@ export async function apiCall<R extends RouteDefinition>(
   const json = await response.json();
   return json as RouteResponse<R>;
 }
-
-// TODO : REMOVE THIS CODE AND USE buildRoutePath INSTEAD, IT'S A DUPLICATE
-/**
- * Build URL with query parameters
- */
-export function buildUrl(baseUrl: string, params: Record<string, string | string[]>): string {
-  const url = new URL(baseUrl.startsWith('http') ? baseUrl : `${API_BASE_URL}${baseUrl}`);
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach((v) => url.searchParams.append(key, v));
-    } else {
-      url.searchParams.set(key, value);
-    }
-  });
-
-  return url.toString();
-}
