@@ -179,6 +179,7 @@ export async function apiCall<R extends RouteDefinition>(
   return json as RouteResponse<R>;
 }
 
+// TODO : REMOVE THIS CODE AND USE buildRoutePath INSTEAD, IT'S A DUPLICATE
 /**
  * Build URL with query parameters
  */
