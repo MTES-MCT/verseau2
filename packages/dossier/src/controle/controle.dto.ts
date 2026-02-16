@@ -5,11 +5,11 @@ import { ErrorCode, EvenementType } from './evenement';
 
 export const ControleDtoSchema = BaseEntitySchema.extend({
   id: z.string(),
-  name: z.nativeEnum(ControleName),
+  name: z.enum(ControleName),
   success: z.boolean(),
-  error: z.nativeEnum(ErrorCode).optional(),
+  error: z.enum(ErrorCode).optional(),
   errorParams: z.array(z.string()).optional(),
-  evenementType: z.nativeEnum(EvenementType).optional(),
+  evenementType: z.enum(EvenementType).optional(),
 });
 
 export type ControleDto = z.infer<typeof ControleDtoSchema>;
@@ -34,7 +34,7 @@ export enum SandreAcceptationStatus {
 
 export const ControleSandreDtoSchema = BaseEntitySchema.extend({
   id: z.string(),
-  acceptationStatus: z.nativeEnum(SandreAcceptationStatus),
+  acceptationStatus: z.enum(SandreAcceptationStatus),
   isConformant: z.boolean(),
   errors: z.array(SandreValidationErrorDtoSchema).optional(),
 });
