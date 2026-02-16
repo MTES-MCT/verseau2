@@ -38,7 +38,7 @@ _Changes every session. Tracks current state._
 
 _Grows over time. Capture insights._
 
-- `.agent-memory/progress.md` -- Chronological log of what was done
+- `.agent-memory/progress.md` -- Chronological log of what was done: must be described concisely in one or two lines
 - `.agent-memory/lessons-learned.md` -- Solutions to tricky problems, strategies that worked
 
 ## Session Protocol

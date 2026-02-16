@@ -13,9 +13,10 @@ import { ControleSandreUploadProcessorService } from './controleSandre/controle-
 import { ControleSandrePollProcessorService } from './controleSandre/controle-sandre-poll.processor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
+import { MasaModule } from '@masa/masa.module';
 
 @Module({
-  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule, UserModule],
+  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule, UserModule, MasaModule],
   providers: [
     FileProcessorService,
     WorkerService,

@@ -13,6 +13,7 @@ import { CpyEntity } from './entities/cpy.entity';
 import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { TltoblEntity } from './entities/tltobl.entity';
+import { ChargeEntranteMaxAndTranche } from '@masa/controleMetier.dto';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -184,7 +185,7 @@ export class RoseauRepository implements RoseauGateway {
   async findChargeEntranteMaxAndTranche(
     steuSandreCda: string,
     year: number,
-  ): Promise<{ chargeMax: number; trancheLabel: string; trancheRfa: string } | null> {
+  ): Promise<ChargeEntranteMaxAndTranche | null> {
     const result = await this.stchanRepository
       .createQueryBuilder('c')
       .select('c.stchan_r_eh_max_chg_val', 'charge_max')
@@ -206,5 +207,46 @@ export class RoseauRepository implements RoseauGateway {
       trancheLabel: result.tranche_label,
       trancheRfa: result.tranche_rfa,
     };
+  }
+
+  async findChargeEntranteMaxAndTrancheBatch(
+    steuSandreCdas: string[],
+    year: number,
+  ): Promise<Map<string, ChargeEntranteMaxAndTranche>> {
+    if (steuSandreCdas.length === 0) {
+      return new Map();
+    }
+
+    const results = await this.stchanRepository
+      .createQueryBuilder('c')
+      .select('s.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('c.stchan_r_eh_max_chg_val', 'charge_max')
+      .addSelect('t.tltobl_lb', 'tranche_label')
+      .addSelect('t.tltobl_rfa', 'tranche_rfa')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = c.steu_cdn')
+      .innerJoin(AgaEntity, 'a', 'a.zgc_cdn = s.zgc_cdn')
+      .innerJoin(TltoblEntity, 't', 't.tltobl_rfa = a.tltobl_rfa')
+      .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
+      .andWhere('c.stchan_an = :year', { year })
+      .getRawMany<{
+        steu_sandre_cda: string;
+        charge_max: number | null;
+        tranche_label: string | null;
+        tranche_rfa: string | null;
+      }>();
+
+    const resultMap = new Map<string, { chargeMax: number; trancheLabel: string; trancheRfa: string }>();
+
+    for (const result of results) {
+      if (result.charge_max !== null && result.tranche_label !== null && result.tranche_rfa !== null) {
+        resultMap.set(result.steu_sandre_cda, {
+          chargeMax: parseFloat(result.charge_max.toString()),
+          trancheLabel: result.tranche_label,
+          trancheRfa: result.tranche_rfa,
+        });
+      }
+    }
+
+    return resultMap;
   }
 }

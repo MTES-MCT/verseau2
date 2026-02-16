@@ -23,6 +23,7 @@
     "^@infra/(.*)$": "<rootDir>/src/infra/$1",
     "^@authentication/(.*)$": "<rootDir>/src/authentication/$1",
     "^@user/(.*)$": "<rootDir>/src/user/$1",
+    "^@masa/(.*)$": "<rootDir>/src/masa/$1",
     "^@lib/dossier$": "<rootDir>/../../packages/dossier/src/index.ts",
     "^@lib/parser$": "<rootDir>/../../packages/parser/src/index.ts"
   }

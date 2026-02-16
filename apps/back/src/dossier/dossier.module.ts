@@ -27,7 +27,7 @@ import { DepotCoordinatorService } from './depot/depotCoordinator.service';
 import { MasaEntity } from './masa/masa.entity';
 import { MasaController } from './masa/masa.controller';
 import { MasaService } from './masa/masa.service';
-import { MasaProvider } from './masa/api/masa.provider';
+import { MasaModule } from '@masa/masa.module';
 import { MasaGateway } from './masa/masa.gateway';
 import { MasaRepository } from './masa/masa.repository';
 import { MasaApiKeyGuard } from './masa/masaApiKey.guard';
@@ -56,6 +56,7 @@ const sandreServiceFactory = {
     InfraModule,
     UserModule,
     ReferentielModule,
+    MasaModule,
   ],
   controllers: [DepotController, DepotAdminController, ControleController, MasaController],
   providers: [
@@ -76,7 +77,6 @@ const sandreServiceFactory = {
     // Masa
     { provide: MasaGateway, useClass: MasaRepository },
     MasaService,
-    MasaProvider,
     MasaApiKeyGuard,
     MasaIpGuard,
     RapportPdfGeneratorService,
