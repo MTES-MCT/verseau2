@@ -1,0 +1,50 @@
+import { z } from 'zod';
+import type { RouteDefinition } from './route.types';
+import { DepotDtoSchema } from '../depot/depot.dto';
+
+// GET /depot - List all depots
+export const listDepots = {
+  method: 'GET',
+  path: '/depot',
+  response: z.array(DepotDtoSchema),
+} as const satisfies RouteDefinition;
+
+// POST /depot/upload - Upload a depot
+export const uploadDepot = {
+  method: 'POST',
+  path: '/depot/upload',
+  response: DepotDtoSchema,
+} as const satisfies RouteDefinition;
+
+// GET /depot/droits-de-depot - Check depot rights
+export const CheckDroitsDeDepotQuerySchema = z.object({
+  cdOuvrageDepollution: z.string().min(1, 'cdOuvrageDepollution est requis'),
+  cdSystemeCollecte: z.string().min(1, 'cdSystemeCollecte est requis'),
+});
+
+export const checkDroitsDeDepot = {
+  method: 'GET',
+  path: '/depot/droits-de-depot',
+  query: CheckDroitsDeDepotQuerySchema,
+  response: z.object({
+    authorized: z.boolean(),
+  }),
+} as const satisfies RouteDefinition;
+
+// GET /depot/:id/rapport - Download rapport (binary)
+export const downloadRapport = {
+  method: 'GET',
+  path: '/depot/:id/rapport',
+  params: z.object({
+    id: z.string(),
+  }),
+} as const satisfies RouteDefinition;
+
+// GET /depot/:id/xml - Download XML (binary)
+export const downloadXml = {
+  method: 'GET',
+  path: '/depot/:id/xml',
+  params: z.object({
+    id: z.string(),
+  }),
+} as const satisfies RouteDefinition;

@@ -6,3 +6,5 @@ export * from './depot/depot.dto';
 export * from './depot/depot.status';
 export * from './masa/masa.dto';
 export * from './indicateur/indicateur.dto';
+export * from './routes/route.types';
+export * from './routes/depot.routes';

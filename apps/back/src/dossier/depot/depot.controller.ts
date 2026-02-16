@@ -21,7 +21,17 @@ import { DroitsDepotService } from './droitsDepot.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
-import { DepotDto } from '@lib/dossier';
+import type { RouteResponse } from '@lib/dossier';
+import {
+  listDepots,
+  uploadDepot,
+  checkDroitsDeDepot as checkDroitsRoute,
+  CheckDroitsDeDepotQuerySchema,
+} from '@lib/dossier';
+import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
+import type { z } from 'zod';
+
+type CheckDroitsDeDepotQuery = z.infer<typeof CheckDroitsDeDepotQuerySchema>;
 import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
 import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
@@ -53,7 +63,10 @@ export class DepotController {
   @Post('upload')
   @Throttle({ default: { ttl: 60000, limit: 20 } })
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: MulterFile | undefined, @Req() req: CustomRequest): Promise<DepotDto> {
+  async uploadFile(
+    @UploadedFile() file: MulterFile | undefined,
+    @Req() req: CustomRequest,
+  ): Promise<RouteResponse<typeof uploadDepot>> {
     const user = req.user;
     if (!file) {
       throw new BadRequestException('No file provided');
@@ -100,7 +113,7 @@ export class DepotController {
   }
 
   @Get()
-  async listMyDepots(@Req() req: CustomRequest): Promise<DepotDto[]> {
+  async listMyDepots(@Req() req: CustomRequest): Promise<RouteResponse<typeof listDepots>> {
     const user = req.user;
     const itvCdn = await this.droitsUserService.resolveItvCdn(user.cerbereId);
     if (!itvCdn) {
@@ -112,13 +125,13 @@ export class DepotController {
 
   @Get('droits-de-depot')
   async checkDroitsDeDepot(
-    @Query('cdOuvrageDepollution') cdOuvrageDepollution: string,
-    @Query('cdSystemeCollecte') cdSystemeCollecte: string,
+    @Query(new ZodValidationPipe(CheckDroitsDeDepotQuerySchema))
+    query: CheckDroitsDeDepotQuery,
     @Req() req: CustomRequest,
-  ): Promise<{ authorized: boolean }> {
+  ): Promise<RouteResponse<typeof checkDroitsRoute>> {
     const user = req.user;
-    const cdOuvrageDepollutionList = cdOuvrageDepollution ? cdOuvrageDepollution.split(',') : [];
-    const cdSystemeCollecteList = cdSystemeCollecte ? cdSystemeCollecte.split(',') : [];
+    const cdOuvrageDepollutionList = query.cdOuvrageDepollution ? query.cdOuvrageDepollution.split(',') : [];
+    const cdSystemeCollecteList = query.cdSystemeCollecte ? query.cdSystemeCollecte.split(',') : [];
     try {
       await this.droitsDepotService.validateDroits(user.cerbereId, cdOuvrageDepollutionList, cdSystemeCollecteList);
       return { authorized: true };
