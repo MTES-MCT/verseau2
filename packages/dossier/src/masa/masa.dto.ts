@@ -1,4 +1,5 @@
-import { BaseEntity } from '../baseEntity';
+import { z } from 'zod';
+import { BaseEntitySchema } from '../baseEntity';
 
 export enum MasaStatus {
   REFUSE = 'REFUSE',
@@ -6,9 +7,11 @@ export enum MasaStatus {
   INTEGRATION_PARTIELLE = 'INTEGRATION_PARTIELLE',
 }
 
-export interface MasaDto extends BaseEntity {
-  id: string;
-  numeroDepotVerseau1: string | null;
-  statut: MasaStatus;
-  rapport: string | null;
-}
+export const MasaDtoSchema = BaseEntitySchema.extend({
+  id: z.string(),
+  numeroDepotVerseau1: z.string().nullable(),
+  statut: z.nativeEnum(MasaStatus),
+  rapport: z.string().nullable(),
+});
+
+export type MasaDto = z.infer<typeof MasaDtoSchema>;

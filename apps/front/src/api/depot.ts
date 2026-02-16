@@ -1,11 +1,13 @@
-import type { ControleDto, ControleSandreDto, MasaDto } from '@lib/dossier';
 import {
   listDepots,
   checkDroitsDeDepot as checkDroitsRoute,
   downloadRapport as downloadRapportRoute,
   downloadXml as downloadXmlRoute,
+  getControles,
+  getControlesSandre,
+  getMasa,
 } from '@lib/dossier';
-import { apiGet, apiPostFormData, apiDownload, apiCall, buildRoutePath } from './apiClient';
+import { apiPostFormData, apiDownload, apiCall, buildRoutePath } from './apiClient';
 
 export type DroitsDeDepotResponse = {
   authorized: boolean;
@@ -15,16 +17,16 @@ export async function fetchDepots() {
   return apiCall(listDepots);
 }
 
-export async function fetchControles(depotId: string): Promise<ControleDto[]> {
-  return apiGet<ControleDto[]>(`/depot/${depotId}/controle`);
+export async function fetchControles(depotId: string) {
+  return apiCall(getControles, { params: { depotId } });
 }
 
-export async function fetchControlesSandre(depotId: string): Promise<ControleSandreDto[]> {
-  return apiGet<ControleSandreDto[]>(`/depot/${depotId}/controle/sandre`);
+export async function fetchControlesSandre(depotId: string) {
+  return apiCall(getControlesSandre, { params: { depotId } });
 }
 
-export async function fetchMasa(depotId: string): Promise<MasaDto | null> {
-  return apiGet<MasaDto | null>(`/depot/${depotId}/masa`);
+export async function fetchMasa(depotId: string) {
+  return apiCall(getMasa, { params: { depotId } });
 }
 
 export async function uploadDepot(file: File): Promise<void> {

@@ -1,6 +1,8 @@
 import { Controller, Get, Inject, Param, UseGuards } from '@nestjs/common';
 import { ControleGateway } from './controle.gateway';
-import { ControleDto, ControleSandreDto, MasaDto } from '@lib/dossier';
+import type { RouteParams, RouteResponse } from '@lib/dossier';
+import { getControles, getControlesSandre, getMasa } from '@lib/dossier';
+import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { ReponseSandreGateway } from './technique/sandre/reponseSandre.gateway';
 import { MasaGateway } from '../masa/masa.gateway';
 import { mapMasaModelToDto } from '../masa/masa.mapper';
@@ -16,19 +18,25 @@ export class ControleController {
 
   @UseGuards(HasUserAccessToDepotGuard)
   @Get(':depotId/controle')
-  async getControle(@Param('depotId') depotId: string): Promise<ControleDto[]> {
+  async getControle(
+    @Param(new ZodValidationPipe(getControles['params'])) { depotId }: RouteParams<typeof getControles>,
+  ): Promise<RouteResponse<typeof getControles>> {
     return this.controleGateway.findByDepotId(depotId);
   }
 
   @UseGuards(HasUserAccessToDepotGuard)
   @Get(':depotId/controle/sandre')
-  async getControleSandre(@Param('depotId') depotId: string): Promise<ControleSandreDto[]> {
+  async getControleSandre(
+    @Param(new ZodValidationPipe(getControlesSandre['params'])) { depotId }: RouteParams<typeof getControlesSandre>,
+  ): Promise<RouteResponse<typeof getControlesSandre>> {
     return this.reponseSandreGateway.findByDepotId(depotId);
   }
 
   @UseGuards(HasUserAccessToDepotGuard)
   @Get(':depotId/masa')
-  async getMasa(@Param('depotId') depotId: string): Promise<MasaDto | null> {
+  async getMasa(
+    @Param(new ZodValidationPipe(getMasa['params'])) { depotId }: RouteParams<typeof getMasa>,
+  ): Promise<RouteResponse<typeof getMasa>> {
     const masa = await this.masaGateway.findByDepotId(depotId);
     return masa ? mapMasaModelToDto(masa) : null;
   }

@@ -1,7 +1,6 @@
 import { useParams, Link, useLocation } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import { type ControleDto, type ControleSandreDto, type MasaDto } from '@lib/dossier';
 import { fetchControles, fetchControlesSandre, fetchMasa } from '../api/depot';
 import { ApiError } from '../api/apiClient';
 import { ControleGroup } from '../components/ControleGroup';
@@ -23,21 +22,21 @@ export function ControlePage() {
     data: controles = [],
     isLoading,
     error,
-  } = useQuery<ControleDto[], ApiError>({
+  } = useQuery({
     queryKey: ['controles', depotId],
     queryFn: () => fetchControles(depotId!),
     enabled: Boolean(depotId),
     retry: false,
   });
 
-  const { data: sandreControles = [] } = useQuery<ControleSandreDto[], ApiError>({
+  const { data: sandreControles = [] } = useQuery({
     queryKey: ['controles-sandre', depotId],
     queryFn: () => fetchControlesSandre(depotId!),
     enabled: Boolean(depotId),
     retry: false,
   });
 
-  const { data: masa = null } = useQuery<MasaDto | null, ApiError>({
+  const { data: masa = null } = useQuery({
     queryKey: ['masa', depotId],
     queryFn: () => fetchMasa(depotId!),
     enabled: Boolean(depotId),
