@@ -42,9 +42,17 @@ export function buildRoutePath<R extends RouteDefinition>(
 
   // Add query parameters
   if (options?.query) {
-    const queryString = new URLSearchParams(
-      Object.entries(options.query).map(([key, value]) => [key, String(value)]),
-    ).toString();
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(options.query)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          searchParams.append(key, String(item));
+        }
+      } else {
+        searchParams.append(key, String(value));
+      }
+    }
+    const queryString = searchParams.toString();
     if (queryString) {
       path += `?${queryString}`;
     }

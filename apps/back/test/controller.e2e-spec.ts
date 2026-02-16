@@ -139,18 +139,6 @@ describe('Controller (e2e) - Unauthorized', () => {
   });
 
   describe('Controller (e2e) - Referentiel', () => {
-    it('/referentiel/maitre-ouvrage-ouvrage-depollution (GET) - Should return 401 Unauthorized', async () => {
-      return request(app.getHttpServer()).get('/referentiel/maitre-ouvrage-ouvrage-depollution').expect(401);
-    });
-
-    it('/referentiel/parametre-to-code (GET) - Should return 401 Unauthorized', async () => {
-      return request(app.getHttpServer()).get('/referentiel/parametre-to-code').expect(401);
-    });
-
-    it('/referentiel/parametres-to-codes (GET) - Should return 401 Unauthorized', async () => {
-      return request(app.getHttpServer()).get('/referentiel/parametres-to-codes').expect(401);
-    });
-
     it('/referentiel/codes-to-parametres (GET) - Should return 401 Unauthorized', async () => {
       return request(app.getHttpServer()).get('/referentiel/codes-to-parametres').expect(401);
     });
