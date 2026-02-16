@@ -17,15 +17,13 @@ export const uploadDepot = {
 } as const satisfies RouteDefinition;
 
 // GET /depot/droits-de-depot - Check depot rights
-export const CheckDroitsDeDepotQuerySchema = z.object({
-  cdOuvrageDepollution: z.string().min(1, 'cdOuvrageDepollution est requis'),
-  cdSystemeCollecte: z.string().min(1, 'cdSystemeCollecte est requis'),
-});
-
 export const checkDroitsDeDepot = {
   method: 'GET',
   path: '/depot/droits-de-depot',
-  query: CheckDroitsDeDepotQuerySchema,
+  query: z.object({
+    cdOuvrageDepollution: z.string().optional(),
+    cdSystemeCollecte: z.string().optional(),
+  }),
   response: z.object({
     authorized: z.boolean(),
   }),

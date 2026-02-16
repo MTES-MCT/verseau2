@@ -2,49 +2,26 @@ import type { z, ZodType } from 'zod';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
-export interface RouteDefinition<
-  TMethod extends HttpMethod = HttpMethod,
-  TParams extends ZodType | undefined = ZodType | undefined,
-  TQuery extends ZodType | undefined = ZodType | undefined,
-  TBody extends ZodType | undefined = ZodType | undefined,
-  TResponse extends ZodType | undefined = ZodType | undefined,
-> {
-  readonly method: TMethod;
+export interface RouteDefinition {
+  readonly method: HttpMethod;
   readonly path: string;
-  readonly params?: TParams;
-  readonly query?: TQuery;
-  readonly body?: TBody;
-  readonly response?: TResponse;
+  readonly params?: ZodType;
+  readonly query?: ZodType;
+  readonly body?: ZodType;
+  readonly response?: ZodType;
 }
 
 // Inference helpers
-export type RouteParams<R> =
-  R extends RouteDefinition<HttpMethod, infer TParams, ZodType | undefined, ZodType | undefined, ZodType | undefined>
-    ? TParams extends ZodType
-      ? z.infer<TParams>
-      : never
-    : never;
+type InferField<R, K extends keyof RouteDefinition> = K extends keyof R
+  ? R[K] extends ZodType
+    ? z.infer<R[K]>
+    : never
+  : never;
 
-export type RouteQuery<R> =
-  R extends RouteDefinition<HttpMethod, ZodType | undefined, infer TQuery, ZodType | undefined, ZodType | undefined>
-    ? TQuery extends ZodType
-      ? z.infer<TQuery>
-      : never
-    : never;
-
-export type RouteBody<R> =
-  R extends RouteDefinition<HttpMethod, ZodType | undefined, ZodType | undefined, infer TBody, ZodType | undefined>
-    ? TBody extends ZodType
-      ? z.infer<TBody>
-      : never
-    : never;
-
-export type RouteResponse<R> =
-  R extends RouteDefinition<HttpMethod, ZodType | undefined, ZodType | undefined, ZodType | undefined, infer TResponse>
-    ? TResponse extends ZodType
-      ? z.infer<TResponse>
-      : never
-    : never;
+export type RouteParams<R> = InferField<R, 'params'>;
+export type RouteQuery<R> = InferField<R, 'query'>;
+export type RouteBody<R> = InferField<R, 'body'>;
+export type RouteResponse<R> = InferField<R, 'response'>;
 
 // URL builder (pure function, used by frontend)
 export function buildRoutePath<R extends RouteDefinition>(
