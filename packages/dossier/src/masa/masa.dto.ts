@@ -10,7 +10,7 @@ export enum MasaStatus {
 export const MasaDtoSchema = BaseEntitySchema.extend({
   id: z.string(),
   numeroDepotVerseau1: z.string().nullable(),
-  statut: z.nativeEnum(MasaStatus),
+  statut: z.enum(MasaStatus),
   rapport: z.string().nullable(),
 });
 
