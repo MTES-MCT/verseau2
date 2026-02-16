@@ -21,17 +21,10 @@ import { DroitsDepotService } from './droitsDepot.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { DepotService } from './depot.service';
 import { UserService } from '@user/user.service';
-import type { RouteResponse } from '@lib/dossier';
-import {
-  listDepots,
-  uploadDepot,
-  checkDroitsDeDepot as checkDroitsRoute,
-  CheckDroitsDeDepotQuerySchema,
-} from '@lib/dossier';
+import type { RouteQuery, RouteResponse } from '@lib/dossier';
+import { listDepots, uploadDepot, checkDroitsDeDepot as checkDroitsRoute } from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
-import type { z } from 'zod';
 
-type CheckDroitsDeDepotQuery = z.infer<typeof CheckDroitsDeDepotQuerySchema>;
 import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
 import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
@@ -125,8 +118,8 @@ export class DepotController {
 
   @Get('droits-de-depot')
   async checkDroitsDeDepot(
-    @Query(new ZodValidationPipe(CheckDroitsDeDepotQuerySchema))
-    query: CheckDroitsDeDepotQuery,
+    @Query(new ZodValidationPipe(checkDroitsRoute['query']))
+    query: RouteQuery<typeof checkDroitsRoute>,
     @Req() req: CustomRequest,
   ): Promise<RouteResponse<typeof checkDroitsRoute>> {
     const user = req.user;
