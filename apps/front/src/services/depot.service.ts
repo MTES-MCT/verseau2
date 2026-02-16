@@ -1,6 +1,6 @@
 import { EtapeMetier } from '@lib/dossier';
 
-export const getMessageForDepotEtapeMetier = (etapeMetier?: EtapeMetier): string | null => {
+export const getMessageForDepotEtapeMetier = (etapeMetier?: EtapeMetier | null): string | null => {
   switch (etapeMetier) {
     case EtapeMetier.CONTROLE_METIER:
       return 'Controle métier';
@@ -13,7 +13,7 @@ export const getMessageForDepotEtapeMetier = (etapeMetier?: EtapeMetier): string
   }
 };
 
-export const getEtapeMetierNumber = (etapeMetier?: EtapeMetier): number => {
+export const getEtapeMetierNumber = (etapeMetier?: EtapeMetier | null): number => {
   switch (etapeMetier) {
     case EtapeMetier.CONTROLE_REFERENTIEL:
       return 1;

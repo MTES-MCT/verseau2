@@ -1,4 +1,9 @@
 import { authService } from '../services/auth.service';
+import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
+import { buildRoutePath } from '@lib/dossier';
+
+// Re-export buildRoutePath for convenience
+export { buildRoutePath };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -68,7 +73,7 @@ export async function apiGet<T>(endpoint: string): Promise<T> {
 /**
  * POST request helper
  */
-export async function apiPost<T>(endpoint: string, body?: any): Promise<T> {
+export async function apiPost<T>(endpoint: string, body?: unknown): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const response = await authenticatedFetch(url, {
     method: 'POST',
@@ -134,6 +139,44 @@ export async function apiDownload(endpoint: string): Promise<Blob> {
   }
 
   return response.blob();
+}
+
+/**
+ * Generic typed API call using route definitions
+ */
+export async function apiCall<R extends RouteDefinition>(
+  route: R,
+  options?: {
+    params?: RouteParams<R>;
+    query?: RouteQuery<R>;
+    body?: RouteBody<R>;
+  },
+): Promise<RouteResponse<R>> {
+  // Build the URL from route definition
+  const path = buildRoutePath(route, {
+    params: options?.params,
+    query: options?.query,
+  });
+
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+
+  // Make the request
+  const response = await authenticatedFetch(url, {
+    method: route.method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: options?.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new ApiError(`${route.method} ${path} failed: ${message}`, response.status, response.statusText);
+  }
+
+  // Parse response (no validation on frontend, schemas are for typing only)
+  const json = await response.json();
+  return json as RouteResponse<R>;
 }
 
 /**

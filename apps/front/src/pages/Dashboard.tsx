@@ -8,7 +8,8 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { DepotStatus, EtapeMetier, type DepotDto } from '@lib/dossier';
-import { fetchDepots, ApiError } from '../api/depot';
+import { fetchDepots } from '../api/depot';
+import { ApiError } from '../api/apiClient';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
 import { usePagination } from '../hooks/usePagination';
@@ -16,7 +17,7 @@ import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
 import { IndicateursTable } from '../components/IndicateursTable';
 
-const DEPOT_POLLING_INTERVAL_MS = 2000;
+const DEPOT_POLLING_INTERVAL_MS = 5000;
 const PAGE_SIZE = 5;
 
 function getStatusBadge(depot: DepotDto) {

@@ -1,24 +1,18 @@
-import type { DepotDto, ControleDto, ControleSandreDto, MasaDto } from '@lib/dossier';
-import { apiGet, apiPostFormData, buildUrl, apiDownload } from './apiClient';
-
-export class ApiError extends Error {
-  status: number;
-  statusText: string;
-
-  constructor(message: string, status: number, statusText: string) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.statusText = statusText;
-  }
-}
+import type { ControleDto, ControleSandreDto, MasaDto } from '@lib/dossier';
+import {
+  listDepots,
+  checkDroitsDeDepot as checkDroitsRoute,
+  downloadRapport as downloadRapportRoute,
+  downloadXml as downloadXmlRoute,
+} from '@lib/dossier';
+import { apiGet, apiPostFormData, apiDownload, apiCall, buildRoutePath } from './apiClient';
 
 export type DroitsDeDepotResponse = {
   authorized: boolean;
 };
 
-export async function fetchDepots(): Promise<DepotDto[]> {
-  return apiGet<DepotDto[]>('/depot');
+export async function fetchDepots() {
+  return apiCall(listDepots);
 }
 
 export async function fetchControles(depotId: string): Promise<ControleDto[]> {
@@ -43,19 +37,20 @@ export async function checkDroitsDeDepot(
   cdOuvrageDepollutionList: string[],
   cdSystemeCollecteList: string[],
 ): Promise<DroitsDeDepotResponse> {
-  const url = buildUrl('/depot/droits-de-depot', {
-    cdOuvrageDepollution: cdOuvrageDepollutionList.join(','),
-    cdSystemeCollecte: cdSystemeCollecteList.join(','),
+  return apiCall(checkDroitsRoute, {
+    query: {
+      cdOuvrageDepollution: cdOuvrageDepollutionList.join(','),
+      cdSystemeCollecte: cdSystemeCollecteList.join(','),
+    },
   });
-  return apiGet<DroitsDeDepotResponse>(url);
 }
 
 export async function downloadRapport(depotId: string): Promise<Blob> {
-  const url = `/depot/${depotId}/rapport`;
+  const url = buildRoutePath(downloadRapportRoute, { params: { id: depotId } });
   return apiDownload(url);
 }
 
 export async function downloadXml(depotId: string): Promise<Blob> {
-  const url = `/depot/${depotId}/xml`;
+  const url = buildRoutePath(downloadXmlRoute, { params: { id: depotId } });
   return apiDownload(url);
 }
