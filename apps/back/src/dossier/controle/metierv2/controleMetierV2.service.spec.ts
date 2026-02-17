@@ -32,7 +32,7 @@ describe('ControleMetierV2Service', () => {
         {
           provide: MasaProvider,
           useValue: {
-            findChargeEntranteMaxAndTranche: jest.fn(),
+            findChargeEntranteMaxComparison: jest.fn(),
           },
         },
         {
@@ -1293,18 +1293,19 @@ describe('ControleMetierV2Service', () => {
   });
 
   describe.skip('verifyChargeEntranteVsTranche', () => {
-    it('should use MasaProvider to check charge entrante vs tranche', async () => {
+    it('should detect >20% variation of charge entrante max between N and N-1', async () => {
       const resultMap = new Map([
         [
           'STEU1',
           {
-            chargeMax: 12000,
-            trancheLabel: 'Tranche 2',
-            trancheRfa: '2',
+            chargeMaxN: 12000,
+            chargeMaxNMoins1: 8000,
+            trancheLabel: 'De 2 000 à 10 000 EH',
+            annee: 2024,
           },
         ],
       ]);
-      masaProvider.findChargeEntranteMaxAndTranche.mockResolvedValue(resultMap);
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue(resultMap);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },
@@ -1313,8 +1314,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargeEntranteVsTranche(xmlObj);
 
-      expect(masaProvider.findChargeEntranteMaxAndTranche).toHaveBeenCalledWith(['STEU1'], 2024);
-      // Tranche 2 limit is 10000. 12000 > 10000 -> Error
+      expect(masaProvider.findChargeEntranteMaxComparison).toHaveBeenCalledWith(['STEU1'], 2024);
+      // Variation = |12000 - 8000| / 8000 = 50% > 20% -> Error
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
     });

@@ -284,6 +284,7 @@ const buildErrorMessage53 = (params: string[]) => {
 };
 
 const buildErrorMessage54 = (params: string[]) => {
-  const [cdOuvrage, chargeMax, trancheLabel, seuilSup] = params as ErrorParamsMap[ErrorCode.E2_054];
-  return `La charge entrante retenue (CBPO max) de ${chargeMax} EH pour l'ouvrage ${cdOuvrage} dépasse le seuil supérieur (${seuilSup} EH) de la tranche d'obligation "${trancheLabel}".`;
+  const [cdOuvrage, chargeMaxN, chargeMaxNMoins1, trancheLabel, variationPct] =
+    params as ErrorParamsMap[ErrorCode.E2_054];
+  return `Dépassement de plus de 20 % de la charge entrante retenue (CBPO max) entre N et N-1 pour l'ouvrage ${cdOuvrage} (tranche "${trancheLabel}"). Charge N : ${chargeMaxN} EH, charge N-1 : ${chargeMaxNMoins1} EH, variation : ${variationPct} %.`;
 };

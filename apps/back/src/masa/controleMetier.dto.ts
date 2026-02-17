@@ -1,5 +1,6 @@
-export interface ChargeEntranteMaxAndTranche {
-  chargeMax: number;
+export interface ChargeEntranteMaxComparison {
+  chargeMaxN: number;
+  chargeMaxNMoins1: number;
   trancheLabel: string;
-  trancheRfa: string;
+  annee: number;
 }

@@ -137,6 +137,15 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.agac CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE roseau.agac (
+      aga_cdn INTEGER NOT NULL,
+      agac_conf_an NUMERIC NOT NULL,
+      PRIMARY KEY (aga_cdn, agac_conf_an)
+    )
+  `);
+
   await dataSource.query(`DROP TABLE IF EXISTS roseau.scl CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.scl (
@@ -323,6 +332,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
   await dataSource.query(`DELETE FROM roseau.cxnadm`);
   await dataSource.query(`DELETE FROM roseau.pmo`);
   await dataSource.query(`DELETE FROM roseau.tlref`);
+  await dataSource.query(`DELETE FROM roseau.agac`);
   await dataSource.query(`DELETE FROM roseau.aga`);
   await dataSource.query(`DELETE FROM roseau.tltobl`);
   await dataSource.query(`DELETE FROM roseau.scl`);
@@ -535,6 +545,16 @@ export async function seedCxntech(
 }
 
 // ============= Lanceleau Additional Seed Functions =============
+
+export async function seedAgac(dataSource: DataSource, agaCdn: number, agacConfAn: number): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.agac (aga_cdn, agac_conf_an)
+    VALUES ($1, $2)
+  `,
+    [agaCdn, agacConfAn],
+  );
+}
 
 export async function seedSup(dataSource: DataSource, supRfa: string): Promise<void> {
   await dataSource.query(

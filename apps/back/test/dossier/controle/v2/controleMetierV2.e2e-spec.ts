@@ -24,6 +24,7 @@ import {
   seedStchan,
   seedCpy,
   seedAga,
+  seedAgac,
   seedTltobl,
 } from '../../../createReferentielDataset';
 import { clearDepots } from '../../../depot.helper';
@@ -2379,15 +2380,17 @@ describe('ControleMetierV2Service (e2e)', () => {
   });
 
   describe.skip('CTL054 - verifyChargeEntranteVsTranche', () => {
-    it('should pass when charge max is within tranche bounds', async () => {
-      // Tranche 2: seuil sup = 10 000 EH, charge max = 8000 EH -> OK
+    it('should pass when charge max variation is within 20%', async () => {
+      // Charge N = 9000, Charge N-1 = 8000 -> variation = 12.5% < 20% -> OK
       await dataSource.query(`
         INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
         VALUES (1, 'STEU001', 100, 2024)
       `);
       await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
       await seedAga(dataSource, 1, 100, 'AGA001', '2');
-      await seedStchan(dataSource, 1, 2024, null, 8000);
+      await seedAgac(dataSource, 1, 2024);
+      await seedStchan(dataSource, 1, 2024, null, 9000);
+      await seedStchan(dataSource, 1, 2023, null, 8000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2410,15 +2413,17 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should report error when charge max exceeds tranche upper bound', async () => {
-      // Tranche 2: seuil sup = 10 000 EH, charge max = 12000 EH -> AVERTISSEMENT
+    it('should report error when charge max variation exceeds 20%', async () => {
+      // Charge N = 12000, Charge N-1 = 8000 -> variation = 50% > 20% -> AVERTISSEMENT
       await dataSource.query(`
         INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
         VALUES (2, 'STEU002', 200, 2024)
       `);
       await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
       await seedAga(dataSource, 2, 200, 'AGA002', '2');
+      await seedAgac(dataSource, 2, 2024);
       await seedStchan(dataSource, 2, 2024, null, 12000);
+      await seedStchan(dataSource, 2, 2023, null, 8000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2440,19 +2445,21 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL054);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU002', '12000', 'De 2 000 à 10 000 EH', '10000']);
+      expect(result.errors[0].params).toEqual(['STEU002', '12000', '8000', 'De 2 000 à 10 000 EH', '50.0']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
-    it('should report error when charge max exceeds tranche 1 upper bound', async () => {
-      // Tranche 1: seuil sup = 2 000 EH, charge max = 3000 EH -> AVERTISSEMENT
+    it('should report error when charge max decreases by more than 20%', async () => {
+      // Charge N = 5000, Charge N-1 = 10000 -> variation = 50% > 20% -> AVERTISSEMENT
       await dataSource.query(`
         INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
         VALUES (3, 'STEU003', 300, 2024)
       `);
       await seedTltobl(dataSource, '1', 'Moins de 2 000 EH');
       await seedAga(dataSource, 3, 300, 'AGA003', '1');
-      await seedStchan(dataSource, 3, 2024, null, 3000);
+      await seedAgac(dataSource, 3, 2024);
+      await seedStchan(dataSource, 3, 2024, null, 5000);
+      await seedStchan(dataSource, 3, 2023, null, 10000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2474,17 +2481,17 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL054);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU003', '3000', 'Moins de 2 000 EH', '2000']);
     });
 
-    it('should not report error for tranche 4 (no upper bound)', async () => {
-      // Tranche 4: pas de seuil supérieur, charge max = 999999 EH -> OK
+    it('should skip when no N-1 data exists', async () => {
+      // Only charge N exists, no N-1 -> skip (no comparison possible)
       await dataSource.query(`
         INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
         VALUES (4, 'STEU004', 400, 2024)
       `);
       await seedTltobl(dataSource, '4', 'Plus de 100 000 EH');
       await seedAga(dataSource, 4, 400, 'AGA004', '4');
+      await seedAgac(dataSource, 4, 2024);
       await seedStchan(dataSource, 4, 2024, null, 999999);
 
       const fctAssainissement = createTestFctAssainissement({
@@ -2546,15 +2553,17 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should report error for tranche 3 when charge exceeds 100 000 EH', async () => {
-      // Tranche 3: seuil sup = 100 000 EH, charge max = 120000 EH -> AVERTISSEMENT
+    it('should skip when N-1 charge is zero', async () => {
+      // Charge N-1 = 0 -> skip (cannot compute variation, division by zero)
       await dataSource.query(`
         INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
         VALUES (5, 'STEU005', 500, 2024)
       `);
       await seedTltobl(dataSource, '3', 'De 10 000 à 100 000 EH');
       await seedAga(dataSource, 5, 500, 'AGA005', '3');
+      await seedAgac(dataSource, 5, 2024);
       await seedStchan(dataSource, 5, 2024, null, 120000);
+      await seedStchan(dataSource, 5, 2023, null, 0);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2574,10 +2583,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
       expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU005', '120000', 'De 10 000 à 100 000 EH', '100000']);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+      expect(result.errors).toHaveLength(0);
     });
   });
 });

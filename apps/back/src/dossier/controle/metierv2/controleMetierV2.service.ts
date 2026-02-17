@@ -39,7 +39,7 @@ export class ControleMetierV2Service {
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
       this.verifyCmaComparisonForDcoDbo5(xmlObj),
       // this.verifyDebitEntrantVsChargeMax(xmlObj),
-      // this.verifyChargeEntranteVsTranche(xmlObj),
+      this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -632,16 +632,8 @@ export class ControleMetierV2Service {
   }
 
   // TODO : revoir la gestion des tranches
-  // Seuils supérieurs DERU par tranche d'obligation (en EH)
-  // T1: < 2 000 EH, T2: 2 000 - 10 000 EH, T3: 10 000 - 100 000 EH, T4: > 100 000 EH
-  private static readonly TRANCHE_SEUILS_SUP: Map<string, number> = new Map([
-    ['1', 2_000],
-    ['2', 10_000],
-    ['3', 100_000],
-  ]);
-
-  // TODO : revoir les règles
-  // CTL054: Vérification que la charge entrante retenue (CBPO max) correspond à la tranche d'obligation
+  // CTL054: Vérification du dépassement de plus de 20% de la charge entrante retenue (CBPO max) entre N et N-1
+  // Ce contrôle doit être lancé après bancarisation dans ROSEAU afin de disposer de la charge entrante max réactualisée.
   async verifyChargeEntranteVsTranche(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
@@ -659,25 +651,34 @@ export class ControleMetierV2Service {
       .map((ouvrage) => ouvrage.cdOuvrageDepollution)
       .filter((code): code is string => !!code);
 
-    const chargeEntranteBySteu = await this.masaProvider.findChargeEntranteMaxAndTranche(steuCodes, year);
+    const chargeComparisonBySteu = await this.masaProvider.findChargeEntranteMaxComparison(steuCodes, year);
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) continue;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
 
-      const result = chargeEntranteBySteu.get(cdOuvrageDepollution);
-      if (!result) continue;
+      const result = chargeComparisonBySteu.get(cdOuvrageDepollution);
+      if (!result) {
+        continue;
+      }
 
-      const { chargeMax, trancheLabel, trancheRfa } = result;
+      const { chargeMaxN, chargeMaxNMoins1, trancheLabel } = result;
 
-      // Tranche T4 (> 100 000 EH) n'a pas de seuil supérieur, on ignore
-      const seuilSup = ControleMetierV2Service.TRANCHE_SEUILS_SUP.get(trancheRfa);
-      if (seuilSup === undefined) continue;
+      // Vérifier le dépassement de plus de 20% entre N et N-1
+      const variation = Math.abs((chargeMaxN - chargeMaxNMoins1) / chargeMaxNMoins1);
 
-      if (chargeMax > seuilSup) {
+      if (variation > 0.2) {
         errors.push({
           code: ErrorCode.E2_054,
-          params: [cdOuvrageDepollution, chargeMax.toString(), trancheLabel, seuilSup.toString()],
+          params: [
+            cdOuvrageDepollution,
+            chargeMaxN.toString(),
+            chargeMaxNMoins1.toString(),
+            trancheLabel,
+            (variation * 100).toFixed(1),
+          ],
           evenementType: EvenementType.AVERTISSEMENT,
         });
       }

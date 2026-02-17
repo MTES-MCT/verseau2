@@ -136,7 +136,13 @@ export type ErrorParamsMap = {
     | [date: string];
   [ErrorCode.E2_052]: [param: string, cdOuvrage: string, date: string, val: string, cma: string] | [date: string];
   [ErrorCode.E2_053]: [cdOuvrage: string, date: string, total: string, maxRef: string, threshold: string];
-  [ErrorCode.E2_054]: [cdOuvrage: string, chargeMax: string, trancheLabel: string, seuilSup: string];
+  [ErrorCode.E2_054]: [
+    cdOuvrage: string,
+    chargeMaxN: string,
+    chargeMaxNMoins1: string,
+    trancheLabel: string,
+    variationPct: string,
+  ];
   [ErrorCode.E2_999]: [message: string];
 };
 

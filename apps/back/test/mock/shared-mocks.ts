@@ -200,14 +200,12 @@ export class QueueTestMock implements Queue {
 export class RoseauGatewayTestMock {
   findSteuBySandreCda = jest.fn().mockResolvedValue(null);
   findCxnAdmBySteuAndItv = jest.fn().mockResolvedValue(null);
-  findChargeEntranteMaxAndTranche = jest.fn().mockResolvedValue(null);
-  findChargeEntranteMaxAndTrancheBatch = jest.fn().mockResolvedValue(new Map());
+  findChargeEntranteMaxComparisonBatch = jest.fn().mockResolvedValue(new Map());
 
   reset(): void {
     this.findSteuBySandreCda.mockClear().mockResolvedValue(null);
     this.findCxnAdmBySteuAndItv.mockClear().mockResolvedValue(null);
-    this.findChargeEntranteMaxAndTranche.mockClear().mockResolvedValue(null);
-    this.findChargeEntranteMaxAndTrancheBatch.mockClear().mockResolvedValue(new Map());
+    this.findChargeEntranteMaxComparisonBatch.mockClear().mockResolvedValue(new Map());
   }
 }
 
