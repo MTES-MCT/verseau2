@@ -12,6 +12,7 @@ import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { MasaProvider } from '@masa/masa.provider';
+import { ControleV1DataFetcherService } from '@dossier/controle/isov1/controleV1DataFetcher.service';
 
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -58,6 +59,7 @@ describe('ControleV1Service (e2e)', () => {
         RoseauRepository,
         LanceleauRepository,
         MasaProvider,
+        ControleV1DataFetcherService,
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },

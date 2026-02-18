@@ -8,8 +8,8 @@ import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
 import { LoggerService } from '@shared/logger/logger.service';
-import { MasaProvider } from '@masa/masa.provider';
-import { MasaItv, MasaSteu } from '@masa/masa-controle.dto';
+import { ControleV1DataFetcherService } from './controleV1DataFetcher.service';
+import { MasaItv, MasaSteu } from '@masa/masaControle.dto';
 
 @Injectable()
 export class ControleV1Service {
@@ -19,7 +19,7 @@ export class ControleV1Service {
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly controleMapper: ControleMapper,
     private readonly logger: LoggerService,
-    private readonly masaProvider: MasaProvider,
+    private readonly controleV1DataFetcher: ControleV1DataFetcherService,
   ) {
     this.logger.setContext(ControleV1Service.name);
   }
@@ -31,57 +31,8 @@ export class ControleV1Service {
     fctAssainissement: FctAssainissement,
     manager?: EntityManager,
   ): Promise<ControleModel[]> {
-    // Préchargement batch des données MASA (CTL002, CTL004, CTL005, CTL023)
-    // Un seul appel par type de données pour tout le fichier, en parallèle.
-    // Quand l'API REST MASA sera disponible, seul MasaProvider changera.
-    const allSteuCdas = fctAssainissement.ouvrages
-      .map((o) => o.cdOuvrageDepollution)
-      .filter((cda): cda is string => !!cda);
-
-    const allExploitantRfas = fctAssainissement.ouvrages
-      .map((o) => o.exploitant?.cdIntervenant)
-      .filter((rfa): rfa is string => !!rfa);
-
-    const allPmoQueries = fctAssainissement.ouvrages.flatMap((ouvrage) => {
-      const cdSteu = ouvrage.cdOuvrageDepollution;
-      if (!cdSteu) return [];
-      return ouvrage.pointMesure
-        .filter((pmo) => !!pmo.locGlobalePointMesure)
-        .map((pmo) => ({
-          cdSteu,
-          numPmo: pmo.numeroPointMesure,
-          locPoint: pmo.locGlobalePointMesure as string,
-        }));
-    });
-
-    const allSclLinks = fctAssainissement.systemesCollecte.flatMap((scl) => {
-      const cdScl = scl.cdSystemeCollecte;
-      const cdAga = scl.agglomerationAssainissement?.cdAgglomerationAssainissement;
-      if (!cdScl || !cdAga) return [];
-      return [{ cdScl, cdAga }];
-    });
-
-    const [steuMap, itvMap] = await Promise.all([
-      this.masaProvider.findSteuBatchBySandreCdas(allSteuCdas),
-      this.masaProvider.findItvBatchByRfas(allExploitantRfas),
-    ]);
-
-    // Les liens CxnAdm dépendent des steuCdn/itvCdn récupérés ci-dessus
-    const expLinks = fctAssainissement.ouvrages.flatMap((ouvrage) => {
-      const cdSteu = ouvrage.cdOuvrageDepollution;
-      const cdItv = ouvrage.exploitant?.cdIntervenant;
-      if (!cdSteu || !cdItv) return [];
-      const steu = steuMap.get(cdSteu);
-      const itv = itvMap.get(cdItv);
-      if (!steu || !itv) return [];
-      return [{ steuCdn: steu.steuCdn, itvCdn: itv.itvCdn }];
-    });
-
-    const [pmoSet, sclLinkSet, expLinkSet] = await Promise.all([
-      this.masaProvider.checkPmoExistenceBatch(allPmoQueries),
-      this.masaProvider.checkSclAgglomerationLinksBatch(allSclLinks),
-      this.masaProvider.checkExpSteuLinksBatch(expLinks),
-    ]);
+    const { steuMap, itvMap, expLinkSet, pmoSet, sclLinkSet } =
+      await this.controleV1DataFetcher.load(fctAssainissement);
 
     const tousControles = Promise.all([
       Promise.resolve(this.verifySteuExists(fctAssainissement, steuMap)),

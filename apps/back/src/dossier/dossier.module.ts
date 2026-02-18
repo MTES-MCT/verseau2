@@ -16,6 +16,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserModule } from '@user/user.module';
 import { ReferentielModule } from '@referentiel/referentiel.module';
 import { ControleV1Service } from './controle/isov1/controlev1.service';
+import { ControleV1DataFetcherService } from './controle/isov1/controleV1DataFetcher.service';
 import { ControleEntity } from './controle/controle.entity';
 import { ControleRepository } from './controle/controle.repository';
 import { ControleGateway } from './controle/controle.gateway';
@@ -71,6 +72,7 @@ const sandreServiceFactory = {
     sandreServiceFactory,
     { provide: ReponseSandreGateway, useClass: ReponseSandreRepository },
     // ISO V1 control
+    ControleV1DataFetcherService,
     ControleV1Service,
     ControleMetierV2Service,
     { provide: ControleGateway, useClass: ControleRepository },
