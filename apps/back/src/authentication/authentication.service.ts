@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type { CookieOptions, Response } from 'express';
 
 import {
   Configuration,
+  discovery,
   authorizationCodeGrant,
   refreshTokenGrant,
   fetchUserInfo,
@@ -18,23 +19,43 @@ import { jwtVerify, createRemoteJWKSet, type JWTPayload } from 'jose';
 export class AuthenticationService implements Authentication {
   private readonly redirectUri: string;
   private readonly clientId: string;
+  private readonly clientSecret: string;
+  private readonly issuerUrl: string;
   private readonly scope =
     'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations';
   private jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+  private configuration: Configuration | null = null;
 
   constructor(
-    private readonly configuration: Configuration,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
   ) {
     this.redirectUri = this.configService.getOrThrow<string>('OIDC_REDIRECT_URI');
     this.clientId = this.configService.getOrThrow<string>('OIDC_CLIENT_ID');
+    this.clientSecret = this.configService.getOrThrow<string>('OIDC_CLIENT_SECRET');
+    this.issuerUrl = this.configService.getOrThrow<string>('OIDC_ISSUER_URL');
     this.logger.setContext(AuthenticationService.name);
   }
 
-  private getJWKS() {
+  private async getConfiguration(): Promise<Configuration> {
+    if (!this.configuration) {
+      try {
+        this.configuration = await discovery(new URL(this.issuerUrl), this.clientId, {
+          client_secret: this.clientSecret,
+        });
+      } catch (error) {
+        throw new ServiceUnavailableException(
+          `OIDC provider unreachable: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+    }
+    return this.configuration;
+  }
+
+  private async getJWKS() {
+    const configuration = await this.getConfiguration();
     if (!this.jwks) {
-      const metadata = this.configuration.serverMetadata();
+      const metadata = configuration.serverMetadata();
       if (!metadata.jwks_uri) {
         throw new Error('JWKS URI not available in OIDC metadata');
       }
@@ -47,9 +68,10 @@ export class AuthenticationService implements Authentication {
     try {
       try {
         // Attempt local JWT verification first
-        const jwks = this.getJWKS();
+        const jwks = await this.getJWKS();
+        const configuration = await this.getConfiguration();
         const { payload } = await jwtVerify(token, jwks, {
-          issuer: this.configuration.serverMetadata().issuer,
+          issuer: configuration.serverMetadata().issuer,
           audience: this.clientId,
         });
 
@@ -63,8 +85,9 @@ export class AuthenticationService implements Authentication {
     }
   }
 
-  getOIDCConfiguration(): OIDCConfiguration {
-    const metadata = this.configuration.serverMetadata();
+  async getOIDCConfiguration(): Promise<OIDCConfiguration> {
+    const configuration = await this.getConfiguration();
+    const metadata = configuration.serverMetadata();
     const authEndpoint = metadata.authorization_endpoint;
     if (!authEndpoint) {
       throw new Error('Authorization endpoint not available');
@@ -79,10 +102,11 @@ export class AuthenticationService implements Authentication {
   }
 
   async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }> {
+    const configuration = await this.getConfiguration();
     const callbackUrl = new URL(this.redirectUri);
     callbackUrl.searchParams.set('code', code);
 
-    const tokens = await authorizationCodeGrant(this.configuration, callbackUrl, {
+    const tokens = await authorizationCodeGrant(configuration, callbackUrl, {
       expectedNonce: nonce,
       pkceCodeVerifier: undefined,
     });
@@ -100,9 +124,10 @@ export class AuthenticationService implements Authentication {
   }
 
   async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
+    const configuration = await this.getConfiguration();
     this.logger.debug(`Getting user info for access token: ${accessToken}`);
 
-    const userInfo: UserInfoResponse = await fetchUserInfo(this.configuration, accessToken, skipSubjectCheck);
+    const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, skipSubjectCheck);
     this.logger.debug(`User info received: ${JSON.stringify(userInfo)}`);
 
     return this.mapOpenIdUserToUser(userInfo);
@@ -145,7 +170,8 @@ export class AuthenticationService implements Authentication {
   }
 
   async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
-    const tokens = await refreshTokenGrant(this.configuration, refreshToken);
+    const configuration = await this.getConfiguration();
+    const tokens = await refreshTokenGrant(configuration, refreshToken);
 
     return {
       accessToken: tokens.access_token,
@@ -155,8 +181,9 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  generateLogoutUrl(idToken: string): string {
-    const endSessionEndpoint = this.configuration.serverMetadata().end_session_endpoint;
+  async generateLogoutUrl(idToken: string): Promise<string> {
+    const configuration = await this.getConfiguration();
+    const endSessionEndpoint = configuration.serverMetadata().end_session_endpoint;
     if (!endSessionEndpoint) {
       throw new Error('End session endpoint not available');
     }

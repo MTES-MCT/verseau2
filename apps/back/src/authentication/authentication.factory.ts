@@ -1,16 +1,11 @@
 import { ConfigService } from '@nestjs/config';
-import { discovery, Configuration } from 'openid-client';
 import { Authentication } from './authentication';
 import { AuthenticationService } from './authentication.service';
 import { AuthenticationMockService } from './authentication.mock.service';
 import { LoggerService } from '@shared/logger/logger.service';
 
-export const createAuthenticationService = (
-  configuration: Configuration,
-  configService: ConfigService,
-  logger: LoggerService,
-): Authentication => {
-  return new AuthenticationService(configuration, configService, logger);
+export const createAuthenticationService = (configService: ConfigService, logger: LoggerService): Authentication => {
+  return new AuthenticationService(configService, logger);
 };
 
 export const createAuthenticationMockService = (configService: ConfigService): Authentication => {
@@ -19,31 +14,15 @@ export const createAuthenticationMockService = (configService: ConfigService): A
 
 export const createAuthenticationProviders = () => [
   {
-    provide: 'OIDC_CONFIGURATION',
-    useFactory: async (configService: ConfigService): Promise<Configuration | null> => {
-      const useMock = configService.get<string>('OIDC_MOCK') === 'true';
-      if (useMock) {
-        return null;
-      }
-      const issuerUrl = configService.getOrThrow<string>('OIDC_ISSUER_URL');
-      const clientId = configService.getOrThrow<string>('OIDC_CLIENT_ID');
-      const clientSecret = configService.getOrThrow<string>('OIDC_CLIENT_SECRET');
-      return await discovery(new URL(issuerUrl), clientId, {
-        client_secret: clientSecret,
-      });
-    },
-    inject: [ConfigService],
-  },
-  {
     provide: Authentication,
-    inject: ['OIDC_CONFIGURATION', ConfigService, LoggerService],
-    useFactory: (configuration: Configuration, configService: ConfigService, logger: LoggerService): Authentication => {
+    inject: [ConfigService, LoggerService],
+    useFactory: (configService: ConfigService, logger: LoggerService): Authentication => {
       const useMock = configService.get<string>('OIDC_MOCK') === 'true';
       if (useMock) {
         logger.warn('MOCK AUTHENTICATION SERVICE IN USE');
         return createAuthenticationMockService(configService);
       }
-      return createAuthenticationService(configuration, configService, logger);
+      return createAuthenticationService(configService, logger);
     },
   },
 ];
