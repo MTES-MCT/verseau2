@@ -71,15 +71,15 @@ export class S3TestMock implements S3 {
  * Implements the Sftp interface for full compatibility.
  */
 export class SftpTestMock implements Sftp {
-  calls: Array<{ file: Buffer; depotId: string }> = [];
+  calls: Array<{ file: Buffer; fileName: string }> = [];
   shouldFail = false;
   failureMessage = 'SFTP send failed';
 
-  async sendToAgentVerseau(file: Buffer, depotId: string): Promise<void> {
+  async sendToAgentVerseau(file: Buffer, fileName: string): Promise<void> {
     if (this.shouldFail) {
       throw new Error(this.failureMessage);
     }
-    this.calls.push({ file, depotId });
+    this.calls.push({ file, fileName });
     await Promise.resolve();
   }
 

@@ -13,7 +13,6 @@ import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
-import { SandreAcceptationStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
@@ -224,10 +223,10 @@ describe('Worker Service (e2e)', () => {
       });
       expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.SFTP_COMPLETED);
-
       // Verify SFTP was called
-      expect(sftpMock.calls).toHaveLength(1);
-      expect(sftpMock.calls[0].depotId).toBe('sftp_test.xml');
+      expect(sftpMock.calls).toHaveLength(2);
+      expect(sftpMock.calls[0].fileName).toBe('sftp_test.xml');
+      expect(sftpMock.calls[1].fileName).toBe('sftp_test.xml.ack');
     });
 
     it('should handle SFTP failures', async () => {

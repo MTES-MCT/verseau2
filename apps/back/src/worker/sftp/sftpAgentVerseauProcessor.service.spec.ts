@@ -79,7 +79,8 @@ describe('SftpAgentVerseauProcessorService', () => {
     expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'John Doe');
 
     const expectedXml = `${originalXml}<!-- added John Doe -->`;
-    expect(mockSftp.sendToAgentVerseau).toHaveBeenCalledWith(Buffer.from(expectedXml), 'remote/path.xml');
+    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'remote/path.xml');
+    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
 
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       step: DepotStep.SFTP_COMPLETED,
@@ -100,7 +101,8 @@ describe('SftpAgentVerseauProcessorService', () => {
     await service.process({ depotId, filePath });
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
-    expect(mockSftp.sendToAgentVerseau).toHaveBeenCalledWith(Buffer.from(originalXml), 'remote/path.xml');
+    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(1, Buffer.from(originalXml), 'remote/path.xml');
+    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
   });
 
   it('should handle errors and update depot status to REJETE', async () => {
