@@ -107,7 +107,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
   // CTL034 — Existence et validité des PMO pour les localisations A2-A8
   // TODO: Implémenter quand CTL034 sera développé
-  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
   // async findPmoWithValidityBatch(
@@ -117,7 +117,6 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
   // CTL052 — Concentrations moyennes annuelles N-1 par STEU et paramètre
   // Retourne Map<steuCda, Map<codeParametre, valeur>>
-  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
   async findConcentrationsMoyennesBatch(
@@ -125,44 +124,22 @@ export class MasaProvider {
     year: number,
     parametreCodes: string[],
   ): Promise<Map<string, Map<string, number>>> {
-    const result = new Map<string, Map<string, number>>();
-    await Promise.all(
-      steuCdas.map(async (cda) => {
-        try {
-          const cmaValues = await this.roseauGateway.findConcentrationMoyenneAnnuelle(cda, year, parametreCodes);
-          if (cmaValues.size > 0) {
-            result.set(cda, cmaValues);
-          }
-        } catch {
-          // Pas de données de référence pour cette STEU — on ignore silencieusement
-        }
-      }),
-    );
-    return result;
+    return this.roseauGateway.findConcentrationsMoyennesAnnuellesBatch(steuCdas, year, parametreCodes);
   }
 
   // ---------------------------------------------------------------------------
   // CTL053 — Débit max de référence par STEU
   // Retourne Map<steuCda, maxDebitRef> — absent si null ou <= 0
-  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
   async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<Map<string, number>> {
-    const result = new Map<string, number>();
-    await Promise.all(
-      steuCdas.map(async (cda) => {
-        const maxDebit = await this.roseauGateway.findMaxDebitReference(cda);
-        if (maxDebit !== null && maxDebit > 0) {
-          result.set(cda, maxDebit);
-        }
-      }),
-    );
-    return result;
+    return this.roseauGateway.findMaxDebitsReferenceBatch(steuCdas);
   }
 
   // ---------------------------------------------------------------------------
   // CTL054 — Charge entrante max et tranche d'obligation par STEU
-  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
   async findChargeEntranteMaxAndTranche(

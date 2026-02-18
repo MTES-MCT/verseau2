@@ -162,6 +162,36 @@ export class RoseauRepository implements RoseauGateway {
     return map;
   }
 
+  async findConcentrationsMoyennesAnnuellesBatch(
+    steuSandreCdas: string[],
+    year: number,
+    parametreCodes: string[],
+  ): Promise<Map<string, Map<string, number>>> {
+    if (steuSandreCdas.length === 0 || parametreCodes.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.resaRepository
+      .createQueryBuilder('r')
+      .select('s.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('r.par_rfa', 'par_rfa')
+      .addSelect('r.resa_cma_val', 'resa_cma_val')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = r.steu_cdn')
+      .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
+      .andWhere('r.resa_an = :year', { year })
+      .andWhere('r.par_rfa IN (:...parametreCodes)', { parametreCodes })
+      .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: string }>();
+
+    const result = new Map<string, Map<string, number>>();
+    for (const row of rows) {
+      if (!result.has(row.steu_sandre_cda)) {
+        result.set(row.steu_sandre_cda, new Map());
+      }
+      result.get(row.steu_sandre_cda)!.set(row.par_rfa, parseFloat(row.resa_cma_val));
+    }
+    return result;
+  }
+
   async findMaxDebitReference(steuSandreCda: string): Promise<number | null> {
     const result = await this.stchanRepository
       .createQueryBuilder('t')
@@ -180,6 +210,35 @@ export class RoseauRepository implements RoseauGateway {
     const dref = result.dref ? parseFloat(result.dref.toString()) : 0;
 
     return Math.max(pc95, dref);
+  }
+
+  async findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<Map<string, number>> {
+    if (steuSandreCdas.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.stchanRepository
+      .createQueryBuilder('t')
+      .select('s.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('t.stchan_pc95_val', 'pc95')
+      .addSelect('c.cpy_ref_debit_mt', 'dref')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = t.steu_cdn')
+      .innerJoin(CpyEntity, 'c', 'c.steu_cdn = s.steu_cdn')
+      .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
+      .andWhere('t.stchan_an = s.steu_encours_an')
+      .andWhere('c.cpy_an = s.steu_encours_an')
+      .getRawMany<{ steu_sandre_cda: string; pc95: number | null; dref: number | null }>();
+
+    const result = new Map<string, number>();
+    for (const row of rows) {
+      const pc95 = row.pc95 ? parseFloat(row.pc95.toString()) : 0;
+      const dref = row.dref ? parseFloat(row.dref.toString()) : 0;
+      const maxDebit = Math.max(pc95, dref);
+      if (maxDebit > 0) {
+        result.set(row.steu_sandre_cda, maxDebit);
+      }
+    }
+    return result;
   }
 
   async findChargeEntranteMaxAndTranche(

@@ -36,7 +36,13 @@ export interface RoseauGateway {
     year: number,
     parametreCodes: string[],
   ): Promise<Map<string, number>>;
+  findConcentrationsMoyennesAnnuellesBatch(
+    steuSandreCdas: string[],
+    year: number,
+    parametreCodes: string[],
+  ): Promise<Map<string, Map<string, number>>>;
   findMaxDebitReference(steuSandreCda: string): Promise<number | null>;
+  findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<Map<string, number>>;
   findChargeEntranteMaxAndTranche(steuSandreCda: string, year: number): Promise<ChargeEntranteMaxAndTranche | null>;
   findChargeEntranteMaxAndTrancheBatch(
     steuSandreCdas: string[],
