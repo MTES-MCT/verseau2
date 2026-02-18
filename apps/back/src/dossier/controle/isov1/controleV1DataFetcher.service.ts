@@ -4,11 +4,11 @@ import { MasaProvider } from '@masa/masa.provider';
 import { MasaItv, MasaSteu } from '@masa/masaControle.dto';
 
 export interface ControleV1MasaData {
-  steuMap: Map<string, MasaSteu>;
-  itvMap: Map<string, MasaItv>;
-  expLinkSet: Set<string>;
-  pmoSet: Set<string>;
-  sclLinkSet: Set<string>;
+  steuBySandreCda: Map<string, MasaSteu>;
+  itvByRfa: Map<string, MasaItv>;
+  validExpSteuLinks: Set<string>;
+  existingPmos: Set<string>;
+  validSclAgaLinks: Set<string>;
 }
 
 @Injectable()
@@ -21,7 +21,7 @@ export class ControleV1DataFetcherService {
   async load(fctAssainissement: FctAssainissement): Promise<ControleV1MasaData> {
     const steuCdas = this.extractSteuCdas(fctAssainissement);
     const exploitantRfas = this.extractExploitantRfas(fctAssainissement);
-    const [steuMap, itvMap] = await Promise.all([
+    const [steuBySandreCda, itvByRfa] = await Promise.all([
       this.masaProvider.findSteuBatchBySandreCdas(steuCdas),
       this.masaProvider.findItvBatchByRfas(exploitantRfas),
     ]);
@@ -29,14 +29,20 @@ export class ControleV1DataFetcherService {
     // Les liens CxnAdm dépendent des steuCdn/itvCdn récupérés ci-dessus
     const pmoQueries = this.extractPmoQueries(fctAssainissement);
     const sclLinks = this.extractSclLinks(fctAssainissement);
-    const expLinks = this.extractExpLinks(fctAssainissement, steuMap, itvMap);
-    const [pmoSet, sclLinkSet, expLinkSet] = await Promise.all([
+    const expLinks = this.extractExpLinks(fctAssainissement, steuBySandreCda, itvByRfa);
+    const [existingPmos, validSclAgaLinks, validExpSteuLinks] = await Promise.all([
       this.masaProvider.checkPmoExistenceBatch(pmoQueries),
       this.masaProvider.checkSclAgglomerationLinksBatch(sclLinks),
       this.masaProvider.checkExpSteuLinksBatch(expLinks),
     ]);
 
-    return { steuMap, itvMap, expLinkSet, pmoSet, sclLinkSet };
+    return {
+      steuBySandreCda,
+      itvByRfa,
+      validExpSteuLinks,
+      existingPmos,
+      validSclAgaLinks,
+    };
   }
 
   private extractSteuCdas(fctAssainissement: FctAssainissement): string[] {

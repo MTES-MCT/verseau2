@@ -31,14 +31,14 @@ export class ControleV1Service {
     fctAssainissement: FctAssainissement,
     manager?: EntityManager,
   ): Promise<ControleModel[]> {
-    const { steuMap, itvMap, expLinkSet, pmoSet, sclLinkSet } =
+    const { steuBySandreCda, itvByRfa, validExpSteuLinks, existingPmos, validSclAgaLinks } =
       await this.controleV1DataFetcher.load(fctAssainissement);
 
     const tousControles = Promise.all([
-      Promise.resolve(this.verifySteuExists(fctAssainissement, steuMap)),
+      Promise.resolve(this.verifySteuExists(fctAssainissement, steuBySandreCda)),
       this.verifyMoSteuExists(fctAssainissement),
-      Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steuMap, itvMap, expLinkSet)),
-      Promise.resolve(this.verifyPmoExists(fctAssainissement, pmoSet)),
+      Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steuBySandreCda, itvByRfa, validExpSteuLinks)),
+      Promise.resolve(this.verifyPmoExists(fctAssainissement, existingPmos)),
       this.verifySupExists(fctAssainissement),
       this.verifyLieuAnalyseExists(fctAssainissement),
       this.verifyStatutAnalyseExists(fctAssainissement),
@@ -56,7 +56,7 @@ export class ControleV1Service {
       this.verifyTypeEvenementExists(fctAssainissement),
       this.verifyCodeRemarqueExists(fctAssainissement),
       this.verifySystemeDeCollecteExists(fctAssainissement),
-      Promise.resolve(this.verifySystemeCollecteLinkedToAgglomeration(fctAssainissement, sclLinkSet)),
+      Promise.resolve(this.verifySystemeCollecteLinkedToAgglomeration(fctAssainissement, validSclAgaLinks)),
       this.verifyTypeOuvrageExists(fctAssainissement),
       this.verifyNatureSystemeCollecteExists(fctAssainissement),
       this.verifyIntervenantEmetteurExists(fctAssainissement),
