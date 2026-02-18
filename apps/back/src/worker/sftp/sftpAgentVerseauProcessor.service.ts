@@ -44,6 +44,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       }
 
       await this.sftpService.sendToAgentVerseau(fileToSend, depot.path);
+      await this.sftpService.sendToAgentVerseau(Buffer.alloc(0), `${depot.path}.ack`);
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
       });
