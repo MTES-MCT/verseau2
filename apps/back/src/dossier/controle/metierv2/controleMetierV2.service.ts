@@ -23,6 +23,25 @@ export class ControleMetierV2Service {
     const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
       filterFctAssainissementForMetierV2(xmlObj);
 
+    // Préchargement batch des données MASA (CTL052, CTL053)
+    // Un seul appel par type de données pour tout le fichier, en parallèle.
+    // Quand l'API REST MASA sera disponible, seul MasaProvider changera.
+    const dateDebutReference = xmlObj.scenario?.dateDebutReference;
+    const currentYear = dateDebutReference ? parseInt(dateDebutReference.substring(0, 4), 10) : NaN;
+    const previousYear = currentYear - 1;
+
+    const allSteuCdas = xmlObj.ouvrages.map((o) => o.cdOuvrageDepollution).filter((cda): cda is string => !!cda);
+
+    const [cmaBySteu, maxDebitBySteu] = await Promise.all([
+      !isNaN(currentYear)
+        ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
+            String(CodeParametre.DBO5),
+            String(CodeParametre.DCO),
+          ])
+        : Promise.resolve(new Map<string, Map<string, number>>()),
+      this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
+    ]);
+
     const tousControles = await Promise.all([
       Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
@@ -37,8 +56,8 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
-      this.verifyCmaComparisonForDcoDbo5(xmlObj),
-      // this.verifyDebitEntrantVsChargeMax(xmlObj),
+      this.verifyCmaComparisonForDcoDbo5(xmlObj, cmaBySteu),
+      // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebitBySteu),
       // this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
@@ -471,7 +490,10 @@ export class ControleMetierV2Service {
   }
 
   // CTL052: Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1
-  async verifyCmaComparisonForDcoDbo5(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  async verifyCmaComparisonForDcoDbo5(
+    fctAssainissement: FctAssainissement,
+    cmaBySteu?: Map<string, Map<string, number>>,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
@@ -494,7 +516,17 @@ export class ControleMetierV2Service {
       return { name: ControleName.CTL052, errors };
     }
 
-    const previousYear = currentYear - 1;
+    // Si les données ne sont pas préchargées (appel direct, hors execute()), on les récupère ici
+    if (!cmaBySteu) {
+      const allSteuCdas = fctAssainissement.ouvrages
+        .map((o) => o.cdOuvrageDepollution)
+        .filter((cda): cda is string => !!cda);
+      cmaBySteu = await this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, currentYear - 1, [
+        String(CodeParametre.DBO5),
+        String(CodeParametre.DCO),
+      ]);
+    }
+
     const dbo5Code = String(CodeParametre.DBO5);
     const dcoCode = String(CodeParametre.DCO);
 
@@ -502,17 +534,8 @@ export class ControleMetierV2Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      let cmaValues: Map<string, number>;
-      try {
-        cmaValues = await this.roseauGateway.findConcentrationMoyenneAnnuelle(cdOuvrageDepollution, previousYear, [
-          dbo5Code,
-          dcoCode,
-        ]);
-      } catch {
-        continue;
-      }
-
-      if (cmaValues.size === 0) {
+      const cmaValues = cmaBySteu.get(cdOuvrageDepollution);
+      if (!cmaValues || cmaValues.size === 0) {
         continue;
       }
 
@@ -557,9 +580,20 @@ export class ControleMetierV2Service {
   }
 
   // CTL053: Vérification du débit entrant (paramètre 1552) vs max(PC95, Dref)
-  async verifyDebitEntrantVsChargeMax(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  async verifyDebitEntrantVsChargeMax(
+    fctAssainissement: FctAssainissement,
+    maxDebitBySteu?: Map<string, number>,
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
     const volumeCode = String(CodeParametre.Volume); // Paramètre 1552
+
+    // Si les données ne sont pas préchargées (appel direct, hors execute()), on les récupère ici
+    if (!maxDebitBySteu) {
+      const allSteuCdas = fctAssainissement.ouvrages
+        .map((o) => o.cdOuvrageDepollution)
+        .filter((cda): cda is string => !!cda);
+      maxDebitBySteu = await this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas);
+    }
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
@@ -567,10 +601,10 @@ export class ControleMetierV2Service {
         continue;
       }
 
-      // Récupérer max(PC95, Dref) depuis Roseau
-      const maxDebitRef = await this.roseauGateway.findMaxDebitReference(cdOuvrageDepollution);
+      // Récupérer max(PC95, Dref) depuis les données préchargées
+      const maxDebitRef = maxDebitBySteu.get(cdOuvrageDepollution);
 
-      if (maxDebitRef === null || maxDebitRef <= 0) {
+      if (maxDebitRef === undefined) {
         // Pas de données de référence, on saute la vérification
         continue;
       }

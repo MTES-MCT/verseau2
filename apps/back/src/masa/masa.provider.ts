@@ -1,16 +1,174 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { ChargeEntranteMaxAndTranche } from './controleMetier.dto';
+import { MasaItv, MasaSteu } from './masa-controle.dto';
 
 @Injectable()
 export class MasaProvider {
-  constructor(@Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway) {}
+  constructor(
+    @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
+  ) {}
+
+  // ---------------------------------------------------------------------------
+  // CTL002 / CTL004 — Existence des STEU (ouvrages de dépollution)
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findSteuBatchBySandreCdas(cdas: string[]): Promise<Map<string, MasaSteu>> {
+    const result = new Map<string, MasaSteu>();
+    await Promise.all(
+      cdas.map(async (cda) => {
+        const steu = await this.roseauGateway.findSteuBySandreCda(cda);
+        if (steu) {
+          result.set(cda, { steuCdn: steu.steuCdn });
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL004 — Existence des intervenants (exploitants)
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findItvBatchByRfas(rfas: string[]): Promise<Map<string, MasaItv>> {
+    const result = new Map<string, MasaItv>();
+    await Promise.all(
+      rfas.map(async (rfa) => {
+        const itv = await this.lanceleauGateway.findItvByRfa(rfa);
+        if (itv) {
+          result.set(rfa, { itvCdn: itv.itvCdn });
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL004 — Vérification des liens exploitant–STEU (CxnAdm)
+  // La clé du Set est `${steuCdn}:${itvCdn}` — présent = lien valide
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>> {
+    const result = new Set<string>();
+    await Promise.all(
+      links.map(async ({ steuCdn, itvCdn }) => {
+        const cxnadm = await this.roseauGateway.findCxnAdmByExpSteuAndItv(steuCdn, itvCdn);
+        if (cxnadm) {
+          result.add(`${steuCdn}:${itvCdn}`);
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL005 — Existence des points de mesure (PMO)
+  // La clé du Set est `${cdSteu}:${numPmo}:${locPoint}` — présent = PMO valide
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>> {
+    const result = new Set<string>();
+    await Promise.all(
+      queries.map(async ({ cdSteu, numPmo, locPoint }) => {
+        const pmo = await this.roseauGateway.findPmoBySteuNumeroAndLocPoint(cdSteu, numPmo, locPoint);
+        if (pmo) {
+          result.add(`${cdSteu}:${numPmo}:${locPoint}`);
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL023 — Vérification des liens SCL–Agglomération
+  // La clé du Set est `${cdScl}:${cdAga}` — présent = lien valide
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>> {
+    const result = new Set<string>();
+    await Promise.all(
+      links.map(async ({ cdScl, cdAga }) => {
+        const linked = await this.roseauGateway.isSystemeCollecteLinkedToAgglomeration(cdScl, cdAga);
+        if (linked) {
+          result.add(`${cdScl}:${cdAga}`);
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL034 — Existence et validité des PMO pour les localisations A2-A8
+  // TODO: Implémenter quand CTL034 sera développé
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  // async findPmoWithValidityBatch(
+  //   queries: { cdSteu: string; numPmo: string; locPoint: string; dateDebut: string; dateFin: string }[],
+  // ): Promise<Set<string>> { ... }
+
+  // ---------------------------------------------------------------------------
+  // CTL052 — Concentrations moyennes annuelles N-1 par STEU et paramètre
+  // Retourne Map<steuCda, Map<codeParametre, valeur>>
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findConcentrationsMoyennesBatch(
+    steuCdas: string[],
+    year: number,
+    parametreCodes: string[],
+  ): Promise<Map<string, Map<string, number>>> {
+    const result = new Map<string, Map<string, number>>();
+    await Promise.all(
+      steuCdas.map(async (cda) => {
+        try {
+          const cmaValues = await this.roseauGateway.findConcentrationMoyenneAnnuelle(cda, year, parametreCodes);
+          if (cmaValues.size > 0) {
+            result.set(cda, cmaValues);
+          }
+        } catch {
+          // Pas de données de référence pour cette STEU — on ignore silencieusement
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL053 — Débit max de référence par STEU
+  // Retourne Map<steuCda, maxDebitRef> — absent si null ou <= 0
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    await Promise.all(
+      steuCdas.map(async (cda) => {
+        const maxDebit = await this.roseauGateway.findMaxDebitReference(cda);
+        if (maxDebit !== null && maxDebit > 0) {
+          result.set(cda, maxDebit);
+        }
+      }),
+    );
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL054 — Charge entrante max et tranche d'obligation par STEU
+  // TODO: Remplacer par un seul appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
 
   async findChargeEntranteMaxAndTranche(
     steuSandreCdas: string[],
     year: number,
   ): Promise<Map<string, ChargeEntranteMaxAndTranche>> {
-    // TODO: Replace this call with a single batch API call to Masa when available
     return this.roseauGateway.findChargeEntranteMaxAndTrancheBatch(steuSandreCdas, year);
   }
 }

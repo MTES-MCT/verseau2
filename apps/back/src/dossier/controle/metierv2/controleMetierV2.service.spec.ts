@@ -26,7 +26,6 @@ describe('ControleMetierV2Service', () => {
           provide: RoseauGateway,
           useValue: {
             findCapaciteNominaleBySteuSandreAndYear: jest.fn(),
-            findConcentrationMoyenneAnnuelle: jest.fn(),
           },
         },
         {
@@ -1133,21 +1132,21 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmaMap = new Map([
-        [CodeParametre.DBO5.toString(), 150],
-        [CodeParametre.DCO.toString(), 400],
+      const cmaBySteu = new Map([
+        [
+          'STEU1',
+          new Map([
+            [CodeParametre.DBO5.toString(), 150],
+            [CodeParametre.DCO.toString(), 400],
+          ]),
+        ],
       ]);
-      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmaBySteu);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_052);
-      expect(roseauGateway.findConcentrationMoyenneAnnuelle).toHaveBeenCalledWith('STEU1', 2023, [
-        CodeParametre.DBO5.toString(),
-        CodeParametre.DCO.toString(),
-      ]);
     });
 
     it('should return no error when values are lower than CMA N-1', async () => {
@@ -1178,13 +1177,17 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmaMap = new Map([
-        [CodeParametre.DBO5.toString(), 150],
-        [CodeParametre.DCO.toString(), 400],
+      const cmaBySteu = new Map([
+        [
+          'STEU1',
+          new Map([
+            [CodeParametre.DBO5.toString(), 150],
+            [CodeParametre.DCO.toString(), 400],
+          ]),
+        ],
       ]);
-      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmaBySteu);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -1214,10 +1217,10 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmaMap = new Map(); // Vide - pas de CMA trouvée
-      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
+      // Empty map — no CMA found for any STEU
+      const cmaBySteu = new Map<string, Map<string, number>>();
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmaBySteu);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -1230,7 +1233,7 @@ describe('ControleMetierV2Service', () => {
         ouvrages: [],
       } as unknown as FctAssainissement;
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, new Map());
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);

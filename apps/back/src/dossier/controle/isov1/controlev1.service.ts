@@ -8,6 +8,8 @@ import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
 import { LoggerService } from '@shared/logger/logger.service';
+import { MasaProvider } from '@masa/masa.provider';
+import { MasaItv, MasaSteu } from '@masa/masa-controle.dto';
 
 @Injectable()
 export class ControleV1Service {
@@ -17,23 +19,75 @@ export class ControleV1Service {
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly controleMapper: ControleMapper,
     private readonly logger: LoggerService,
+    private readonly masaProvider: MasaProvider,
   ) {
     this.logger.setContext(ControleV1Service.name);
   }
 
   // Première implémentation naïve des contrôles v1
   // Acceptable pour un MVP
-  // TODO : Améliorer les performances des contrôles en réduisant les requêtes SQL
   async execute(
     depotId: string,
     fctAssainissement: FctAssainissement,
     manager?: EntityManager,
   ): Promise<ControleModel[]> {
+    // Préchargement batch des données MASA (CTL002, CTL004, CTL005, CTL023)
+    // Un seul appel par type de données pour tout le fichier, en parallèle.
+    // Quand l'API REST MASA sera disponible, seul MasaProvider changera.
+    const allSteuCdas = fctAssainissement.ouvrages
+      .map((o) => o.cdOuvrageDepollution)
+      .filter((cda): cda is string => !!cda);
+
+    const allExploitantRfas = fctAssainissement.ouvrages
+      .map((o) => o.exploitant?.cdIntervenant)
+      .filter((rfa): rfa is string => !!rfa);
+
+    const allPmoQueries = fctAssainissement.ouvrages.flatMap((ouvrage) => {
+      const cdSteu = ouvrage.cdOuvrageDepollution;
+      if (!cdSteu) return [];
+      return ouvrage.pointMesure
+        .filter((pmo) => !!pmo.locGlobalePointMesure)
+        .map((pmo) => ({
+          cdSteu,
+          numPmo: pmo.numeroPointMesure,
+          locPoint: pmo.locGlobalePointMesure as string,
+        }));
+    });
+
+    const allSclLinks = fctAssainissement.systemesCollecte.flatMap((scl) => {
+      const cdScl = scl.cdSystemeCollecte;
+      const cdAga = scl.agglomerationAssainissement?.cdAgglomerationAssainissement;
+      if (!cdScl || !cdAga) return [];
+      return [{ cdScl, cdAga }];
+    });
+
+    const [steuMap, itvMap] = await Promise.all([
+      this.masaProvider.findSteuBatchBySandreCdas(allSteuCdas),
+      this.masaProvider.findItvBatchByRfas(allExploitantRfas),
+    ]);
+
+    // Les liens CxnAdm dépendent des steuCdn/itvCdn récupérés ci-dessus
+    const expLinks = fctAssainissement.ouvrages.flatMap((ouvrage) => {
+      const cdSteu = ouvrage.cdOuvrageDepollution;
+      const cdItv = ouvrage.exploitant?.cdIntervenant;
+      if (!cdSteu || !cdItv) return [];
+      const steu = steuMap.get(cdSteu);
+      const itv = itvMap.get(cdItv);
+      if (!steu || !itv) return [];
+      return [{ steuCdn: steu.steuCdn, itvCdn: itv.itvCdn }];
+    });
+
+    const [pmoSet, sclLinkSet, expLinkSet] = await Promise.all([
+      this.masaProvider.checkPmoExistenceBatch(allPmoQueries),
+      this.masaProvider.checkSclAgglomerationLinksBatch(allSclLinks),
+      this.masaProvider.checkExpSteuLinksBatch(expLinks),
+    ]);
+
     const tousControles = Promise.all([
-      this.verifySteuExists(fctAssainissement),
+      Promise.resolve(this.verifySteuExists(fctAssainissement, steuMap)),
       this.verifyMoSteuExists(fctAssainissement),
-      this.verifyExpSteuExists(fctAssainissement),
-      this.verifyPmoExists(fctAssainissement),
+      Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steuMap, itvMap, expLinkSet)),
+      Promise.resolve(this.verifyPmoExists(fctAssainissement, pmoSet)),
       this.verifySupExists(fctAssainissement),
       this.verifyLieuAnalyseExists(fctAssainissement),
       this.verifyStatutAnalyseExists(fctAssainissement),
@@ -51,7 +105,7 @@ export class ControleV1Service {
       this.verifyTypeEvenementExists(fctAssainissement),
       this.verifyCodeRemarqueExists(fctAssainissement),
       this.verifySystemeDeCollecteExists(fctAssainissement),
-      this.verifySystemeCollecteLinkedToAgglomeration(fctAssainissement),
+      Promise.resolve(this.verifySystemeCollecteLinkedToAgglomeration(fctAssainissement, sclLinkSet)),
       this.verifyTypeOuvrageExists(fctAssainissement),
       this.verifyNatureSystemeCollecteExists(fctAssainissement),
       this.verifyIntervenantEmetteurExists(fctAssainissement),
@@ -83,7 +137,10 @@ export class ControleV1Service {
   }
 
   // CTL002: Vérification que l'ouvrage de dépollution (STEU) existe bien dans la table STEU de Roseau
-  async verifySteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  verifySteuExists(
+    fctAssainissement: FctAssainissement,
+    steuMap: Map<string, MasaSteu>,
+  ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -93,9 +150,7 @@ export class ControleV1Service {
         continue;
       }
 
-      const steu = await this.roseauGateway.findSteuBySandreCda(cdOuvrageDepollution);
-
-      if (!steu) {
+      if (!steuMap.has(cdOuvrageDepollution)) {
         errors.push({
           code: ErrorCode.E2_003,
           params: [cdOuvrageDepollution],
@@ -152,7 +207,12 @@ export class ControleV1Service {
   }
 
   // CTL004: Vérification que l'exploitant de l'ouvrage de dépollution (STEU) existe bien en BdD
-  async verifyExpSteuExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  verifyExpSteuExists(
+    fctAssainissement: FctAssainissement,
+    steuMap: Map<string, MasaSteu>,
+    itvMap: Map<string, MasaItv>,
+    expLinkSet: Set<string>,
+  ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -163,10 +223,10 @@ export class ControleV1Service {
         continue;
       }
 
-      const steu = await this.roseauGateway.findSteuBySandreCda(cdOuvrageDepollution);
+      const steu = steuMap.get(cdOuvrageDepollution);
       if (!steu) continue;
 
-      const itv = await this.lanceleauGateway.findItvByRfa(cdIntervenant);
+      const itv = itvMap.get(cdIntervenant);
       if (!itv) {
         errors.push({
           code: ErrorCode.E2_005,
@@ -176,8 +236,7 @@ export class ControleV1Service {
         continue;
       }
 
-      const cxnadm = await this.roseauGateway.findCxnAdmByExpSteuAndItv(steu.steuCdn, itv.itvCdn);
-      if (!cxnadm) {
+      if (!expLinkSet.has(`${steu.steuCdn}:${itv.itvCdn}`)) {
         errors.push({
           code: ErrorCode.E2_005,
           params: [cdIntervenant, cdOuvrageDepollution],
@@ -193,7 +252,7 @@ export class ControleV1Service {
   }
 
   // CTL005: Vérification de l'existence du point de mesure en BdD
-  async verifyPmoExists(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  verifyPmoExists(fctAssainissement: FctAssainissement, pmoSet: Set<string>): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -206,13 +265,7 @@ export class ControleV1Service {
 
         if (!locGlobalePointMesure) continue;
 
-        const pmoEntity = await this.roseauGateway.findPmoBySteuNumeroAndLocPoint(
-          cdOuvrageDepollution,
-          numeroPointMesure,
-          locGlobalePointMesure,
-        );
-
-        if (!pmoEntity) {
+        if (!pmoSet.has(`${cdOuvrageDepollution}:${numeroPointMesure}:${locGlobalePointMesure}`)) {
           errors.push({
             code: ErrorCode.E2_033,
             params: [numeroPointMesure, locGlobalePointMesure, cdOuvrageDepollution],
@@ -725,9 +778,10 @@ export class ControleV1Service {
   }
 
   // CTL023: Vérification que système de collecte (SCL) est rattaché à l'agglomération
-  async verifySystemeCollecteLinkedToAgglomeration(
+  verifySystemeCollecteLinkedToAgglomeration(
     fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess> {
+    sclLinkSet: Set<string>,
+  ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
     for (const scl of fctAssainissement.systemesCollecte) {
@@ -737,12 +791,8 @@ export class ControleV1Service {
       if (!cdAgglomerationAssainissement) {
         continue;
       }
-      const linked = await this.roseauGateway.isSystemeCollecteLinkedToAgglomeration(
-        cdSystemeCollecte,
-        cdAgglomerationAssainissement,
-      );
 
-      if (!linked) {
+      if (!sclLinkSet.has(`${cdSystemeCollecte}:${cdAgglomerationAssainissement}`)) {
         errors.push({
           code: ErrorCode.E2_023,
           params: [cdAgglomerationAssainissement, cdSystemeCollecte],
