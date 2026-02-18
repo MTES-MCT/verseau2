@@ -61,10 +61,10 @@ function formatDate(date: Date | string): string {
 }
 
 export function Dashboard() {
-  const { downloadingDepotId, handleDownload, downloadingXmlId, handleDownloadXml, downloadError, setDownloadError } =
-    useRapportAndXmlDownload();
-
   const { data: depots = [], isLoading, error, isExpertNational } = useDepots();
+
+  const { downloadingDepotId, handleDownload, downloadingXmlId, handleDownloadXml, downloadError, setDownloadError } =
+    useRapportAndXmlDownload(isExpertNational);
   const pageSize = isExpertNational ? 20 : PAGE_SIZE;
 
   const { currentPage, totalPages, paginatedData, getPageLinkProps } = usePagination(depots, pageSize, 1);

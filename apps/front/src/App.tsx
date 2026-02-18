@@ -28,12 +28,20 @@ function App() {
       <div className={`${fr.cx('fr-container')} app-container`}>
         <Breadcrumb />
         {isExpertNational && (
-          <Notice
-            title="Vue administrateur — Expert national Verseau"
-            description=" - Vous consultez l'ensemble des dépôts de tous les intervenants."
-            severity="info"
-            className={fr.cx('fr-mb-3w')}
-          />
+          <>
+            <Notice
+              title="Vue administrateur — Expert national Verseau"
+              description=" - Vous consultez l'ensemble des dépôts de tous les intervenants."
+              severity="info"
+              className={fr.cx('fr-mb-1w')}
+            />
+            <Notice
+              title="Attention lors des dépôts"
+              description=" - Un dépot sera lié à l'itvCdn de votre utilisateur"
+              severity="warning"
+              className={fr.cx('fr-mb-3w')}
+            />
+          </>
         )}
 
         <main className={fr.cx('fr-py-2w', 'fr-px-0')}>

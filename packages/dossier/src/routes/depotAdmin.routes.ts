@@ -15,3 +15,11 @@ export const downloadAdminRapport = {
   path: '/admin/depot/:id/rapport',
   params: z.object({ id: z.string() }),
 } as const satisfies RouteDefinition;
+
+export const downloadAdminXml = {
+  method: 'GET',
+  path: '/admin/depot/:id/xml',
+  params: z.object({
+    id: z.string(),
+  }),
+} as const satisfies RouteDefinition;

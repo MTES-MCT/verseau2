@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { downloadRapport, downloadXml } from '../api/depot';
+import { downloadRapport, downloadXml, downloadAdminRapport, downloadAdminXml } from '../api/depot';
 
-export function useRapportAndXmlDownload() {
+export function useRapportAndXmlDownload(isAdmin = false) {
   const [downloadingDepotId, setDownloadingDepotId] = useState<string | null>(null);
   const [downloadingXmlId, setDownloadingXmlId] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -10,7 +10,7 @@ export function useRapportAndXmlDownload() {
     setDownloadError(null);
     try {
       setDownloadingDepotId(depotId);
-      const blob = await downloadRapport(depotId);
+      const blob = isAdmin ? await downloadAdminRapport(depotId) : await downloadRapport(depotId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -30,7 +30,7 @@ export function useRapportAndXmlDownload() {
     setDownloadError(null);
     try {
       setDownloadingXmlId(depotId);
-      const blob = await downloadXml(depotId);
+      const blob = isAdmin ? await downloadAdminXml(depotId) : await downloadXml(depotId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

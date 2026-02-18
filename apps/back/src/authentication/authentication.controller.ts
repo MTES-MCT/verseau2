@@ -137,7 +137,7 @@ export class AuthenticationController {
     const user = await this.authentication.getUserInfo(token);
     const [intervenant, isExpertNational] = await Promise.all([
       this.droitsUserService.findIntervenantByUserSub(user.cerbereId),
-      this.droitsUserService.isExpertNationalVerseau(user.cerbereId),
+      this.droitsUserService.isExpertNationalVerseau(user.cerbereId), // TODO : vérifier si les rôles sont dans le token JWT => utiliser pour éviter ces appels supplémentaires
     ]);
     return {
       user,

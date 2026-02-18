@@ -2,6 +2,7 @@ import {
   listDepots,
   listAllDepots,
   downloadAdminRapport as downloadAdminRapportRoute,
+  downloadAdminXml as downloadAdminXmlRoute,
   checkDroitsDeDepot as checkDroitsRoute,
   downloadRapport as downloadRapportRoute,
   downloadXml as downloadXmlRoute,
@@ -65,5 +66,10 @@ export async function fetchAllDepots() {
 
 export async function downloadAdminRapport(depotId: string): Promise<Blob> {
   const url = buildRoutePath(downloadAdminRapportRoute, { params: { id: depotId } });
+  return apiDownload(url);
+}
+
+export async function downloadAdminXml(depotId: string): Promise<Blob> {
+  const url = buildRoutePath(downloadAdminXmlRoute, { params: { id: depotId } });
   return apiDownload(url);
 }

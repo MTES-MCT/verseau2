@@ -20,7 +20,9 @@ export class IsAdminGuard implements CanActivate {
       this.logger.warn('No authenticated user found in request');
       throw new ForbiddenException('User not authenticated');
     }
-
+    // TODO : vérifier si les rôles sont dans le token JWT
+    // => Valider le token
+    // => utiliser pour éviter ces appels supplémentaires
     return this.droitsUserService.isExpertNationalVerseau(authenticatedUser.cerbereId);
   }
 }
