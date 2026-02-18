@@ -1,14 +1,13 @@
 import { Link } from 'react-router';
 import { type ControleLocationState } from './Controle';
 
-import { useQuery } from '@tanstack/react-query';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
-import { DepotStatus, EtapeMetier, type DepotDto } from '@lib/dossier';
-import { fetchDepots } from '../api/depot';
+import { DepotStatus, type DepotDto } from '@lib/dossier';
 import { ApiError } from '../api/apiClient';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
@@ -16,8 +15,8 @@ import { usePagination } from '../hooks/usePagination';
 import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
 import { IndicateursTable } from '../components/IndicateursTable';
+import { useDepots } from '../hooks/useDepots';
 
-const DEPOT_POLLING_INTERVAL_MS = 5000;
 const PAGE_SIZE = 5;
 
 function getStatusBadge(depot: DepotDto) {
@@ -66,28 +65,10 @@ export function Dashboard() {
   const { downloadingDepotId, handleDownload, downloadingXmlId, handleDownloadXml, downloadError, setDownloadError } =
     useRapportAndXmlDownload();
 
-  const {
-    data: depots = [],
-    isLoading,
-    error,
-  } = useQuery<DepotDto[], ApiError>({
-    queryKey: ['depots'],
-    queryFn: fetchDepots,
-    refetchInterval: ({ state }) => {
-      const hasPendingOrProcessing = state.data?.some(
-        (depot: DepotDto) =>
-          (!depot.etapeMetier ||
-            [EtapeMetier.CONTROLE_METIER, EtapeMetier.CONTROLE_REFERENTIEL, EtapeMetier.SCENARIO_SANDRE].includes(
-              depot.etapeMetier,
-            )) &&
-          depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT,
-      );
+  const { data: depots = [], isLoading, error, isExpertNational } = useDepots();
+  const pageSize = isExpertNational ? 20 : PAGE_SIZE;
 
-      return hasPendingOrProcessing ? DEPOT_POLLING_INTERVAL_MS : false;
-    },
-  });
-
-  const { currentPage, totalPages, paginatedData, getPageLinkProps } = usePagination(depots, PAGE_SIZE, 1);
+  const { currentPage, totalPages, paginatedData, getPageLinkProps } = usePagination(depots, pageSize, 1);
 
   const errorMessage = error
     ? error instanceof ApiError
@@ -152,6 +133,14 @@ export function Dashboard() {
 
   return (
     <>
+      {isExpertNational && (
+        <Notice
+          title="Vue administrateur — Expert national Verseau"
+          description=" - Vous consultez l'ensemble des dépôts de tous les intervenants."
+          severity="info"
+          className={fr.cx('fr-mb-3w')}
+        />
+      )}
       <div>
         <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
           <div className="fr-col-12 fr-col-md-4">
@@ -208,7 +197,7 @@ export function Dashboard() {
               />
               <div className="fr-mb-2w fr-pt-1w" style={{ marginLeft: '1.5rem' }}>
                 <p className="fr-text--sm">
-                  Affichage de {(currentPage - 1) * PAGE_SIZE + 1} à {Math.min(currentPage * PAGE_SIZE, depots.length)}{' '}
+                  Affichage de {(currentPage - 1) * pageSize + 1} à {Math.min(currentPage * pageSize, depots.length)}{' '}
                   sur {depots.length} entrée{depots.length > 1 ? 's' : ''}
                 </p>
               </div>

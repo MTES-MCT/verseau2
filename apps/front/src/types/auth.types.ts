@@ -21,4 +21,5 @@ export interface AuthenticatedUserWithIntervenant {
     itvCdn: number;
     nom: string;
   } | null;
+  isExpertNational: boolean;
 }

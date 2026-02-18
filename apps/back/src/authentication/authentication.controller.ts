@@ -135,10 +135,14 @@ export class AuthenticationController {
   async me(@Req() req: CustomRequest): Promise<AuthenticatedUserWithIntervenant> {
     const token = req.token || '';
     const user = await this.authentication.getUserInfo(token);
-    const intervenant = await this.droitsUserService.findIntervenantByUserSub(user.cerbereId);
+    const [intervenant, isExpertNational] = await Promise.all([
+      this.droitsUserService.findIntervenantByUserSub(user.cerbereId),
+      this.droitsUserService.isExpertNationalVerseau(user.cerbereId),
+    ]);
     return {
       user,
       intervenant,
+      isExpertNational,
     };
   }
 }

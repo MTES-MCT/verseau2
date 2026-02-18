@@ -44,6 +44,7 @@ export interface AuthenticatedUser {
 export interface AuthenticatedUserWithIntervenant {
   user: AuthenticatedUser;
   intervenant: IntervenantForAuthentication | null;
+  isExpertNational: boolean;
 }
 
 export const Authentication = Symbol('Authentication');
