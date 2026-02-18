@@ -17,13 +17,13 @@ export class AuthenticationMockService implements Authentication {
     return this.getMockUser();
   }
 
-  getOIDCConfiguration(): OIDCConfiguration {
-    return {
+  getOIDCConfiguration(): Promise<OIDCConfiguration> {
+    return Promise.resolve({
       authorizationEndpoint: 'http://localhost:5173/mock_authorization',
       clientId: 'mock-client-id',
       redirectUri: 'http://localhost:5173/dashboard',
       scope: 'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations',
-    };
+    });
   }
 
   async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }> {
@@ -51,8 +51,8 @@ export class AuthenticationMockService implements Authentication {
     };
   }
 
-  generateLogoutUrl(idToken: string): string {
-    return 'http://localhost:5173';
+  generateLogoutUrl(idToken: string): Promise<string> {
+    return Promise.resolve('http://localhost:5173');
   }
 
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {

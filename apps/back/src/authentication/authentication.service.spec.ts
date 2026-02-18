@@ -2,12 +2,23 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { AuthenticationService } from './authentication.service';
 import { LoggerService } from '@shared/logger/logger.service';
-import { Configuration } from 'openid-client';
 import type { JWTPayload } from 'jose';
+
+const mockServerMetadata = {
+  issuer: 'https://auth.example.com',
+  authorization_endpoint: 'https://auth.example.com/authorize',
+  jwks_uri: 'https://auth.example.com/.well-known/jwks.json',
+  end_session_endpoint: 'https://auth.example.com/logout',
+};
+
+const mockConfiguration = {
+  serverMetadata: jest.fn().mockReturnValue(mockServerMetadata),
+};
 
 // Mock external modules
 jest.mock('openid-client', () => ({
   Configuration: jest.fn(),
+  discovery: jest.fn(),
   authorizationCodeGrant: jest.fn(),
   refreshTokenGrant: jest.fn(),
   fetchUserInfo: jest.fn(),
@@ -19,7 +30,7 @@ jest.mock('jose', () => ({
   createRemoteJWKSet: jest.fn(),
 }));
 
-import { authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
+import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { AuthenticatedUser } from './authentication';
 
@@ -43,16 +54,8 @@ const createAuthenticatedUser = (user: Partial<AuthenticatedUser> = {}): Authent
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
-  let mockConfiguration: jest.Mocked<Configuration>;
   let mockConfigService: jest.Mocked<ConfigService>;
   let mockLogger: jest.Mocked<LoggerService>;
-
-  const mockServerMetadata = {
-    issuer: 'https://auth.example.com',
-    authorization_endpoint: 'https://auth.example.com/authorize',
-    jwks_uri: 'https://auth.example.com/.well-known/jwks.json',
-    end_session_endpoint: 'https://auth.example.com/logout',
-  };
 
   const mockJWKS = jest.fn();
 
@@ -60,16 +63,16 @@ describe('AuthenticationService', () => {
     // Reset all mocks
     jest.clearAllMocks();
 
-    // Mock Configuration
-    mockConfiguration = {
-      serverMetadata: jest.fn().mockReturnValue(mockServerMetadata),
-    } as unknown as jest.Mocked<Configuration>;
+    // discovery() resolves to a mock configuration by default
+    (discovery as jest.Mock).mockResolvedValue(mockConfiguration);
 
     // Mock ConfigService
     mockConfigService = {
       getOrThrow: jest.fn((key: string) => {
         if (key === 'OIDC_REDIRECT_URI') return 'https://app.example.com/api/auth/callback';
         if (key === 'OIDC_CLIENT_ID') return 'test-client-id';
+        if (key === 'OIDC_CLIENT_SECRET') return 'test-client-secret';
+        if (key === 'OIDC_ISSUER_URL') return 'https://auth.example.com';
         throw new Error(`Config key ${key} not found`);
       }),
     } as unknown as jest.Mocked<ConfigService>;
@@ -86,13 +89,12 @@ describe('AuthenticationService', () => {
     // Mock createRemoteJWKSet
     (createRemoteJWKSet as jest.Mock).mockReturnValue(mockJWKS);
 
+    // Reset serverMetadata to default for each test
+    (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue(mockServerMetadata);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthenticationService,
-        {
-          provide: Configuration,
-          useValue: mockConfiguration,
-        },
         {
           provide: ConfigService,
           useValue: mockConfigService,
@@ -199,8 +201,8 @@ describe('AuthenticationService', () => {
   });
 
   describe('getOIDCConfiguration', () => {
-    it('should return correct OIDC configuration', () => {
-      const config = service.getOIDCConfiguration();
+    it('should return correct OIDC configuration', async () => {
+      const config = await service.getOIDCConfiguration();
 
       expect(config).toEqual({
         authorizationEndpoint: 'https://auth.example.com/authorize',
@@ -210,14 +212,13 @@ describe('AuthenticationService', () => {
       });
     });
 
-    it('should throw error when authorization endpoint is missing', () => {
-      mockConfiguration.serverMetadata.mockReturnValue({
+    it('should throw error when authorization endpoint is missing', async () => {
+      (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue({
         ...mockServerMetadata,
         authorization_endpoint: undefined,
-        supportsPKCE: jest.fn(),
-      } as any);
+      });
 
-      expect(() => service.getOIDCConfiguration()).toThrow('Authorization endpoint not available');
+      await expect(service.getOIDCConfiguration()).rejects.toThrow('Authorization endpoint not available');
     });
   });
 
@@ -420,31 +421,63 @@ describe('AuthenticationService', () => {
   describe('generateLogoutUrl', () => {
     const mockIdToken = 'id-token-xyz';
 
-    it('should generate correct logout URL with id_token_hint', () => {
-      const logoutUrl = service.generateLogoutUrl(mockIdToken);
+    it('should generate correct logout URL with id_token_hint', async () => {
+      const logoutUrl = await service.generateLogoutUrl(mockIdToken);
 
       expect(logoutUrl).toBe(
         'https://auth.example.com/logout?id_token_hint=id-token-xyz&post_logout_redirect_uri=https%3A%2F%2Fapp.example.com',
       );
     });
 
-    it('should throw error when end_session_endpoint is missing', () => {
-      mockConfiguration.serverMetadata.mockReturnValue({
+    it('should throw error when end_session_endpoint is missing', async () => {
+      (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue({
         ...mockServerMetadata,
         end_session_endpoint: undefined,
-        supportsPKCE: jest.fn(),
-      } as any);
+      });
 
-      expect(() => service.generateLogoutUrl(mockIdToken)).toThrow('End session endpoint not available');
+      await expect(service.generateLogoutUrl(mockIdToken)).rejects.toThrow('End session endpoint not available');
     });
 
-    it('should correctly strip /api/auth/callback from redirect URI', () => {
-      const logoutUrl = service.generateLogoutUrl(mockIdToken);
+    it('should correctly strip /api/auth/callback from redirect URI', async () => {
+      const logoutUrl = await service.generateLogoutUrl(mockIdToken);
       const url = new URL(logoutUrl);
       const postLogoutRedirect = url.searchParams.get('post_logout_redirect_uri');
 
       expect(postLogoutRedirect).toBe('https://app.example.com');
       expect(postLogoutRedirect).not.toContain('/api/auth/callback');
+    });
+  });
+
+  describe('lazy discovery', () => {
+    it('should call discovery() only once and reuse the configuration', async () => {
+      (fetchUserInfo as jest.Mock).mockResolvedValue(createJWTPayload({ sub: 'u1' }));
+
+      await service.getUserInfo('token1');
+      await service.getUserInfo('token2');
+
+      expect(discovery).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw ServiceUnavailableException when discovery fails', async () => {
+      (discovery as jest.Mock).mockRejectedValue(new Error('Connection refused'));
+
+      await expect(service.getUserInfo('token')).rejects.toMatchObject({
+        message: 'OIDC provider unreachable: Connection refused',
+      });
+    });
+
+    it('should retry discovery on next request after a failure', async () => {
+      (discovery as jest.Mock)
+        .mockRejectedValueOnce(new Error('Transient error'))
+        .mockResolvedValueOnce(mockConfiguration);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(createJWTPayload({ sub: 'u1' }));
+
+      // First call fails
+      await expect(service.getUserInfo('token')).rejects.toThrow();
+      // Second call succeeds (discovery retried)
+      const result = await service.getUserInfo('token');
+      expect(result.cerbereId).toBe('u1');
+      expect(discovery).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -534,39 +567,16 @@ describe('AuthenticationService', () => {
 
   describe('JWKS initialization', () => {
     it('should throw error when jwks_uri is missing from metadata', async () => {
-      mockConfiguration.serverMetadata.mockReturnValue({
+      (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue({
         ...mockServerMetadata,
         jwks_uri: undefined,
-        supportsPKCE: jest.fn(),
-      } as any);
+      });
 
-      // Create a new service instance to trigger JWKS initialization
-      const newModule = await Test.createTestingModule({
-        providers: [
-          AuthenticationService,
-          {
-            provide: Configuration,
-            useValue: mockConfiguration,
-          },
-          {
-            provide: ConfigService,
-            useValue: mockConfigService,
-          },
-          {
-            provide: LoggerService,
-            useValue: mockLogger,
-          },
-        ],
-      }).compile();
-
-      const newService = newModule.get<AuthenticationService>(AuthenticationService);
-
-      // When jwks_uri is missing, JWT verification will fail with the JWKS error
-      // and then it falls back to getUserInfo, so we need to make that fail too
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error('JWT verification failed'));
+      // JWT verification fails due to missing JWKS; fetchUserInfo also fails to simulate total failure
+      (jwtVerify as jest.Mock).mockRejectedValue(new Error('JWKS URI not available in OIDC metadata'));
       (fetchUserInfo as jest.Mock).mockRejectedValue(new Error('JWKS URI not available in OIDC metadata'));
 
-      await expect(newService.validateToken('token')).rejects.toThrow(
+      await expect(service.validateToken('token')).rejects.toThrow(
         'Token validation failed: JWKS URI not available in OIDC metadata',
       );
     });

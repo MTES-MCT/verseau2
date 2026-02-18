@@ -17,11 +17,11 @@ import type { Response } from 'express';
 
 export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
-  getOIDCConfiguration(): OIDCConfiguration;
+  getOIDCConfiguration(): Promise<OIDCConfiguration>;
   handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }>;
   getUserInfo(accessToken: string): Promise<AuthenticatedUser>;
   refreshTokens(refreshToken: string): Promise<OIDCTokens>;
-  generateLogoutUrl(idToken: string): string;
+  generateLogoutUrl(idToken: string): Promise<string>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;
 }
 

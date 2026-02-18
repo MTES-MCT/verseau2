@@ -116,7 +116,7 @@ export class AuthenticationController {
   }
 
   @Post('logout')
-  logout(@Body('idToken') idToken: string, @Res({ passthrough: true }) res: Response) {
+  async logout(@Body('idToken') idToken: string, @Res({ passthrough: true }) res: Response) {
     if (!idToken) {
       throw new BadRequestException('Missing ID token');
     }
@@ -125,7 +125,7 @@ export class AuthenticationController {
     res.clearCookie('access_token', cookieOptions);
     res.clearCookie('refresh_token', cookieOptions);
 
-    const logoutUrl = this.authentication.generateLogoutUrl(idToken);
+    const logoutUrl = await this.authentication.generateLogoutUrl(idToken);
     return { logoutUrl };
   }
 
