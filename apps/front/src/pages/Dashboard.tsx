@@ -4,7 +4,6 @@ import { type ControleLocationState } from './Controle';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
-import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { DepotStatus, type DepotDto } from '@lib/dossier';
@@ -133,14 +132,6 @@ export function Dashboard() {
 
   return (
     <>
-      {isExpertNational && (
-        <Notice
-          title="Vue administrateur — Expert national Verseau"
-          description=" - Vous consultez l'ensemble des dépôts de tous les intervenants."
-          severity="info"
-          className={fr.cx('fr-mb-3w')}
-        />
-      )}
       <div>
         <div className="fr-grid-row fr-grid-row--gutters fr-mb-2w">
           <div className="fr-col-12 fr-col-md-4">

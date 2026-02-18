@@ -15,13 +15,26 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppRoutes } from './routes';
 import './App.css';
 import { fr } from '@codegouvfr/react-dsfr';
+import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
+  const { authenticatedUser } = useAuth();
+  const isExpertNational = authenticatedUser?.isExpertNational ?? false;
+
   return (
     <BrowserRouter>
       <AppHeader />
       <div className={`${fr.cx('fr-container')} app-container`}>
         <Breadcrumb />
+        {isExpertNational && (
+          <Notice
+            title="Vue administrateur — Expert national Verseau"
+            description=" - Vous consultez l'ensemble des dépôts de tous les intervenants."
+            severity="info"
+            className={fr.cx('fr-mb-3w')}
+          />
+        )}
 
         <main className={fr.cx('fr-py-2w', 'fr-px-0')}>
           <Routes>
