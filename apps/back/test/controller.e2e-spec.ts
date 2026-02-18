@@ -17,10 +17,25 @@ import { InfraModule } from '@infra/infra.module';
 import { initTestContainerImports } from './init/initTestContainer';
 import { getPostgresConnectionUri, startPostgresContainer } from './testcontainer.config';
 import { InfraMockModule } from './mock/infraMock.module';
+import { InfraWithRealDbMockModule } from './mock/infraWithRealDbMock.module';
 import { Authentication } from '@authentication/authentication';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
+import { DataSource } from 'typeorm';
+import { DepotStatus } from '@lib/dossier';
+import {
+  createLanceleauTables,
+  createReferentielSchemas,
+  clearLanceleauData,
+  seedOrionCredentials,
+  seedAg,
+  seedOrionRoleForPrincipal,
+  seedUser,
+  seedDepot,
+  clearUserData,
+  clearDepotData,
+} from './createReferentielDataset';
 
 describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
@@ -100,6 +115,10 @@ describe('Controller (e2e) - Unauthorized', () => {
     it('/depot/:depotId/controle/sandre (GET) - Should return 401 Unauthorized when no token is provided', async () => {
       return request(app.getHttpServer()).get('/depot/1/controle/sandre').expect(401);
     });
+
+    it('/depot/:depotId/masa (GET) - Should return 401 Unauthorized when no token is provided', async () => {
+      return request(app.getHttpServer()).get('/depot/1/masa').expect(401);
+    });
   });
 
   describe('Controller (e2e) - Depot', () => {
@@ -153,6 +172,151 @@ describe('Controller (e2e) - Unauthorized', () => {
         .get('/indicateurs/steu')
         .set('Cookie', ['access_token=token-user-1'])
         .expect(200);
+    });
+  });
+});
+
+describe('ControleController (e2e) - UseOrGuards', () => {
+  let app: INestApplication<App>;
+  let dataSource: DataSource;
+
+  const TEST_USER_SUB = 'test-user-id';
+  const TEST_USER_EMAIL = 'dev@example.com';
+  const PR_CDN = 1;
+  const OWNER_ITV_CDN = 100;
+  const OTHER_ITV_CDN = 999;
+  const ROLE_EXPERT_NATIONAL = 305;
+  const DEPOT_ID = 'dep_guard-test-depot';
+
+  beforeAll(async () => {
+    await startPostgresContainer();
+    const connectionUri = getPostgresConnectionUri();
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [...initTestContainerImports(connectionUri), ApiModule, ThrottlerConfigModule],
+    })
+      .overrideModule(InfraModule)
+      .useModule(InfraWithRealDbMockModule)
+      .overrideProvider(LoggerService)
+      .useValue(loggerValueMock)
+      .compile();
+
+    app = moduleFixture.createNestApplication({ logger: false });
+    app.use(cookieParser());
+    await app.init();
+
+    dataSource = moduleFixture.get(DataSource);
+
+    await createReferentielSchemas(dataSource);
+    await createLanceleauTables(dataSource);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(async () => {
+    await clearLanceleauData(dataSource);
+    await clearDepotData(dataSource, DEPOT_ID);
+    await clearUserData(dataSource, TEST_USER_SUB);
+  });
+
+  async function seedUserWithItv(itvCdn: number) {
+    await seedUser(dataSource, 'guard-test-user', TEST_USER_SUB, TEST_USER_EMAIL);
+    await seedOrionCredentials(dataSource, PR_CDN, TEST_USER_EMAIL, 'test-login');
+    await seedAg(dataSource, PR_CDN, itvCdn);
+  }
+
+  it('/depot/:depotId/controle (GET) - Should return 404 when depot does not exist', async () => {
+    return request(app.getHttpServer())
+      .get('/depot/nonexistent-depot-id/controle')
+      .set('Cookie', ['access_token=token-user-1'])
+      .expect(404);
+  });
+
+  describe('when user owns the depot (HasUserAccessToDepotGuard passes)', () => {
+    beforeEach(async () => {
+      await seedUserWithItv(OWNER_ITV_CDN);
+      await seedDepot(dataSource, DEPOT_ID, OWNER_ITV_CDN, DepotStatus.EN_COURS_DE_TRAITEMENT);
+    });
+
+    it('/depot/:depotId/controle (GET) - Should return 200', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/controle`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+
+    it('/depot/:depotId/controle/sandre (GET) - Should return 200', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/controle/sandre`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+
+    it('/depot/:depotId/masa (GET) - Should return 200', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/masa`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+  });
+
+  describe('when user is admin / expert national (IsAdminGuard passes)', () => {
+    beforeEach(async () => {
+      await seedUserWithItv(OWNER_ITV_CDN);
+      await seedDepot(dataSource, DEPOT_ID, OTHER_ITV_CDN, DepotStatus.EN_COURS_DE_TRAITEMENT);
+      await seedOrionRoleForPrincipal(dataSource, PR_CDN, ROLE_EXPERT_NATIONAL);
+    });
+
+    it('/depot/:depotId/controle (GET) - Should return 200', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/controle`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+
+    it('/depot/:depotId/controle/sandre (GET) - Should return 200', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/controle/sandre`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+
+    it('/depot/:depotId/masa (GET) - Should return 200', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/masa`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(200);
+    });
+  });
+
+  describe('when user has no access and is not admin (both guards fail)', () => {
+    beforeEach(async () => {
+      await seedUserWithItv(OWNER_ITV_CDN);
+      await seedDepot(dataSource, DEPOT_ID, OTHER_ITV_CDN, DepotStatus.EN_COURS_DE_TRAITEMENT);
+      // No admin role seeded
+    });
+
+    it('/depot/:depotId/controle (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/controle`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
+    });
+
+    it('/depot/:depotId/controle/sandre (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/controle/sandre`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
+    });
+
+    it('/depot/:depotId/masa (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/masa`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
     });
   });
 });

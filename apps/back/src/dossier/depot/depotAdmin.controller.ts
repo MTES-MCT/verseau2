@@ -3,7 +3,7 @@ import { DepotService } from './depot.service';
 import type { Response } from 'express';
 import { IsAdminGuard } from '@authentication/isAdmin.guard';
 import type { RouteParams, RouteResponse } from '@lib/dossier';
-import { listAllDepots, downloadAdminRapport } from '@lib/dossier';
+import { listAllDepots, downloadAdminRapport, downloadAdminXml } from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
 
@@ -33,5 +33,18 @@ export class DepotAdminController {
     });
 
     res.send(pdfBuffer);
+  }
+
+  @Get(':id/xml')
+  async downloadXmlFile(
+    @Param(new ZodValidationPipe(downloadAdminXml['params'])) { id }: RouteParams<typeof downloadAdminXml>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const xmlBuffer = await this.depotService.downloadXml(id);
+    const depot = await this.depotService.findById(id);
+
+    res.attachment(depot.nomOriginalFichier);
+    res.type('application/xml');
+    res.send(xmlBuffer);
   }
 }

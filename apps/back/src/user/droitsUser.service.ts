@@ -7,6 +7,8 @@ import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class DroitsUserService {
+  private readonly ROLE_EXPERT_NATIONAL_VERSEAU: number = 305;
+
   constructor(
     @Inject(UserGateway) private readonly userGateway: UserGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
@@ -23,6 +25,24 @@ export class DroitsUserService {
 
     const ag = await this.lanceleauGateway.findAgByEmail(user.email);
     return ag ? ag.itvCdn : null;
+  }
+
+  async isExpertNationalVerseau(sub: string): Promise<boolean> {
+    try {
+      const user = await this.userGateway.findBySub(sub);
+      if (!user?.email) {
+        return false;
+      }
+      const ag = await this.lanceleauGateway.findAgByEmail(user.email);
+      if (!ag) {
+        return false;
+      }
+      const role = await this.lanceleauGateway.findOrionRoleForPrincipal(ag.prCdn, this.ROLE_EXPERT_NATIONAL_VERSEAU);
+      return !!role;
+    } catch (error) {
+      this.logger.warn('Failed to check expert national role for user', sub, error);
+      return false;
+    }
   }
 
   async canConsultDepot(sub: string, depot: DepotModel): Promise<boolean> {

@@ -1,11 +1,15 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { CustomRequest } from '@shared/constants/customRequest';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 @Injectable()
 export class IsAdminGuard implements CanActivate {
-  constructor(private readonly logger: LoggerService) {
-    this.logger.setContext('HasUserAccessToDepotGuard');
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly droitsUserService: DroitsUserService,
+  ) {
+    this.logger.setContext(IsAdminGuard.name);
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -16,8 +20,9 @@ export class IsAdminGuard implements CanActivate {
       this.logger.warn('No authenticated user found in request');
       throw new ForbiddenException('User not authenticated');
     }
-
-    //TODO: implement admin check logic here
-    return await Promise.resolve(false);
+    // TODO : vérifier si les rôles sont dans le token JWT
+    // => Valider le token
+    // => utiliser pour éviter ces appels supplémentaires
+    return this.droitsUserService.isExpertNationalVerseau(authenticatedUser.cerbereId);
   }
 }

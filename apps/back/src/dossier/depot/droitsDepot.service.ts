@@ -2,13 +2,16 @@ import { Inject, Injectable, ForbiddenException } from '@nestjs/common';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserGateway } from '@user/user.gateway';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 @Injectable()
 export class DroitsDepotService {
+  private readonly ROLE_DEPOSANT: number = 301;
   constructor(
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(UserGateway) private readonly userGateway: UserGateway,
     @Inject(LoggerService) private readonly logger: LoggerService,
+    private readonly droitsUserService: DroitsUserService,
   ) {
     this.logger.setContext(DroitsDepotService.name);
   }
@@ -20,6 +23,12 @@ export class DroitsDepotService {
   ): Promise<void> {
     if (cdOuvrageDepollutionList.length === 0 && cdSystemeCollecteList.length === 0) {
       throw new ForbiddenException('Aucun code fourni pour la validation des droits de dépôt');
+    }
+
+    const isExpert = await this.droitsUserService.isExpertNationalVerseau(subId);
+    if (isExpert) {
+      this.logger.log('Expert national Verseau — droits de dépôt accordés sans restriction', { subId });
+      return;
     }
 
     const user = await this.userGateway.findBySub(subId);
@@ -34,10 +43,10 @@ export class DroitsDepotService {
       throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
     }
 
-    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(ag.prCdn, 301);
+    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(ag.prCdn, this.ROLE_DEPOSANT);
     this.logger.log('Orion role found', role);
     if (!role) {
-      throw new ForbiddenException(`L'utilisateur n'a pas le rôle 301 requis pour le dépôt`);
+      throw new ForbiddenException(`L'utilisateur n'a pas le rôle ${this.ROLE_DEPOSANT} requis pour le dépôt`);
     }
 
     const itv = await this.lanceleauGateway.findByItvCdn(ag.itvCdn);

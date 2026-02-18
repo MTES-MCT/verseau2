@@ -12,8 +12,8 @@ export interface Endpoint {
   index: number;
 }
 
-/** Regex pattern to match @UseGuards decorator */
-const USE_GUARDS_PATTERN = /@UseGuards\s*\(/m;
+/** Regex pattern to match @UseGuards or @UseOrGuards decorator */
+const USE_GUARDS_PATTERN = /@Use(?:Or)?Guards\s*\(/m;
 
 /**
  * Parses a NestJS controller source file to extract guard and endpoint information.

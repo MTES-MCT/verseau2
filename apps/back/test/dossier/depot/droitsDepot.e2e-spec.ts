@@ -4,6 +4,7 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { App } from 'supertest/types';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
+import { DroitsUserService } from '@user/droitsUser.service';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { UserGateway } from '@user/user.gateway';
@@ -41,6 +42,7 @@ describe('DroitsDepotService (e2e)', () => {
       imports: [...initTestContainerImports(connectionUri)],
       providers: [
         DroitsDepotService,
+        DroitsUserService,
         LanceleauRepository,
         UserRepository,
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
