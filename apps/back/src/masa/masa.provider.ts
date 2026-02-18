@@ -17,16 +17,8 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<Map<string, MasaSteu>> {
-    const result = new Map<string, MasaSteu>();
-    await Promise.all(
-      cdas.map(async (cda) => {
-        const steu = await this.roseauGateway.findSteuBySandreCda(cda);
-        if (steu) {
-          result.set(cda, { steuCdn: steu.steuCdn });
-        }
-      }),
-    );
-    return result;
+    const steuMap = await this.roseauGateway.findSteuBatchBySandreCdas(cdas);
+    return new Map([...steuMap.entries()].map(([cda, steu]) => [cda, { steuCdn: steu.steuCdn }]));
   }
 
   // ---------------------------------------------------------------------------
@@ -35,16 +27,8 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findItvBatchByRfas(rfas: string[]): Promise<Map<string, MasaItv>> {
-    const result = new Map<string, MasaItv>();
-    await Promise.all(
-      rfas.map(async (rfa) => {
-        const itv = await this.lanceleauGateway.findItvByRfa(rfa);
-        if (itv) {
-          result.set(rfa, { itvCdn: itv.itvCdn });
-        }
-      }),
-    );
-    return result;
+    const itvMap = await this.lanceleauGateway.findItvBatchByRfas(rfas);
+    return new Map([...itvMap.entries()].map(([rfa, itv]) => [rfa, { itvCdn: itv.itvCdn }]));
   }
 
   // ---------------------------------------------------------------------------
@@ -54,16 +38,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>> {
-    const result = new Set<string>();
-    await Promise.all(
-      links.map(async ({ steuCdn, itvCdn }) => {
-        const cxnadm = await this.roseauGateway.findCxnAdmByExpSteuAndItv(steuCdn, itvCdn);
-        if (cxnadm) {
-          result.add(`${steuCdn}:${itvCdn}`);
-        }
-      }),
-    );
-    return result;
+    return this.roseauGateway.checkExpSteuLinksBatch(links);
   }
 
   // ---------------------------------------------------------------------------
@@ -73,16 +48,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>> {
-    const result = new Set<string>();
-    await Promise.all(
-      queries.map(async ({ cdSteu, numPmo, locPoint }) => {
-        const pmo = await this.roseauGateway.findPmoBySteuNumeroAndLocPoint(cdSteu, numPmo, locPoint);
-        if (pmo) {
-          result.add(`${cdSteu}:${numPmo}:${locPoint}`);
-        }
-      }),
-    );
-    return result;
+    return this.roseauGateway.checkPmoExistenceBatch(queries);
   }
 
   // ---------------------------------------------------------------------------
@@ -92,16 +58,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>> {
-    const result = new Set<string>();
-    await Promise.all(
-      links.map(async ({ cdScl, cdAga }) => {
-        const linked = await this.roseauGateway.isSystemeCollecteLinkedToAgglomeration(cdScl, cdAga);
-        if (linked) {
-          result.add(`${cdScl}:${cdAga}`);
-        }
-      }),
-    );
-    return result;
+    return this.roseauGateway.checkSclAgglomerationLinksBatch(links);
   }
 
   // ---------------------------------------------------------------------------

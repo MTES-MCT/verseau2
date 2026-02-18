@@ -13,6 +13,7 @@ export interface LanceleauGateway {
   findItvById(id: number): Promise<ItvEntity | null>;
   findByItvCdn(itvCdn: number): Promise<ItvEntity | null>;
   findItvByRfa(itvRfa: string): Promise<ItvEntity | null>;
+  findItvBatchByRfas(rfas: string[]): Promise<Map<string, ItvEntity>>;
   findSupByRfa(supRfa: string): Promise<SupEntity | null>;
   findFanByRfa(fanRfa: string): Promise<FanEntity | null>;
   findParByRfa(parRfa: string): Promise<ParEntity | null>;

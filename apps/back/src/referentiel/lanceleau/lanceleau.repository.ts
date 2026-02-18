@@ -51,6 +51,15 @@ export class LanceleauRepository implements LanceleauGateway {
     return this.itvRepository.findOne({ where: { itvRfa } });
   }
 
+  async findItvBatchByRfas(rfas: string[]): Promise<Map<string, ItvEntity>> {
+    if (rfas.length === 0) return new Map();
+    const rows = await this.itvRepository
+      .createQueryBuilder('itv')
+      .where('itv.itv_rfa IN (:...rfas)', { rfas })
+      .getMany();
+    return new Map(rows.map((itv) => [itv.itvRfa, itv]));
+  }
+
   async findSupByRfa(supRfa: string): Promise<SupEntity | null> {
     return this.supRepository.findOne({ where: { supRfa } });
   }

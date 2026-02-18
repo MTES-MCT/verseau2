@@ -72,12 +72,40 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
+  async findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<Map<string, SteuEntity>> {
+    if (sandreCdas.length === 0) return new Map();
+    const rows = await this.steuRepository
+      .createQueryBuilder('s')
+      .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .getMany();
+    return new Map(rows.map((s) => [s.steuSandreCda, s]));
+  }
+
   async findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
     return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
   async findCxnAdmByExpSteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
     return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
+  }
+
+  async checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>> {
+    if (links.length === 0) return new Set();
+    const rows = await this.cxnadmRepository
+      .createQueryBuilder('a')
+      .select('a.exp_steu_cdn', 'steu_cdn')
+      .addSelect('a.steu_itv_cdn', 'itv_cdn')
+      .where(
+        links.map((_, i) => `(a.exp_steu_cdn = :steu${i} AND a.steu_itv_cdn = :itv${i})`).join(' OR '),
+        Object.fromEntries(
+          links.flatMap(({ steuCdn, itvCdn }, i) => [
+            [`steu${i}`, steuCdn],
+            [`itv${i}`, itvCdn],
+          ]),
+        ),
+      )
+      .getRawMany<{ steu_cdn: number; itv_cdn: number }>();
+    return new Set(rows.map((r) => `${r.steu_cdn}:${r.itv_cdn}`));
   }
 
   async findPmoBySteuAndNumero(steuCdn: number, pmoNo: string): Promise<PmoEntity | null> {
@@ -98,6 +126,30 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('t16.tlref_elt_cda = :codeLocPoint', { codeLocPoint }); // ex: S14 ou S15
 
     return query.getOne();
+  }
+
+  async checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>> {
+    if (queries.length === 0) return new Set();
+    const rows = await this.pmoRepository
+      .createQueryBuilder('pmo')
+      .select('s.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('pmo.pmo_no', 'pmo_no')
+      .addSelect('t16.tlref_elt_cda', 'loc_point')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = pmo.steu_cdn')
+      .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+      .where('s.steu_sandre_cda IN (:...cdSteus)', {
+        cdSteus: [...new Set(queries.map((q) => q.cdSteu))],
+      })
+      .getRawMany<{ steu_sandre_cda: string; pmo_no: string; loc_point: string }>();
+
+    const existing = new Set(rows.map((r) => `${r.steu_sandre_cda}:${r.pmo_no}:${r.loc_point}`));
+    const result = new Set<string>();
+    for (const { cdSteu, numPmo, locPoint } of queries) {
+      if (existing.has(`${cdSteu}:${numPmo}:${locPoint}`)) {
+        result.add(`${cdSteu}:${numPmo}:${locPoint}`);
+      }
+    }
+    return result;
   }
 
   async findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null> {
@@ -127,6 +179,25 @@ export class RoseauRepository implements RoseauGateway {
       .getRawOne<{ scl_cdn: string }>();
 
     return Boolean(row);
+  }
+
+  async checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>> {
+    if (links.length === 0) return new Set();
+    const cdScls = [...new Set(links.map((l) => l.cdScl))];
+    const cdAgas = [...new Set(links.map((l) => l.cdAga))];
+    const rows = await this.sclRepository
+      .createQueryBuilder('scl')
+      .select('scl.scl_sandre_cda', 'cd_scl')
+      .addSelect('aga.aga_sandre_cda', 'cd_aga')
+      .innerJoin(AgaEntity, 'aga', 'aga.aga_sandre_cda IN (:...cdAgas)', { cdAgas })
+      .innerJoin(
+        CxntechEntity,
+        'cxntech',
+        'cxntech.aval_scl_cdn = scl.scl_cdn AND cxntech.amont_zgc_cdn = aga.zgc_cdn AND cxntech.cxntech_retrait_dt IS NULL',
+      )
+      .where('scl.scl_sandre_cda IN (:...cdScls)', { cdScls })
+      .getRawMany<{ cd_scl: string; cd_aga: string }>();
+    return new Set(rows.map((r) => `${r.cd_scl}:${r.cd_aga}`));
   }
 
   async findCapaciteNominaleBySteuSandreAndYear(steuSandreCda: string, year: number): Promise<number | null> {
