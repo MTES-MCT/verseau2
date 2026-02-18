@@ -23,24 +23,7 @@ export class ControleMetierV2Service {
     const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
       filterFctAssainissementForMetierV2(xmlObj);
 
-    // Préchargement batch des données MASA (CTL052, CTL053)
-    // Un seul appel par type de données pour tout le fichier, en parallèle.
-    // Quand l'API REST MASA sera disponible, seul MasaProvider changera.
-    const dateDebutReference = xmlObj.scenario?.dateDebutReference;
-    const currentYear = dateDebutReference ? parseInt(dateDebutReference.substring(0, 4), 10) : NaN;
-    const previousYear = currentYear - 1;
-
-    const allSteuCdas = xmlObj.ouvrages.map((o) => o.cdOuvrageDepollution).filter((cda): cda is string => !!cda);
-
-    const [cmaBySteu, maxDebitBySteu] = await Promise.all([
-      !isNaN(currentYear)
-        ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
-            String(CodeParametre.DBO5),
-            String(CodeParametre.DCO),
-          ])
-        : Promise.resolve(new Map<string, Map<string, number>>()),
-      this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
-    ]);
+    const { cmaBySteu, maxDebitBySteu } = await this.preloadMasaData(xmlObj);
 
     const tousControles = await Promise.all([
       Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
@@ -67,6 +50,28 @@ export class ControleMetierV2Service {
     );
     const createdControles = await this.controleGateway.createControles(createControles, manager);
     return createdControles;
+  }
+
+  private async preloadMasaData(
+    xmlObj: FctAssainissement,
+  ): Promise<{ cmaBySteu: Map<string, Map<string, number>>; maxDebitBySteu: Map<string, number> }> {
+    const dateDebutReference = xmlObj.scenario?.dateDebutReference;
+    const currentYear = dateDebutReference ? parseInt(dateDebutReference.substring(0, 4), 10) : NaN;
+    const previousYear = currentYear - 1;
+
+    const allSteuCdas = xmlObj.ouvrages.map((o) => o.cdOuvrageDepollution).filter((cda): cda is string => !!cda);
+
+    const [cmaBySteu, maxDebitBySteu] = await Promise.all([
+      !isNaN(currentYear)
+        ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
+            String(CodeParametre.DBO5),
+            String(CodeParametre.DCO),
+          ])
+        : Promise.resolve(new Map<string, Map<string, number>>()),
+      this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
+    ]);
+
+    return { cmaBySteu, maxDebitBySteu };
   }
 
   // CTL039: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5
