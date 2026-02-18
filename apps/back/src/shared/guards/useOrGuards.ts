@@ -15,7 +15,7 @@ export function orGuard(guards: Type<CanActivate>[]) {
 
       for (const GuardType of guards) {
         try {
-          const guard = await this.moduleRef.resolve(GuardType, undefined, { strict: false });
+          const guard = this.moduleRef.get(GuardType, { strict: false });
           const result = await guard.canActivate(context);
           if (result) {
             return true;

@@ -576,9 +576,47 @@ export async function seedUrf(dataSource: DataSource, urfRfa: string): Promise<v
   );
 }
 
+export async function seedOrionRoleForPrincipal(dataSource: DataSource, prCdn: number, roleCdn: number): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO lanceleau.t_orion_role_for_principal (pr_cdn, role_cdn)
+    VALUES ($1, $2)
+  `,
+    [prCdn, roleCdn],
+  );
+}
+
 export async function clearLanceleauData(dataSource: DataSource): Promise<void> {
   await dataSource.query(`DELETE FROM lanceleau.ag`);
   await dataSource.query(`DELETE FROM lanceleau.t_orion_credentials`);
   await dataSource.query(`DELETE FROM lanceleau.itv`);
   await dataSource.query(`DELETE FROM lanceleau.t_orion_role_for_principal`);
+}
+
+export async function seedUser(dataSource: DataSource, id: string, sub: string, email: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO "user" (id, sub, email, created_at, updated_at)
+    VALUES ($1, $2, $3, NOW(), NOW())
+  `,
+    [id, sub, email],
+  );
+}
+
+export async function seedDepot(dataSource: DataSource, id: string, itvCdn: number, status: string): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO depot (id, nom_original_fichier, taille_fichier, type, status, itv_cdn, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+  `,
+    [id, 'test.xml', 1024, 'application/xml', status, itvCdn],
+  );
+}
+
+export async function clearUserData(dataSource: DataSource, sub: string): Promise<void> {
+  await dataSource.query(`DELETE FROM "user" WHERE sub = $1`, [sub]);
+}
+
+export async function clearDepotData(dataSource: DataSource, id: string): Promise<void> {
+  await dataSource.query(`DELETE FROM depot WHERE id = $1`, [id]);
 }
