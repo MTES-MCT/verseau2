@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { ChargeEntranteMaxAndTranche } from './controleMetier.dto';
-import { MasaItv, MasaSteu } from './masaControle.dto';
+import { SteuCdnBySandreCda, ItvCdnByRfa } from './masaControle.dto';
 
 @Injectable()
 export class MasaProvider {
@@ -16,9 +16,8 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findSteuBatchBySandreCdas(cdas: string[]): Promise<Map<string, MasaSteu>> {
-    const steuMap = await this.roseauGateway.findSteuBatchBySandreCdas(cdas);
-    return new Map([...steuMap.entries()].map(([cda, steu]) => [cda, { steuCdn: steu.steuCdn }]));
+  async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
+    return this.roseauGateway.findSteuBatchBySandreCdas(cdas);
   }
 
   // ---------------------------------------------------------------------------
@@ -26,9 +25,8 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findItvBatchByRfas(rfas: string[]): Promise<Map<string, MasaItv>> {
-    const itvMap = await this.lanceleauGateway.findItvBatchByRfas(rfas);
-    return new Map([...itvMap.entries()].map(([rfa, itv]) => [rfa, { itvCdn: itv.itvCdn }]));
+  async findItvBatchByRfas(rfas: string[]): Promise<ItvCdnByRfa[]> {
+    return this.lanceleauGateway.findItvBatchByRfas(rfas);
   }
 
   // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
 import { ChargeEntranteMaxAndTranche } from '@masa/controleMetier.dto';
+import { SteuCdnBySandreCda } from '@masa/masaControle.dto';
 
 export interface RoseauGateway {
   findAga(): Promise<AgaEntity[]>;
@@ -16,7 +17,7 @@ export interface RoseauGateway {
   findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
   findSteuById(id: number): Promise<SteuEntity | null>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<Map<string, SteuEntity>>;
+  findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
   findCxnAdmByExpSteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
   checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>>;

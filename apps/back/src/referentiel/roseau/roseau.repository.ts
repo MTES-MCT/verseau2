@@ -14,6 +14,7 @@ import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { TltoblEntity } from './entities/tltobl.entity';
 import { ChargeEntranteMaxAndTranche } from '@masa/controleMetier.dto';
+import { SteuCdnBySandreCda } from '@masa/masaControle.dto';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -72,13 +73,13 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
-  async findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<Map<string, SteuEntity>> {
-    if (sandreCdas.length === 0) return new Map();
+  async findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]> {
+    if (sandreCdas.length === 0) return [];
     const rows = await this.steuRepository
       .createQueryBuilder('s')
       .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
-    return new Map(rows.map((s) => [s.steuSandreCda, s]));
+    return rows.map((s) => ({ sandreCda: s.steuSandreCda, steuCdn: s.steuCdn }));
   }
 
   async findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { FctAssainissement } from '@lib/parser';
 import { MasaProvider } from '@masa/masa.provider';
-import { MasaItv, MasaSteu } from '@masa/masaControle.dto';
+import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masaControle.dto';
 
 export interface ControleV1MasaData {
-  steuBySandreCda: Map<string, MasaSteu>;
-  itvByRfa: Map<string, MasaItv>;
+  steus: SteuCdnBySandreCda[];
+  itvs: ItvCdnByRfa[];
   validExpSteuLinks: Set<string>;
   existingPmos: Set<string>;
   validSclAgaLinks: Set<string>;
@@ -21,7 +21,7 @@ export class ControleV1DataFetcherService {
   async load(fctAssainissement: FctAssainissement): Promise<ControleV1MasaData> {
     const steuCdas = this.extractSteuCdas(fctAssainissement);
     const exploitantRfas = this.extractExploitantRfas(fctAssainissement);
-    const [steuBySandreCda, itvByRfa] = await Promise.all([
+    const [steus, itvs] = await Promise.all([
       this.masaProvider.findSteuBatchBySandreCdas(steuCdas),
       this.masaProvider.findItvBatchByRfas(exploitantRfas),
     ]);
@@ -29,7 +29,7 @@ export class ControleV1DataFetcherService {
     // Les liens CxnAdm dépendent des steuCdn/itvCdn récupérés ci-dessus
     const pmoQueries = this.extractPmoQueries(fctAssainissement);
     const sclLinks = this.extractSclLinks(fctAssainissement);
-    const expLinks = this.extractExpLinks(fctAssainissement, steuBySandreCda, itvByRfa);
+    const expLinks = this.extractExpLinks(fctAssainissement, steus, itvs);
     const [existingPmos, validSclAgaLinks, validExpSteuLinks] = await Promise.all([
       this.masaProvider.checkPmoExistenceBatch(pmoQueries),
       this.masaProvider.checkSclAgglomerationLinksBatch(sclLinks),
@@ -37,8 +37,8 @@ export class ControleV1DataFetcherService {
     ]);
 
     return {
-      steuBySandreCda,
-      itvByRfa,
+      steus,
+      itvs,
       validExpSteuLinks,
       existingPmos,
       validSclAgaLinks,
@@ -76,12 +76,12 @@ export class ControleV1DataFetcherService {
 
   private extractExpLinks(
     fctAssainissement: FctAssainissement,
-    steuMap: Map<string, MasaSteu>,
-    itvMap: Map<string, MasaItv>,
+    steus: SteuCdnBySandreCda[],
+    itvs: ItvCdnByRfa[],
   ): { steuCdn: number; itvCdn: number }[] {
     return fctAssainissement.ouvrages.flatMap((ouvrage) => {
-      const steu = steuMap.get(ouvrage.cdOuvrageDepollution ?? '');
-      const itv = itvMap.get(ouvrage.exploitant?.cdIntervenant ?? '');
+      const steu = steus.find((s) => s.sandreCda === ouvrage.cdOuvrageDepollution);
+      const itv = itvs.find((i) => i.rfa === ouvrage.exploitant?.cdIntervenant);
       if (!steu || !itv) return [];
       return [{ steuCdn: steu.steuCdn, itvCdn: itv.itvCdn }];
     });

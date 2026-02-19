@@ -1,9 +1,11 @@
-/** STEU réduit aux champs utiles pour les contrôles MASA */
-export interface MasaSteu {
+/** Résultat STEU retourné par un fetch batch MASA */
+export interface SteuCdnBySandreCda {
+  sandreCda: string;
   steuCdn: number;
 }
 
-/** Intervenant réduit aux champs utiles pour les contrôles MASA */
-export interface MasaItv {
+/** Résultat ITV retourné par un fetch batch MASA */
+export interface ItvCdnByRfa {
+  rfa: string;
   itvCdn: number;
 }

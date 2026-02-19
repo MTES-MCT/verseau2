@@ -8,8 +8,8 @@ import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
 import { LoggerService } from '@shared/logger/logger.service';
-import { ControleV1DataFetcherService } from './controleV1DataFetcher.service';
-import { MasaItv, MasaSteu } from '@masa/masaControle.dto';
+import { ControleV1DataFetcherService, ControleV1MasaData } from './controleV1DataFetcher.service';
+import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masaControle.dto';
 
 @Injectable()
 export class ControleV1Service {
@@ -31,13 +31,13 @@ export class ControleV1Service {
     fctAssainissement: FctAssainissement,
     manager?: EntityManager,
   ): Promise<ControleModel[]> {
-    const { steuBySandreCda, itvByRfa, validExpSteuLinks, existingPmos, validSclAgaLinks } =
+    const { steus, itvs, validExpSteuLinks, existingPmos, validSclAgaLinks } =
       await this.controleV1DataFetcher.load(fctAssainissement);
 
     const tousControles = Promise.all([
-      Promise.resolve(this.verifySteuExists(fctAssainissement, steuBySandreCda)),
+      Promise.resolve(this.verifySteuExists(fctAssainissement, steus)),
       this.verifyMoSteuExists(fctAssainissement),
-      Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steuBySandreCda, itvByRfa, validExpSteuLinks)),
+      Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steus, itvs, validExpSteuLinks)),
       Promise.resolve(this.verifyPmoExists(fctAssainissement, existingPmos)),
       this.verifySupExists(fctAssainissement),
       this.verifyLieuAnalyseExists(fctAssainissement),
@@ -90,7 +90,7 @@ export class ControleV1Service {
   // CTL002: Vérification que l'ouvrage de dépollution (STEU) existe bien dans la table STEU de Roseau
   verifySteuExists(
     fctAssainissement: FctAssainissement,
-    steuMap: Map<string, MasaSteu>,
+    steus: SteuCdnBySandreCda[],
   ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
@@ -101,7 +101,7 @@ export class ControleV1Service {
         continue;
       }
 
-      if (!steuMap.has(cdOuvrageDepollution)) {
+      if (!steuExists(steus, cdOuvrageDepollution)) {
         errors.push({
           code: ErrorCode.E2_003,
           params: [cdOuvrageDepollution],
@@ -160,8 +160,8 @@ export class ControleV1Service {
   // CTL004: Vérification que l'exploitant de l'ouvrage de dépollution (STEU) existe bien en BdD
   verifyExpSteuExists(
     fctAssainissement: FctAssainissement,
-    steuMap: Map<string, MasaSteu>,
-    itvMap: Map<string, MasaItv>,
+    steus: SteuCdnBySandreCda[],
+    itvs: ItvCdnByRfa[],
     expLinkSet: Set<string>,
   ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
@@ -174,10 +174,10 @@ export class ControleV1Service {
         continue;
       }
 
-      const steu = steuMap.get(cdOuvrageDepollution);
+      const steu = findSteu(steus, cdOuvrageDepollution);
       if (!steu) continue;
 
-      const itv = itvMap.get(cdIntervenant);
+      const itv = findItv(itvs, cdIntervenant);
       if (!itv) {
         errors.push({
           code: ErrorCode.E2_005,
@@ -918,4 +918,20 @@ export class ControleV1Service {
       errors: errors,
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers de lookup sur les listes batch MASA
+// ---------------------------------------------------------------------------
+
+function steuExists(steus: SteuCdnBySandreCda[], sandreCda: string): boolean {
+  return steus.some((s) => s.sandreCda === sandreCda);
+}
+
+function findSteu(steus: SteuCdnBySandreCda[], sandreCda: string): SteuCdnBySandreCda | undefined {
+  return steus.find((s) => s.sandreCda === sandreCda);
+}
+
+function findItv(itvs: ItvCdnByRfa[], rfa: string): ItvCdnByRfa | undefined {
+  return itvs.find((i) => i.rfa === rfa);
 }
