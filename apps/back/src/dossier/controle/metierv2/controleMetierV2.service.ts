@@ -39,7 +39,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
-      this.verifyCmaComparisonForDcoDbo5(xmlObj, cmaBySteu),
+      Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmaBySteu)),
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebitBySteu),
       // this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
@@ -495,10 +495,10 @@ export class ControleMetierV2Service {
   }
 
   // CTL052: Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1
-  async verifyCmaComparisonForDcoDbo5(
+  verifyCmaComparisonForDcoDbo5(
     fctAssainissement: FctAssainissement,
-    cmaBySteu?: Map<string, Map<string, number>>,
-  ): Promise<ControleIndividuelWithoutSuccess> {
+    cmaBySteu: Map<string, Map<string, number>>,
+  ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
@@ -519,17 +519,6 @@ export class ControleMetierV2Service {
         evenementType: EvenementType.AVERTISSEMENT,
       });
       return { name: ControleName.CTL052, errors };
-    }
-
-    // Si les données ne sont pas préchargées (appel direct, hors execute()), on les récupère ici
-    if (!cmaBySteu) {
-      const allSteuCdas = fctAssainissement.ouvrages
-        .map((o) => o.cdOuvrageDepollution)
-        .filter((cda): cda is string => !!cda);
-      cmaBySteu = await this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, currentYear - 1, [
-        String(CodeParametre.DBO5),
-        String(CodeParametre.DCO),
-      ]);
     }
 
     const dbo5Code = String(CodeParametre.DBO5);

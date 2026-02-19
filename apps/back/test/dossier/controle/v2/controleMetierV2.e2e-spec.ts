@@ -21,6 +21,8 @@ import { startPostgresContainer, getPostgresConnectionUri } from '../../../testc
 import {
   createReferentielDataset,
   clearReferentielData,
+  seedSteu,
+  seedResa,
   seedCpy,
   seedStchan,
   seedTltobl,
@@ -729,19 +731,9 @@ describe('ControleMetierV2Service (e2e)', () => {
 
   describe('CTL052 - verifyCmaComparisonForDcoDbo5', () => {
     it('should pass when DBO5 and DCO are lower than CMA N-1', async () => {
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (1, 'STEU001')
-      `);
-
-      await dataSource.query(`
-        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
-        VALUES (1, 1, 2023, '1313', 100)
-      `);
-      await dataSource.query(`
-        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
-        VALUES (2, 1, 2023, '1314', 200)
-      `);
+      await seedSteu(dataSource, 1, 'STEU001');
+      await seedResa(dataSource, 1, 1, 2023, '1313', 100);
+      await seedResa(dataSource, 2, 1, 2023, '1314', 200);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -780,16 +772,9 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
 
     it('should report error when DBO5 exceeds CMA N-1', async () => {
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (2, 'STEU002')
-      `);
-
+      await seedSteu(dataSource, 2, 'STEU002');
       // Seed CMA for DBO5 = 150 mg/L
-      await dataSource.query(`
-        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
-        VALUES (3, 2, 2023, '1313', 150)
-      `);
+      await seedResa(dataSource, 3, 2, 2023, '1313', 150);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -828,16 +813,9 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
 
     it('should report error when DCO exceeds CMA N-1', async () => {
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (3, 'STEU003')
-      `);
-
+      await seedSteu(dataSource, 3, 'STEU003');
       // Seed CMA for DCO = 300 mg/L
-      await dataSource.query(`
-        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
-        VALUES (4, 3, 2023, '1314', 300)
-      `);
+      await seedResa(dataSource, 4, 3, 2023, '1314', 300);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -878,11 +856,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
 
     it('should not report error when no CMA data exists for year N-1', async () => {
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (4, 'STEU004')
-      `);
-
+      await seedSteu(dataSource, 4, 'STEU004');
       // No RESA data - no CMA available
 
       const fctAssainissement = createTestFctAssainissement({
@@ -922,15 +896,8 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
 
     it('should not report error when dateDebutReference is missing', async () => {
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (5, 'STEU005')
-      `);
-
-      await dataSource.query(`
-        INSERT INTO roseau.resa (resa_cdn, steu_cdn, resa_an, par_rfa, resa_cma_val)
-        VALUES (5, 5, 2023, '1313', 100)
-      `);
+      await seedSteu(dataSource, 5, 'STEU005');
+      await seedResa(dataSource, 5, 5, 2023, '1313', 100);
 
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -961,6 +928,134 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors[0].error).toBe(ErrorCode.E2_052);
       expect(ctlErrors[0].errorParams).toEqual([undefined]);
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report two errors when both DBO5 and DCO exceed CMA N-1', async () => {
+      await seedSteu(dataSource, 6, 'STEU006');
+      // Seed CMA for DBO5 = 100 and DCO = 200
+      await seedResa(dataSource, 6, 6, 2023, '1313', 100);
+      await seedResa(dataSource, 7, 6, 2023, '1314', 200);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU006',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM006',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-06-01',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '101'),
+                      createTestAnalyse(CodeParametre.DCO.toString(), '201'),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL052);
+
+      expect(ctlErrors).toHaveLength(2);
+      expect(ctlErrors[0].error).toBe(ErrorCode.E2_052);
+      expect(ctlErrors[0].errorParams).toEqual(['DBO5', 'STEU006', '2024-06-01', '101.00', '100.00']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+      expect(ctlErrors[1].error).toBe(ErrorCode.E2_052);
+      expect(ctlErrors[1].errorParams).toEqual(['DCO', 'STEU006', '2024-06-01', '201.00', '200.00']);
+      expect(ctlErrors[1].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should not report error when DBO5 and DCO equal CMA N-1 exactly', async () => {
+      await seedSteu(dataSource, 7, 'STEU007');
+      // Seed CMA for DBO5 = 150 and DCO = 300
+      await seedResa(dataSource, 8, 7, 2023, '1313', 150);
+      await seedResa(dataSource, 9, 7, 2023, '1314', 300);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU007',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM007',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-07-10',
+                    cdSupport: '3',
+                    analyse: [
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '150'), // exactly at CMA
+                      createTestAnalyse(CodeParametre.DCO.toString(), '300'), // exactly at CMA
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL052);
+
+      expect(ctlErrors).toHaveLength(0); // Equal to CMA is not a violation (only strictly >)
+    });
+
+    it('should not check prelevement on A4 point de mesure (only A3 is checked)', async () => {
+      await seedSteu(dataSource, 8, 'STEU008');
+      // Seed CMA for DBO5 = 100
+      await seedResa(dataSource, 10, 8, 2023, '1313', 100);
+
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU008',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM008_A4',
+                locGlobalePointMesure: 'A4', // A4 should be skipped
+                prelevement: [
+                  {
+                    datePrlvt: '2024-08-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '999')], // Exceeds CMA but on A4
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL052);
+
+      expect(ctlErrors).toHaveLength(0); // A4 is not checked by CTL052
     });
   });
 
@@ -1848,10 +1943,7 @@ describe('ControleMetierV2Service (e2e)', () => {
   describe('CTL051 - verifyVolumeA3A4VsCapaciteEH', () => {
     it('should pass when volumes are below threshold (capaciteEH * 0.2 * 6)', async () => {
       // capaciteEH = 3000 (> 2000), seuil = 3000 * 0.2 * 6 = 3600
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (1, 'STEU001')
-      `);
+      await seedSteu(dataSource, 1, 'STEU001');
       await seedCpy(dataSource, 1, 1, 2024, 3000);
 
       const fctAssainissement = createTestFctAssainissement({
@@ -1900,10 +1992,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error when volumes exceed threshold', async () => {
       // capaciteEH = 3000, seuil = 3600
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (2, 'STEU002')
-      `);
+      await seedSteu(dataSource, 2, 'STEU002');
       await seedCpy(dataSource, 2, 2, 2024, 3000);
 
       const fctAssainissement = createTestFctAssainissement({
@@ -1962,10 +2051,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
 
     it('should skip when capaciteEH <= 2000', async () => {
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (3, 'STEU003')
-      `);
+      await seedSteu(dataSource, 3, 'STEU003');
       await seedCpy(dataSource, 3, 3, 2024, 2000);
 
       const fctAssainissement = createTestFctAssainissement({
@@ -2090,10 +2176,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should only check when both A3 and A4 volumes are present for the same date', async () => {
       // capaciteEH = 3000, seuil = 3600
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-        VALUES (4, 'STEU004')
-      `);
+      await seedSteu(dataSource, 4, 'STEU004');
       await seedCpy(dataSource, 4, 4, 2024, 3000);
 
       const fctAssainissement = createTestFctAssainissement({
@@ -2136,10 +2219,7 @@ describe('ControleMetierV2Service (e2e)', () => {
   describe.skip('CTL053 - verifyDebitEntrantVsChargeMax', () => {
     it('should pass when total debit is below threshold (2 * maxDebitRef)', async () => {
       // maxDebitRef = max(pc95=500, dref=400) = 500, threshold = 1000
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
-        VALUES (1, 'STEU001', 2024)
-      `);
+      await seedSteu(dataSource, 1, 'STEU001', { steuEncoursAn: 2024 });
       await seedCpy(dataSource, 1, 1, 2024, undefined, 400);
       await seedStchan(dataSource, 1, 2024, 500);
 
@@ -2172,10 +2252,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error when total debit exceeds threshold', async () => {
       // maxDebitRef = max(pc95=500, dref=400) = 500, threshold = 1000
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
-        VALUES (2, 'STEU002', 2024)
-      `);
+      await seedSteu(dataSource, 2, 'STEU002', { steuEncoursAn: 2024 });
       await seedCpy(dataSource, 2, 2, 2024, undefined, 400);
       await seedStchan(dataSource, 2, 2024, 500);
 
@@ -2211,10 +2288,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should sum debits across A3, A2, A7 for the same date', async () => {
       // maxDebitRef = 500, threshold = 1000
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
-        VALUES (3, 'STEU003', 2024)
-      `);
+      await seedSteu(dataSource, 3, 'STEU003', { steuEncoursAn: 2024 });
       await seedCpy(dataSource, 3, 3, 2024, undefined, 300);
       await seedStchan(dataSource, 3, 2024, 500);
 
@@ -2272,10 +2346,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should skip locations other than A3, A2, A7', async () => {
       // maxDebitRef = 500, threshold = 1000
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
-        VALUES (4, 'STEU004', 2024)
-      `);
+      await seedSteu(dataSource, 4, 'STEU004', { steuEncoursAn: 2024 });
       await seedCpy(dataSource, 4, 4, 2024, undefined, 400);
       await seedStchan(dataSource, 4, 2024, 500);
 
@@ -2319,10 +2390,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should skip when no maxDebitRef data exists', async () => {
       // No stchan or cpy data for this STEU
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
-        VALUES (5, 'STEU005', 2024)
-      `);
+      await seedSteu(dataSource, 5, 'STEU005', { steuEncoursAn: 2024 });
 
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -2353,10 +2421,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should skip prelevements with cdSupport != 3', async () => {
       // maxDebitRef = 500, threshold = 1000
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an)
-        VALUES (6, 'STEU006', 2024)
-      `);
+      await seedSteu(dataSource, 6, 'STEU006', { steuEncoursAn: 2024 });
       await seedCpy(dataSource, 6, 6, 2024, undefined, 400);
       await seedStchan(dataSource, 6, 2024, 500);
 
@@ -2391,10 +2456,7 @@ describe('ControleMetierV2Service (e2e)', () => {
   describe.skip('CTL054 - verifyChargeEntranteVsTranche', () => {
     it('should pass when charge max is within tranche bounds', async () => {
       // Tranche 2: seuil sup = 10 000 EH, charge max = 8000 EH -> OK
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
-        VALUES (1, 'STEU001', 100, 2024)
-      `);
+      await seedSteu(dataSource, 1, 'STEU001', { zgcCdn: 100, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
       await seedAga(dataSource, 1, 100, 'AGA001', '2');
       await seedStchan(dataSource, 1, 2024, null, 8000);
@@ -2422,10 +2484,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error when charge max exceeds tranche upper bound', async () => {
       // Tranche 2: seuil sup = 10 000 EH, charge max = 12000 EH -> AVERTISSEMENT
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
-        VALUES (2, 'STEU002', 200, 2024)
-      `);
+      await seedSteu(dataSource, 2, 'STEU002', { zgcCdn: 200, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
       await seedAga(dataSource, 2, 200, 'AGA002', '2');
       await seedStchan(dataSource, 2, 2024, null, 12000);
@@ -2456,10 +2515,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error when charge max exceeds tranche 1 upper bound', async () => {
       // Tranche 1: seuil sup = 2 000 EH, charge max = 3000 EH -> AVERTISSEMENT
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
-        VALUES (3, 'STEU003', 300, 2024)
-      `);
+      await seedSteu(dataSource, 3, 'STEU003', { zgcCdn: 300, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '1', 'Moins de 2 000 EH');
       await seedAga(dataSource, 3, 300, 'AGA003', '1');
       await seedStchan(dataSource, 3, 2024, null, 3000);
@@ -2489,10 +2545,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should not report error for tranche 4 (no upper bound)', async () => {
       // Tranche 4: pas de seuil supérieur, charge max = 999999 EH -> OK
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
-        VALUES (4, 'STEU004', 400, 2024)
-      `);
+      await seedSteu(dataSource, 4, 'STEU004', { zgcCdn: 400, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '4', 'Plus de 100 000 EH');
       await seedAga(dataSource, 4, 400, 'AGA004', '4');
       await seedStchan(dataSource, 4, 2024, null, 999999);
@@ -2558,10 +2611,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
     it('should report error for tranche 3 when charge exceeds 100 000 EH', async () => {
       // Tranche 3: seuil sup = 100 000 EH, charge max = 120000 EH -> AVERTISSEMENT
-      await dataSource.query(`
-        INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, zgc_cdn, steu_encours_an)
-        VALUES (5, 'STEU005', 500, 2024)
-      `);
+      await seedSteu(dataSource, 5, 'STEU005', { zgcCdn: 500, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '3', 'De 10 000 à 100 000 EH');
       await seedAga(dataSource, 5, 500, 'AGA005', '3');
       await seedStchan(dataSource, 5, 2024, null, 120000);
