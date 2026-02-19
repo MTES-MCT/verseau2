@@ -1808,4 +1808,84 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl036?.error).toBe(ErrorCode.E2_036);
     });
   });
+
+  describe('Batch regression - CHAR(n) column padding', () => {
+    // Simulates production DB where columns use CHAR(n) instead of VARCHAR.
+    // PostgreSQL CHAR(n) pads stored values with trailing spaces.
+    // The IN clause still matches (PG ignores trailing spaces in char comparison),
+    // but the returned entity values include padding, causing Map key mismatches.
+    beforeAll(async () => {
+      await dataSource.query(`ALTER TABLE roseau.steu ALTER COLUMN steu_sandre_cda TYPE CHAR(20)`);
+      await dataSource.query(`ALTER TABLE roseau.pmo ALTER COLUMN pmo_no TYPE CHAR(10)`);
+      await dataSource.query(`ALTER TABLE roseau.tlref ALTER COLUMN tlref_elt_cda TYPE CHAR(10)`);
+      await dataSource.query(`ALTER TABLE lanceleau.itv ALTER COLUMN itv_rfa TYPE CHAR(20)`);
+    });
+
+    afterAll(async () => {
+      await dataSource.query(`ALTER TABLE roseau.steu ALTER COLUMN steu_sandre_cda TYPE VARCHAR`);
+      await dataSource.query(`ALTER TABLE roseau.pmo ALTER COLUMN pmo_no TYPE VARCHAR`);
+      await dataSource.query(`ALTER TABLE roseau.tlref ALTER COLUMN tlref_elt_cda TYPE VARCHAR`);
+      await dataSource.query(`ALTER TABLE lanceleau.itv ALTER COLUMN itv_rfa TYPE VARCHAR`);
+    });
+
+    it('CTL002 should pass when STEU exists in CHAR(n) column', async () => {
+      await seedSteu(dataSource, 1, '0442165S0005');
+      await seedDepot(dataSource, 'dep_char_ctl002');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [{ cdOuvrageDepollution: '0442165S0005', pointMesure: [] }],
+      });
+
+      const controles = await controleV1Service.execute('dep_char_ctl002', fctAssainissement);
+
+      const ctl002 = controles.find((c) => c.name === ControleName.CTL002);
+      expect(ctl002).toBeDefined();
+      expect(ctl002?.success).toBe(true);
+    });
+
+    it('CTL005 should pass when PMO exists in CHAR(n) columns', async () => {
+      await seedSteu(dataSource, 1, '0442165S0005');
+      await seedTlref(dataSource, 1, 'LREF_16', 'S15');
+      await seedPmo(dataSource, 1, 1, '14', 1);
+      await seedDepot(dataSource, 'dep_char_ctl005');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0442165S0005',
+            pointMesure: [{ numeroPointMesure: '14', locGlobalePointMesure: 'S15', prelevement: [] }],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_char_ctl005', fctAssainissement);
+
+      const ctl005 = controles.find((c) => c.name === ControleName.CTL005);
+      expect(ctl005).toBeDefined();
+      expect(ctl005?.success).toBe(true);
+    });
+
+    it('CTL004 should pass when exploitant exists in CHAR(n) column', async () => {
+      await seedSteu(dataSource, 1, '0442165S0005');
+      await seedItv(dataSource, 1001, 'EXP_SIRET');
+      await seedCxnadm(dataSource, 1, 0, 1001, 1);
+      await seedDepot(dataSource, 'dep_char_ctl004');
+
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: '0442165S0005',
+            exploitant: { cdIntervenant: 'EXP_SIRET' },
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const controles = await controleV1Service.execute('dep_char_ctl004', fctAssainissement);
+
+      const ctl004 = controles.find((c) => c.name === ControleName.CTL004);
+      expect(ctl004).toBeDefined();
+      expect(ctl004?.success).toBe(true);
+    });
+  });
 });

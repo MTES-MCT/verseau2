@@ -78,7 +78,7 @@ export class RoseauRepository implements RoseauGateway {
       .createQueryBuilder('s')
       .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
-    return new Map(rows.map((s) => [s.steuSandreCda, s]));
+    return new Map(rows.map((s) => [s.steuSandreCda.trim(), s]));
   }
 
   async findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
@@ -142,7 +142,7 @@ export class RoseauRepository implements RoseauGateway {
       })
       .getRawMany<{ steu_sandre_cda: string; pmo_no: string; loc_point: string }>();
 
-    const existing = new Set(rows.map((r) => `${r.steu_sandre_cda}:${r.pmo_no}:${r.loc_point}`));
+    const existing = new Set(rows.map((r) => `${r.steu_sandre_cda.trim()}:${r.pmo_no.trim()}:${r.loc_point.trim()}`));
     const result = new Set<string>();
     for (const { cdSteu, numPmo, locPoint } of queries) {
       if (existing.has(`${cdSteu}:${numPmo}:${locPoint}`)) {
@@ -197,7 +197,7 @@ export class RoseauRepository implements RoseauGateway {
       )
       .where('scl.scl_sandre_cda IN (:...cdScls)', { cdScls })
       .getRawMany<{ cd_scl: string; cd_aga: string }>();
-    return new Set(rows.map((r) => `${r.cd_scl}:${r.cd_aga}`));
+    return new Set(rows.map((r) => `${r.cd_scl.trim()}:${r.cd_aga.trim()}`));
   }
 
   async findCapaciteNominaleBySteuSandreAndYear(steuSandreCda: string, year: number): Promise<number | null> {
@@ -255,10 +255,11 @@ export class RoseauRepository implements RoseauGateway {
 
     const result = new Map<string, Map<string, number>>();
     for (const row of rows) {
-      if (!result.has(row.steu_sandre_cda)) {
-        result.set(row.steu_sandre_cda, new Map());
+      const cda = row.steu_sandre_cda.trim();
+      if (!result.has(cda)) {
+        result.set(cda, new Map());
       }
-      result.get(row.steu_sandre_cda)!.set(row.par_rfa, parseFloat(row.resa_cma_val));
+      result.get(cda)!.set(row.par_rfa.trim(), parseFloat(row.resa_cma_val));
     }
     return result;
   }
@@ -306,7 +307,7 @@ export class RoseauRepository implements RoseauGateway {
       const dref = row.dref ? parseFloat(row.dref.toString()) : 0;
       const maxDebit = Math.max(pc95, dref);
       if (maxDebit > 0) {
-        result.set(row.steu_sandre_cda, maxDebit);
+        result.set(row.steu_sandre_cda.trim(), maxDebit);
       }
     }
     return result;
@@ -369,10 +370,10 @@ export class RoseauRepository implements RoseauGateway {
 
     for (const result of results) {
       if (result.charge_max !== null && result.tranche_label !== null && result.tranche_rfa !== null) {
-        resultMap.set(result.steu_sandre_cda, {
+        resultMap.set(result.steu_sandre_cda.trim(), {
           chargeMax: parseFloat(result.charge_max.toString()),
-          trancheLabel: result.tranche_label,
-          trancheRfa: result.tranche_rfa,
+          trancheLabel: result.tranche_label.trim(),
+          trancheRfa: result.tranche_rfa.trim(),
         });
       }
     }
