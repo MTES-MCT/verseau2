@@ -9,6 +9,7 @@ import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -22,6 +23,8 @@ export class ControleMetierV2Service {
   async execute(depotId: string, xmlObj: FctAssainissement, manager?: EntityManager): Promise<ControleModel[]> {
     const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
       filterFctAssainissementForMetierV2(xmlObj);
+
+    const { cmas, maxDebits } = await this.preloadMasaData(xmlObj);
 
     const tousControles = await Promise.all([
       Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
@@ -37,8 +40,8 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
-      this.verifyCmaComparisonForDcoDbo5(xmlObj),
-      // this.verifyDebitEntrantVsChargeMax(xmlObj),
+      Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
+      // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
       // this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
@@ -48,6 +51,28 @@ export class ControleMetierV2Service {
     );
     const createdControles = await this.controleGateway.createControles(createControles, manager);
     return createdControles;
+  }
+
+  private async preloadMasaData(
+    xmlObj: FctAssainissement,
+  ): Promise<{ cmas: CmaBySandreCdaAndParam[]; maxDebits: MaxDebitBySandreCda[] }> {
+    const dateDebutReference = xmlObj.scenario?.dateDebutReference;
+    const currentYear = dateDebutReference ? parseInt(dateDebutReference.substring(0, 4), 10) : NaN;
+    const previousYear = currentYear - 1;
+
+    const allSteuCdas = xmlObj.ouvrages.map((o) => o.cdOuvrageDepollution).filter((cda): cda is string => !!cda);
+
+    const [cmas, maxDebits] = await Promise.all([
+      !isNaN(currentYear)
+        ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
+            String(CodeParametre.DBO5),
+            String(CodeParametre.DCO),
+          ])
+        : Promise.resolve([] as CmaBySandreCdaAndParam[]),
+      this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
+    ]);
+
+    return { cmas, maxDebits };
   }
 
   // CTL039: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5
@@ -471,7 +496,10 @@ export class ControleMetierV2Service {
   }
 
   // CTL052: Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1
-  async verifyCmaComparisonForDcoDbo5(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  verifyCmaComparisonForDcoDbo5(
+    fctAssainissement: FctAssainissement,
+    cmas: CmaBySandreCdaAndParam[],
+  ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
@@ -494,7 +522,6 @@ export class ControleMetierV2Service {
       return { name: ControleName.CTL052, errors };
     }
 
-    const previousYear = currentYear - 1;
     const dbo5Code = String(CodeParametre.DBO5);
     const dcoCode = String(CodeParametre.DCO);
 
@@ -502,22 +529,12 @@ export class ControleMetierV2Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      let cmaValues: Map<string, number>;
-      try {
-        cmaValues = await this.roseauGateway.findConcentrationMoyenneAnnuelle(cdOuvrageDepollution, previousYear, [
-          dbo5Code,
-          dcoCode,
-        ]);
-      } catch {
+      const dbo5ValueNmoins1 = findCmaValue(cmas, cdOuvrageDepollution, dbo5Code);
+      const dcoValueNmoins1 = findCmaValue(cmas, cdOuvrageDepollution, dcoCode);
+
+      if (dbo5ValueNmoins1 === undefined && dcoValueNmoins1 === undefined) {
         continue;
       }
-
-      if (cmaValues.size === 0) {
-        continue;
-      }
-
-      const dbo5ValueNmoins1 = cmaValues.get(dbo5Code);
-      const dcoValueNmoins1 = cmaValues.get(dcoCode);
 
       for (const pointMesure of ouvrage.pointMesure) {
         if (pointMesure.locGlobalePointMesure !== 'A3') continue;
@@ -557,9 +574,20 @@ export class ControleMetierV2Service {
   }
 
   // CTL053: Vérification du débit entrant (paramètre 1552) vs max(PC95, Dref)
-  async verifyDebitEntrantVsChargeMax(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  async verifyDebitEntrantVsChargeMax(
+    fctAssainissement: FctAssainissement,
+    maxDebits?: MaxDebitBySandreCda[],
+  ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
     const volumeCode = String(CodeParametre.Volume); // Paramètre 1552
+
+    // Si les données ne sont pas préchargées (appel direct, hors execute()), on les récupère ici
+    if (!maxDebits) {
+      const allSteuCdas = fctAssainissement.ouvrages
+        .map((o) => o.cdOuvrageDepollution)
+        .filter((cda): cda is string => !!cda);
+      maxDebits = await this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas);
+    }
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
@@ -567,10 +595,10 @@ export class ControleMetierV2Service {
         continue;
       }
 
-      // Récupérer max(PC95, Dref) depuis Roseau
-      const maxDebitRef = await this.roseauGateway.findMaxDebitReference(cdOuvrageDepollution);
+      // Récupérer max(PC95, Dref) depuis les données préchargées
+      const maxDebitRef = findMaxDebit(maxDebits, cdOuvrageDepollution);
 
-      if (maxDebitRef === null || maxDebitRef <= 0) {
+      if (maxDebitRef === undefined) {
         // Pas de données de référence, on saute la vérification
         continue;
       }
@@ -659,13 +687,13 @@ export class ControleMetierV2Service {
       .map((ouvrage) => ouvrage.cdOuvrageDepollution)
       .filter((code): code is string => !!code);
 
-    const chargeEntranteBySteu = await this.masaProvider.findChargeEntranteMaxAndTranche(steuCodes, year);
+    const chargesEntrantes = await this.masaProvider.findChargeEntranteMaxAndTranche(steuCodes, year);
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const result = chargeEntranteBySteu.get(cdOuvrageDepollution);
+      const result = findChargeEntrante(chargesEntrantes, cdOuvrageDepollution);
       if (!result) continue;
 
       const { chargeMax, trancheLabel, trancheRfa } = result;
@@ -685,4 +713,19 @@ export class ControleMetierV2Service {
 
     return { name: ControleName.CTL054, errors };
   }
+}
+
+function findCmaValue(cmas: CmaBySandreCdaAndParam[], sandreCda: string, paramCode: string): number | undefined {
+  return cmas.find((c) => c.sandreCda === sandreCda && c.paramCode === paramCode)?.value;
+}
+
+function findMaxDebit(maxDebits: MaxDebitBySandreCda[], sandreCda: string): number | undefined {
+  return maxDebits.find((d) => d.sandreCda === sandreCda)?.maxDebit;
+}
+
+function findChargeEntrante(
+  chargesEntrantes: ChargeEntranteAndTrancheBySandreCda[],
+  sandreCda: string,
+): ChargeEntranteAndTrancheBySandreCda | undefined {
+  return chargesEntrantes.find((c) => c.sandreCda === sandreCda);
 }

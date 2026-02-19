@@ -336,13 +336,18 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
 
 // ============= Seed Data Functions =============
 
-export async function seedSteu(dataSource: DataSource, steuCdn: number, steuSandreCda: string): Promise<void> {
+export async function seedSteu(
+  dataSource: DataSource,
+  steuCdn: number,
+  steuSandreCda: string,
+  options?: { steuEncoursAn?: number | null; zgcCdn?: number | null },
+): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda)
-    VALUES ($1, $2)
+    INSERT INTO roseau.steu (steu_cdn, steu_sandre_cda, steu_encours_an, zgc_cdn)
+    VALUES ($1, $2, $3, $4)
   `,
-    [steuCdn, steuSandreCda],
+    [steuCdn, steuSandreCda, options?.steuEncoursAn ?? null, options?.zgcCdn ?? null],
   );
 }
 

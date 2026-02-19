@@ -8,6 +8,7 @@ import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParam
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
+import { CmaBySandreCdaAndParam } from '@masa/masa.dto';
 
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
@@ -26,7 +27,6 @@ describe('ControleMetierV2Service', () => {
           provide: RoseauGateway,
           useValue: {
             findCapaciteNominaleBySteuSandreAndYear: jest.fn(),
-            findConcentrationMoyenneAnnuelle: jest.fn(),
           },
         },
         {
@@ -1133,21 +1133,16 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmaMap = new Map([
-        [CodeParametre.DBO5.toString(), 150],
-        [CodeParametre.DCO.toString(), 400],
-      ]);
-      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
+      const cmas: CmaBySandreCdaAndParam[] = [
+        { sandreCda: 'STEU1', paramCode: CodeParametre.DBO5.toString(), value: 150 },
+        { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
+      ];
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_052);
-      expect(roseauGateway.findConcentrationMoyenneAnnuelle).toHaveBeenCalledWith('STEU1', 2023, [
-        CodeParametre.DBO5.toString(),
-        CodeParametre.DCO.toString(),
-      ]);
     });
 
     it('should return no error when values are lower than CMA N-1', async () => {
@@ -1178,13 +1173,12 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmaMap = new Map([
-        [CodeParametre.DBO5.toString(), 150],
-        [CodeParametre.DCO.toString(), 400],
-      ]);
-      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
+      const cmas: CmaBySandreCdaAndParam[] = [
+        { sandreCda: 'STEU1', paramCode: CodeParametre.DBO5.toString(), value: 150 },
+        { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
+      ];
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -1214,10 +1208,8 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmaMap = new Map(); // Vide - pas de CMA trouvée
-      roseauGateway.findConcentrationMoyenneAnnuelle.mockResolvedValue(cmaMap);
-
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      // Empty array — no CMA found for any STEU
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
       expect(result.errors).toHaveLength(0);
     });
@@ -1230,7 +1222,7 @@ describe('ControleMetierV2Service', () => {
         ouvrages: [],
       } as unknown as FctAssainissement;
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj);
+      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
@@ -1294,17 +1286,9 @@ describe('ControleMetierV2Service', () => {
 
   describe.skip('verifyChargeEntranteVsTranche', () => {
     it('should use MasaProvider to check charge entrante vs tranche', async () => {
-      const resultMap = new Map([
-        [
-          'STEU1',
-          {
-            chargeMax: 12000,
-            trancheLabel: 'Tranche 2',
-            trancheRfa: '2',
-          },
-        ],
+      masaProvider.findChargeEntranteMaxAndTranche.mockResolvedValue([
+        { sandreCda: 'STEU1', chargeMax: 12000, trancheLabel: 'Tranche 2', trancheRfa: '2' },
       ]);
-      masaProvider.findChargeEntranteMaxAndTranche.mockResolvedValue(resultMap);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },

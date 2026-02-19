@@ -7,12 +7,14 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
+import { ItvCdnByRfa } from '@masa/masa.dto';
 
 export interface LanceleauGateway {
   findItv(): Promise<ItvEntity[]>;
   findItvById(id: number): Promise<ItvEntity | null>;
   findByItvCdn(itvCdn: number): Promise<ItvEntity | null>;
   findItvByRfa(itvRfa: string): Promise<ItvEntity | null>;
+  findItvBatchByRfas(rfas: string[]): Promise<ItvCdnByRfa[]>;
   findSupByRfa(supRfa: string): Promise<SupEntity | null>;
   findFanByRfa(fanRfa: string): Promise<FanEntity | null>;
   findParByRfa(parRfa: string): Promise<ParEntity | null>;

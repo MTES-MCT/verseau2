@@ -11,6 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
+import { ItvCdnByRfa } from '@masa/masa.dto';
 
 @Injectable()
 export class LanceleauRepository implements LanceleauGateway {
@@ -49,6 +50,15 @@ export class LanceleauRepository implements LanceleauGateway {
 
   async findItvByRfa(itvRfa: string): Promise<ItvEntity | null> {
     return this.itvRepository.findOne({ where: { itvRfa } });
+  }
+
+  async findItvBatchByRfas(rfas: string[]): Promise<ItvCdnByRfa[]> {
+    if (rfas.length === 0) return [];
+    const rows = await this.itvRepository
+      .createQueryBuilder('itv')
+      .where('itv.itv_rfa IN (:...rfas)', { rfas })
+      .getMany();
+    return rows.map((itv) => ({ rfa: itv.itvRfa, itvCdn: itv.itvCdn }));
   }
 
   async findSupByRfa(supRfa: string): Promise<SupEntity | null> {

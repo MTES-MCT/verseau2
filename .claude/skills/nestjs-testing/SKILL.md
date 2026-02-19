@@ -125,6 +125,18 @@ describe('AuthGuard', () => {
 });
 ```
 
+## SQL Queries in E2E Tests
+
+Never use raw `dataSource.query()` for INSERTs. Use typed seed helpers from `test/createReferentielDataset.ts`: `seedSteu`, `seedResa`, `seedCpy`, `seedStchan`, `seedTltobl`, `seedAga`, etc.
+
+```typescript
+// Correct
+await seedSteu(dataSource, 1, 'STEU001');
+await seedResa(dataSource, 1, 1, 2023, '1313', 100);
+```
+
+Raw `dataSource.query()` is only acceptable for `DELETE` cleanup in `beforeEach`. If a helper is missing columns, extend it with an optional `options` object (see `seedSteu` for example).
+
 ## E2E Test Pattern (Testcontainers)
 
 ```typescript

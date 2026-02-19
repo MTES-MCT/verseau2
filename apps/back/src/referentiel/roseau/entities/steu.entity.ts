@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { trimTransformer } from '@database/trim.transformer';
 
 @Entity('steu', { schema: 'roseau', synchronize: false })
 export class SteuEntity {
@@ -50,7 +51,7 @@ export class SteuEntity {
   @Column({ name: 'ae_itv_cdn', nullable: true })
   aeItvCdn: number;
 
-  @Column({ name: 'steu_sandre_cda', nullable: true })
+  @Column({ name: 'steu_sandre_cda', nullable: true, transformer: trimTransformer })
   steuSandreCda: string;
 
   @Column({ name: 'steu_nom_lb', nullable: true })
@@ -68,7 +69,7 @@ export class SteuEntity {
   @Column({ name: 'steu_serv_hors_mise_dt', nullable: true })
   steuServHorsMiseDt: Date;
 
-  @Column({ name: 'steu_cdb_rfa', nullable: true })
+  @Column({ name: 'steu_cdb_rfa', nullable: true, transformer: trimTransformer })
   steuCdbRfa: string;
 
   @Column({ name: 'steu_reg_rfa', nullable: true })
@@ -89,7 +90,7 @@ export class SteuEntity {
   @Column({ name: 'steu_as_manuel_val_dt', nullable: true })
   steuAsManuelValDt: Date;
 
-  @Column({ name: 'steu_pe_exist_in', nullable: true })
+  @Column({ name: 'steu_pe_exist_in', nullable: true, transformer: trimTransformer })
   steuPeExistIn: string;
 
   @Column({ name: 'steu_com_txt', nullable: true })

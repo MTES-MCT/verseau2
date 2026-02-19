@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
-import { EmailParams, EmailTemplate, EmailWithMessage } from '../notification';
+import { EmailParams, EmailTemplate } from '../notification';
 import * as nodemailer from 'nodemailer';
 import * as brevo from '@getbrevo/brevo';
 import { LoggerService } from '@shared/logger/logger.service';

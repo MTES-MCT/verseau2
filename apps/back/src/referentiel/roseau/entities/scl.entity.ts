@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { trimTransformer } from '@database/trim.transformer';
 
 @Entity('scl', { schema: 'roseau', synchronize: false })
 export class SclEntity {
@@ -32,10 +33,10 @@ export class SclEntity {
   @Column({ name: 'scl_trx_desc_txt', nullable: true })
   sclTrxDescTxt: string;
 
-  @Column({ name: 'scl_autosurv_val_in', nullable: true })
+  @Column({ name: 'scl_autosurv_val_in', nullable: true, transformer: trimTransformer })
   sclAutosurvValIn: string;
 
-  @Column({ name: 'scl_direct_rejet_exist_in', nullable: true })
+  @Column({ name: 'scl_direct_rejet_exist_in', nullable: true, transformer: trimTransformer })
   sclDirectRejetExistIn: string;
 
   @Column({ name: 'scl_as_manuel_on', nullable: true })

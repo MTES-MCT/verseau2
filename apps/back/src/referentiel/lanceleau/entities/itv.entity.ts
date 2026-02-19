@@ -1,3 +1,4 @@
+import { trimTransformer } from '@database/trim.transformer';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('itv', { schema: 'lanceleau', synchronize: false })
@@ -20,7 +21,7 @@ export class ItvEntity {
   @Column({ name: 'adr_cdn', nullable: true })
   adrCdn: number;
 
-  @Column({ name: 'itv_rfa', nullable: true })
+  @Column({ name: 'itv_rfa', nullable: true, transformer: trimTransformer })
   itvRfa: string;
 
   @Column({ name: 'itv_origine_lb', nullable: true })
