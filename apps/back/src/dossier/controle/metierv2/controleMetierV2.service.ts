@@ -9,7 +9,7 @@ import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda } from '@masa/masa.dto';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -42,7 +42,7 @@ export class ControleMetierV2Service {
       this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
       Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
-      // this.verifyChargeEntranteVsTranche(xmlObj),
+      this.verifyChargeEntranteVsTranche(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -659,17 +659,9 @@ export class ControleMetierV2Service {
     return { name: ControleName.CTL053, errors };
   }
 
-  // TODO : revoir la gestion des tranches
-  // Seuils supérieurs DERU par tranche d'obligation (en EH)
-  // T1: < 2 000 EH, T2: 2 000 - 10 000 EH, T3: 10 000 - 100 000 EH, T4: > 100 000 EH
-  private static readonly TRANCHE_SEUILS_SUP: Map<string, number> = new Map([
-    ['1', 2_000],
-    ['2', 10_000],
-    ['3', 100_000],
-  ]);
+  private static readonly SEUIL_VARIATION_CHARGE_ENTRANTE = 0.2;
 
-  // TODO : revoir les règles
-  // CTL054: Vérification que la charge entrante retenue (CBPO max) correspond à la tranche d'obligation
+  // CTL054: Vérification d'un dépassement de plus de 20% de la charge entrante entre l'année N et N-1
   async verifyChargeEntranteVsTranche(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
 
@@ -687,25 +679,30 @@ export class ControleMetierV2Service {
       .map((ouvrage) => ouvrage.cdOuvrageDepollution)
       .filter((code): code is string => !!code);
 
-    const chargesEntrantes = await this.masaProvider.findChargeEntranteMaxAndTranche(steuCodes, year);
+    const comparisons = await this.masaProvider.findChargeEntranteMaxComparison(steuCodes, year);
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const result = findChargeEntrante(chargesEntrantes, cdOuvrageDepollution);
-      if (!result) continue;
+      const comparison = comparisons.find((c) => c.sandreCda === cdOuvrageDepollution);
+      if (!comparison) continue;
 
-      const { chargeMax, trancheLabel, trancheRfa } = result;
+      const { chargeMaxN, chargeMaxNMoins1, trancheLabel } = comparison;
 
-      // Tranche T4 (> 100 000 EH) n'a pas de seuil supérieur, on ignore
-      const seuilSup = ControleMetierV2Service.TRANCHE_SEUILS_SUP.get(trancheRfa);
-      if (seuilSup === undefined) continue;
+      const variation = Math.abs((chargeMaxN - chargeMaxNMoins1) / chargeMaxNMoins1);
 
-      if (chargeMax > seuilSup) {
+      if (variation > ControleMetierV2Service.SEUIL_VARIATION_CHARGE_ENTRANTE) {
+        const variationPct = (variation * 100).toFixed(1);
         errors.push({
           code: ErrorCode.E2_054,
-          params: [cdOuvrageDepollution, chargeMax.toString(), trancheLabel, seuilSup.toString()],
+          params: [
+            cdOuvrageDepollution,
+            chargeMaxN.toString(),
+            chargeMaxNMoins1.toString(),
+            trancheLabel,
+            variationPct,
+          ],
           evenementType: EvenementType.AVERTISSEMENT,
         });
       }
@@ -721,11 +718,4 @@ function findCmaValue(cmas: CmaBySandreCdaAndParam[], sandreCda: string, paramCo
 
 function findMaxDebit(maxDebits: MaxDebitBySandreCda[], sandreCda: string): number | undefined {
   return maxDebits.find((d) => d.sandreCda === sandreCda)?.maxDebit;
-}
-
-function findChargeEntrante(
-  chargesEntrantes: ChargeEntranteAndTrancheBySandreCda[],
-  sandreCda: string,
-): ChargeEntranteAndTrancheBySandreCda | undefined {
-  return chargesEntrantes.find((c) => c.sandreCda === sandreCda);
 }

@@ -11,12 +11,13 @@ export interface MaxDebitBySandreCda {
   maxDebit: number;
 }
 
-/** CTL054 — Charge entrante max et tranche d'obligation pour un STEU donné */
-export interface ChargeEntranteAndTrancheBySandreCda {
+/** CTL054 — Comparaison charge entrante max année N vs N-1 pour un STEU donné */
+export interface ChargeEntranteMaxComparison {
   sandreCda: string;
-  chargeMax: number;
+  chargeMaxN: number;
+  chargeMaxNMoins1: number;
   trancheLabel: string;
-  trancheRfa: string;
+  annee: number;
 }
 
 /** Résultat STEU retourné par un fetch batch MASA */
