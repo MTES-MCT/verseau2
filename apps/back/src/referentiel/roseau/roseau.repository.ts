@@ -78,7 +78,7 @@ export class RoseauRepository implements RoseauGateway {
       .createQueryBuilder('s')
       .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
-    return new Map(rows.map((s) => [s.steuSandreCda.trim(), s]));
+    return new Map(rows.map((s) => [s.steuSandreCda, s]));
   }
 
   async findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {

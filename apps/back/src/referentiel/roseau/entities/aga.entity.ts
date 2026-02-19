@@ -1,11 +1,12 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { trimTransformer } from '@database/trim.transformer';
 
 @Entity('aga', { schema: 'roseau', synchronize: false })
 export class AgaEntity {
   @PrimaryColumn({ name: 'aga_cdn' })
   agaCdn: number;
 
-  @Column({ name: 'tltobl_rfa', nullable: true })
+  @Column({ name: 'tltobl_rfa', nullable: true, transformer: trimTransformer })
   tltoblRfa: string;
 
   @Column({ name: 'itv_cdn', nullable: true })
@@ -26,7 +27,7 @@ export class AgaEntity {
   @Column({ name: 'maj_ag_cdn', nullable: true })
   majAgCdn: number;
 
-  @Column({ name: 'aga_sandre_cda', nullable: true })
+  @Column({ name: 'aga_sandre_cda', nullable: true, transformer: trimTransformer })
   agaSandreCda: string;
 
   @Column({ name: 'aga_nom_lb', nullable: true })
@@ -35,7 +36,7 @@ export class AgaEntity {
   @Column({ name: 'aga_nom_compl_lb', nullable: true })
   agaNomComplLb: string;
 
-  @Column({ name: 'aga_cdb_rfa', nullable: true })
+  @Column({ name: 'aga_cdb_rfa', nullable: true, transformer: trimTransformer })
   agaCdbRfa: string;
 
   @Column({ name: 'aga_reg_rfa', nullable: true })
@@ -62,19 +63,19 @@ export class AgaEntity {
   @Column({ name: 'aga_steu_nomi_capa_som_val', nullable: true, type: 'numeric' })
   agaSteuNomiCapaSomVal: number;
 
-  @Column({ name: 'aga_conf_in', nullable: true })
+  @Column({ name: 'aga_conf_in', nullable: true, transformer: trimTransformer })
   agaConfIn: string;
 
-  @Column({ name: 'aga_perf_conf_in', nullable: true })
+  @Column({ name: 'aga_perf_conf_in', nullable: true, transformer: trimTransformer })
   agaPerfConfIn: string;
 
-  @Column({ name: 'aga_equip_conf_in', nullable: true })
+  @Column({ name: 'aga_equip_conf_in', nullable: true, transformer: trimTransformer })
   agaEquipConfIn: string;
 
   @Column({ name: 'aga_equip_conf_dt', nullable: true })
   agaEquipConfDt: Date;
 
-  @Column({ name: 'aga_zgc_conf_in', nullable: true })
+  @Column({ name: 'aga_zgc_conf_in', nullable: true, transformer: trimTransformer })
   agaZgcConfIn: string;
 
   @Column({ name: 'aga_zgc_conf_dt', nullable: true })
@@ -104,19 +105,19 @@ export class AgaEntity {
   @Column({ name: 'aga_suiv_maj_dt', nullable: true })
   agaSuivMajDt: Date;
 
-  @Column({ name: 'aga_loc_conf_in', nullable: true })
+  @Column({ name: 'aga_loc_conf_in', nullable: true, transformer: trimTransformer })
   agaLocConfIn: string;
 
-  @Column({ name: 'aga_loc_perf_conf_in', nullable: true })
+  @Column({ name: 'aga_loc_perf_conf_in', nullable: true, transformer: trimTransformer })
   agaLocPerfConfIn: string;
 
-  @Column({ name: 'aga_loc_equip_conf_in', nullable: true })
+  @Column({ name: 'aga_loc_equip_conf_in', nullable: true, transformer: trimTransformer })
   agaLocEquipConfIn: string;
 
   @Column({ name: 'aga_loc_equip_conf_dt', nullable: true })
   agaLocEquipConfDt: Date;
 
-  @Column({ name: 'aga_zgc_loc_conf_in', nullable: true })
+  @Column({ name: 'aga_zgc_loc_conf_in', nullable: true, transformer: trimTransformer })
   agaZgcLocConfIn: string;
 
   @Column({ name: 'aga_zgc_loc_conf_dt', nullable: true })
