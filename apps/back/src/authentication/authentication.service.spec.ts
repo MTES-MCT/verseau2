@@ -90,7 +90,7 @@ describe('AuthenticationService', () => {
     (createRemoteJWKSet as jest.Mock).mockReturnValue(mockJWKS);
 
     // Reset serverMetadata to default for each test
-    (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue(mockServerMetadata);
+    mockConfiguration.serverMetadata.mockReturnValue(mockServerMetadata);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -213,7 +213,7 @@ describe('AuthenticationService', () => {
     });
 
     it('should throw error when authorization endpoint is missing', async () => {
-      (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue({
+      mockConfiguration.serverMetadata.mockReturnValue({
         ...mockServerMetadata,
         authorization_endpoint: undefined,
       });
@@ -430,7 +430,7 @@ describe('AuthenticationService', () => {
     });
 
     it('should throw error when end_session_endpoint is missing', async () => {
-      (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue({
+      mockConfiguration.serverMetadata.mockReturnValue({
         ...mockServerMetadata,
         end_session_endpoint: undefined,
       });
@@ -567,7 +567,7 @@ describe('AuthenticationService', () => {
 
   describe('JWKS initialization', () => {
     it('should throw error when jwks_uri is missing from metadata', async () => {
-      (mockConfiguration.serverMetadata as jest.Mock).mockReturnValue({
+      mockConfiguration.serverMetadata.mockReturnValue({
         ...mockServerMetadata,
         jwks_uri: undefined,
       });

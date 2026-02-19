@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from './masa.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from './masa.dto';
 import { SteuCdnBySandreCda, ItvCdnByRfa } from './masa.dto';
 
 @Injectable()
@@ -92,14 +92,14 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // CTL054 — Charge entrante max et tranche d'obligation par STEU
+  // CTL054 — Comparaison charge entrante max année N vs N-1 par STEU
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findChargeEntranteMaxAndTranche(
+  async findChargeEntranteMaxComparison(
     steuSandreCdas: string[],
     year: number,
-  ): Promise<ChargeEntranteAndTrancheBySandreCda[]> {
-    return this.roseauGateway.findChargeEntranteMaxAndTrancheBatch(steuSandreCdas, year);
+  ): Promise<ChargeEntranteMaxComparison[]> {
+    return this.roseauGateway.findChargeEntranteMaxComparisonBatch(steuSandreCdas, year);
   }
 }

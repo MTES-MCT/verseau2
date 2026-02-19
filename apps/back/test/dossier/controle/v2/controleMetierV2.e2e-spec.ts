@@ -27,6 +27,7 @@ import {
   seedStchan,
   seedTltobl,
   seedAga,
+  seedAgac,
 } from '../../../createReferentielDataset';
 import { clearDepots, seedDepot } from '../../../depot.helper';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
@@ -2454,12 +2455,14 @@ describe('ControleMetierV2Service (e2e)', () => {
   });
 
   describe.skip('CTL054 - verifyChargeEntranteVsTranche', () => {
-    it('should pass when charge max is within tranche bounds', async () => {
-      // Tranche 2: seuil sup = 10 000 EH, charge max = 8000 EH -> OK
+    it('should pass when variation between N and N-1 is within 20%', async () => {
+      // N = 9000, N-1 = 8000 => variation = 12.5% => OK
       await seedSteu(dataSource, 1, 'STEU001', { zgcCdn: 100, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
       await seedAga(dataSource, 1, 100, 'AGA001', '2');
-      await seedStchan(dataSource, 1, 2024, null, 8000);
+      await seedAgac(dataSource, 1, 2024);
+      await seedStchan(dataSource, 1, 2024, null, 9000);
+      await seedStchan(dataSource, 1, 2023, null, 8000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2482,12 +2485,14 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should report error when charge max exceeds tranche upper bound', async () => {
-      // Tranche 2: seuil sup = 10 000 EH, charge max = 12000 EH -> AVERTISSEMENT
+    it('should report error when variation exceeds +20%', async () => {
+      // N = 12000, N-1 = 8000 => variation = 50% => AVERTISSEMENT
       await seedSteu(dataSource, 2, 'STEU002', { zgcCdn: 200, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '2', 'De 2 000 à 10 000 EH');
       await seedAga(dataSource, 2, 200, 'AGA002', '2');
+      await seedAgac(dataSource, 2, 2024);
       await seedStchan(dataSource, 2, 2024, null, 12000);
+      await seedStchan(dataSource, 2, 2023, null, 8000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2509,16 +2514,18 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL054);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU002', '12000', 'De 2 000 à 10 000 EH', '10000']);
+      expect(result.errors[0].params).toEqual(['STEU002', '12000', '8000', 'De 2 000 à 10 000 EH', '50.0']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
-    it('should report error when charge max exceeds tranche 1 upper bound', async () => {
-      // Tranche 1: seuil sup = 2 000 EH, charge max = 3000 EH -> AVERTISSEMENT
+    it('should report error when variation exceeds -20% (decrease)', async () => {
+      // N = 3000, N-1 = 8000 => variation = -62.5% => |variation| = 62.5% => AVERTISSEMENT
       await seedSteu(dataSource, 3, 'STEU003', { zgcCdn: 300, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '1', 'Moins de 2 000 EH');
       await seedAga(dataSource, 3, 300, 'AGA003', '1');
+      await seedAgac(dataSource, 3, 2024);
       await seedStchan(dataSource, 3, 2024, null, 3000);
+      await seedStchan(dataSource, 3, 2023, null, 8000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2540,14 +2547,15 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL054);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU003', '3000', 'Moins de 2 000 EH', '2000']);
+      expect(result.errors[0].params).toEqual(['STEU003', '3000', '8000', 'Moins de 2 000 EH', '62.5']);
     });
 
-    it('should not report error for tranche 4 (no upper bound)', async () => {
-      // Tranche 4: pas de seuil supérieur, charge max = 999999 EH -> OK
+    it('should skip when no N-1 data exists for the ouvrage', async () => {
+      // Only year N data, no N-1 => query returns nothing => no error
       await seedSteu(dataSource, 4, 'STEU004', { zgcCdn: 400, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '4', 'Plus de 100 000 EH');
       await seedAga(dataSource, 4, 400, 'AGA004', '4');
+      await seedAgac(dataSource, 4, 2024);
       await seedStchan(dataSource, 4, 2024, null, 999999);
 
       const fctAssainissement = createTestFctAssainissement({
@@ -2560,6 +2568,22 @@ describe('ControleMetierV2Service (e2e)', () => {
         ouvrages: [
           {
             cdOuvrageDepollution: 'STEU004',
+            pointMesure: [],
+          },
+        ],
+      });
+
+      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
+
+      expect(result.name).toBe(ControleName.CTL054);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip when dateDebutReference is missing', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
             pointMesure: [],
           },
         ],
@@ -2593,28 +2617,14 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should skip when dateDebutReference is missing', async () => {
-      const fctAssainissement = createTestFctAssainissement({
-        ouvrages: [
-          {
-            cdOuvrageDepollution: 'STEU001',
-            pointMesure: [],
-          },
-        ],
-      });
-
-      const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
-
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should report error for tranche 3 when charge exceeds 100 000 EH', async () => {
-      // Tranche 3: seuil sup = 100 000 EH, charge max = 120000 EH -> AVERTISSEMENT
+    it('should report error for variation exactly at boundary (>20%)', async () => {
+      // N = 6100, N-1 = 5000 => variation = 22% => AVERTISSEMENT
       await seedSteu(dataSource, 5, 'STEU005', { zgcCdn: 500, steuEncoursAn: 2024 });
       await seedTltobl(dataSource, '3', 'De 10 000 à 100 000 EH');
       await seedAga(dataSource, 5, 500, 'AGA005', '3');
-      await seedStchan(dataSource, 5, 2024, null, 120000);
+      await seedAgac(dataSource, 5, 2024);
+      await seedStchan(dataSource, 5, 2024, null, 6100);
+      await seedStchan(dataSource, 5, 2023, null, 5000);
 
       const fctAssainissement = createTestFctAssainissement({
         scenario: {
@@ -2636,7 +2646,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(result.name).toBe(ControleName.CTL054);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU005', '120000', 'De 10 000 à 100 000 EH', '100000']);
+      expect(result.errors[0].params).toEqual(['STEU005', '6100', '5000', 'De 10 000 à 100 000 EH', '22.0']);
       expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });

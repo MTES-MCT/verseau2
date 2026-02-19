@@ -32,7 +32,7 @@ describe('ControleMetierV2Service', () => {
         {
           provide: MasaProvider,
           useValue: {
-            findChargeEntranteMaxAndTranche: jest.fn(),
+            findChargeEntranteMaxComparison: jest.fn(),
           },
         },
         {
@@ -1285,9 +1285,10 @@ describe('ControleMetierV2Service', () => {
   });
 
   describe.skip('verifyChargeEntranteVsTranche', () => {
-    it('should use MasaProvider to check charge entrante vs tranche', async () => {
-      masaProvider.findChargeEntranteMaxAndTranche.mockResolvedValue([
-        { sandreCda: 'STEU1', chargeMax: 12000, trancheLabel: 'Tranche 2', trancheRfa: '2' },
+    it('should detect variation > 20% between year N and N-1', async () => {
+      // N = 10000, N-1 = 5000 => variation = 100% => error
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
+        { sandreCda: 'STEU1', chargeMaxN: 10000, chargeMaxNMoins1: 5000, trancheLabel: 'Tranche 2', annee: 2024 },
       ]);
 
       const xmlObj: FctAssainissement = {
@@ -1297,10 +1298,44 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargeEntranteVsTranche(xmlObj);
 
-      expect(masaProvider.findChargeEntranteMaxAndTranche).toHaveBeenCalledWith(['STEU1'], 2024);
-      // Tranche 2 limit is 10000. 12000 > 10000 -> Error
+      expect(masaProvider.findChargeEntranteMaxComparison).toHaveBeenCalledWith(['STEU1'], 2024);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result.errors[0].params).toEqual(['STEU1', '10000', '5000', 'Tranche 2', '100.0']);
+    });
+
+    it('should not report error when variation <= 20%', async () => {
+      // N = 5500, N-1 = 5000 => variation = 10% => OK
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
+        { sandreCda: 'STEU1', chargeMaxN: 5500, chargeMaxNMoins1: 5000, trancheLabel: 'Tranche 2', annee: 2024 },
+      ]);
+
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargeEntranteVsTranche(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should detect negative variation > 20%', async () => {
+      // N = 3000, N-1 = 5000 => variation = -40% => |variation| = 40% => error
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
+        { sandreCda: 'STEU1', chargeMaxN: 3000, chargeMaxNMoins1: 5000, trancheLabel: 'Tranche 2', annee: 2024 },
+      ]);
+
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargeEntranteVsTranche(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result.errors[0].params).toEqual(['STEU1', '3000', '5000', 'Tranche 2', '40.0']);
     });
   });
 });

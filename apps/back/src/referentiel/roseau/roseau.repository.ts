@@ -13,7 +13,8 @@ import { CpyEntity } from './entities/cpy.entity';
 import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { TltoblEntity } from './entities/tltobl.entity';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
+import { AgacEntity } from './entities/agac.entity';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 @Injectable()
@@ -310,67 +311,45 @@ export class RoseauRepository implements RoseauGateway {
     return result;
   }
 
-  async findChargeEntranteMaxAndTrancheForSteu(
-    steuSandreCda: string,
-    year: number,
-  ): Promise<ChargeEntranteAndTrancheBySandreCda | null> {
-    const result = await this.stchanRepository
-      .createQueryBuilder('c')
-      .select('c.stchan_r_eh_max_chg_val', 'charge_max')
-      .addSelect('t.tltobl_lb', 'tranche_label')
-      .addSelect('t.tltobl_rfa', 'tranche_rfa')
-      .innerJoin(SteuEntity, 's', 's.steu_cdn = c.steu_cdn')
-      .innerJoin(AgaEntity, 'a', 'a.zgc_cdn = s.zgc_cdn')
-      .innerJoin(TltoblEntity, 't', 't.tltobl_rfa = a.tltobl_rfa')
-      .where('s.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
-      .andWhere('c.stchan_an = :year', { year })
-      .getRawOne<{ charge_max: number | null; tranche_label: string | null; tranche_rfa: string | null }>();
-
-    if (!result || result.charge_max === null || result.tranche_label === null || result.tranche_rfa === null) {
-      return null;
-    }
-
-    return {
-      sandreCda: steuSandreCda,
-      chargeMax: parseFloat(result.charge_max.toString()),
-      trancheLabel: result.tranche_label,
-      trancheRfa: result.tranche_rfa,
-    };
-  }
-
-  async findChargeEntranteMaxAndTrancheBatch(
+  async findChargeEntranteMaxComparisonBatch(
     steuSandreCdas: string[],
     year: number,
-  ): Promise<ChargeEntranteAndTrancheBySandreCda[]> {
+  ): Promise<ChargeEntranteMaxComparison[]> {
     if (steuSandreCdas.length === 0) {
       return [];
     }
 
     const rows = await this.stchanRepository
-      .createQueryBuilder('c')
+      .createQueryBuilder('cn')
       .select('s.steu_sandre_cda', 'steu_sandre_cda')
-      .addSelect('c.stchan_r_eh_max_chg_val', 'charge_max')
+      .addSelect('cn.stchan_r_eh_max_chg_val', 'charge_max_n')
+      .addSelect('cn1.stchan_r_eh_max_chg_val', 'charge_max_n1')
       .addSelect('t.tltobl_lb', 'tranche_label')
-      .addSelect('t.tltobl_rfa', 'tranche_rfa')
-      .innerJoin(SteuEntity, 's', 's.steu_cdn = c.steu_cdn')
+      .addSelect('cn.stchan_an', 'annee')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = cn.steu_cdn')
       .innerJoin(AgaEntity, 'a', 'a.zgc_cdn = s.zgc_cdn')
+      .innerJoin(AgacEntity, 'ac', 'ac.aga_cdn = a.aga_cdn AND ac.agac_conf_an = :year', { year })
       .innerJoin(TltoblEntity, 't', 't.tltobl_rfa = a.tltobl_rfa')
+      .leftJoin(StchanEntity, 'cn1', 'cn1.steu_cdn = cn.steu_cdn AND cn1.stchan_an = cn.stchan_an - 1')
       .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
-      .andWhere('c.stchan_an = :year', { year })
+      .andWhere('cn.stchan_an = :year', { year })
+      .andWhere('cn.stchan_r_eh_max_chg_val IS NOT NULL')
+      .andWhere('cn1.stchan_r_eh_max_chg_val IS NOT NULL')
+      .andWhere('cn1.stchan_r_eh_max_chg_val != 0')
       .getRawMany<{
         steu_sandre_cda: string;
-        charge_max: number | null;
-        tranche_label: string | null;
-        tranche_rfa: string | null;
+        charge_max_n: number;
+        charge_max_n1: number;
+        tranche_label: string;
+        annee: number;
       }>();
 
-    return rows
-      .filter((r) => r.charge_max !== null && r.tranche_label !== null && r.tranche_rfa !== null)
-      .map((r) => ({
-        sandreCda: r.steu_sandre_cda.trim(),
-        chargeMax: parseFloat(r.charge_max!.toString()),
-        trancheLabel: r.tranche_label!.trim(),
-        trancheRfa: r.tranche_rfa!.trim(),
-      }));
+    return rows.map((r) => ({
+      sandreCda: r.steu_sandre_cda.trim(),
+      chargeMaxN: parseFloat(r.charge_max_n.toString()),
+      chargeMaxNMoins1: parseFloat(r.charge_max_n1.toString()),
+      trancheLabel: r.tranche_label.trim(),
+      annee: parseInt(r.annee.toString(), 10),
+    }));
   }
 }

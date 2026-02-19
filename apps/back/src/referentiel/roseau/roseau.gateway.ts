@@ -5,7 +5,7 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
@@ -48,14 +48,7 @@ export interface RoseauGateway {
   ): Promise<CmaBySandreCdaAndParam[]>;
   findMaxDebitReference(steuSandreCda: string): Promise<number | null>;
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
-  findChargeEntranteMaxAndTrancheForSteu(
-    steuSandreCda: string,
-    year: number,
-  ): Promise<ChargeEntranteAndTrancheBySandreCda | null>;
-  findChargeEntranteMaxAndTrancheBatch(
-    steuSandreCdas: string[],
-    year: number,
-  ): Promise<ChargeEntranteAndTrancheBySandreCda[]>;
+  findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');
