@@ -5,8 +5,8 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { PmoEntity } from './entities/pmo.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import { CxntechEntity } from './entities/cxntech.entity';
-import { CmaResult, MaxDebitResult, ChargeEntranteResult } from '@masa/controleMetier.dto';
-import { SteuCdnBySandreCda } from '@masa/masaControle.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
+import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
   findAga(): Promise<AgaEntity[]>;
@@ -45,11 +45,17 @@ export interface RoseauGateway {
     steuSandreCdas: string[],
     year: number,
     parametreCodes: string[],
-  ): Promise<CmaResult[]>;
+  ): Promise<CmaBySandreCdaAndParam[]>;
   findMaxDebitReference(steuSandreCda: string): Promise<number | null>;
-  findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitResult[]>;
-  findChargeEntranteMaxAndTrancheForSteu(steuSandreCda: string, year: number): Promise<ChargeEntranteResult | null>;
-  findChargeEntranteMaxAndTrancheBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteResult[]>;
+  findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
+  findChargeEntranteMaxAndTrancheForSteu(
+    steuSandreCda: string,
+    year: number,
+  ): Promise<ChargeEntranteAndTrancheBySandreCda | null>;
+  findChargeEntranteMaxAndTrancheBatch(
+    steuSandreCdas: string[],
+    year: number,
+  ): Promise<ChargeEntranteAndTrancheBySandreCda[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

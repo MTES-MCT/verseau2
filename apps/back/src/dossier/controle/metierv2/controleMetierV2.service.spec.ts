@@ -8,7 +8,7 @@ import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParam
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
-import { CmaResult } from '@masa/controleMetier.dto';
+import { CmaBySandreCdaAndParam } from '@masa/masa.dto';
 
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
@@ -1133,7 +1133,7 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmas: CmaResult[] = [
+      const cmas: CmaBySandreCdaAndParam[] = [
         { sandreCda: 'STEU1', paramCode: CodeParametre.DBO5.toString(), value: 150 },
         { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
       ];
@@ -1173,7 +1173,7 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const cmas: CmaResult[] = [
+      const cmas: CmaBySandreCdaAndParam[] = [
         { sandreCda: 'STEU1', paramCode: CodeParametre.DBO5.toString(), value: 150 },
         { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
       ];

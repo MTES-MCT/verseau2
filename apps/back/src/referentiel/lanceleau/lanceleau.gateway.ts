@@ -7,7 +7,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { ItvCdnByRfa } from '@masa/masaControle.dto';
+import { ItvCdnByRfa } from '@masa/masa.dto';
 
 export interface LanceleauGateway {
   findItv(): Promise<ItvEntity[]>;

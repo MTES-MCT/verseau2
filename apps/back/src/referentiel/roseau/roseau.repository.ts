@@ -13,8 +13,8 @@ import { CpyEntity } from './entities/cpy.entity';
 import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { TltoblEntity } from './entities/tltobl.entity';
-import { CmaResult, MaxDebitResult, ChargeEntranteResult } from '@masa/controleMetier.dto';
-import { SteuCdnBySandreCda } from '@masa/masaControle.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
+import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -238,7 +238,7 @@ export class RoseauRepository implements RoseauGateway {
     steuSandreCdas: string[],
     year: number,
     parametreCodes: string[],
-  ): Promise<CmaResult[]> {
+  ): Promise<CmaBySandreCdaAndParam[]> {
     if (steuSandreCdas.length === 0 || parametreCodes.length === 0) {
       return [];
     }
@@ -252,12 +252,12 @@ export class RoseauRepository implements RoseauGateway {
       .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
       .andWhere('r.resa_an = :year', { year })
       .andWhere('r.par_rfa IN (:...parametreCodes)', { parametreCodes })
-      .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: string }>();
+      .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: number }>();
 
     return rows.map((row) => ({
       sandreCda: row.steu_sandre_cda.trim(),
       paramCode: row.par_rfa.trim(),
-      value: parseFloat(row.resa_cma_val),
+      value: row.resa_cma_val,
     }));
   }
 
@@ -281,7 +281,7 @@ export class RoseauRepository implements RoseauGateway {
     return Math.max(pc95, dref);
   }
 
-  async findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitResult[]> {
+  async findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]> {
     if (steuSandreCdas.length === 0) {
       return [];
     }
@@ -298,7 +298,7 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('c.cpy_an = s.steu_encours_an')
       .getRawMany<{ steu_sandre_cda: string; pc95: number | null; dref: number | null }>();
 
-    const result: MaxDebitResult[] = [];
+    const result: MaxDebitBySandreCda[] = [];
     for (const row of rows) {
       const pc95 = row.pc95 ? parseFloat(row.pc95.toString()) : 0;
       const dref = row.dref ? parseFloat(row.dref.toString()) : 0;
@@ -313,7 +313,7 @@ export class RoseauRepository implements RoseauGateway {
   async findChargeEntranteMaxAndTrancheForSteu(
     steuSandreCda: string,
     year: number,
-  ): Promise<ChargeEntranteResult | null> {
+  ): Promise<ChargeEntranteAndTrancheBySandreCda | null> {
     const result = await this.stchanRepository
       .createQueryBuilder('c')
       .select('c.stchan_r_eh_max_chg_val', 'charge_max')
@@ -338,7 +338,10 @@ export class RoseauRepository implements RoseauGateway {
     };
   }
 
-  async findChargeEntranteMaxAndTrancheBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteResult[]> {
+  async findChargeEntranteMaxAndTrancheBatch(
+    steuSandreCdas: string[],
+    year: number,
+  ): Promise<ChargeEntranteAndTrancheBySandreCda[]> {
     if (steuSandreCdas.length === 0) {
       return [];
     }

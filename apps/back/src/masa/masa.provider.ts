@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { CmaResult, MaxDebitResult, ChargeEntranteResult } from './controleMetier.dto';
-import { SteuCdnBySandreCda, ItvCdnByRfa } from './masaControle.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from './masa.dto';
+import { SteuCdnBySandreCda, ItvCdnByRfa } from './masa.dto';
 
 @Injectable()
 export class MasaProvider {
@@ -78,7 +78,7 @@ export class MasaProvider {
     steuCdas: string[],
     year: number,
     parametreCodes: string[],
-  ): Promise<CmaResult[]> {
+  ): Promise<CmaBySandreCdaAndParam[]> {
     return this.roseauGateway.findConcentrationsMoyennesAnnuellesBatch(steuCdas, year, parametreCodes);
   }
 
@@ -87,7 +87,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<MaxDebitResult[]> {
+  async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<MaxDebitBySandreCda[]> {
     return this.roseauGateway.findMaxDebitsReferenceBatch(steuCdas);
   }
 
@@ -96,7 +96,10 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findChargeEntranteMaxAndTranche(steuSandreCdas: string[], year: number): Promise<ChargeEntranteResult[]> {
+  async findChargeEntranteMaxAndTranche(
+    steuSandreCdas: string[],
+    year: number,
+  ): Promise<ChargeEntranteAndTrancheBySandreCda[]> {
     return this.roseauGateway.findChargeEntranteMaxAndTrancheBatch(steuSandreCdas, year);
   }
 }

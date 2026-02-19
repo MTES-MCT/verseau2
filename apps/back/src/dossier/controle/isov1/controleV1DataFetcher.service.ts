@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { FctAssainissement } from '@lib/parser';
 import { MasaProvider } from '@masa/masa.provider';
-import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masaControle.dto';
+import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface ControleV1MasaData {
   steus: SteuCdnBySandreCda[];

@@ -9,7 +9,7 @@ import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.map
 import { ControleModel } from '../controle.model';
 import { LoggerService } from '@shared/logger/logger.service';
 import { ControleV1DataFetcherService, ControleV1MasaData } from './controleV1DataFetcher.service';
-import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masaControle.dto';
+import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masa.dto';
 
 @Injectable()
 export class ControleV1Service {
@@ -919,10 +919,6 @@ export class ControleV1Service {
     };
   }
 }
-
-// ---------------------------------------------------------------------------
-// Helpers de lookup sur les listes batch MASA
-// ---------------------------------------------------------------------------
 
 function steuExists(steus: SteuCdnBySandreCda[], sandreCda: string): boolean {
   return steus.some((s) => s.sandreCda === sandreCda);

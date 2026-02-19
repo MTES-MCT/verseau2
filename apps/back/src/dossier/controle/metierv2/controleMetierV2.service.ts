@@ -9,7 +9,7 @@ import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import { CmaResult, MaxDebitResult, ChargeEntranteResult } from '@masa/controleMetier.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteAndTrancheBySandreCda } from '@masa/masa.dto';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -55,7 +55,7 @@ export class ControleMetierV2Service {
 
   private async preloadMasaData(
     xmlObj: FctAssainissement,
-  ): Promise<{ cmas: CmaResult[]; maxDebits: MaxDebitResult[] }> {
+  ): Promise<{ cmas: CmaBySandreCdaAndParam[]; maxDebits: MaxDebitBySandreCda[] }> {
     const dateDebutReference = xmlObj.scenario?.dateDebutReference;
     const currentYear = dateDebutReference ? parseInt(dateDebutReference.substring(0, 4), 10) : NaN;
     const previousYear = currentYear - 1;
@@ -68,7 +68,7 @@ export class ControleMetierV2Service {
             String(CodeParametre.DBO5),
             String(CodeParametre.DCO),
           ])
-        : Promise.resolve([] as CmaResult[]),
+        : Promise.resolve([] as CmaBySandreCdaAndParam[]),
       this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
     ]);
 
@@ -498,7 +498,7 @@ export class ControleMetierV2Service {
   // CTL052: Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1
   verifyCmaComparisonForDcoDbo5(
     fctAssainissement: FctAssainissement,
-    cmas: CmaResult[],
+    cmas: CmaBySandreCdaAndParam[],
   ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
 
@@ -576,7 +576,7 @@ export class ControleMetierV2Service {
   // CTL053: Vérification du débit entrant (paramètre 1552) vs max(PC95, Dref)
   async verifyDebitEntrantVsChargeMax(
     fctAssainissement: FctAssainissement,
-    maxDebits?: MaxDebitResult[],
+    maxDebits?: MaxDebitBySandreCda[],
   ): Promise<ControleIndividuelWithoutSuccess> {
     const errors: ControleError[] = [];
     const volumeCode = String(CodeParametre.Volume); // Paramètre 1552
@@ -715,24 +715,17 @@ export class ControleMetierV2Service {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Module-level helpers — lookup functions for batch result arrays
-// ---------------------------------------------------------------------------
-
-/** Returns the CMA value for a given STEU and parameter code, or undefined if not found. */
-function findCmaValue(cmas: CmaResult[], sandreCda: string, paramCode: string): number | undefined {
+function findCmaValue(cmas: CmaBySandreCdaAndParam[], sandreCda: string, paramCode: string): number | undefined {
   return cmas.find((c) => c.sandreCda === sandreCda && c.paramCode === paramCode)?.value;
 }
 
-/** Returns the max debit reference for a given STEU, or undefined if not found. */
-function findMaxDebit(maxDebits: MaxDebitResult[], sandreCda: string): number | undefined {
+function findMaxDebit(maxDebits: MaxDebitBySandreCda[], sandreCda: string): number | undefined {
   return maxDebits.find((d) => d.sandreCda === sandreCda)?.maxDebit;
 }
 
-/** Returns the charge entrante result for a given STEU, or undefined if not found. */
 function findChargeEntrante(
-  chargesEntrantes: ChargeEntranteResult[],
+  chargesEntrantes: ChargeEntranteAndTrancheBySandreCda[],
   sandreCda: string,
-): ChargeEntranteResult | undefined {
+): ChargeEntranteAndTrancheBySandreCda | undefined {
   return chargesEntrantes.find((c) => c.sandreCda === sandreCda);
 }
