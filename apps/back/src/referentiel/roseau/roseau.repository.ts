@@ -252,12 +252,12 @@ export class RoseauRepository implements RoseauGateway {
       .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
       .andWhere('r.resa_an = :year', { year })
       .andWhere('r.par_rfa IN (:...parametreCodes)', { parametreCodes })
-      .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: number }>();
+      .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: string }>();
 
     return rows.map((row) => ({
       sandreCda: row.steu_sandre_cda.trim(),
       paramCode: row.par_rfa.trim(),
-      value: row.resa_cma_val,
+      value: parseFloat(row.resa_cma_val),
     }));
   }
 
