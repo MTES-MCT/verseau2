@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { ChargeEntranteMaxAndTranche } from './controleMetier.dto';
+import { CmaResult, MaxDebitResult, ChargeEntranteResult } from './controleMetier.dto';
 import { SteuCdnBySandreCda, ItvCdnByRfa } from './masaControle.dto';
 
 @Injectable()
@@ -71,24 +71,23 @@ export class MasaProvider {
 
   // ---------------------------------------------------------------------------
   // CTL052 — Concentrations moyennes annuelles N-1 par STEU et paramètre
-  // Retourne Map<steuCda, Map<codeParametre, valeur>>
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
   async findConcentrationsMoyennesBatch(
     steuCdas: string[],
     year: number,
     parametreCodes: string[],
-  ): Promise<Map<string, Map<string, number>>> {
+  ): Promise<CmaResult[]> {
     return this.roseauGateway.findConcentrationsMoyennesAnnuellesBatch(steuCdas, year, parametreCodes);
   }
 
   // ---------------------------------------------------------------------------
   // CTL053 — Débit max de référence par STEU
-  // Retourne Map<steuCda, maxDebitRef> — absent si null ou <= 0
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<Map<string, number>> {
+  async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<MaxDebitResult[]> {
     return this.roseauGateway.findMaxDebitsReferenceBatch(steuCdas);
   }
 
@@ -97,10 +96,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findChargeEntranteMaxAndTranche(
-    steuSandreCdas: string[],
-    year: number,
-  ): Promise<Map<string, ChargeEntranteMaxAndTranche>> {
+  async findChargeEntranteMaxAndTranche(steuSandreCdas: string[], year: number): Promise<ChargeEntranteResult[]> {
     return this.roseauGateway.findChargeEntranteMaxAndTrancheBatch(steuSandreCdas, year);
   }
 }

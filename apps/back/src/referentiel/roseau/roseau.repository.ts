@@ -13,7 +13,7 @@ import { CpyEntity } from './entities/cpy.entity';
 import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { TltoblEntity } from './entities/tltobl.entity';
-import { ChargeEntranteMaxAndTranche } from '@masa/controleMetier.dto';
+import { CmaResult, MaxDebitResult, ChargeEntranteResult } from '@masa/controleMetier.dto';
 import { SteuCdnBySandreCda } from '@masa/masaControle.dto';
 
 @Injectable()
@@ -238,9 +238,9 @@ export class RoseauRepository implements RoseauGateway {
     steuSandreCdas: string[],
     year: number,
     parametreCodes: string[],
-  ): Promise<Map<string, Map<string, number>>> {
+  ): Promise<CmaResult[]> {
     if (steuSandreCdas.length === 0 || parametreCodes.length === 0) {
-      return new Map();
+      return [];
     }
 
     const rows = await this.resaRepository
@@ -254,15 +254,11 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('r.par_rfa IN (:...parametreCodes)', { parametreCodes })
       .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: string }>();
 
-    const result = new Map<string, Map<string, number>>();
-    for (const row of rows) {
-      const cda = row.steu_sandre_cda.trim();
-      if (!result.has(cda)) {
-        result.set(cda, new Map());
-      }
-      result.get(cda)!.set(row.par_rfa.trim(), parseFloat(row.resa_cma_val));
-    }
-    return result;
+    return rows.map((row) => ({
+      sandreCda: row.steu_sandre_cda.trim(),
+      paramCode: row.par_rfa.trim(),
+      value: parseFloat(row.resa_cma_val),
+    }));
   }
 
   async findMaxDebitReference(steuSandreCda: string): Promise<number | null> {
@@ -285,9 +281,9 @@ export class RoseauRepository implements RoseauGateway {
     return Math.max(pc95, dref);
   }
 
-  async findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<Map<string, number>> {
+  async findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitResult[]> {
     if (steuSandreCdas.length === 0) {
-      return new Map();
+      return [];
     }
 
     const rows = await this.stchanRepository
@@ -302,22 +298,22 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('c.cpy_an = s.steu_encours_an')
       .getRawMany<{ steu_sandre_cda: string; pc95: number | null; dref: number | null }>();
 
-    const result = new Map<string, number>();
+    const result: MaxDebitResult[] = [];
     for (const row of rows) {
       const pc95 = row.pc95 ? parseFloat(row.pc95.toString()) : 0;
       const dref = row.dref ? parseFloat(row.dref.toString()) : 0;
       const maxDebit = Math.max(pc95, dref);
       if (maxDebit > 0) {
-        result.set(row.steu_sandre_cda.trim(), maxDebit);
+        result.push({ sandreCda: row.steu_sandre_cda.trim(), maxDebit });
       }
     }
     return result;
   }
 
-  async findChargeEntranteMaxAndTranche(
+  async findChargeEntranteMaxAndTrancheForSteu(
     steuSandreCda: string,
     year: number,
-  ): Promise<ChargeEntranteMaxAndTranche | null> {
+  ): Promise<ChargeEntranteResult | null> {
     const result = await this.stchanRepository
       .createQueryBuilder('c')
       .select('c.stchan_r_eh_max_chg_val', 'charge_max')
@@ -335,21 +331,19 @@ export class RoseauRepository implements RoseauGateway {
     }
 
     return {
+      sandreCda: steuSandreCda,
       chargeMax: parseFloat(result.charge_max.toString()),
       trancheLabel: result.tranche_label,
       trancheRfa: result.tranche_rfa,
     };
   }
 
-  async findChargeEntranteMaxAndTrancheBatch(
-    steuSandreCdas: string[],
-    year: number,
-  ): Promise<Map<string, ChargeEntranteMaxAndTranche>> {
+  async findChargeEntranteMaxAndTrancheBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteResult[]> {
     if (steuSandreCdas.length === 0) {
-      return new Map();
+      return [];
     }
 
-    const results = await this.stchanRepository
+    const rows = await this.stchanRepository
       .createQueryBuilder('c')
       .select('s.steu_sandre_cda', 'steu_sandre_cda')
       .addSelect('c.stchan_r_eh_max_chg_val', 'charge_max')
@@ -367,18 +361,13 @@ export class RoseauRepository implements RoseauGateway {
         tranche_rfa: string | null;
       }>();
 
-    const resultMap = new Map<string, { chargeMax: number; trancheLabel: string; trancheRfa: string }>();
-
-    for (const result of results) {
-      if (result.charge_max !== null && result.tranche_label !== null && result.tranche_rfa !== null) {
-        resultMap.set(result.steu_sandre_cda.trim(), {
-          chargeMax: parseFloat(result.charge_max.toString()),
-          trancheLabel: result.tranche_label.trim(),
-          trancheRfa: result.tranche_rfa.trim(),
-        });
-      }
-    }
-
-    return resultMap;
+    return rows
+      .filter((r) => r.charge_max !== null && r.tranche_label !== null && r.tranche_rfa !== null)
+      .map((r) => ({
+        sandreCda: r.steu_sandre_cda.trim(),
+        chargeMax: parseFloat(r.charge_max!.toString()),
+        trancheLabel: r.tranche_label!.trim(),
+        trancheRfa: r.tranche_rfa!.trim(),
+      }));
   }
 }
