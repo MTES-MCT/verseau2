@@ -184,4 +184,28 @@ describe('Sandre Parser', () => {
     expect(xml).not.toEqual(originalXml);
     expect(xml).toEqual(expectedXml);
   });
+
+  it('should write the NomContact tag without adding extra blank lines when there are multiple newlines before the closing tag', () => {
+    const nomContact = 'Pierre Dupont';
+    const originalXml = `
+        <Emetteur>
+            <CdIntervenant schemeAgencyID="SIRET">57202552611737</CdIntervenant>
+            <NomIntervenant>Bretagne Ouest</NomIntervenant>
+
+        </Emetteur>`;
+
+    const expectedXml = `
+        <Emetteur>
+            <CdIntervenant schemeAgencyID="SIRET">57202552611737</CdIntervenant>
+            <NomIntervenant>Bretagne Ouest</NomIntervenant>
+          <Contact>
+            <NomContact>${nomContact}</NomContact>
+          </Contact>
+        </Emetteur>`;
+
+    const xml = addNameTagToXml(originalXml, nomContact);
+    expect(xml).toBeDefined();
+    expect(xml).toContain(`<NomContact>${nomContact}</NomContact>`);
+    expect(xml).toEqual(expectedXml);
+  });
 });

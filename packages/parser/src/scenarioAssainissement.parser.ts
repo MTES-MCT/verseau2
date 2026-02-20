@@ -142,14 +142,14 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
 
     if (hasDestinataire) {
       return xml.replace(/(\s*)(<Destinataire>)/, (match, p1, p2) => {
-        const indent = p1.replace(/\n/, '') || '';
+        const indent = p1.match(/[^\r\n]*$/)?.[0] || '';
         const contactIndent = indent + '  ';
         const nomContactIndent = contactIndent + '  ';
         return `${p1}<Emetteur>\n${contactIndent}<Contact>\n${nomContactIndent}<NomContact>${nomContact}</NomContact>\n${contactIndent}</Contact>\n${indent}</Emetteur>${p1}${p2}`;
       });
     } else {
       return xml.replace(/(<Scenario>)(\s*)([\s\S]*?)(<\/Scenario>)/, (match, p1, p2, p3, p4) => {
-        const scenarioIndent = p2.replace(/\n/, '') || '';
+        const scenarioIndent = p2.match(/[^\r\n]*$/)?.[0] || '';
         const emetteurIndent = scenarioIndent + '  ';
         const contactIndent = emetteurIndent + '  ';
         const nomContactIndent = contactIndent + '  ';
@@ -162,17 +162,17 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
 
   if (hasContact) {
     return xml.replace(/(<Emetteur>[\s\S]*?<Contact>)([\s\S]*?)(\s*)(<\/Contact>)/, (match, p1, p2, p3, p4) => {
-      const closingIndent = p3.replace(/\n/, '') || '';
+      const closingIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
       const childIndent = closingIndent + '  ';
-      return `${p1}${p2}\n${childIndent}<NomContact>${nomContact}</NomContact>${p3}${p4}`;
+      return `${p1}${p2}\n${childIndent}<NomContact>${nomContact}</NomContact>\n${closingIndent}${p4}`;
     });
   }
 
   return xml.replace(/(<Emetteur>)([\s\S]*?)(\s*)(<\/Emetteur>)/, (match, p1, p2, p3, p4) => {
-    const emetteurIndent = p3.replace(/\n/, '') || '';
+    const emetteurIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
     const contactIndent = emetteurIndent + '  ';
     const nomContactIndent = contactIndent + '  ';
-    return `${p1}${p2}\n${contactIndent}<Contact>\n${nomContactIndent}<NomContact>${nomContact}</NomContact>\n${contactIndent}</Contact>${p3}${p4}`;
+    return `${p1}${p2}\n${contactIndent}<Contact>\n${nomContactIndent}<NomContact>${nomContact}</NomContact>\n${contactIndent}</Contact>\n${emetteurIndent}${p4}`;
   });
 }
 
