@@ -1,8 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from './masa.dto';
-import { SteuCdnBySandreCda, ItvCdnByRfa } from './masa.dto';
+import {
+  CmaBySandreCdaAndParam,
+  MaxDebitBySandreCda,
+  ChargeEntranteMaxComparison,
+  SteuCdnBySandreCda,
+  ItvCdnByRfa,
+  AgByEmail,
+  IntervenantAuth,
+  VSteuSclItvResult,
+} from './masa.dto';
+import { ROLE } from '@user/user.model';
 
 @Injectable()
 export class MasaProvider {
@@ -101,5 +110,56 @@ export class MasaProvider {
     year: number,
   ): Promise<ChargeEntranteMaxComparison[]> {
     return this.roseauGateway.findChargeEntranteMaxComparisonBatch(steuSandreCdas, year);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dépôt — Droits STEU/SCL par codes — utilisé pour la validation des droits de dépôt
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
+    const entities = await this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
+    return entities.map((e) => ({
+      steuCda: e.steuCda,
+      sclCda: e.sclCda,
+      moItvRfa: e.moItvRfa,
+      satItvRfa: e.satItvRfa,
+      aeItvRfa: e.aeItvRfa,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentification — Résolution de l'AG (agent) par email utilisateur
+  // Utilisé par les guards et le login pour résoudre l'itvCdn et le prCdn
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findAgByEmail(email: string): Promise<AgByEmail | null> {
+    const ag = await this.lanceleauGateway.findAgByEmail(email);
+    if (!ag) return null;
+    return { itvCdn: ag.itvCdn, prCdn: ag.prCdn };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentification — Vérification d'un rôle Orion pour un principal
+  // Utilisé par DroitsUserService (rôles 301, 305, ...)
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async hasRole(prCdn: number, roleCdn: ROLE): Promise<boolean> {
+    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, roleCdn);
+    return !!role;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentification — Hydratation du nom de l'intervenant
+  // Utilisé lors du login (handleCallback) pour enrichir le contexte utilisateur
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
+    const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
+    if (!itv) return null;
+    return { itvCdn, nom: itv.itvNomLb, siret: itv.itvRfa };
   }
 }

@@ -1,17 +1,18 @@
-import { Inject, Injectable, ForbiddenException } from '@nestjs/common';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserGateway } from '@user/user.gateway';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { MasaProvider } from '@masa/masa.provider';
+import { ROLE } from '@user/user.model';
 
 @Injectable()
 export class DroitsDepotService {
-  private readonly ROLE_DEPOSANT: number = 301;
   constructor(
-    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(UserGateway) private readonly userGateway: UserGateway,
     @Inject(LoggerService) private readonly logger: LoggerService,
     private readonly droitsUserService: DroitsUserService,
+    private readonly masaProvider: MasaProvider,
   ) {
     this.logger.setContext(DroitsDepotService.name);
   }
@@ -36,32 +37,35 @@ export class DroitsDepotService {
     if (!user) {
       throw new ForbiddenException(`Utilisateur non trouvé : ${subId}`);
     }
+    if (!user.email) {
+      throw new ForbiddenException(`Email manquant pour l'utilisateur : ${subId}`);
+    }
 
-    const ag = await this.lanceleauGateway.findAgByEmail(user.email);
+    const ag = await this.masaProvider.findAgByEmail(user.email);
     this.logger.log('Ag entity found', ag);
     if (!ag) {
       throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
     }
 
-    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(ag.prCdn, this.ROLE_DEPOSANT);
-    this.logger.log('Orion role found', role);
-    if (!role) {
-      throw new ForbiddenException(`L'utilisateur n'a pas le rôle ${this.ROLE_DEPOSANT} requis pour le dépôt`);
+    const hasRoleDeposant = await this.masaProvider.hasRole(ag.prCdn, ROLE.DEPOSANT);
+    this.logger.log('Deposant role found', hasRoleDeposant);
+    if (!hasRoleDeposant) {
+      throw new ForbiddenException(`L'utilisateur n'a pas le rôle déposant requis pour le dépôt`);
     }
 
-    const itv = await this.lanceleauGateway.findByItvCdn(ag.itvCdn);
-    this.logger.log('Intervenant found', { itvCdn: itv?.itvCdn, itvRfa: itv?.itvRfa });
-    if (!itv || !itv.itvRfa) {
+    const intervenant = await this.masaProvider.findIntervenantById(ag.itvCdn);
+    this.logger.log('Intervenant found', { itvCdn: intervenant?.itvCdn, siret: intervenant?.siret });
+    if (!intervenant?.siret) {
       throw new ForbiddenException(`Intervenant non trouvé ou SIRET manquant`);
     }
-    const userSiret = itv.itvRfa;
+    const userSiret = intervenant.siret;
 
     this.logger.log(
       'Validating droits de depot for cdOuvrageDepollutionList',
       cdOuvrageDepollutionList,
       cdSystemeCollecteList,
     );
-    const matches = await this.lanceleauGateway.findVSteuSclItvByCodes(cdOuvrageDepollutionList, cdSystemeCollecteList);
+    const matches = await this.masaProvider.findVSteuSclItvByCodes(cdOuvrageDepollutionList, cdSystemeCollecteList);
     this.logger.log('VSteuSclItv entities found', matches);
 
     for (const code of cdOuvrageDepollutionList) {

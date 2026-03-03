@@ -4,11 +4,11 @@ import { UserEntity } from './user.entity';
 import { UserGateway } from './user.gateway';
 import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
-import { ReferentielModule } from '@referentiel/referentiel.module';
+import { MasaModule } from '@masa/masa.module';
 import { DroitsUserService } from './droitsUser.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserEntity]), ReferentielModule],
+  imports: [TypeOrmModule.forFeature([UserEntity]), MasaModule],
   providers: [{ provide: UserGateway, useClass: UserRepository }, UserService, DroitsUserService],
   exports: [UserService, UserGateway, DroitsUserService],
 })
