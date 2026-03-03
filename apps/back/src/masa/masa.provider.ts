@@ -9,6 +9,7 @@ import {
   ItvCdnByRfa,
   AgByEmail,
   IntervenantAuth,
+  VSteuSclItvResult,
 } from './masa.dto';
 
 @Injectable()
@@ -111,6 +112,34 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
+  // Dépôt — Vérification du rôle Déposant (301) pour un principal
+  // Utilisé par DroitsDepotService
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async hasDeposantRole(prCdn: number): Promise<boolean> {
+    const ROLE_DEPOSANT = 301;
+    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, ROLE_DEPOSANT);
+    return !!role;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dépôt — Droits STEU/SCL par codes — utilisé pour la validation des droits de dépôt
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
+    const entities = await this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
+    return entities.map((e) => ({
+      steuCda: e.steuCda,
+      sclCda: e.sclCda,
+      moItvRfa: e.moItvRfa,
+      satItvRfa: e.satItvRfa,
+      aeItvRfa: e.aeItvRfa,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
   // Authentification — Résolution de l'AG (agent) par email utilisateur
   // Utilisé par les guards et le login pour résoudre l'itvCdn et le prCdn
   // TODO: Remplacer par appel à l'API MASA quand disponible
@@ -143,6 +172,6 @@ export class MasaProvider {
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
     const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
     if (!itv) return null;
-    return { itvCdn, nom: itv.itvNomLb };
+    return { itvCdn, nom: itv.itvNomLb, siret: itv.itvRfa };
   }
 }

@@ -38,8 +38,18 @@ export interface AgByEmail {
   prCdn: number;
 }
 
-/** Intervenant résolu pour l'authentification */
+/** Intervenant résolu pour l'authentification et les droits de dépôt */
 export interface IntervenantAuth {
   itvCdn: number;
   nom?: string;
+  siret?: string;
+}
+
+/** Droits STEU/SCL par SIRET intervenant — utilisé pour la validation des droits de dépôt */
+export interface VSteuSclItvResult {
+  steuCda: string;
+  sclCda: string;
+  moItvRfa: string | null;
+  satItvRfa: string | null;
+  aeItvRfa: string | null;
 }
