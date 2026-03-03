@@ -36,6 +36,9 @@ export class DroitsDepotService {
     if (!user) {
       throw new ForbiddenException(`Utilisateur non trouvé : ${subId}`);
     }
+    if (!user.email) {
+      throw new ForbiddenException(`Email manquant pour l'utilisateur : ${subId}`);
+    }
 
     const ag = await this.masaProvider.findAgByEmail(user.email);
     this.logger.log('Ag entity found', ag);
