@@ -1,17 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { Injectable } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { IntervenantForAuthentication } from '@referentiel/lanceleau/lanceleau.model';
 import { LoggerService } from '@shared/logger/logger.service';
+import { MasaProvider } from '@masa/masa.provider';
 
 @Injectable()
 export class DroitsUserService {
-  private readonly ROLE_EXPERT_NATIONAL_VERSEAU: number = 305;
-
   constructor(
     @Inject(UserGateway) private readonly userGateway: UserGateway,
-    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
+    private readonly masaProvider: MasaProvider,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(DroitsUserService.name);
@@ -23,7 +22,7 @@ export class DroitsUserService {
       return null;
     }
 
-    const ag = await this.lanceleauGateway.findAgByEmail(user.email);
+    const ag = await this.masaProvider.findAgByEmail(user.email);
     return ag ? ag.itvCdn : null;
   }
 
@@ -33,12 +32,11 @@ export class DroitsUserService {
       if (!user?.email) {
         return false;
       }
-      const ag = await this.lanceleauGateway.findAgByEmail(user.email);
+      const ag = await this.masaProvider.findAgByEmail(user.email);
       if (!ag) {
         return false;
       }
-      const role = await this.lanceleauGateway.findOrionRoleForPrincipal(ag.prCdn, this.ROLE_EXPERT_NATIONAL_VERSEAU);
-      return !!role;
+      return this.masaProvider.isExpertNationalVerseau(ag.prCdn);
     } catch (error) {
       this.logger.warn('Failed to check expert national role for user', sub, error);
       return false;
@@ -58,11 +56,8 @@ export class DroitsUserService {
     try {
       const itvCdn = await this.resolveItvCdn(sub);
       if (itvCdn) {
-        const itvEntity = await this.lanceleauGateway.findByItvCdn(itvCdn);
-        return {
-          itvCdn,
-          nom: itvEntity?.itvNomLb,
-        };
+        const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
+        return intervenant ? { itvCdn: intervenant.itvCdn, nom: intervenant.nom } : { itvCdn };
       }
       return null;
     } catch (error) {

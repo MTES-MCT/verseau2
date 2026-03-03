@@ -31,3 +31,15 @@ export interface ItvCdnByRfa {
   rfa: string;
   itvCdn: number;
 }
+
+/** Résultat de résolution AG (agent) par email — utilisé pour l'authentification */
+export interface AgByEmail {
+  itvCdn: number;
+  prCdn: number;
+}
+
+/** Intervenant résolu pour l'authentification */
+export interface IntervenantAuth {
+  itvCdn: number;
+  nom?: string;
+}

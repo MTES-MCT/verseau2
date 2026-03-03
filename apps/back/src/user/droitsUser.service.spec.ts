@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DroitsUserService } from './droitsUser.service';
 import { UserGateway } from './user.gateway';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { MasaProvider } from '@masa/masa.provider';
 import { LoggerService } from '@shared/logger/logger.service';
 
 describe('DroitsUserService', () => {
@@ -11,10 +11,10 @@ describe('DroitsUserService', () => {
     findBySub: jest.fn(),
   };
 
-  const mockLanceleauGateway = {
+  const mockMasaProvider = {
     findAgByEmail: jest.fn(),
-    findOrionRoleForPrincipal: jest.fn(),
-    findByItvCdn: jest.fn(),
+    isExpertNationalVerseau: jest.fn(),
+    findIntervenantById: jest.fn(),
   };
 
   const mockLogger = {
@@ -30,7 +30,7 @@ describe('DroitsUserService', () => {
       providers: [
         DroitsUserService,
         { provide: UserGateway, useValue: mockUserGateway },
-        { provide: LanceleauGateway, useValue: mockLanceleauGateway },
+        { provide: MasaProvider, useValue: mockMasaProvider },
         { provide: LoggerService, useValue: mockLogger },
       ],
     }).compile();
@@ -46,19 +46,19 @@ describe('DroitsUserService', () => {
 
     it('retourne true si le rôle 305 est présent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockLanceleauGateway.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
-      mockLanceleauGateway.findOrionRoleForPrincipal.mockResolvedValue({ prCdn, roleCdn: 305 });
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
+      mockMasaProvider.isExpertNationalVerseau.mockResolvedValue(true);
 
       const result = await service.isExpertNationalVerseau(sub);
 
       expect(result).toBe(true);
-      expect(mockLanceleauGateway.findOrionRoleForPrincipal).toHaveBeenCalledWith(prCdn, 305);
+      expect(mockMasaProvider.isExpertNationalVerseau).toHaveBeenCalledWith(prCdn);
     });
 
     it('retourne false si le rôle 305 est absent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockLanceleauGateway.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
-      mockLanceleauGateway.findOrionRoleForPrincipal.mockResolvedValue(null);
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
+      mockMasaProvider.isExpertNationalVerseau.mockResolvedValue(false);
 
       const result = await service.isExpertNationalVerseau(sub);
 
@@ -71,7 +71,7 @@ describe('DroitsUserService', () => {
       const result = await service.isExpertNationalVerseau(sub);
 
       expect(result).toBe(false);
-      expect(mockLanceleauGateway.findAgByEmail).not.toHaveBeenCalled();
+      expect(mockMasaProvider.findAgByEmail).not.toHaveBeenCalled();
     });
 
     it("retourne false si l'utilisateur n'a pas d'email", async () => {
@@ -84,12 +84,12 @@ describe('DroitsUserService', () => {
 
     it('retourne false si aucun AG lié', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockLanceleauGateway.findAgByEmail.mockResolvedValue(null);
+      mockMasaProvider.findAgByEmail.mockResolvedValue(null);
 
       const result = await service.isExpertNationalVerseau(sub);
 
       expect(result).toBe(false);
-      expect(mockLanceleauGateway.findOrionRoleForPrincipal).not.toHaveBeenCalled();
+      expect(mockMasaProvider.isExpertNationalVerseau).not.toHaveBeenCalled();
     });
 
     it('retourne false si une erreur est levée', async () => {

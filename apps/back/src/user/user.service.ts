@@ -1,15 +1,11 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { UserModel } from './user.model';
 import { normalizeEmail } from '@shared/service/string.service';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @Inject(UserGateway) private readonly userGateway: UserGateway,
-    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
-  ) {}
+  constructor(@Inject(UserGateway) private readonly userGateway: UserGateway) {}
 
   async findOrCreateUser(sub: string, claims?: { email?: string; nom?: string; prenom?: string }): Promise<UserModel> {
     // Normalize email to lowercase for consistent matching with Lanceleau referential

@@ -1,8 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from './masa.dto';
-import { SteuCdnBySandreCda, ItvCdnByRfa } from './masa.dto';
+import {
+  CmaBySandreCdaAndParam,
+  MaxDebitBySandreCda,
+  ChargeEntranteMaxComparison,
+  SteuCdnBySandreCda,
+  ItvCdnByRfa,
+  AgByEmail,
+  IntervenantAuth,
+} from './masa.dto';
 
 @Injectable()
 export class MasaProvider {
@@ -101,5 +108,41 @@ export class MasaProvider {
     year: number,
   ): Promise<ChargeEntranteMaxComparison[]> {
     return this.roseauGateway.findChargeEntranteMaxComparisonBatch(steuSandreCdas, year);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentification — Résolution de l'AG (agent) par email utilisateur
+  // Utilisé par les guards et le login pour résoudre l'itvCdn et le prCdn
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findAgByEmail(email: string): Promise<AgByEmail | null> {
+    const ag = await this.lanceleauGateway.findAgByEmail(email);
+    if (!ag) return null;
+    return { itvCdn: ag.itvCdn, prCdn: ag.prCdn };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentification — Vérification du rôle Expert National Verseau (305)
+  // Utilisé par IsAdminGuard
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async isExpertNationalVerseau(prCdn: number): Promise<boolean> {
+    const ROLE_EXPERT_NATIONAL_VERSEAU = 305;
+    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, ROLE_EXPERT_NATIONAL_VERSEAU);
+    return !!role;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Authentification — Hydratation du nom de l'intervenant
+  // Utilisé lors du login (handleCallback) pour enrichir le contexte utilisateur
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
+    const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
+    if (!itv) return null;
+    return { itvCdn, nom: itv.itvNomLb };
   }
 }
