@@ -5,6 +5,7 @@ import { DepotModel } from '@dossier/depot/depot.model';
 import { IntervenantForAuthentication } from '@referentiel/lanceleau/lanceleau.model';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MasaProvider } from '@masa/masa.provider';
+import { ROLE } from './user.model';
 
 @Injectable()
 export class DroitsUserService {
@@ -36,7 +37,7 @@ export class DroitsUserService {
       if (!ag) {
         return false;
       }
-      return await this.masaProvider.isExpertNationalVerseau(ag.prCdn);
+      return await this.masaProvider.hasRole(ag.prCdn, ROLE.EXPERT_NATIONAL_VERSEAU);
     } catch (error) {
       this.logger.warn('Failed to check expert national role for user', sub, error);
       return false;

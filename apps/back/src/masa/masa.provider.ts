@@ -11,6 +11,7 @@ import {
   IntervenantAuth,
   VSteuSclItvResult,
 } from './masa.dto';
+import { ROLE } from '@user/user.model';
 
 @Injectable()
 export class MasaProvider {
@@ -112,18 +113,6 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Dépôt — Vérification du rôle Déposant (301) pour un principal
-  // Utilisé par DroitsDepotService
-  // TODO: Remplacer par appel à l'API MASA quand disponible
-  // ---------------------------------------------------------------------------
-
-  async hasDeposantRole(prCdn: number): Promise<boolean> {
-    const ROLE_DEPOSANT = 301;
-    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, ROLE_DEPOSANT);
-    return !!role;
-  }
-
-  // ---------------------------------------------------------------------------
   // Dépôt — Droits STEU/SCL par codes — utilisé pour la validation des droits de dépôt
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
@@ -152,14 +141,13 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Authentification — Vérification du rôle Expert National Verseau (305)
-  // Utilisé par IsAdminGuard
+  // Authentification — Vérification d'un rôle Orion pour un principal
+  // Utilisé par DroitsUserService (rôles 301, 305, ...)
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async isExpertNationalVerseau(prCdn: number): Promise<boolean> {
-    const ROLE_EXPERT_NATIONAL_VERSEAU = 305;
-    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, ROLE_EXPERT_NATIONAL_VERSEAU);
+  async hasRole(prCdn: number, roleCdn: ROLE): Promise<boolean> {
+    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, roleCdn);
     return !!role;
   }
 

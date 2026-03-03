@@ -4,6 +4,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserGateway } from '@user/user.gateway';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { MasaProvider } from '@masa/masa.provider';
+import { ROLE } from '@user/user.model';
 
 @Injectable()
 export class DroitsDepotService {
@@ -46,9 +47,9 @@ export class DroitsDepotService {
       throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
     }
 
-    const hasRole = await this.masaProvider.hasDeposantRole(ag.prCdn);
-    this.logger.log('Deposant role found', hasRole);
-    if (!hasRole) {
+    const hasRoleDeposant = await this.masaProvider.hasRole(ag.prCdn, ROLE.DEPOSANT);
+    this.logger.log('Deposant role found', hasRoleDeposant);
+    if (!hasRoleDeposant) {
       throw new ForbiddenException(`L'utilisateur n'a pas le rôle déposant requis pour le dépôt`);
     }
 

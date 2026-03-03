@@ -3,6 +3,7 @@ import { DroitsUserService } from './droitsUser.service';
 import { UserGateway } from './user.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { LoggerService } from '@shared/logger/logger.service';
+import { ROLE } from './user.model';
 
 describe('DroitsUserService', () => {
   let service: DroitsUserService;
@@ -13,8 +14,8 @@ describe('DroitsUserService', () => {
 
   const mockMasaProvider = {
     findAgByEmail: jest.fn(),
-    isExpertNationalVerseau: jest.fn(),
     findIntervenantById: jest.fn(),
+    hasRole: jest.fn(),
   };
 
   const mockLogger = {
@@ -47,18 +48,18 @@ describe('DroitsUserService', () => {
     it('retourne true si le rôle 305 est présent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
-      mockMasaProvider.isExpertNationalVerseau.mockResolvedValue(true);
+      mockMasaProvider.hasRole.mockResolvedValue(true);
 
       const result = await service.isExpertNationalVerseau(sub);
 
       expect(result).toBe(true);
-      expect(mockMasaProvider.isExpertNationalVerseau).toHaveBeenCalledWith(prCdn);
+      expect(mockMasaProvider.hasRole).toHaveBeenCalledWith(prCdn, ROLE.EXPERT_NATIONAL_VERSEAU);
     });
 
     it('retourne false si le rôle 305 est absent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
-      mockMasaProvider.isExpertNationalVerseau.mockResolvedValue(false);
+      mockMasaProvider.hasRole.mockResolvedValue(false);
 
       const result = await service.isExpertNationalVerseau(sub);
 
@@ -89,7 +90,7 @@ describe('DroitsUserService', () => {
       const result = await service.isExpertNationalVerseau(sub);
 
       expect(result).toBe(false);
-      expect(mockMasaProvider.isExpertNationalVerseau).not.toHaveBeenCalled();
+      expect(mockMasaProvider.hasRole).not.toHaveBeenCalled();
     });
 
     it('retourne false si une erreur est levée par findBySub', async () => {
@@ -100,10 +101,10 @@ describe('DroitsUserService', () => {
       expect(result).toBe(false);
     });
 
-    it('retourne false si une erreur est levée par isExpertNationalVerseau', async () => {
+    it('retourne false si une erreur est levée par hasRole', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
-      mockMasaProvider.isExpertNationalVerseau.mockRejectedValue(new Error('provider error'));
+      mockMasaProvider.hasRole.mockRejectedValue(new Error('provider error'));
 
       const result = await service.isExpertNationalVerseau(sub);
 
