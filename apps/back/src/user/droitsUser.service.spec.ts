@@ -92,8 +92,18 @@ describe('DroitsUserService', () => {
       expect(mockMasaProvider.isExpertNationalVerseau).not.toHaveBeenCalled();
     });
 
-    it('retourne false si une erreur est levée', async () => {
+    it('retourne false si une erreur est levée par findBySub', async () => {
       mockUserGateway.findBySub.mockRejectedValue(new Error('DB error'));
+
+      const result = await service.isExpertNationalVerseau(sub);
+
+      expect(result).toBe(false);
+    });
+
+    it('retourne false si une erreur est levée par isExpertNationalVerseau', async () => {
+      mockUserGateway.findBySub.mockResolvedValue({ email });
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
+      mockMasaProvider.isExpertNationalVerseau.mockRejectedValue(new Error('provider error'));
 
       const result = await service.isExpertNationalVerseau(sub);
 

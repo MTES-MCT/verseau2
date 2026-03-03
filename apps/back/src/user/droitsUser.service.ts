@@ -36,7 +36,7 @@ export class DroitsUserService {
       if (!ag) {
         return false;
       }
-      return this.masaProvider.isExpertNationalVerseau(ag.prCdn);
+      return await this.masaProvider.isExpertNationalVerseau(ag.prCdn);
     } catch (error) {
       this.logger.warn('Failed to check expert national role for user', sub, error);
       return false;
