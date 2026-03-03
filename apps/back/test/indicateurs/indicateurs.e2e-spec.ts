@@ -107,6 +107,8 @@ describe('IndicateursController (e2e) - Caching', () => {
         telephone: '01',
         profils: [],
         roles: [],
+        itvCdn: null,
+        isExpertNational: false,
       };
       if (token === 'token-user-1') {
         return { ...baseUser, cerbereId: 'user-1' };

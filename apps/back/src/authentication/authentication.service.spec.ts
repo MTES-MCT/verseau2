@@ -1,8 +1,38 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { AuthenticationService } from './authentication.service';
 import { LoggerService } from '@shared/logger/logger.service';
-import type { JWTPayload } from 'jose';
+import { DroitsUserService } from '@user/droitsUser.service';
+import { AuthenticatedUser } from './authentication';
+
+// Mock external modules
+jest.mock('openid-client', () => ({
+  Configuration: jest.fn(),
+  discovery: jest.fn(),
+  authorizationCodeGrant: jest.fn(),
+  refreshTokenGrant: jest.fn(),
+  fetchUserInfo: jest.fn(),
+  skipSubjectCheck: Symbol('skipSubjectCheck'),
+}));
+
+const mockSign = jest.fn().mockResolvedValue('mock-internal-jwt');
+const mockSetProtectedHeader = jest.fn().mockReturnThis();
+const mockSetIssuedAt = jest.fn().mockReturnThis();
+const mockSetExpirationTime = jest.fn().mockReturnThis();
+
+jest.mock('jose', () => ({
+  jwtVerify: jest.fn(),
+  SignJWT: jest.fn().mockImplementation(() => ({
+    setProtectedHeader: mockSetProtectedHeader,
+    setIssuedAt: mockSetIssuedAt,
+    setExpirationTime: mockSetExpirationTime,
+    sign: mockSign,
+  })),
+}));
+
+import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
+import { jwtVerify } from 'jose';
 
 const mockServerMetadata = {
   issuer: 'https://auth.example.com',
@@ -15,29 +45,7 @@ const mockConfiguration = {
   serverMetadata: jest.fn().mockReturnValue(mockServerMetadata),
 };
 
-// Mock external modules
-jest.mock('openid-client', () => ({
-  Configuration: jest.fn(),
-  discovery: jest.fn(),
-  authorizationCodeGrant: jest.fn(),
-  refreshTokenGrant: jest.fn(),
-  fetchUserInfo: jest.fn(),
-  skipSubjectCheck: Symbol('skipSubjectCheck'),
-}));
-
-jest.mock('jose', () => ({
-  jwtVerify: jest.fn(),
-  createRemoteJWKSet: jest.fn(),
-}));
-
-import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
-import { jwtVerify, createRemoteJWKSet } from 'jose';
-import { AuthenticatedUser } from './authentication';
-
-// Builder for creating JWTPayload test objects
-const createJWTPayload = (payload: Partial<JWTPayload> = {}): JWTPayload => {
-  return payload as JWTPayload;
-};
+const JWT_SECRET = 'unsupersecret';
 
 // Builder for creating AuthenticatedUser test objects
 const createAuthenticatedUser = (user: Partial<AuthenticatedUser> = {}): AuthenticatedUser => {
@@ -48,6 +56,8 @@ const createAuthenticatedUser = (user: Partial<AuthenticatedUser> = {}): Authent
     prenom: '',
     mel: '',
     matricule: '',
+    itvCdn: null,
+    isExpertNational: false,
     ...user,
   };
 };
@@ -56,8 +66,7 @@ describe('AuthenticationService', () => {
   let service: AuthenticationService;
   let mockConfigService: jest.Mocked<ConfigService>;
   let mockLogger: jest.Mocked<LoggerService>;
-
-  const mockJWKS = jest.fn();
+  let mockDroitsUserService: jest.Mocked<DroitsUserService>;
 
   beforeEach(async () => {
     // Reset all mocks
@@ -68,11 +77,13 @@ describe('AuthenticationService', () => {
 
     // Mock ConfigService
     mockConfigService = {
+      get: jest.fn(),
       getOrThrow: jest.fn((key: string) => {
         if (key === 'OIDC_REDIRECT_URI') return 'https://app.example.com/api/auth/callback';
         if (key === 'OIDC_CLIENT_ID') return 'test-client-id';
         if (key === 'OIDC_CLIENT_SECRET') return 'test-client-secret';
         if (key === 'OIDC_ISSUER_URL') return 'https://auth.example.com';
+        if (key === 'JWT_SECRET') return JWT_SECRET;
         throw new Error(`Config key ${key} not found`);
       }),
     } as unknown as jest.Mocked<ConfigService>;
@@ -86,8 +97,14 @@ describe('AuthenticationService', () => {
       warn: jest.fn(),
     } as unknown as jest.Mocked<LoggerService>;
 
-    // Mock createRemoteJWKSet
-    (createRemoteJWKSet as jest.Mock).mockReturnValue(mockJWKS);
+    // Mock DroitsUserService
+    mockDroitsUserService = {
+      resolveItvCdn: jest.fn().mockResolvedValue(null),
+      isExpertNationalVerseau: jest.fn().mockResolvedValue(false),
+      canConsultDepot: jest.fn(),
+      canConsultControle: jest.fn(),
+      findIntervenantByUserSub: jest.fn(),
+    } as unknown as jest.Mocked<DroitsUserService>;
 
     // Reset serverMetadata to default for each test
     mockConfiguration.serverMetadata.mockReturnValue(mockServerMetadata);
@@ -102,6 +119,10 @@ describe('AuthenticationService', () => {
         {
           provide: LoggerService,
           useValue: mockLogger,
+        },
+        {
+          provide: DroitsUserService,
+          useValue: mockDroitsUserService,
         },
       ],
     }).compile();
@@ -118,85 +139,62 @@ describe('AuthenticationService', () => {
   });
 
   describe('validateToken', () => {
-    const mockToken = 'mock.jwt.token';
-    const mockPayload = createJWTPayload({
-      sub: 'user-123',
-      preferred_username: 'john.doe',
-      usual_name: 'Doe',
-      given_name: 'John',
-      email: 'john.doe@example.com',
-      cerbere_matricule: 'MAT123',
-    });
-
-    it('should successfully validate JWT token via local verification', async () => {
+    it('should successfully validate an internal JWT token', async () => {
       (jwtVerify as jest.Mock).mockResolvedValue({
-        payload: mockPayload,
+        payload: {
+          sub: 'user-123',
+          email: 'john.doe@example.com',
+          itvCdn: 42,
+          isExpertNational: true,
+        },
       });
 
-      const result = await service.validateToken(mockToken);
+      const result = await service.validateToken('mock.jwt.token');
 
-      expect(jwtVerify).toHaveBeenCalledWith(mockToken, mockJWKS, {
-        issuer: mockServerMetadata.issuer,
-        audience: 'test-client-id',
-      });
+      expect(jwtVerify).toHaveBeenCalledWith('mock.jwt.token', expect.any(Uint8Array), { algorithms: ['HS256'] });
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-123',
-          login: 'john.doe',
-          nom: 'Doe',
-          prenom: 'John',
           mel: 'john.doe@example.com',
-          matricule: 'MAT123',
+          itvCdn: 42,
+          isExpertNational: true,
         }),
       );
     });
 
-    it('should fall back to getUserInfo when JWT verification fails', async () => {
-      const mockUserInfo = createJWTPayload({
-        sub: 'user-456',
-        uid: 'jane.smith',
-        family_name: 'Smith',
-        given_name: 'Jane',
-        email: 'jane.smith@example.com',
-      });
+    it('should reject a token that fails verification (no fallback)', async () => {
+      (jwtVerify as jest.Mock).mockRejectedValue(new Error('signature verification failed'));
 
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error('JWT verification failed'));
-      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
+      await expect(service.validateToken('invalid.jwt.token')).rejects.toThrow(
+        'Token validation failed: signature verification failed',
+      );
 
-      const result = await service.validateToken(mockToken);
+      // fetchUserInfo should NOT be called — no fallback to Cerbere
+      expect(fetchUserInfo).not.toHaveBeenCalled();
+    });
 
-      expect(jwtVerify).toHaveBeenCalled();
-      expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, mockToken, expect.any(Symbol));
-      expect(result).toEqual(
-        createAuthenticatedUser({
-          cerbereId: 'user-456',
-          login: 'jane.smith',
-          nom: 'Smith',
-          prenom: 'Jane',
-          mel: 'jane.smith@example.com',
-          matricule: 'user-456',
-        }),
+    it('should throw error when token is expired', async () => {
+      (jwtVerify as jest.Mock).mockRejectedValue(new Error('token expired'));
+
+      await expect(service.validateToken('expired.jwt.token')).rejects.toThrow(
+        'Token validation failed: token expired',
       );
     });
 
-    it('should throw error when both JWT verification and getUserInfo fail', async () => {
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error('JWT verification failed'));
-      (fetchUserInfo as jest.Mock).mockRejectedValue(new Error('UserInfo fetch failed'));
-
-      await expect(service.validateToken(mockToken)).rejects.toThrow('Token validation failed: UserInfo fetch failed');
-    });
-
-    it('should create JWKS only once and reuse it', async () => {
+    it('should map itvCdn null correctly', async () => {
       (jwtVerify as jest.Mock).mockResolvedValue({
-        payload: mockPayload,
+        payload: {
+          sub: 'user-123',
+          email: 'test@example.com',
+          itvCdn: null,
+          isExpertNational: false,
+        },
       });
 
-      await service.validateToken(mockToken);
-      await service.validateToken(mockToken);
+      const result = await service.validateToken('token');
 
-      // createRemoteJWKSet should be called only once
-      expect(createRemoteJWKSet).toHaveBeenCalledTimes(1);
-      expect(createRemoteJWKSet).toHaveBeenCalledWith(new URL(mockServerMetadata.jwks_uri));
+      expect(result.itvCdn).toBeNull();
+      expect(result.isExpertNational).toBe(false);
     });
   });
 
@@ -226,56 +224,44 @@ describe('AuthenticationService', () => {
     const mockCode = 'auth-code-123';
     const mockNonce = 'nonce-456';
     const mockTokens = {
-      access_token: 'access-token-123',
+      access_token: 'cerbere-access-token-123',
       id_token: 'id-token-456',
       refresh_token: 'refresh-token-789',
       expires_in: 3600,
     };
-    const mockUserInfo = createJWTPayload({
+    const mockUserInfo = {
       sub: 'user-123',
       preferred_username: 'john.doe',
       usual_name: 'Doe',
       given_name: 'John',
       email: 'john.doe@example.com',
       cerbere_matricule: 'MAT123',
-    });
+    };
 
-    it('should successfully exchange authorization code for tokens and retrieve user info', async () => {
+    it('should exchange code, resolve business claims, and return internal JWT', async () => {
       (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
+      mockDroitsUserService.resolveItvCdn.mockResolvedValue(42);
+      mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(true);
 
       const result = await service.handleCallback(mockCode, mockNonce);
 
-      expect(authorizationCodeGrant).toHaveBeenCalledWith(
-        mockConfiguration,
-        expect.objectContaining({
-          searchParams: expect.any(Object) as URLSearchParams,
-        }),
-        {
-          expectedNonce: mockNonce,
-          pkceCodeVerifier: undefined,
-        },
-      );
+      // Vérifie que les claims métier ont été résolus en parallèle
+      expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('user-123');
+      expect(mockDroitsUserService.isExpertNationalVerseau).toHaveBeenCalledWith('user-123');
 
-      const callbackUrl = (authorizationCodeGrant as jest.Mock).mock.calls[0]?.[1] as URL;
-      expect(callbackUrl?.searchParams.get('code')).toBe(mockCode);
+      // Le token retourné est un JWT interne (forgé par SignJWT)
+      expect(result.accessToken).toBe('mock-internal-jwt');
+      expect(result.cerbereAccessToken).toBe('cerbere-access-token-123');
+      expect(result.idToken).toBe('id-token-456');
+      expect(result.refreshToken).toBe('refresh-token-789');
+      expect(result.expiresIn).toBe(3600);
 
-      expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'access-token-123', expect.any(Symbol));
-
-      expect(result).toEqual({
-        accessToken: 'access-token-123',
-        idToken: 'id-token-456',
-        refreshToken: 'refresh-token-789',
-        expiresIn: 3600,
-        user: createAuthenticatedUser({
-          cerbereId: 'user-123',
-          login: 'john.doe',
-          nom: 'Doe',
-          prenom: 'John',
-          mel: 'john.doe@example.com',
-          matricule: 'MAT123',
-        }),
-      });
+      // L'utilisateur retourné est enrichi avec les claims métier
+      expect(result.user.itvCdn).toBe(42);
+      expect(result.user.isExpertNational).toBe(true);
+      expect(result.user.cerbereId).toBe('user-123');
+      expect(result.user.mel).toBe('john.doe@example.com');
     });
 
     it('should propagate errors from authorizationCodeGrant', async () => {
@@ -283,11 +269,23 @@ describe('AuthenticationService', () => {
 
       await expect(service.handleCallback(mockCode, mockNonce)).rejects.toThrow('Invalid authorization code');
     });
+
+    it('should handle null itvCdn from Lanceleau', async () => {
+      (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
+      mockDroitsUserService.resolveItvCdn.mockResolvedValue(null);
+      mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(false);
+
+      const result = await service.handleCallback(mockCode, mockNonce);
+
+      expect(result.user.itvCdn).toBeNull();
+      expect(result.user.isExpertNational).toBe(false);
+    });
   });
 
   describe('getUserInfo', () => {
     const mockAccessToken = 'access-token-123';
-    const mockUserInfo = createJWTPayload({
+    const mockUserInfo = {
       sub: 'user-789',
       preferred_username: 'alice.wonder',
       usual_name: 'Wonder',
@@ -301,7 +299,7 @@ describe('AuthenticationService', () => {
       phone_number: '+33123456789',
       cerbere_profils: ['ADMIN;NATIONAL;'],
       cerbere_roles: ['ROLE_ADMIN', 'ROLE_USER'],
-    });
+    };
 
     it('should successfully fetch and map user info from access token', async () => {
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
@@ -329,13 +327,13 @@ describe('AuthenticationService', () => {
     });
 
     it('should handle alternative claim names for login', async () => {
-      const userInfoWithUid = createJWTPayload({
+      const userInfoWithUid = {
         sub: 'user-999',
         uid: 'bob.builder',
         family_name: 'Builder',
         given_name: 'Bob',
         email: 'bob@example.com',
-      });
+      };
 
       (fetchUserInfo as jest.Mock).mockResolvedValue(userInfoWithUid);
 
@@ -346,14 +344,14 @@ describe('AuthenticationService', () => {
     });
 
     it('should handle missing optional fields', async () => {
-      const minimalUserInfo = createJWTPayload({
+      const minimalUserInfo = {
         sub: 'user-minimal',
         preferred_username: 'minimal.user',
         usual_name: 'User',
         given_name: 'Minimal',
         email: 'minimal@example.com',
         cerbere_matricule: 'MIN001',
-      });
+      };
 
       (fetchUserInfo as jest.Mock).mockResolvedValue(minimalUserInfo);
 
@@ -375,25 +373,39 @@ describe('AuthenticationService', () => {
   describe('refreshTokens', () => {
     const mockRefreshToken = 'refresh-token-abc';
 
-    it('should successfully refresh tokens using refresh token', async () => {
+    it('should refresh tokens and re-forge internal JWT with updated claims', async () => {
       const mockRefreshedTokens = {
-        access_token: 'new-access-token',
+        access_token: 'new-cerbere-access-token',
         id_token: 'new-id-token',
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
       };
+      const mockUserInfo = {
+        sub: 'user-123',
+        preferred_username: 'john.doe',
+        usual_name: 'Doe',
+        given_name: 'John',
+        email: 'john.doe@example.com',
+        cerbere_matricule: 'MAT123',
+      };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
+      mockDroitsUserService.resolveItvCdn.mockResolvedValue(42);
+      mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(true);
 
       const result = await service.refreshTokens(mockRefreshToken);
 
       expect(refreshTokenGrant).toHaveBeenCalledWith(mockConfiguration, mockRefreshToken);
-      expect(result).toEqual({
-        accessToken: 'new-access-token',
-        idToken: 'new-id-token',
-        refreshToken: 'new-refresh-token',
-        expiresIn: 3600,
-      });
+      expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('user-123');
+      expect(mockDroitsUserService.isExpertNationalVerseau).toHaveBeenCalledWith('user-123');
+
+      // Le token retourné est un JWT interne (pas le token Cerbere)
+      expect(result.accessToken).toBe('mock-internal-jwt');
+      expect(result.cerbereAccessToken).toBe('new-cerbere-access-token');
+      expect(result.idToken).toBe('new-id-token');
+      expect(result.refreshToken).toBe('new-refresh-token');
+      expect(result.expiresIn).toBe(3600);
     });
 
     it('should handle missing id_token in response', async () => {
@@ -403,8 +415,10 @@ describe('AuthenticationService', () => {
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
       };
+      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
 
       const result = await service.refreshTokens(mockRefreshToken);
 
@@ -450,7 +464,7 @@ describe('AuthenticationService', () => {
 
   describe('lazy discovery', () => {
     it('should call discovery() only once and reuse the configuration', async () => {
-      (fetchUserInfo as jest.Mock).mockResolvedValue(createJWTPayload({ sub: 'u1' }));
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
 
       await service.getUserInfo('token1');
       await service.getUserInfo('token2');
@@ -470,7 +484,7 @@ describe('AuthenticationService', () => {
       (discovery as jest.Mock)
         .mockRejectedValueOnce(new Error('Transient error'))
         .mockResolvedValueOnce(mockConfiguration);
-      (fetchUserInfo as jest.Mock).mockResolvedValue(createJWTPayload({ sub: 'u1' }));
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
 
       // First call fails
       await expect(service.getUserInfo('token')).rejects.toThrow();
@@ -481,104 +495,62 @@ describe('AuthenticationService', () => {
     });
   });
 
-  describe('mapClaimsToUser (tested indirectly)', () => {
-    it('should map all JWT claims to AuthenticatedUser structure', async () => {
-      const fullClaims = createJWTPayload({
-        sub: 'user-full',
-        preferred_username: 'full.user',
-        usual_name: 'User',
-        given_name: 'Full',
-        email: 'full@example.com',
-        cerbere_matricule: 'FULL001',
-        organizational_unit: 'Engineering',
-        email_metier: 'full.work@example.com',
-        cerbere_description: 'Lead Engineer',
-        cerbere_mobile: '+33600000000',
-        phone_number: '+33100000000',
-        cerbere_profils: ['PROFILE1;SCOPE1;', 'PROFILE2;SCOPE2;'],
-        cerbere_roles: ['ROLE_1', 'ROLE_2', 'ROLE_3'],
+  describe('buildCookieResponse', () => {
+    it('should set access_token, cerbere_token and refresh_token cookies', () => {
+      const mockRes = {
+        cookie: jest.fn(),
+      } as unknown as import('express').Response;
+
+      service.buildCookieResponse(mockRes, {
+        accessToken: 'internal-jwt',
+        idToken: 'id-token',
+        refreshToken: 'refresh-token',
+        expiresIn: 3600,
+        cerbereAccessToken: 'cerbere-token',
       });
 
-      (fetchUserInfo as jest.Mock).mockResolvedValue(fullClaims);
-
-      const result = await service.getUserInfo('token');
-
-      expect(result).toEqual(
-        createAuthenticatedUser({
-          cerbereId: 'user-full',
-          login: 'full.user',
-          nom: 'User',
-          prenom: 'Full',
-          mel: 'full@example.com',
-          matricule: 'FULL001',
-          unite: 'Engineering',
-          emailMetier: 'full.work@example.com',
-          description: 'Lead Engineer',
-          mobile: '+33600000000',
-          telephone: '+33100000000',
-          profils: ['PROFILE1;SCOPE1;', 'PROFILE2;SCOPE2;'],
-          roles: ['ROLE_1', 'ROLE_2', 'ROLE_3'],
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'access_token',
+        'internal-jwt',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+        }),
+      );
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'cerbere_token',
+        'cerbere-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+        }),
+      );
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'refresh-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
         }),
       );
     });
 
-    it('should use sub as fallback for matricule when cerbere_matricule is missing', async () => {
-      const claimsWithoutMatricule = createJWTPayload({
-        sub: 'user-sub-fallback',
-        preferred_username: 'test.user',
-        usual_name: 'User',
-        given_name: 'Test',
-        email: 'test@example.com',
+    it('should not set cerbere_token cookie when cerbereAccessToken is undefined', () => {
+      const mockRes = {
+        cookie: jest.fn(),
+      } as unknown as import('express').Response;
+
+      service.buildCookieResponse(mockRes, {
+        accessToken: 'internal-jwt',
+        idToken: 'id-token',
+        expiresIn: 3600,
       });
 
-      (fetchUserInfo as jest.Mock).mockResolvedValue(claimsWithoutMatricule);
-
-      const result = await service.getUserInfo('token');
-
-      expect(result.matricule).toBe('user-sub-fallback');
-    });
-
-    it('should handle empty string values', async () => {
-      const claimsWithEmptyStrings = createJWTPayload({
-        sub: '',
-        preferred_username: '',
-        usual_name: '',
-        given_name: '',
-        email: '',
-        cerbere_matricule: '',
-      });
-
-      (fetchUserInfo as jest.Mock).mockResolvedValue(claimsWithEmptyStrings);
-
-      const result = await service.getUserInfo('token');
-
-      expect(result).toEqual(
-        createAuthenticatedUser({
-          cerbereId: '',
-          login: '',
-          nom: '',
-          prenom: '',
-          mel: '',
-          matricule: '',
-        }),
-      );
-    });
-  });
-
-  describe('JWKS initialization', () => {
-    it('should throw error when jwks_uri is missing from metadata', async () => {
-      mockConfiguration.serverMetadata.mockReturnValue({
-        ...mockServerMetadata,
-        jwks_uri: undefined,
-      });
-
-      // JWT verification fails due to missing JWKS; fetchUserInfo also fails to simulate total failure
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error('JWKS URI not available in OIDC metadata'));
-      (fetchUserInfo as jest.Mock).mockRejectedValue(new Error('JWKS URI not available in OIDC metadata'));
-
-      await expect(service.validateToken('token')).rejects.toThrow(
-        'Token validation failed: JWKS URI not available in OIDC metadata',
-      );
+      expect(mockRes.cookie).toHaveBeenCalledWith('access_token', 'internal-jwt', expect.any(Object));
+      expect(mockRes.cookie).not.toHaveBeenCalledWith('cerbere_token', expect.anything(), expect.anything());
     });
   });
 });

@@ -18,7 +18,6 @@ import type { Response } from 'express';
 import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
 @Throttle({ default: { ttl: 60000, limit: 10 } })
 @Controller('auth')
@@ -27,7 +26,6 @@ export class AuthenticationController {
     @Inject(Authentication) private readonly authentication: Authentication,
     private readonly userService: UserService,
     private readonly droitsUserService: DroitsUserService,
-    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
   ) {}
 
   @Get('login')
@@ -73,12 +71,13 @@ export class AuthenticationController {
         );
       }
 
-      // Set cookies via AuthenticationService helper
+      // Set cookies via AuthenticationService helper (access_token = JWT interne, cerbere_token, refresh_token)
       this.authentication.buildCookieResponse(res, {
         accessToken: result.accessToken,
         idToken: result.idToken,
         refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
+        cerbereAccessToken: result.cerbereAccessToken,
       });
 
       return {
@@ -102,7 +101,7 @@ export class AuthenticationController {
     try {
       const tokens = await this.authentication.refreshTokens(refreshToken);
 
-      // Set cookies via AuthenticationService helper
+      // Set cookies via AuthenticationService helper (re-forged internal token + cerbere_token)
       this.authentication.buildCookieResponse(res, tokens);
 
       return {
@@ -123,6 +122,7 @@ export class AuthenticationController {
 
     const cookieOptions = { path: '/', httpOnly: true, secure: true, sameSite: 'strict' as const };
     res.clearCookie('access_token', cookieOptions);
+    res.clearCookie('cerbere_token', cookieOptions);
     res.clearCookie('refresh_token', cookieOptions);
 
     const logoutUrl = await this.authentication.generateLogoutUrl(idToken);
@@ -133,16 +133,28 @@ export class AuthenticationController {
   @SkipThrottle({ default: true })
   @UseGuards(MeGuard)
   async me(@Req() req: CustomRequest): Promise<AuthenticatedUserWithIntervenant> {
-    const token = req.token || '';
-    const user = await this.authentication.getUserInfo(token);
-    const [intervenant, isExpertNational] = await Promise.all([
-      this.droitsUserService.findIntervenantByUserSub(user.cerbereId),
-      this.droitsUserService.isExpertNationalVerseau(user.cerbereId), // TODO : vérifier si les rôles sont dans le token JWT => utiliser pour éviter ces appels supplémentaires
-    ]);
+    const authenticatedUser = req.user;
+
+    // Récupérer le profil complet depuis la DB locale (nom, prenom, email sont synchronisés au login)
+    const userFromDb = await this.userService.findBySub(authenticatedUser.cerbereId);
+
+    // Enrichir l'utilisateur avec les données de la DB locale
+    const user = {
+      ...authenticatedUser,
+      nom: userFromDb?.nom || authenticatedUser.nom,
+      prenom: userFromDb?.prenom || authenticatedUser.prenom,
+      mel: userFromDb?.email || authenticatedUser.mel,
+    };
+
+    // Résoudre le nom de l'intervenant depuis Lanceleau (donnée d'affichage uniquement)
+    const intervenant = authenticatedUser.itvCdn
+      ? await this.droitsUserService.findIntervenantByUserSub(authenticatedUser.cerbereId)
+      : null;
+
     return {
       user,
       intervenant,
-      isExpertNational,
+      isExpertNational: authenticatedUser.isExpertNational,
     };
   }
 }

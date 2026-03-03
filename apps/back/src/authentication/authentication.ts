@@ -3,6 +3,7 @@ export interface OIDCTokens {
   idToken: string;
   refreshToken?: string;
   expiresIn?: number;
+  cerbereAccessToken?: string; // token Cerbere original, stocké dans un cookie séparé pour refresh/logout
 }
 
 export interface OIDCConfiguration {
@@ -39,6 +40,8 @@ export interface AuthenticatedUser {
   telephone?: string; // phone_number
   profils?: string[]; // cerbere_profils (format: "NOM;PORTEE;RESTRICTION")
   roles?: string[]; // cerbere_roles
+  itvCdn: number | null; // code intervenant Lanceleau, embarqué dans le token interne
+  isExpertNational: boolean; // rôle 305 Lanceleau, embarqué dans le token interne
 }
 
 export interface AuthenticatedUserWithIntervenant {

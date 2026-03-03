@@ -1,17 +1,13 @@
-import { Authentication } from './authentication';
-import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { CustomRequest } from '@shared/constants/customRequest';
-import { DroitsUserService } from '@user/droitsUser.service';
 
 @Injectable()
 export class HasUserAccessToDepotGuard implements CanActivate {
   constructor(
-    @Inject(Authentication) private readonly authentication: Authentication,
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
-    private readonly droitsUserService: DroitsUserService,
   ) {
     this.logger.setContext('HasUserAccessToDepotGuard');
   }
@@ -36,8 +32,9 @@ export class HasUserAccessToDepotGuard implements CanActivate {
     // Find the depot
     const depot = await this.depotService.findById(depotId);
 
-    // Check if the depot belongs to the authenticated user's intervenant
-    const canConsult = await this.droitsUserService.canConsultDepot(authenticatedUser.cerbereId, depot);
+    // Compare itvCdn depuis le token JWT interne avec celui du dépôt
+    const userItvCdn = authenticatedUser.itvCdn;
+    const canConsult = !!userItvCdn && Number(depot.itvCdn) === userItvCdn;
 
     if (!canConsult) {
       this.logger.warn('User does not have access to depot', {

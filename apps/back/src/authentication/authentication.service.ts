@@ -13,7 +13,8 @@ import {
 import { Authentication, AuthenticatedUser, OIDCTokens, OIDCConfiguration } from './authentication';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
-import { jwtVerify, createRemoteJWKSet, type JWTPayload } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
+import { DroitsUserService } from '@user/droitsUser.service';
 
 @Injectable()
 export class AuthenticationService implements Authentication {
@@ -21,19 +22,21 @@ export class AuthenticationService implements Authentication {
   private readonly clientId: string;
   private readonly clientSecret: string;
   private readonly issuerUrl: string;
+  private readonly jwtSecret: Uint8Array;
   private readonly scope =
     'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations';
-  private jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
   private configuration: Configuration | null = null;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
+    private readonly droitsUserService: DroitsUserService,
   ) {
     this.redirectUri = this.configService.getOrThrow<string>('OIDC_REDIRECT_URI');
     this.clientId = this.configService.getOrThrow<string>('OIDC_CLIENT_ID');
     this.clientSecret = this.configService.getOrThrow<string>('OIDC_CLIENT_SECRET');
     this.issuerUrl = this.configService.getOrThrow<string>('OIDC_ISSUER_URL');
+    this.jwtSecret = new TextEncoder().encode(this.configService.getOrThrow<string>('JWT_SECRET'));
     this.logger.setContext(AuthenticationService.name);
   }
 
@@ -52,34 +55,52 @@ export class AuthenticationService implements Authentication {
     return this.configuration;
   }
 
-  private async getJWKS() {
-    const configuration = await this.getConfiguration();
-    if (!this.jwks) {
-      const metadata = configuration.serverMetadata();
-      if (!metadata.jwks_uri) {
-        throw new Error('JWKS URI not available in OIDC metadata');
-      }
-      this.jwks = createRemoteJWKSet(new URL(metadata.jwks_uri));
+  /**
+   * Forge un JWT interne Verseau2 signé avec JWT_SECRET (HMAC-SHA256).
+   * Contient les claims métier (sub, email, itvCdn, isExpertNational).
+   */
+  private async signInternalToken(
+    sub: string,
+    email: string,
+    itvCdn: number | null,
+    isExpertNational: boolean,
+    expiresIn?: number,
+  ): Promise<string> {
+    const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt();
+
+    if (expiresIn) {
+      jwt.setExpirationTime(`${expiresIn}s`);
+    } else {
+      jwt.setExpirationTime('1h');
     }
-    return this.jwks;
+
+    return jwt.sign(this.jwtSecret);
   }
 
+  /**
+   * Résout les claims métier (itvCdn, isExpertNational) depuis Lanceleau via DroitsUserService.
+   */
+  private async resolveBusinessClaims(sub: string): Promise<{ itvCdn: number | null; isExpertNational: boolean }> {
+    const [itvCdn, isExpertNational] = await Promise.all([
+      this.droitsUserService.resolveItvCdn(sub),
+      this.droitsUserService.isExpertNationalVerseau(sub),
+    ]);
+    return { itvCdn, isExpertNational };
+  }
+
+  /**
+   * Valide exclusivement le JWT interne signé par Verseau2.
+   * Tout token non signé par JWT_SECRET est rejeté (pas de fallback Cerbere).
+   */
   async validateToken(token: string): Promise<AuthenticatedUser> {
     try {
-      try {
-        // Attempt local JWT verification first
-        const jwks = await this.getJWKS();
-        const configuration = await this.getConfiguration();
-        const { payload } = await jwtVerify(token, jwks, {
-          issuer: configuration.serverMetadata().issuer,
-          audience: this.clientId,
-        });
+      const { payload } = await jwtVerify(token, this.jwtSecret, {
+        algorithms: ['HS256'],
+      });
 
-        return this.mapClaimsToUser(payload);
-      } catch {
-        // Fallback to fetchUserInfo if JWT verification fails (e.g. opaque token or local validation issues)
-        return await this.getUserInfo(token);
-      }
+      return this.mapInternalClaimsToUser(payload);
     } catch (error) {
       throw new Error(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -113,13 +134,27 @@ export class AuthenticationService implements Authentication {
 
     const user = await this.getUserInfo(tokens.access_token);
 
-    // TODO : forger un nouveau token contenant les claims : itvCdn et email pour réduire les queries DB pour le contrôle d'accès
+    // Résoudre les claims métier depuis Lanceleau
+    const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
+
+    // Forger le JWT interne Verseau2
+    const internalToken = await this.signInternalToken(
+      user.cerbereId,
+      user.mel,
+      itvCdn,
+      isExpertNational,
+      tokens.expires_in,
+    );
+
+    const enrichedUser: AuthenticatedUser = { ...user, itvCdn, isExpertNational };
+
     return {
-      accessToken: tokens.access_token,
+      accessToken: internalToken,
       idToken: tokens.id_token!,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
-      user,
+      cerbereAccessToken: tokens.access_token,
+      user: enrichedUser,
     };
   }
 
@@ -148,24 +183,27 @@ export class AuthenticationService implements Authentication {
       telephone: claims.phone_number,
       profils: claims.cerbere_profils as string[] | undefined,
       roles: claims.cerbere_roles as string[] | undefined,
+      itvCdn: null,
+      isExpertNational: false,
     };
   }
 
-  private mapClaimsToUser(claims: JWTPayload): AuthenticatedUser {
+  /**
+   * Mappe les claims du JWT interne Verseau2 vers AuthenticatedUser.
+   * Le JWT interne ne contient que sub, email, itvCdn, isExpertNational.
+   * Les autres champs (nom, prenom, etc.) ne sont pas dans le token
+   * et seront résolus depuis la DB locale si nécessaire (ex: /me).
+   */
+  private mapInternalClaimsToUser(claims: Record<string, unknown>): AuthenticatedUser {
     return {
       cerbereId: (claims.sub as string) || '',
-      login: (claims.preferred_username as string) || (claims.uid as string) || '',
-      nom: (claims.usual_name as string) || (claims.family_name as string) || '',
-      prenom: (claims.given_name as string) || '',
+      login: '',
+      nom: '',
+      prenom: '',
       mel: (claims.email as string) || '',
-      matricule: (claims.cerbere_matricule as string) || (claims.sub as string) || '',
-      unite: claims.organizational_unit as string | undefined,
-      emailMetier: claims.email_metier as string | undefined,
-      description: claims.cerbere_description as string | undefined,
-      mobile: claims.cerbere_mobile as string | undefined,
-      telephone: claims.phone_number as string | undefined,
-      profils: claims.cerbere_profils as string[] | undefined,
-      roles: claims.cerbere_roles as string[] | undefined,
+      matricule: '',
+      itvCdn: (claims.itvCdn as number) ?? null,
+      isExpertNational: (claims.isExpertNational as boolean) ?? false,
     };
   }
 
@@ -173,11 +211,27 @@ export class AuthenticationService implements Authentication {
     const configuration = await this.getConfiguration();
     const tokens = await refreshTokenGrant(configuration, refreshToken);
 
+    // Récupérer les infos utilisateur depuis le nouveau token Cerbere
+    const user = await this.getUserInfo(tokens.access_token);
+
+    // Re-résoudre les claims métier (peuvent avoir changé)
+    const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
+
+    // Re-forger le JWT interne Verseau2
+    const internalToken = await this.signInternalToken(
+      user.cerbereId,
+      user.mel,
+      itvCdn,
+      isExpertNational,
+      tokens.expires_in,
+    );
+
     return {
-      accessToken: tokens.access_token,
+      accessToken: internalToken,
       idToken: tokens.id_token || '',
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
+      cerbereAccessToken: tokens.access_token,
     };
   }
 
@@ -204,6 +258,10 @@ export class AuthenticationService implements Authentication {
       maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
     };
     res.cookie('access_token', tokens.accessToken, cookieOptions);
+
+    if (tokens.cerbereAccessToken) {
+      res.cookie('cerbere_token', tokens.cerbereAccessToken, cookieOptions);
+    }
 
     if (tokens.refreshToken) {
       res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
