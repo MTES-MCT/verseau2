@@ -95,18 +95,9 @@ describe('IndicateursController (e2e) - Caching', () => {
     jest.spyOn(authService, 'validateToken').mockImplementation(async (token) => {
       const baseUser = {
         cerbereId: 'default',
-        login: 'test-user-login',
         nom: 'Test',
         prenom: 'User',
         mel: 'dev@example.com',
-        matricule: '1234567890',
-        unite: 'DREAL',
-        emailMetier: 'dev@example.com',
-        description: 'Test',
-        mobile: '06',
-        telephone: '01',
-        profils: [],
-        roles: [],
         itvCdn: null,
         isExpertNational: false,
       };

@@ -51,11 +51,9 @@ const JWT_SECRET = 'unsupersecret';
 const createAuthenticatedUser = (user: Partial<AuthenticatedUser> = {}): AuthenticatedUser => {
   return {
     cerbereId: '',
-    login: '',
     nom: '',
     prenom: '',
     mel: '',
-    matricule: '',
     itvCdn: null,
     isExpertNational: false,
     ...user,
@@ -310,37 +308,11 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-789',
-          login: 'alice.wonder',
           nom: 'Wonder',
           prenom: 'Alice',
           mel: 'alice@example.com',
-          matricule: 'MAT789',
-          unite: 'IT Department',
-          emailMetier: 'alice.work@example.com',
-          description: 'Senior Developer',
-          mobile: '+33612345678',
-          telephone: '+33123456789',
-          profils: ['ADMIN;NATIONAL;'],
-          roles: ['ROLE_ADMIN', 'ROLE_USER'],
         }),
       );
-    });
-
-    it('should handle alternative claim names for login', async () => {
-      const userInfoWithUid = {
-        sub: 'user-999',
-        uid: 'bob.builder',
-        family_name: 'Builder',
-        given_name: 'Bob',
-        email: 'bob@example.com',
-      };
-
-      (fetchUserInfo as jest.Mock).mockResolvedValue(userInfoWithUid);
-
-      const result = await service.getUserInfo(mockAccessToken);
-
-      expect(result.login).toBe('bob.builder');
-      expect(result.nom).toBe('Builder');
     });
 
     it('should handle missing optional fields', async () => {
@@ -360,11 +332,9 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-minimal',
-          login: 'minimal.user',
           nom: 'User',
           prenom: 'Minimal',
           mel: 'minimal@example.com',
-          matricule: 'MIN001',
         }),
       );
     });

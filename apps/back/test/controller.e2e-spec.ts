@@ -188,11 +188,9 @@ describe('ControleController (e2e) - UseOrGuards', () => {
     overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
   ): import('@authentication/authentication').AuthenticatedUser => ({
     cerbereId: TEST_USER_SUB,
-    login: 'test-user-login',
     nom: 'Test',
     prenom: 'User',
     mel: TEST_USER_EMAIL,
-    matricule: '1234567890',
     itvCdn: null,
     isExpertNational: false,
     ...overrides,

@@ -91,18 +91,9 @@ export class AuthenticationMockService implements Authentication {
   private getMockUser(): AuthenticatedUser {
     return {
       cerbereId: 'test-user-id',
-      login: 'test-user-login',
       nom: 'Test',
       prenom: 'User',
       mel: 'dev@example.com',
-      matricule: '1234567890',
-      unite: 'DREAL Île-de-France',
-      emailMetier: 'dev.metier@example.com',
-      description: 'Développeur test',
-      mobile: '0601020304',
-      telephone: '0140506070',
-      profils: ['CONSULTANT;fr;none', 'GESTIONNAIRE;fr;75'],
-      roles: ['CONSULTANT', 'GESTIONNAIRE'],
       itvCdn: null,
       isExpertNational: false,
     };
