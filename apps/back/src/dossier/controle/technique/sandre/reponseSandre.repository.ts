@@ -53,10 +53,6 @@ export class ReponseSandreRepository extends Repository<ReponseSandreEntity> imp
     return await this.findReponseSandreById(id);
   }
 
-  async findByJeton(jeton: string): Promise<ReponseSandreModel | null> {
-    return await this.findOne({ where: { jeton } });
-  }
-
   async findByDepotId(depotId: string): Promise<ReponseSandreModel[]> {
     return await this.find({ where: { depot: { id: depotId } }, relations: ['depot'] });
   }

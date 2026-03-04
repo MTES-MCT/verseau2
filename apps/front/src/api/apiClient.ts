@@ -51,47 +51,6 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 }
 
 /**
- * GET request helper
- */
-export async function apiGet<T>(endpoint: string): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const response = await authenticatedFetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new ApiError(`GET ${endpoint} failed: ${message}`, response.status, response.statusText);
-  }
-
-  return response.json();
-}
-
-/**
- * POST request helper
- */
-export async function apiPost<T>(endpoint: string, body?: unknown): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const response = await authenticatedFetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new ApiError(`POST ${endpoint} failed: ${message}`, response.status, response.statusText);
-  }
-
-  return response.json();
-}
-
-/**
  * POST with FormData (for file uploads)
  */
 export async function apiPostFormData<T>(endpoint: string, formData: FormData): Promise<T> {

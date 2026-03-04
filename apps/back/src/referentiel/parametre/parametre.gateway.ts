@@ -30,10 +30,6 @@ export class ParametreGateway {
     }
   }
 
-  findCodesByParametres(ids: string[]): (number | null)[] {
-    return ids.map((id) => this.findCodeParametreById(id as keyof typeof CodeParametre));
-  }
-
   findParametresByCodes(codes: string[] | string): (string | null)[] {
     const codeList = Array.isArray(codes) ? codes : [codes];
     // Convert strings to numbers

@@ -42,32 +42,12 @@ export class RoseauRepository implements RoseauGateway {
     private readonly stchanRepository: Repository<StchanEntity>,
   ) {}
 
-  async findAga(): Promise<AgaEntity[]> {
-    return this.agaRepository.find();
-  }
-
-  async findScl(): Promise<SclEntity[]> {
-    return this.sclRepository.find();
-  }
-
   async findSteu(): Promise<SteuEntity[]> {
     return this.steuRepository.find();
   }
 
-  async findAgaById(id: number): Promise<AgaEntity | null> {
-    return this.agaRepository.findOne({ where: { agaCdn: id } });
-  }
-
-  async findSclById(id: number): Promise<SclEntity | null> {
-    return this.sclRepository.findOne({ where: { sclCdn: id } });
-  }
-
   async findSclBySandreCda(sandreCda: string): Promise<SclEntity | null> {
     return this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
-  }
-
-  async findSteuById(id: number): Promise<SteuEntity | null> {
-    return this.steuRepository.findOne({ where: { steuCdn: id } });
   }
 
   async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
@@ -87,10 +67,6 @@ export class RoseauRepository implements RoseauGateway {
     return this.cxnadmRepository.findOne({ where: { moSteuCdn: steuCdn, steuItvCdn: itvCdn } });
   }
 
-  async findCxnAdmByExpSteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
-    return this.cxnadmRepository.findOne({ where: { expSteuCdn: steuCdn, steuItvCdn: itvCdn } });
-  }
-
   async checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>> {
     if (links.length === 0) return new Set();
     const rows = await this.cxnadmRepository
@@ -108,26 +84,6 @@ export class RoseauRepository implements RoseauGateway {
       )
       .getRawMany<{ steu_cdn: number; itv_cdn: number }>();
     return new Set(rows.map((r) => `${r.steu_cdn}:${r.itv_cdn}`));
-  }
-
-  async findPmoBySteuAndNumero(steuCdn: number, pmoNo: string): Promise<PmoEntity | null> {
-    return this.pmoRepository.findOne({ where: { steuCdn: steuCdn, pmoNo: pmoNo } });
-  }
-
-  async findPmoBySteuNumeroAndLocPoint(
-    cdOuvrageDepollution: string,
-    numeroPointMesure: string,
-    codeLocPoint: string,
-  ): Promise<PmoEntity | null> {
-    const query = this.pmoRepository
-      .createQueryBuilder('pmo')
-      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
-      .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
-      .where('steu.steu_sandre_cda = :cdOuvrageDepollution', { cdOuvrageDepollution })
-      .andWhere('pmo.pmo_no = :numeroPointMesure', { numeroPointMesure }) // ex: 14 ou 0229000001
-      .andWhere('t16.tlref_elt_cda = :codeLocPoint', { codeLocPoint }); // ex: S14 ou S15
-
-    return query.getOne();
   }
 
   async checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>> {
@@ -156,31 +112,6 @@ export class RoseauRepository implements RoseauGateway {
 
   async findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null> {
     return this.tlrefRepository.findOne({ where: { trlRfa: trlRfa, tlrefEltCda: tlrefEltCda } });
-  }
-
-  async findCxnTechBySclAndAga(sclCdn: number, agaZgcCdn: number): Promise<CxntechEntity | null> {
-    return this.cxntechRepository.findOne({ where: { avalSclCdn: sclCdn, amontZgcCdn: agaZgcCdn } });
-  }
-
-  async isSystemeCollecteLinkedToAgglomeration(
-    cdSystemeCollecte: string,
-    cdAgglomerationAssainissement: string,
-  ): Promise<boolean> {
-    const row = await this.sclRepository
-      .createQueryBuilder('scl')
-      .select('scl.scl_cdn', 'scl_cdn')
-      .innerJoin(AgaEntity, 'aga', 'aga.aga_sandre_cda = :cdAgglo', {
-        cdAgglo: cdAgglomerationAssainissement,
-      })
-      .innerJoin(
-        CxntechEntity,
-        'cxntech',
-        'cxntech.aval_scl_cdn = scl.scl_cdn AND cxntech.amont_zgc_cdn = aga.zgc_cdn AND cxntech.cxntech_retrait_dt IS NULL',
-      )
-      .where('scl.scl_sandre_cda = :cdScl', { cdScl: cdSystemeCollecte })
-      .getRawOne<{ scl_cdn: string }>();
-
-    return Boolean(row);
   }
 
   async checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>> {
@@ -213,28 +144,6 @@ export class RoseauRepository implements RoseauGateway {
     return result?.capacite_nominale ?? null;
   }
 
-  async findConcentrationMoyenneAnnuelle(
-    steuSandreCda: string,
-    year: number,
-    parametreCodes: string[],
-  ): Promise<Map<string, number>> {
-    const rows = await this.resaRepository
-      .createQueryBuilder('r')
-      .select('r.par_rfa', 'par_rfa')
-      .addSelect('r.resa_cma_val', 'resa_cma_val')
-      .innerJoin(SteuEntity, 's', 's.steu_cdn = r.steu_cdn')
-      .where('s.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
-      .andWhere('r.resa_an = :year', { year })
-      .andWhere('r.par_rfa IN (:...parametreCodes)', { parametreCodes })
-      .getRawMany<{ par_rfa: string; resa_cma_val: string }>();
-
-    const map = new Map<string, number>();
-    for (const row of rows) {
-      map.set(row.par_rfa, parseFloat(row.resa_cma_val));
-    }
-    return map;
-  }
-
   async findConcentrationsMoyennesAnnuellesBatch(
     steuSandreCdas: string[],
     year: number,
@@ -260,26 +169,6 @@ export class RoseauRepository implements RoseauGateway {
       paramCode: row.par_rfa.trim(),
       value: parseFloat(row.resa_cma_val),
     }));
-  }
-
-  async findMaxDebitReference(steuSandreCda: string): Promise<number | null> {
-    const result = await this.stchanRepository
-      .createQueryBuilder('t')
-      .select('t.stchan_pc95_val', 'pc95')
-      .addSelect('c.cpy_ref_debit_mt', 'dref')
-      .innerJoin(SteuEntity, 's', 's.steu_cdn = t.steu_cdn')
-      .innerJoin(CpyEntity, 'c', 'c.steu_cdn = s.steu_cdn')
-      .where('s.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
-      .andWhere('t.stchan_an = s.steu_encours_an')
-      .andWhere('c.cpy_an = s.steu_encours_an')
-      .getRawOne<{ pc95: number | null; dref: number | null }>();
-
-    if (!result) return null;
-
-    const pc95 = result.pc95 ? parseFloat(result.pc95.toString()) : 0;
-    const dref = result.dref ? parseFloat(result.dref.toString()) : 0;
-
-    return Math.max(pc95, dref);
   }
 
   async findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]> {

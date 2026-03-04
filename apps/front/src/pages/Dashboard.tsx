@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { type ControleLocationState } from './Controle';
+import { getControleRoute } from '../routes';
 
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
@@ -99,7 +100,7 @@ export function Dashboard() {
     depot.createdAt ? formatDate(depot.createdAt) : '-',
     <div key={depot.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
       <Link
-        to={`/controle/${depot.id}`}
+        to={getControleRoute(depot.id)}
         state={{ numeroDepotVerseau1: depot.numeroDepotVerseau1 } as ControleLocationState}
         className="fr-btn fr-btn--sm fr-btn--tertiary-no-outline"
       >
