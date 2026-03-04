@@ -13,7 +13,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
-import { Authentication, AuthenticatedUser, AuthenticatedUserWithIntervenant } from './authentication';
+import { Authentication, AuthenticatedUserWithIntervenant, AuthenticatedUserAndNomPrenom } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
 import { MeGuard } from './me.guard';
@@ -135,13 +135,13 @@ export class AuthenticationController {
 
     // Récupérer le profil complet depuis la DB locale (nom, prenom, email sont synchronisés au login).
     // Si l'utilisateur n'existe plus en base (reset DB, compte supprimé), on fallback sur les claims du token.
-    let user: AuthenticatedUser;
+    let user: AuthenticatedUserAndNomPrenom;
     try {
       const userFromDb = await this.userService.findBySub(authenticatedUser.cerbereId);
       user = {
         ...authenticatedUser,
-        nom: userFromDb.nom || authenticatedUser.nom,
-        prenom: userFromDb.prenom || authenticatedUser.prenom,
+        nom: userFromDb.nom,
+        prenom: userFromDb.prenom,
         mel: userFromDb.email || authenticatedUser.mel,
       };
     } catch (error) {

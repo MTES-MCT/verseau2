@@ -19,7 +19,7 @@ import type { Response } from 'express';
 export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
-  handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }>;
+  handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
   getUserInfo(accessToken: string): Promise<AuthenticatedUser>;
   refreshTokens(refreshToken: string): Promise<OIDCTokens>;
   generateLogoutUrl(idToken: string): Promise<string>;
@@ -29,11 +29,14 @@ export interface Authentication {
 
 export interface AuthenticatedUser {
   cerbereId: string; // Identifiant Cerbere interne (sub)
-  nom: string; // usual_name
-  prenom: string; // given_name
   mel: string; // email
   itvCdn: number | null; // code intervenant Lanceleau, embarqué dans le token interne
   isExpertNational: boolean; // rôle 305 Lanceleau, embarqué dans le token interne
+}
+
+export interface AuthenticatedUserAndNomPrenom extends AuthenticatedUser {
+  nom?: string;
+  prenom?: string;
 }
 
 export interface AuthenticatedUserWithIntervenant {

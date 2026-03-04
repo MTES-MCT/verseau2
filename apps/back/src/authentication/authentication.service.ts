@@ -10,7 +10,13 @@ import {
   skipSubjectCheck,
   type UserInfoResponse,
 } from 'openid-client';
-import { Authentication, AuthenticatedUser, OIDCTokens, OIDCConfiguration } from './authentication';
+import {
+  Authentication,
+  AuthenticatedUser,
+  OIDCTokens,
+  OIDCConfiguration,
+  AuthenticatedUserAndNomPrenom,
+} from './authentication';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SignJWT, jwtVerify } from 'jose';
@@ -122,7 +128,7 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }> {
+  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     const configuration = await this.getConfiguration();
     const callbackUrl = new URL(this.redirectUri);
     callbackUrl.searchParams.set('code', code);
@@ -171,8 +177,6 @@ export class AuthenticationService implements Authentication {
   private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
     return {
       cerbereId: claims.sub,
-      nom: (claims.usual_name as string) || (claims.family_name as string) || '',
-      prenom: (claims.given_name as string) || '',
       mel: (claims.email as string) || '',
       itvCdn: null,
       isExpertNational: false,
@@ -188,8 +192,6 @@ export class AuthenticationService implements Authentication {
   private mapInternalClaimsToUser(claims: Record<string, unknown>): AuthenticatedUser {
     return {
       cerbereId: (claims.sub as string) || '',
-      nom: '',
-      prenom: '',
       mel: (claims.email as string) || '',
       itvCdn: (claims.itvCdn as number) ?? null,
       isExpertNational: (claims.isExpertNational as boolean) ?? false,

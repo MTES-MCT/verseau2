@@ -86,8 +86,6 @@ export class AuthenticationMockService implements Authentication {
   private getMockUser(): AuthenticatedUser {
     return {
       cerbereId: 'test-user-id',
-      nom: 'Test',
-      prenom: 'User',
       mel: 'dev@example.com',
       itvCdn: null,
       isExpertNational: false,
