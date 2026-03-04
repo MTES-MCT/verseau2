@@ -51,8 +51,6 @@ const JWT_SECRET = 'unsupersecret';
 const createAuthenticatedUser = (user: Partial<AuthenticatedUser> = {}): AuthenticatedUser => {
   return {
     cerbereId: '',
-    nom: '',
-    prenom: '',
     mel: '',
     itvCdn: null,
     isExpertNational: false,
@@ -308,8 +306,6 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-789',
-          nom: 'Wonder',
-          prenom: 'Alice',
           mel: 'alice@example.com',
         }),
       );
@@ -332,8 +328,6 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-minimal',
-          nom: 'User',
-          prenom: 'Minimal',
           mel: 'minimal@example.com',
         }),
       );
