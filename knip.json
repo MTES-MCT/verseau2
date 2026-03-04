@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": ["-lintignore"],
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [],
+      "project": [],
+      "ignoreDependencies": ["@eslint/js", "globals", "typescript-eslint"]
+    },
+    "apps/back": {
+      "entry": [
+        "src/main.ts",
+        "src/mainServer.ts",
+        "src/mainWorker.ts",
+        "src/infra/database/migrationDatasource.ts",
+        "test/**/*.ts"
+      ],
+      "project": ["src/**/*.ts", "test/**/*.ts"],
+      "ignore": ["src/**/*.mock*.ts", "**/generateDummyPdf.ts"],
+      "ignoreDependencies": ["source-map-support", "ts-loader", "@eslint/eslintrc", "testcontainers", "@types/multer"]
+    },
+    "apps/front": {
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/parser": {
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/sandreConstants.ts"]
+    },
+    "packages/dossier": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/shared": {
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

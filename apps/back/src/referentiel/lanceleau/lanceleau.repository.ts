@@ -105,14 +105,6 @@ export class LanceleauRepository implements LanceleauGateway {
     return this.orionCredentialsRepository.findOne({ where: { prCdn } });
   }
 
-  async findVSteuSclItvBySteu(steuCda: string): Promise<VSteuSclItvEntity | null> {
-    return this.vSteuSclItvRepository.findOne({ where: { steuCda } });
-  }
-
-  async findVSteuSclItvByScl(sclCda: string): Promise<VSteuSclItvEntity | null> {
-    return this.vSteuSclItvRepository.findOne({ where: { sclCda } });
-  }
-
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]> {
     if (steuCodes.length === 0 && sclCodes.length === 0) {
       return [];
