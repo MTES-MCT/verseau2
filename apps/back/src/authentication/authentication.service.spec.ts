@@ -466,7 +466,7 @@ describe('AuthenticationService', () => {
   });
 
   describe('buildCookieResponse', () => {
-    it('should set access_token, cerbere_token and refresh_token cookies', () => {
+    it('should set access_token and refresh_token cookies', () => {
       const mockRes = {
         cookie: jest.fn(),
       } as unknown as import('express').Response;
@@ -476,7 +476,6 @@ describe('AuthenticationService', () => {
         idToken: 'id-token',
         refreshToken: 'refresh-token',
         expiresIn: 3600,
-        cerbereAccessToken: 'cerbere-token',
       });
 
       expect(mockRes.cookie).toHaveBeenCalledWith(
@@ -488,15 +487,7 @@ describe('AuthenticationService', () => {
           sameSite: 'strict',
         }),
       );
-      expect(mockRes.cookie).toHaveBeenCalledWith(
-        'cerbere_token',
-        'cerbere-token',
-        expect.objectContaining({
-          httpOnly: true,
-          secure: true,
-          sameSite: 'strict',
-        }),
-      );
+
       expect(mockRes.cookie).toHaveBeenCalledWith(
         'refresh_token',
         'refresh-token',
@@ -506,21 +497,6 @@ describe('AuthenticationService', () => {
           sameSite: 'strict',
         }),
       );
-    });
-
-    it('should not set cerbere_token cookie when cerbereAccessToken is undefined', () => {
-      const mockRes = {
-        cookie: jest.fn(),
-      } as unknown as import('express').Response;
-
-      service.buildCookieResponse(mockRes, {
-        accessToken: 'internal-jwt',
-        idToken: 'id-token',
-        expiresIn: 3600,
-      });
-
-      expect(mockRes.cookie).toHaveBeenCalledWith('access_token', 'internal-jwt', expect.any(Object));
-      expect(mockRes.cookie).not.toHaveBeenCalledWith('cerbere_token', expect.anything(), expect.anything());
     });
   });
 });

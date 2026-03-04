@@ -254,10 +254,6 @@ export class AuthenticationService implements Authentication {
     };
     res.cookie('access_token', tokens.accessToken, cookieOptions);
 
-    if (tokens.cerbereAccessToken) {
-      res.cookie('cerbere_token', tokens.cerbereAccessToken, cookieOptions);
-    }
-
     if (tokens.refreshToken) {
       res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
     }
@@ -265,7 +261,6 @@ export class AuthenticationService implements Authentication {
 
   clearCookieResponse(res: Response): void {
     res.clearCookie('access_token', this.baseCookieOptions);
-    res.clearCookie('cerbere_token', this.baseCookieOptions);
     res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 }

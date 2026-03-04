@@ -72,7 +72,7 @@ export class AuthenticationController {
         );
       }
 
-      // Set cookies via AuthenticationService helper (access_token = JWT interne, cerbere_token, refresh_token)
+      // Set cookies via AuthenticationService helper (access_token = JWT interne, refresh_token)
       this.authentication.buildCookieResponse(res, {
         accessToken: result.accessToken,
         idToken: result.idToken,
@@ -102,7 +102,7 @@ export class AuthenticationController {
     try {
       const tokens = await this.authentication.refreshTokens(refreshToken);
 
-      // Set cookies via AuthenticationService helper (re-forged internal token + cerbere_token)
+      // Set cookies via AuthenticationService helper (re-forged internal token)
       this.authentication.buildCookieResponse(res, tokens);
 
       return {

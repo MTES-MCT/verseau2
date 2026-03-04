@@ -73,10 +73,6 @@ export class AuthenticationMockService implements Authentication {
     // In mock, set cookies similarly to real implementation for tests
     res.cookie('access_token', tokens.accessToken, this.baseCookieOptions);
 
-    if (tokens.cerbereAccessToken) {
-      res.cookie('cerbere_token', tokens.cerbereAccessToken, this.baseCookieOptions);
-    }
-
     if (tokens.refreshToken) {
       res.cookie('refresh_token', tokens.refreshToken, this.baseCookieOptions);
     }
@@ -84,7 +80,6 @@ export class AuthenticationMockService implements Authentication {
 
   clearCookieResponse(res: Response): void {
     res.clearCookie('access_token', this.baseCookieOptions);
-    res.clearCookie('cerbere_token', this.baseCookieOptions);
     res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 
