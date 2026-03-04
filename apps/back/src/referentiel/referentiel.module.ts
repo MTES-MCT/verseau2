@@ -9,8 +9,6 @@ import { RoseauRepository } from './roseau/roseau.repository';
 import { LanceleauGateway } from './lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from './lanceleau/lanceleau.repository';
 import { ItvEntity } from './lanceleau/entities/itv.entity';
-import { ReferentielGateway } from './referentiel.gateway';
-import { ReferentielRepository } from './referentiel.repository';
 import { ReferentielController } from './referentiel.controller';
 import { PmoEntity } from './roseau/entities/pmo.entity';
 import { TlrefEntity } from './roseau/entities/tlref.entity';
@@ -66,7 +64,6 @@ import { ParametreGateway } from './parametre/parametre.gateway';
   providers: [
     { provide: RoseauGateway, useClass: RoseauRepository },
     { provide: LanceleauGateway, useClass: LanceleauRepository },
-    { provide: ReferentielGateway, useClass: ReferentielRepository },
     ParametreGateway,
   ],
   exports: [RoseauGateway, LanceleauGateway],

@@ -26,8 +26,6 @@ export class LanceleauRepository implements LanceleauGateway {
     private readonly parRepository: Repository<ParEntity>,
     @InjectRepository(UrfEntity)
     private readonly urfRepository: Repository<UrfEntity>,
-    @InjectRepository(OrionCredentialsEntity)
-    private readonly orionCredentialsRepository: Repository<OrionCredentialsEntity>,
     @InjectRepository(OrionRoleForPrincipalEntity)
     private readonly orionRoleForPrincipalRepository: Repository<OrionRoleForPrincipalEntity>,
     @InjectRepository(AgEntity)
@@ -35,14 +33,6 @@ export class LanceleauRepository implements LanceleauGateway {
     @InjectRepository(VSteuSclItvEntity)
     private readonly vSteuSclItvRepository: Repository<VSteuSclItvEntity>,
   ) {}
-
-  async findItv(): Promise<ItvEntity[]> {
-    return this.itvRepository.find();
-  }
-
-  async findItvById(id: number): Promise<ItvEntity | null> {
-    return this.itvRepository.findOne({ where: { itvCdn: id } });
-  }
 
   async findByItvCdn(itvCdn: number): Promise<ItvEntity | null> {
     return this.itvRepository.findOne({ where: { itvCdn } });
@@ -77,16 +67,8 @@ export class LanceleauRepository implements LanceleauGateway {
     return this.urfRepository.findOne({ where: { urfRfa } });
   }
 
-  async findOrionCredentialsByEmail(email: string): Promise<OrionCredentialsEntity | null> {
-    return this.orionCredentialsRepository.findOne({ where: { mail: email } });
-  }
-
   async findOrionRoleForPrincipal(prCdn: number, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null> {
     return this.orionRoleForPrincipalRepository.findOne({ where: { prCdn, roleCdn } });
-  }
-
-  async findAgByPrCdn(prCdn: number): Promise<AgEntity | null> {
-    return this.agRepository.findOne({ where: { prCdn } });
   }
 
   async findAgByEmail(email: string): Promise<AgEntity | null> {
@@ -95,14 +77,6 @@ export class LanceleauRepository implements LanceleauGateway {
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
       .where('oc.mail = :email', { email })
       .getOne();
-  }
-
-  async findAgsByItvCdn(itvCdn: number): Promise<AgEntity[]> {
-    return this.agRepository.find({ where: { itvCdn } });
-  }
-
-  async findOrionCredentialsByPrCdn(prCdn: number): Promise<OrionCredentialsEntity | null> {
-    return this.orionCredentialsRepository.findOne({ where: { prCdn } });
   }
 
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]> {
