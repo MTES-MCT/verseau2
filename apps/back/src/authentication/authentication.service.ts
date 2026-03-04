@@ -238,12 +238,18 @@ export class AuthenticationService implements Authentication {
     return logoutUrl.toString();
   }
 
-  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    const cookieOptions: CookieOptions = {
+  private get baseCookieOptions(): CookieOptions {
+    return {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
       path: '/',
+    };
+  }
+
+  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
+    const cookieOptions: CookieOptions = {
+      ...this.baseCookieOptions,
       maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
     };
     res.cookie('access_token', tokens.accessToken, cookieOptions);
@@ -255,5 +261,11 @@ export class AuthenticationService implements Authentication {
     if (tokens.refreshToken) {
       res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
     }
+  }
+
+  clearCookieResponse(res: Response): void {
+    res.clearCookie('access_token', this.baseCookieOptions);
+    res.clearCookie('cerbere_token', this.baseCookieOptions);
+    res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 }

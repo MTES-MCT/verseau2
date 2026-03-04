@@ -6,13 +6,14 @@ import {
   Inject,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
   Req,
   Res,
   UseGuards,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
-import { Authentication, AuthenticatedUserWithIntervenant } from './authentication';
+import { Authentication, AuthenticatedUser, AuthenticatedUserWithIntervenant } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
 import { MeGuard } from './me.guard';
@@ -120,10 +121,7 @@ export class AuthenticationController {
       throw new BadRequestException('Missing ID token');
     }
 
-    const cookieOptions = { path: '/', httpOnly: true, secure: true, sameSite: 'strict' as const };
-    res.clearCookie('access_token', cookieOptions);
-    res.clearCookie('cerbere_token', cookieOptions);
-    res.clearCookie('refresh_token', cookieOptions);
+    this.authentication.clearCookieResponse(res);
 
     const logoutUrl = await this.authentication.generateLogoutUrl(idToken);
     return { logoutUrl };
@@ -135,16 +133,24 @@ export class AuthenticationController {
   async me(@Req() req: CustomRequest): Promise<AuthenticatedUserWithIntervenant> {
     const authenticatedUser = req.user;
 
-    // Récupérer le profil complet depuis la DB locale (nom, prenom, email sont synchronisés au login)
-    const userFromDb = await this.userService.findBySub(authenticatedUser.cerbereId);
-
-    // Enrichir l'utilisateur avec les données de la DB locale
-    const user = {
-      ...authenticatedUser,
-      nom: userFromDb?.nom || authenticatedUser.nom,
-      prenom: userFromDb?.prenom || authenticatedUser.prenom,
-      mel: userFromDb?.email || authenticatedUser.mel,
-    };
+    // Récupérer le profil complet depuis la DB locale (nom, prenom, email sont synchronisés au login).
+    // Si l'utilisateur n'existe plus en base (reset DB, compte supprimé), on fallback sur les claims du token.
+    let user: AuthenticatedUser;
+    try {
+      const userFromDb = await this.userService.findBySub(authenticatedUser.cerbereId);
+      user = {
+        ...authenticatedUser,
+        nom: userFromDb.nom || authenticatedUser.nom,
+        prenom: userFromDb.prenom || authenticatedUser.prenom,
+        mel: userFromDb.email || authenticatedUser.mel,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        user = authenticatedUser;
+      } else {
+        throw error;
+      }
+    }
 
     // Résoudre le nom de l'intervenant depuis Lanceleau (donnée d'affichage uniquement)
     const intervenant = authenticatedUser.itvCdn

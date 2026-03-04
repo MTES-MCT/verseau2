@@ -24,6 +24,7 @@ export interface Authentication {
   refreshTokens(refreshToken: string): Promise<OIDCTokens>;
   generateLogoutUrl(idToken: string): Promise<string>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;
+  clearCookieResponse(res: Response): void;
 }
 
 export interface AuthenticatedUser {

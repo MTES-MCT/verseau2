@@ -60,32 +60,32 @@ export class AuthenticationMockService implements Authentication {
     return Promise.resolve('http://localhost:5173');
   }
 
-  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    // In mock, set cookies similarly to real implementation for tests
-    res.cookie('access_token', tokens.accessToken, {
+  private get baseCookieOptions() {
+    return {
       httpOnly: true,
       secure: false,
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       path: '/',
-    });
+    };
+  }
+
+  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
+    // In mock, set cookies similarly to real implementation for tests
+    res.cookie('access_token', tokens.accessToken, this.baseCookieOptions);
 
     if (tokens.cerbereAccessToken) {
-      res.cookie('cerbere_token', tokens.cerbereAccessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        path: '/',
-      });
+      res.cookie('cerbere_token', tokens.cerbereAccessToken, this.baseCookieOptions);
     }
 
     if (tokens.refreshToken) {
-      res.cookie('refresh_token', tokens.refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        path: '/',
-      });
+      res.cookie('refresh_token', tokens.refreshToken, this.baseCookieOptions);
     }
+  }
+
+  clearCookieResponse(res: Response): void {
+    res.clearCookie('access_token', this.baseCookieOptions);
+    res.clearCookie('cerbere_token', this.baseCookieOptions);
+    res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 
   private getMockUser(): AuthenticatedUser {
