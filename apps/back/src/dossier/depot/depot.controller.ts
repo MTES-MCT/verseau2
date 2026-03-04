@@ -101,8 +101,8 @@ export class DepotController {
       itvCdn,
       utilisateur: {
         id: userEntity.id,
-        nom: user.nom,
-        prenom: user.prenom,
+        nom: userEntity.nom,
+        prenom: userEntity.prenom,
       },
     });
 

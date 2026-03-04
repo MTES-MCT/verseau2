@@ -7,6 +7,7 @@ import type { Response } from 'express';
 export class AuthenticationMockService implements Authentication {
   constructor(private readonly configService: ConfigService) {}
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async validateToken(token: string): Promise<AuthenticatedUser> {
     const providedToken = token?.trim();
 
@@ -26,6 +27,7 @@ export class AuthenticationMockService implements Authentication {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
   async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }> {
     const fakeToken = 'mock-token';
     return {
@@ -37,10 +39,12 @@ export class AuthenticationMockService implements Authentication {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
   async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
     return this.getMockUser();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
   async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
     const fakeToken = 'mock-token';
     return {
@@ -51,44 +55,40 @@ export class AuthenticationMockService implements Authentication {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   generateLogoutUrl(idToken: string): Promise<string> {
     return Promise.resolve('http://localhost:5173');
   }
 
-  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    // In mock, set cookies similarly to real implementation for tests
-    res.cookie('access_token', tokens.accessToken, {
+  private get baseCookieOptions() {
+    return {
       httpOnly: true,
       secure: false,
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       path: '/',
-    });
+    };
+  }
+
+  buildCookieResponse(res: Response, tokens: OIDCTokens): void {
+    // In mock, set cookies similarly to real implementation for tests
+    res.cookie('access_token', tokens.accessToken, this.baseCookieOptions);
 
     if (tokens.refreshToken) {
-      res.cookie('refresh_token', tokens.refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax',
-        path: '/',
-      });
+      res.cookie('refresh_token', tokens.refreshToken, this.baseCookieOptions);
     }
+  }
+
+  clearCookieResponse(res: Response): void {
+    res.clearCookie('access_token', this.baseCookieOptions);
+    res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 
   private getMockUser(): AuthenticatedUser {
     return {
       cerbereId: 'test-user-id',
-      login: 'test-user-login',
-      nom: 'Test',
-      prenom: 'User',
       mel: 'dev@example.com',
-      matricule: '1234567890',
-      unite: 'DREAL Île-de-France',
-      emailMetier: 'dev.metier@example.com',
-      description: 'Développeur test',
-      mobile: '0601020304',
-      telephone: '0140506070',
-      profils: ['CONSULTANT;fr;none', 'GESTIONNAIRE;fr;75'],
-      roles: ['CONSULTANT', 'GESTIONNAIRE'],
+      itvCdn: null,
+      isExpertNational: false,
     };
   }
 }

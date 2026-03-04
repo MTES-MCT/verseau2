@@ -4,10 +4,6 @@ import { IsAdminGuard } from './isAdmin.guard';
 describe('IsAdminGuard', () => {
   let guard: IsAdminGuard;
 
-  const mockDroitsUserService = {
-    isExpertNationalVerseau: jest.fn<Promise<boolean>, [string]>(),
-  };
-
   const mockLogger = {
     warn: jest.fn(),
     setContext: jest.fn(),
@@ -23,32 +19,28 @@ describe('IsAdminGuard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    guard = new IsAdminGuard(mockLogger as never, mockDroitsUserService as never);
+    guard = new IsAdminGuard(mockLogger as never);
   });
 
-  it("retourne true si l'utilisateur est expert national Verseau", async () => {
-    mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(true);
-    const context = buildContext({ cerbereId: 'expert-sub' });
+  it("retourne true si l'utilisateur est expert national Verseau", () => {
+    const context = buildContext({ cerbereId: 'expert-sub', isExpertNational: true, itvCdn: 42 });
 
-    const result = await guard.canActivate(context);
+    const result = guard.canActivate(context);
 
     expect(result).toBe(true);
-    expect(mockDroitsUserService.isExpertNationalVerseau).toHaveBeenCalledWith('expert-sub');
   });
 
-  it("retourne false si l'utilisateur n'est pas expert national Verseau", async () => {
-    mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(false);
-    const context = buildContext({ cerbereId: 'regular-sub' });
+  it("retourne false si l'utilisateur n'est pas expert national Verseau", () => {
+    const context = buildContext({ cerbereId: 'regular-sub', isExpertNational: false, itvCdn: 42 });
 
-    const result = await guard.canActivate(context);
+    const result = guard.canActivate(context);
 
     expect(result).toBe(false);
   });
 
-  it('lève ForbiddenException si aucun utilisateur authentifié', async () => {
+  it('lève ForbiddenException si aucun utilisateur authentifié', () => {
     const context = buildContext(undefined);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
-    expect(mockDroitsUserService.isExpertNationalVerseau).not.toHaveBeenCalled();
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 });

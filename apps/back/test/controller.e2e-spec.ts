@@ -28,9 +28,6 @@ import {
   createLanceleauTables,
   createReferentielSchemas,
   clearLanceleauData,
-  seedOrionCredentials,
-  seedAg,
-  seedOrionRoleForPrincipal,
   seedUser,
   seedDepot,
   clearUserData,
@@ -179,14 +176,23 @@ describe('Controller (e2e) - Unauthorized', () => {
 describe('ControleController (e2e) - UseOrGuards', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
+  let authService: Authentication;
 
   const TEST_USER_SUB = 'test-user-id';
   const TEST_USER_EMAIL = 'dev@example.com';
-  const PR_CDN = 1;
   const OWNER_ITV_CDN = 100;
   const OTHER_ITV_CDN = 999;
-  const ROLE_EXPERT_NATIONAL = 305;
   const DEPOT_ID = 'dep_guard-test-depot';
+
+  const mockUser = (
+    overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
+  ): import('@authentication/authentication').AuthenticatedUser => ({
+    cerbereId: TEST_USER_SUB,
+    mel: TEST_USER_EMAIL,
+    itvCdn: null,
+    isExpertNational: false,
+    ...overrides,
+  });
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -206,6 +212,7 @@ describe('ControleController (e2e) - UseOrGuards', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    authService = app.get<Authentication>(Authentication);
 
     await createReferentielSchemas(dataSource);
     await createLanceleauTables(dataSource);
@@ -216,18 +223,14 @@ describe('ControleController (e2e) - UseOrGuards', () => {
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await clearLanceleauData(dataSource);
     await clearDepotData(dataSource, DEPOT_ID);
     await clearUserData(dataSource, TEST_USER_SUB);
   });
 
-  async function seedUserWithItv(itvCdn: number) {
-    await seedUser(dataSource, 'guard-test-user', TEST_USER_SUB, TEST_USER_EMAIL);
-    await seedOrionCredentials(dataSource, PR_CDN, TEST_USER_EMAIL, 'test-login');
-    await seedAg(dataSource, PR_CDN, itvCdn);
-  }
-
   it('/depot/:depotId/controle (GET) - Should return 404 when depot does not exist', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: OWNER_ITV_CDN }));
     return request(app.getHttpServer())
       .get('/depot/nonexistent-depot-id/controle')
       .set('Cookie', ['access_token=token-user-1'])
@@ -236,8 +239,10 @@ describe('ControleController (e2e) - UseOrGuards', () => {
 
   describe('when user owns the depot (HasUserAccessToDepotGuard passes)', () => {
     beforeEach(async () => {
-      await seedUserWithItv(OWNER_ITV_CDN);
+      await seedUser(dataSource, 'guard-test-user', TEST_USER_SUB, TEST_USER_EMAIL);
       await seedDepot(dataSource, DEPOT_ID, OWNER_ITV_CDN, DepotStatus.EN_COURS_DE_TRAITEMENT);
+      // Le token JWT interne contient itvCdn = OWNER_ITV_CDN, qui correspond au dépôt
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: OWNER_ITV_CDN }));
     });
 
     it('/depot/:depotId/controle (GET) - Should return 200', async () => {
@@ -264,9 +269,12 @@ describe('ControleController (e2e) - UseOrGuards', () => {
 
   describe('when user is admin / expert national (IsAdminGuard passes)', () => {
     beforeEach(async () => {
-      await seedUserWithItv(OWNER_ITV_CDN);
+      await seedUser(dataSource, 'guard-test-user', TEST_USER_SUB, TEST_USER_EMAIL);
       await seedDepot(dataSource, DEPOT_ID, OTHER_ITV_CDN, DepotStatus.EN_COURS_DE_TRAITEMENT);
-      await seedOrionRoleForPrincipal(dataSource, PR_CDN, ROLE_EXPERT_NATIONAL);
+      // Le token JWT interne contient isExpertNational = true (itvCdn != dépôt mais admin)
+      jest
+        .spyOn(authService, 'validateToken')
+        .mockResolvedValue(mockUser({ itvCdn: OWNER_ITV_CDN, isExpertNational: true }));
     });
 
     it('/depot/:depotId/controle (GET) - Should return 200', async () => {
@@ -293,9 +301,12 @@ describe('ControleController (e2e) - UseOrGuards', () => {
 
   describe('when user has no access and is not admin (both guards fail)', () => {
     beforeEach(async () => {
-      await seedUserWithItv(OWNER_ITV_CDN);
+      await seedUser(dataSource, 'guard-test-user', TEST_USER_SUB, TEST_USER_EMAIL);
       await seedDepot(dataSource, DEPOT_ID, OTHER_ITV_CDN, DepotStatus.EN_COURS_DE_TRAITEMENT);
-      // No admin role seeded
+      // Le token JWT interne contient itvCdn != dépôt et isExpertNational = false
+      jest
+        .spyOn(authService, 'validateToken')
+        .mockResolvedValue(mockUser({ itvCdn: OWNER_ITV_CDN, isExpertNational: false }));
     });
 
     it('/depot/:depotId/controle (GET) - Should return 403', async () => {

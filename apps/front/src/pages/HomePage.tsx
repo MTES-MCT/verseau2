@@ -19,27 +19,11 @@ export function HomePage() {
                 <p className={fr.cx('fr-text--lead', 'fr-mb-1v')}>
                   {authenticatedUser.user.prenom || authenticatedUser.user.nom
                     ? `Bonjour ${authenticatedUser.user.prenom} ${authenticatedUser.user.nom}`.trim()
-                    : authenticatedUser.user.login && authenticatedUser.user.login !== authenticatedUser.user.matricule
-                      ? `Bonjour ${authenticatedUser.user.login}`
-                      : 'Bienvenue sur votre espace'}
+                    : 'Bienvenue sur votre espace'}
                 </p>
-                {(authenticatedUser.user.mel || authenticatedUser.user.unite || authenticatedUser.user.matricule) && (
+                {authenticatedUser.user.mel && (
                   <p className={fr.cx('fr-text--sm', 'fr-hint-text')}>
-                    {authenticatedUser.user.mel && <span>{authenticatedUser.user.mel}</span>}
-                    {authenticatedUser.user.unite && (
-                      <span>
-                        {authenticatedUser.user.mel
-                          ? ` • ${authenticatedUser.user.unite}`
-                          : authenticatedUser.user.unite}
-                      </span>
-                    )}
-                    {authenticatedUser.user.matricule && (
-                      <span>
-                        {authenticatedUser.user.mel || authenticatedUser.user.unite
-                          ? ` • Identifiant : ${authenticatedUser.user.matricule}`
-                          : `Identifiant : ${authenticatedUser.user.matricule}`}
-                      </span>
-                    )}
+                    <span>{authenticatedUser.user.mel}</span>
                   </p>
                 )}
               </div>
