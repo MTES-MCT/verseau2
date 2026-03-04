@@ -11,5 +11,8 @@
     "dev": "tsc -w",
     "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
     "test": "jest"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
   }
 }
