@@ -76,6 +76,11 @@ export function AppHeader() {
             isActive: isNavItemActive(AppRoutes.REFERENTIEL_OUVRAGES),
           },
           {
+            text: 'Suivi des mesures',
+            linkProps: { href: AppRoutes.SUIVI_MESURES },
+            isActive: isNavItemActive(AppRoutes.SUIVI_MESURES),
+          },
+          {
             text: 'Tableau de bord',
             linkProps: { href: AppRoutes.DASHBOARD },
             isActive: isNavItemActive(AppRoutes.DASHBOARD),

@@ -7,6 +7,7 @@ import { DepotDownloadPage } from './pages/DepotDownload';
 import { DepotDetailsPage } from './pages/DepotDetails';
 import { HomePage } from './pages/HomePage';
 import { ReferentielOuvragesPage } from './pages/ReferentielOuvrages';
+import { SuiviMesuresPage } from './pages/SuiviMesures';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
@@ -105,6 +106,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ReferentielOuvragesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.SUIVI_MESURES}
+              element={
+                <ProtectedRoute>
+                  <SuiviMesuresPage />
                 </ProtectedRoute>
               }
             />
