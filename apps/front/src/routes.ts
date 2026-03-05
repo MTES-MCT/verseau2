@@ -14,6 +14,7 @@ export const AppRoutes = {
   SUIVI_DECISIONS: '/suivi/decisions',
   SUIVI_DEPOTS: '/suivi/depots',
   SUIVI_CONFORMITE: '/suivi/conformite',
+  EXPORT_DONNEES: '/export/donnees',
 } as const;
 
 export const getControleRoute = (depotId: string) => `/controle/${depotId}`;

@@ -95,6 +95,11 @@ export function AppHeader() {
                 isActive: isNavItemActive(AppRoutes.SUIVI_CONFORMITE),
               },
               {
+                text: 'Export des données',
+                linkProps: { href: AppRoutes.EXPORT_DONNEES },
+                isActive: isNavItemActive(AppRoutes.EXPORT_DONNEES),
+              },
+              {
                 text: 'Historique des décisions',
                 linkProps: { href: AppRoutes.SUIVI_DECISIONS },
                 isActive: isNavItemActive(AppRoutes.SUIVI_DECISIONS),

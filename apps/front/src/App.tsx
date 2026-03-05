@@ -11,6 +11,7 @@ import { SuiviMesuresPage } from './pages/SuiviMesures';
 import { SuiviDecisionsPage } from './pages/SuiviDecisions';
 import { SuiviDepotsPage } from './pages/SuiviDepots';
 import { SuiviConformitePage } from './pages/SuiviConformite';
+import { ExportDonneesPage } from './pages/ExportDonnees';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
@@ -141,6 +142,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SuiviConformitePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.EXPORT_DONNEES}
+              element={
+                <ProtectedRoute>
+                  <ExportDonneesPage />
                 </ProtectedRoute>
               }
             />
