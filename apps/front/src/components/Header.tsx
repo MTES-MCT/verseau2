@@ -71,19 +71,30 @@ export function AppHeader() {
         ]}
         navigation={[
           {
-            text: 'Référentiel des ouvrages',
-            linkProps: { href: AppRoutes.REFERENTIEL_OUVRAGES },
-            isActive: isNavItemActive(AppRoutes.REFERENTIEL_OUVRAGES),
-          },
-          {
-            text: 'Suivi des mesures',
-            linkProps: { href: AppRoutes.SUIVI_MESURES },
-            isActive: isNavItemActive(AppRoutes.SUIVI_MESURES),
-          },
-          {
-            text: 'Historique des décisions',
-            linkProps: { href: AppRoutes.SUIVI_DECISIONS },
-            isActive: isNavItemActive(AppRoutes.SUIVI_DECISIONS),
+            text: 'Suivi de conformité',
+            isActive: isNavItemActive('/suivi') || isNavItemActive(AppRoutes.REFERENTIEL_OUVRAGES),
+            menuLinks: [
+              {
+                text: 'Référentiel des ouvrages',
+                linkProps: { href: AppRoutes.REFERENTIEL_OUVRAGES },
+                isActive: isNavItemActive(AppRoutes.REFERENTIEL_OUVRAGES),
+              },
+              {
+                text: 'Suivi des mesures',
+                linkProps: { href: AppRoutes.SUIVI_MESURES },
+                isActive: isNavItemActive(AppRoutes.SUIVI_MESURES),
+              },
+              {
+                text: 'Dépôts attendus',
+                linkProps: { href: AppRoutes.SUIVI_DEPOTS },
+                isActive: isNavItemActive(AppRoutes.SUIVI_DEPOTS),
+              },
+              {
+                text: 'Historique des décisions',
+                linkProps: { href: AppRoutes.SUIVI_DECISIONS },
+                isActive: isNavItemActive(AppRoutes.SUIVI_DECISIONS),
+              },
+            ],
           },
           {
             text: 'Tableau de bord',
