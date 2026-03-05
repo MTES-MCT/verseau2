@@ -10,6 +10,7 @@ import { ReferentielOuvragesPage } from './pages/ReferentielOuvrages';
 import { SuiviMesuresPage } from './pages/SuiviMesures';
 import { SuiviDecisionsPage } from './pages/SuiviDecisions';
 import { SuiviDepotsPage } from './pages/SuiviDepots';
+import { SuiviConformitePage } from './pages/SuiviConformite';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
@@ -132,6 +133,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SuiviDepotsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.SUIVI_CONFORMITE}
+              element={
+                <ProtectedRoute>
+                  <SuiviConformitePage />
                 </ProtectedRoute>
               }
             />

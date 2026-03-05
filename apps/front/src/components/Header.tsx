@@ -90,6 +90,11 @@ export function AppHeader() {
                 isActive: isNavItemActive(AppRoutes.SUIVI_DEPOTS),
               },
               {
+                text: 'Conformité prévisionnelle',
+                linkProps: { href: AppRoutes.SUIVI_CONFORMITE },
+                isActive: isNavItemActive(AppRoutes.SUIVI_CONFORMITE),
+              },
+              {
                 text: 'Historique des décisions',
                 linkProps: { href: AppRoutes.SUIVI_DECISIONS },
                 isActive: isNavItemActive(AppRoutes.SUIVI_DECISIONS),
