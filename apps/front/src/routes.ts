@@ -9,6 +9,7 @@ export const AppRoutes = {
   DEPOT_DETAILS: '/depot/details',
   MOCK_AUTHORIZATION: '/mock_authorization',
   DESIGN_SYSTEM: '/design-system',
+  REFERENTIEL_OUVRAGES: '/referentiel/ouvrages',
 } as const;
 
 export const getControleRoute = (depotId: string) => `/controle/${depotId}`;

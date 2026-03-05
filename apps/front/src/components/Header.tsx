@@ -71,6 +71,11 @@ export function AppHeader() {
         ]}
         navigation={[
           {
+            text: 'Référentiel des ouvrages',
+            linkProps: { href: AppRoutes.REFERENTIEL_OUVRAGES },
+            isActive: isNavItemActive(AppRoutes.REFERENTIEL_OUVRAGES),
+          },
+          {
             text: 'Tableau de bord',
             linkProps: { href: AppRoutes.DASHBOARD },
             isActive: isNavItemActive(AppRoutes.DASHBOARD),

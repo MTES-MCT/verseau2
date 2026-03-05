@@ -6,6 +6,7 @@ import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
 import { DepotDownloadPage } from './pages/DepotDownload';
 import { DepotDetailsPage } from './pages/DepotDetails';
 import { HomePage } from './pages/HomePage';
+import { ReferentielOuvragesPage } from './pages/ReferentielOuvrages';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
@@ -99,6 +100,14 @@ function App() {
             />
             <Route path={AppRoutes.MOCK_AUTHORIZATION} element={<MockAuthorizationPage />} />
             {import.meta.env.DEV && <Route path={AppRoutes.DESIGN_SYSTEM} element={<DesignSystemPage />} />}
+            <Route
+              path={AppRoutes.REFERENTIEL_OUVRAGES}
+              element={
+                <ProtectedRoute>
+                  <ReferentielOuvragesPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </main>
       </div>
