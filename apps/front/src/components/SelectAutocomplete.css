@@ -1,0 +1,32 @@
+.select-autocomplete-container {
+  position: relative;
+  /* Preserve the spacing that the input-group margin normally provides */
+  margin-bottom: 1.5rem;
+}
+
+/*
+ * The DSFR applies `margin-bottom: 1.5rem` on `.fr-input-group:not(:last-child)`.
+ * When the listbox <ul> is appended as a sibling inside the container, the
+ * .fr-input-group is no longer the last child and the margin activates, pushing
+ * content below downward. We cancel that margin here so the listbox stays purely
+ * on top of the layout without affecting the document flow.
+ */
+.select-autocomplete-input-group.fr-input-group {
+  margin-bottom: 0;
+}
+
+.select-autocomplete-listbox {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: var(--background-default-grey);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 250px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border-default-grey);
+  margin: 0;
+  padding: 0;
+}

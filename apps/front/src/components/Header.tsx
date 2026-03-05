@@ -96,6 +96,15 @@ export function AppHeader() {
               },
             ],
           },
+          ...(import.meta.env.DEV
+            ? [
+                {
+                  text: 'Design System',
+                  linkProps: { href: AppRoutes.DESIGN_SYSTEM },
+                  isActive: isNavItemActive(AppRoutes.DESIGN_SYSTEM),
+                },
+              ]
+            : []),
         ]}
       />
     </div>

@@ -8,6 +8,7 @@ import { DepotDetailsPage } from './pages/DepotDetails';
 import { HomePage } from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
+import { DesignSystemPage } from './pages/DesignSystemPage';
 import { AppHeader } from './components/Header';
 import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
@@ -97,6 +98,7 @@ function App() {
               }
             />
             <Route path={AppRoutes.MOCK_AUTHORIZATION} element={<MockAuthorizationPage />} />
+            {import.meta.env.DEV && <Route path={AppRoutes.DESIGN_SYSTEM} element={<DesignSystemPage />} />}
           </Routes>
         </main>
       </div>
