@@ -81,6 +81,11 @@ export function AppHeader() {
             isActive: isNavItemActive(AppRoutes.SUIVI_MESURES),
           },
           {
+            text: 'Historique des décisions',
+            linkProps: { href: AppRoutes.SUIVI_DECISIONS },
+            isActive: isNavItemActive(AppRoutes.SUIVI_DECISIONS),
+          },
+          {
             text: 'Tableau de bord',
             linkProps: { href: AppRoutes.DASHBOARD },
             isActive: isNavItemActive(AppRoutes.DASHBOARD),

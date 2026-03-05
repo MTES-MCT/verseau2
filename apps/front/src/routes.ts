@@ -11,6 +11,7 @@ export const AppRoutes = {
   DESIGN_SYSTEM: '/design-system',
   REFERENTIEL_OUVRAGES: '/referentiel/ouvrages',
   SUIVI_MESURES: '/suivi/mesures',
+  SUIVI_DECISIONS: '/suivi/decisions',
 } as const;
 
 export const getControleRoute = (depotId: string) => `/controle/${depotId}`;
