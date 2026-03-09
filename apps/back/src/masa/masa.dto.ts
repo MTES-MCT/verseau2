@@ -41,8 +41,8 @@ export interface AgByEmail {
 /** Intervenant résolu pour l'authentification et les droits de dépôt */
 export interface IntervenantAuth {
   itvCdn: number;
-  nom?: string;
-  siret?: string;
+  itvNomLb?: string;
+  itvRfa?: string; // siret
 }
 
 /** Droits STEU/SCL par SIRET intervenant — utilisé pour la validation des droits de dépôt */

@@ -58,7 +58,7 @@ export class DroitsUserService {
       const itvCdn = await this.resolveItvCdn(sub);
       if (itvCdn) {
         const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
-        return intervenant ? { itvCdn: intervenant.itvCdn, nom: intervenant.nom } : { itvCdn };
+        return intervenant ? { itvCdn: intervenant.itvCdn, nom: intervenant.itvNomLb } : { itvCdn };
       }
       return null;
     } catch (error) {

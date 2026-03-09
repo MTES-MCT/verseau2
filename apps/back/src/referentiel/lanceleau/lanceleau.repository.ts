@@ -67,8 +67,13 @@ export class LanceleauRepository implements LanceleauGateway {
     return this.urfRepository.findOne({ where: { urfRfa } });
   }
 
-  async findOrionRoleForPrincipal(prCdn: number, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null> {
-    return this.orionRoleForPrincipalRepository.findOne({ where: { prCdn, roleCdn } });
+  async hasRole(prCdn: number, roleCdn: number): Promise<boolean> {
+    const role = await this.orionRoleForPrincipalRepository.findOne({ where: { prCdn, roleCdn } });
+    return !!role;
+  }
+
+  async findOrionRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {
+    return this.orionRoleForPrincipalRepository.find({ where: { prCdn } });
   }
 
   async findAgByEmail(email: string): Promise<AgEntity | null> {

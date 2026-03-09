@@ -15,7 +15,8 @@ export interface LanceleauGateway {
   findFanByRfa(fanRfa: string): Promise<FanEntity | null>;
   findParByRfa(parRfa: string): Promise<ParEntity | null>;
   findUrfByRfa(urfRfa: string): Promise<UrfEntity | null>;
-  findOrionRoleForPrincipal(prCdn: number, roleCdn: number): Promise<OrionRoleForPrincipalEntity | null>;
+  hasRole(prCdn: number, roleCdn: number): Promise<boolean>;
+  findOrionRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null>;
   findAgByEmail(email: string): Promise<AgEntity | null>;
   findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]>;
   findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]>;

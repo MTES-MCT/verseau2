@@ -54,11 +54,11 @@ export class DroitsDepotService {
     }
 
     const intervenant = await this.masaProvider.findIntervenantById(ag.itvCdn);
-    this.logger.log('Intervenant found', { itvCdn: intervenant?.itvCdn, siret: intervenant?.siret });
-    if (!intervenant?.siret) {
+    this.logger.log('Intervenant found', { itvCdn: intervenant?.itvCdn, siret: intervenant?.itvRfa });
+    if (!intervenant?.itvRfa) {
       throw new ForbiddenException(`Intervenant non trouvé ou SIRET manquant`);
     }
-    const userSiret = intervenant.siret;
+    const userSiret = intervenant.itvRfa;
 
     this.logger.log(
       'Validating droits de depot for cdOuvrageDepollutionList',
