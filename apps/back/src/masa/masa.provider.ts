@@ -12,7 +12,12 @@ import {
   VSteuSclItvResult,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
+import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
 
+/**
+ * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
+ * Ce provider ne doit contenir aucune logique métier, mapping de données ou autre.
+ */
 @Injectable()
 export class MasaProvider {
   constructor(
@@ -118,14 +123,25 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
-    const entities = await this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
-    return entities.map((e) => ({
-      steuCda: e.steuCda,
-      sclCda: e.sclCda,
-      moItvRfa: e.moItvRfa,
-      satItvRfa: e.satItvRfa,
-      aeItvRfa: e.aeItvRfa,
-    }));
+    return this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Indicateurs — Droits STEU/SCL par SIRET intervenant — données live verseau
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
+    return this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Indicateurs — Résolution du SIRET intervenant à partir de l'email utilisateur
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findSiretByEmail(email: string): Promise<string | null> {
+    return this.lanceleauGateway.findSiretByEmail(email);
   }
 
   // ---------------------------------------------------------------------------
@@ -135,9 +151,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findAgByEmail(email: string): Promise<AgByEmail | null> {
-    const ag = await this.lanceleauGateway.findAgByEmail(email);
-    if (!ag) return null;
-    return { itvCdn: ag.itvCdn, prCdn: ag.prCdn };
+    return await this.lanceleauGateway.findAgByEmail(email);
   }
 
   // ---------------------------------------------------------------------------
@@ -147,8 +161,15 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async hasRole(prCdn: number, roleCdn: ROLE): Promise<boolean> {
-    const role = await this.lanceleauGateway.findOrionRoleForPrincipal(prCdn, roleCdn);
-    return !!role;
+    return await this.lanceleauGateway.hasRole(prCdn, roleCdn);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Non utilisé actuellement, mais potentiellement utile
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+  async findRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {
+    return await this.lanceleauGateway.findOrionRolesByPrCdn(prCdn);
   }
 
   // ---------------------------------------------------------------------------
@@ -158,8 +179,6 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
-    const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
-    if (!itv) return null;
-    return { itvCdn, nom: itv.itvNomLb, siret: itv.itvRfa };
+    return await this.lanceleauGateway.findByItvCdn(itvCdn);
   }
 }
