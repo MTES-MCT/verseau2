@@ -1,16 +1,16 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { UserGateway } from '@user/user.gateway';
 import { IndicateurSteuDto } from '@lib/dossier';
 import { TraceCalls } from '../shared/logger/traceCalls.decorator';
 import { IndicateursGateway } from './indicateurs.gateway';
 import { LoggerService } from '@shared/logger/logger.service';
+import { MasaProvider } from '@masa/masa.provider';
 
 @Injectable()
 export class IndicateursService {
   constructor(
     @Inject(IndicateursGateway) private readonly indicateursRepository: IndicateursGateway,
-    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
+    private readonly masaProvider: MasaProvider,
     @Inject(UserGateway) private readonly userGateway: UserGateway,
     private readonly logger: LoggerService,
   ) {
@@ -25,22 +25,14 @@ export class IndicateursService {
       return [];
     }
 
-    const ag = await this.lanceleauGateway.findAgByEmail(user.email);
-    if (!ag) {
-      this.logger.warn(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
+    const siret = await this.masaProvider.findSiretByEmail(user.email);
+    if (!siret) {
+      this.logger.warn(`Aucun intervenant avec SIRET trouvé pour l'utilisateur ${user.email}`);
       return [];
     }
 
-    const itv = await this.lanceleauGateway.findByItvCdn(ag.itvCdn);
-    if (!itv || !itv.itvRfa) {
-      this.logger.warn(`Intervenant non trouvé ou SIRET manquant pour l'utilisateur ${user.email}`);
-      return [];
-    }
-
-    const userSiret = itv.itvRfa;
-
-    // Récupérer les codes SANDRE autorisés pour cet intervenant
-    const authorizedSteus = await this.lanceleauGateway.findVSteuSclItvByItvRfa(userSiret);
+    // Récupérer les codes SANDRE autorisés pour cet intervenant (données live verseau)
+    const authorizedSteus = await this.masaProvider.findVSteuSclItvByItvRfa(siret);
     const steuCodes = authorizedSteus.map((s) => s.steuCda).filter((code) => !!code);
 
     if (steuCodes.length === 0) {

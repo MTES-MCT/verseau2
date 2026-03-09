@@ -11,7 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { ItvCdnByRfa } from '@masa/masa.dto';
+import { ItvCdnByRfa, VSteuSclItvResult } from '@masa/masa.dto';
 
 @Injectable()
 export class LanceleauRepository implements LanceleauGateway {
@@ -79,7 +79,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .getOne();
   }
 
-  async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvEntity[]> {
+  async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
     if (steuCodes.length === 0 && sclCodes.length === 0) {
       return [];
     }
@@ -97,10 +97,21 @@ export class LanceleauRepository implements LanceleauGateway {
     return qb.getMany();
   }
 
-  async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvEntity[]> {
+  async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
     return this.vSteuSclItvRepository
       .createQueryBuilder('v')
       .where('v.moItvRfa = :itvRfa OR v.satItvRfa = :itvRfa OR v.aeItvRfa = :itvRfa', { itvRfa })
       .getMany();
+  }
+
+  async findSiretByEmail(email: string): Promise<string | null> {
+    const row = await this.itvRepository
+      .createQueryBuilder('itv')
+      .select('itv.itv_rfa', 'itvRfa')
+      .innerJoin(AgEntity, 'ag', 'ag.itv_cdn = itv.itv_cdn')
+      .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
+      .where('oc.mail = :email', { email })
+      .getRawOne<{ itvRfa: string | null }>();
+    return row?.itvRfa ?? null;
   }
 }

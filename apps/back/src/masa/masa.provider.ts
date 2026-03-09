@@ -13,6 +13,10 @@ import {
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 
+/**
+ * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
+ * Ce provider ne doit contenir aucune logique métier, mapping de données ou autre.
+ */
 @Injectable()
 export class MasaProvider {
   constructor(
@@ -118,14 +122,25 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
-    const entities = await this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
-    return entities.map((e) => ({
-      steuCda: e.steuCda,
-      sclCda: e.sclCda,
-      moItvRfa: e.moItvRfa,
-      satItvRfa: e.satItvRfa,
-      aeItvRfa: e.aeItvRfa,
-    }));
+    return this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Indicateurs — Droits STEU/SCL par SIRET intervenant — données live verseau
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
+    return this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Indicateurs — Résolution du SIRET intervenant à partir de l'email utilisateur
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findSiretByEmail(email: string): Promise<string | null> {
+    return this.lanceleauGateway.findSiretByEmail(email);
   }
 
   // ---------------------------------------------------------------------------
