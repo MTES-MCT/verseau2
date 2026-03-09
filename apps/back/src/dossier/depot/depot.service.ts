@@ -1,7 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateDepotModel, DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
-import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { S3 } from '@infra/s3/s3';
 import { LoggerService } from '@shared/logger/logger.service';
 
@@ -9,7 +8,6 @@ import { LoggerService } from '@shared/logger/logger.service';
 export class DepotService {
   constructor(
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
-    @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(S3) private readonly s3: S3,
     private readonly logger: LoggerService,
   ) {
