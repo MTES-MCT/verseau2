@@ -36,7 +36,7 @@ export function useDepotRecap(): UseDepotRecapResult {
     mutationFn: async (xml: string) => {
       const parsed = await parseScenarioAssainissementXml(xml);
       if (!parsed.scenario || !checkScenarioCodeAndVersion(parsed.scenario)) {
-        throw new Error('Le fichier doit être un scénario FCT_ASSAIN version 4');
+        throw new Error('Le fichier doit être un scénario FCT_ASSAIN version 3 ou 4');
       }
       return parsed;
     },

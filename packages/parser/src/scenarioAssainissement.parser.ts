@@ -178,7 +178,8 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
 
 export function checkScenarioCodeAndVersion(scenario: Scenario): boolean {
   return (
-    scenario.codeScenario === SandreScenarioCode.FCT_ASSAIN && scenario.versionScenario === SandreScenarioVersion.V4
+    scenario.codeScenario === SandreScenarioCode.FCT_ASSAIN &&
+    (scenario.versionScenario === SandreScenarioVersion.V4 || scenario.versionScenario === SandreScenarioVersion.V3)
   );
 }
 
