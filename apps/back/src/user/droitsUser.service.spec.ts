@@ -111,4 +111,76 @@ describe('DroitsUserService', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('isExpertBassinVerseau', () => {
+    const sub = 'bassin-sub';
+    const email = 'bassin@example.com';
+    const prCdn = 888;
+
+    it('retourne true si le rôle expert bassin est présent', async () => {
+      mockUserGateway.findBySub.mockResolvedValue({ email });
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
+      mockMasaProvider.hasRole.mockResolvedValue(true);
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(true);
+      expect(mockMasaProvider.hasRole).toHaveBeenCalledWith(prCdn, ROLE.EXPERT_BASSIN_VERSEAU);
+    });
+
+    it('retourne false si le rôle expert bassin est absent', async () => {
+      mockUserGateway.findBySub.mockResolvedValue({ email });
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
+      mockMasaProvider.hasRole.mockResolvedValue(false);
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(false);
+    });
+
+    it('retourne false si utilisateur non trouvé', async () => {
+      mockUserGateway.findBySub.mockResolvedValue(null);
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(false);
+      expect(mockMasaProvider.findAgByEmail).not.toHaveBeenCalled();
+    });
+
+    it("retourne false si l'utilisateur n'a pas d'email", async () => {
+      mockUserGateway.findBySub.mockResolvedValue({ email: null });
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(false);
+    });
+
+    it('retourne false si aucun AG lié', async () => {
+      mockUserGateway.findBySub.mockResolvedValue({ email });
+      mockMasaProvider.findAgByEmail.mockResolvedValue(null);
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(false);
+      expect(mockMasaProvider.hasRole).not.toHaveBeenCalled();
+    });
+
+    it('retourne false si une erreur est levée par findBySub', async () => {
+      mockUserGateway.findBySub.mockRejectedValue(new Error('DB error'));
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(false);
+    });
+
+    it('retourne false si une erreur est levée par hasRole', async () => {
+      mockUserGateway.findBySub.mockResolvedValue({ email });
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ prCdn, itvCdn: 100 });
+      mockMasaProvider.hasRole.mockRejectedValue(new Error('provider error'));
+
+      const result = await service.isExpertBassinVerseau(sub);
+
+      expect(result).toBe(false);
+    });
+  });
 });

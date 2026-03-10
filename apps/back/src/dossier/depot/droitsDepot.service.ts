@@ -26,9 +26,15 @@ export class DroitsDepotService {
       throw new ForbiddenException('Aucun code fourni pour la validation des droits de dépôt');
     }
 
-    const isExpert = await this.droitsUserService.isExpertNationalVerseau(subId);
-    if (isExpert) {
+    const isExpertNational = await this.droitsUserService.isExpertNationalVerseau(subId);
+    if (isExpertNational) {
       this.logger.log('Expert national Verseau — droits de dépôt accordés sans restriction', { subId });
+      return;
+    }
+
+    const isExpertBassin = await this.droitsUserService.isExpertBassinVerseau(subId);
+    if (isExpertBassin) {
+      this.logger.log('Expert bassin Verseau — droits de dépôt accordés sans restriction', { subId });
       return;
     }
 

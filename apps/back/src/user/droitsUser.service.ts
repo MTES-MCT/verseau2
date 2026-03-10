@@ -44,6 +44,23 @@ export class DroitsUserService {
     }
   }
 
+  async isExpertBassinVerseau(sub: string): Promise<boolean> {
+    try {
+      const user = await this.userGateway.findBySub(sub);
+      if (!user?.email) {
+        return false;
+      }
+      const ag = await this.masaProvider.findAgByEmail(user.email);
+      if (!ag) {
+        return false;
+      }
+      return await this.masaProvider.hasRole(ag.prCdn, ROLE.EXPERT_BASSIN_VERSEAU);
+    } catch (error) {
+      this.logger.warn('Failed to check expert bassin role for user', sub, error);
+      return false;
+    }
+  }
+
   async canConsultDepot(sub: string, depot: DepotModel): Promise<boolean> {
     const itvCdn = await this.resolveItvCdn(sub);
     return !!itvCdn && Number(depot.itvCdn) === itvCdn;
