@@ -16,7 +16,7 @@ npm run lint --workspace=apps/front        # Lint frontend
 
 ## Memory System
 
-This project uses a 3-layer memory structure in `.agent-memory/`.
+This project uses a 2-layer memory structure in `.agent-memory/`.
 
 ### Layer 1: Static Identity (read mostly)
 
@@ -27,18 +27,10 @@ _Rarely changes. Defines the project DNA._
 - `.agent-memory/tech-context.md` -- Stack, dependencies, setup, path aliases, constraints
 - `.agent-memory/conventions.md` -- Code style, naming, git, testing patterns
 
-### Layer 2: Working Context (read-write)
-
-_Changes every session. Tracks current state._
-
-- `.agent-memory/active-context.md` -- Current focus, recent decisions, open questions, blockers
-- `.agent-memory/todo.md` -- Current task steps (recitation pattern: read at start, update as you work)
-
-### Layer 3: Accumulated Experience (append-only)
+### Layer 2: Accumulated Experience (append-only)
 
 _Grows over time. Capture insights._
 
-- `.agent-memory/progress.md` -- Chronological log of what was done: must be described concisely in one or two lines
 - `.agent-memory/lessons-learned.md` -- Solutions to tricky problems, strategies that worked
 
 ## Session Protocol
@@ -70,3 +62,34 @@ _Grows over time. Capture insights._
 - Use npm, not yarn or pnpm
 - Mock providers exist for S3, SANDRE, Auth, Email, SFTP -- toggled via env vars
 - Shared packages (`packages/*`) must be built before backend/frontend can use them
+
+## Issue Tracking
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --status in_progress  # Claim work
+bd close <id>         # Complete work
+```
+
+### Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git commit` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **Clean up** - Clear stashes, prune remote branches
+5. **Verify** - All changes committed
+6. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git commit` succeeds
+- NEVER stop before commiting - that leaves work stranded locally
+- NEVER say "ready to commit when you are" - YOU must commit
+- If commit fails, resolve and retry until it succeeds
+

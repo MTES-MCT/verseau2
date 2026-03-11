@@ -21,6 +21,8 @@ import { ResaEntity } from '@referentiel/roseau/entities/resa.entity';
 import { StchanEntity } from '@referentiel/roseau/entities/stchan.entity';
 import { TltoblEntity } from '@referentiel/roseau/entities/tltobl.entity';
 import { AgacEntity } from '@referentiel/roseau/entities/agac.entity';
+import { PleEntity } from '@referentiel/roseau/entities/ple.entity';
+import { AlrEntity } from '@referentiel/roseau/entities/alr.entity';
 import { SharedModule } from '@shared/shared.module';
 import { OrionCredentialsEntity } from '@referentiel/lanceleau/entities/orionCredentials.entity';
 import { VSteuSclItvEntity } from '@referentiel/lanceleau/entities/vSteuSclItv.entity';
@@ -53,6 +55,8 @@ export function initTestContainerImports(connectionUri: string) {
         StchanEntity,
         TltoblEntity,
         AgacEntity,
+        PleEntity,
+        AlrEntity,
         // Lanceleau entities
         ItvEntity,
         SupEntity,
@@ -85,6 +89,8 @@ export function initTestContainerImports(connectionUri: string) {
       StchanEntity,
       TltoblEntity,
       AgacEntity,
+      PleEntity,
+      AlrEntity,
       ItvEntity,
       SupEntity,
       FanEntity,

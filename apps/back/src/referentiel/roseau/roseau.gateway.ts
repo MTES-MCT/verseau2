@@ -2,7 +2,14 @@ import { SclEntity } from './entities/scl.entity';
 import { SteuEntity } from './entities/steu.entity';
 import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from '@masa/masa.dto';
+import {
+  CmaBySandreCdaAndParam,
+  MaxDebitBySandreCda,
+  ChargeEntranteMaxComparison,
+  MesureFilters,
+  MesureRow,
+  SteuWithName,
+} from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
@@ -23,6 +30,8 @@ export interface RoseauGateway {
   ): Promise<CmaBySandreCdaAndParam[]>;
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
+  findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
+  findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

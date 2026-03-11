@@ -25,6 +25,12 @@ export interface SteuCdnBySandreCda {
   sandreCda: string;
   steuCdn: number;
 }
+
+/** STEU avec nom — utilisé pour les dropdowns et listes d'ouvrages */
+export interface SteuWithName {
+  steuSandreCda: string;
+  steuNom: string | null;
+}
 /** Résultat ITV retourné par un fetch batch MASA */
 
 export interface ItvCdnByRfa {
@@ -52,4 +58,46 @@ export interface VSteuSclItvResult {
   moItvRfa: string | null;
   satItvRfa: string | null;
   aeItvRfa: string | null;
+}
+
+/** Résultat paginé générique */
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Filtres pour la recherche de mesures */
+export interface MesureFilters {
+  steuSandreCdas: string[];
+  dateDebut?: string;
+  dateFin?: string;
+  parametreCode?: string;
+  qualification?: string;
+  finalite?: string;
+  page: number;
+  pageSize: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+/** Une mesure avec tous ses champs joints */
+export interface MesureRow {
+  steuSandreCda: string;
+  steuNom: string | null;
+  sclSandreCda: string | null;
+  sclNom: string | null;
+  localisationPoint: string | null;
+  numPointAgence: string | null;
+  numPoint: string | null;
+  nomPoint: string | null;
+  date: Date | null;
+  parametreCode: string;
+  parametreNom: string | null;
+  valeur: number | null;
+  unite: string | null;
+  finalite: string | null;
+  statut: string | null;
+  qualification: string | null;
 }

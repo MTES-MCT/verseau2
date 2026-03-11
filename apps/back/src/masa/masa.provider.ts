@@ -10,6 +10,9 @@ import {
   AgByEmail,
   IntervenantAuth,
   VSteuSclItvResult,
+  MesureFilters,
+  MesureRow,
+  SteuWithName,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -180,5 +183,23 @@ export class MasaProvider {
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
     return await this.lanceleauGateway.findByItvCdn(itvCdn);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Récupération des mesures déposées filtrées et paginées
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
+    return this.roseauGateway.findMesures(filters);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Récupération des STEU autorisés avec noms pour le dropdown ouvrage
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
+    return this.roseauGateway.findSteuWithNamesBySandreCdas(sandreCdas);
   }
 }
