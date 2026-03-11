@@ -138,7 +138,8 @@ export class AuthenticationService implements Authentication {
       pkceCodeVerifier: undefined,
     });
 
-    const user = await this.getUserInfo(tokens.access_token);
+    const userInfo = await this.fetchUserInfoClaims(tokens.access_token);
+    const user = this.mapOpenIdUserToUser(userInfo);
 
     // Résoudre les claims métier depuis Lanceleau
     const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
@@ -152,7 +153,13 @@ export class AuthenticationService implements Authentication {
       tokens.expires_in,
     );
 
-    const enrichedUser: AuthenticatedUser = { ...user, itvCdn, isExpertNational };
+    const enrichedUser: AuthenticatedUserAndNomPrenom = {
+      ...user,
+      itvCdn,
+      isExpertNational,
+      nom: (userInfo.family_name as string) || undefined,
+      prenom: (userInfo.given_name as string) || undefined,
+    };
 
     return {
       accessToken: internalToken,
@@ -165,13 +172,18 @@ export class AuthenticationService implements Authentication {
   }
 
   async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
+    const userInfo = await this.fetchUserInfoClaims(accessToken);
+    return this.mapOpenIdUserToUser(userInfo);
+  }
+
+  private async fetchUserInfoClaims(accessToken: string): Promise<UserInfoResponse> {
     const configuration = await this.getConfiguration();
     this.logger.debug(`Getting user info for access token: ${accessToken}`);
 
     const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, skipSubjectCheck);
     this.logger.debug(`User info received: ${JSON.stringify(userInfo)}`);
 
-    return this.mapOpenIdUserToUser(userInfo);
+    return userInfo;
   }
 
   private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
