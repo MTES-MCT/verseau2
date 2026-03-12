@@ -90,8 +90,6 @@ export interface MesureFilters extends PaginationQuery {
   parametreCode?: string;
   qualification?: string;
   finalite?: string;
-  sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
 }
 
 /** Une mesure avec tous ses champs joints */

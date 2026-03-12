@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepotDetailsPage } from './DepotDetails';
+import { renderWithQueryClient } from '../test.helper';
 
 // Mock all hooks used by useMesureFilters
 vi.mock('../hooks/useMesures', () => ({
@@ -80,19 +81,19 @@ describe('DepotDetailsPage', () => {
   });
 
   it('renders the page title', () => {
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByRole('heading', { name: /détail des mesures déposées/i, level: 1 })).toBeInTheDocument();
   });
 
   it('displays the J-7 information text', () => {
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/données mises à jour chaque semaine \(J-7\)/i)).toBeInTheDocument();
   });
 
   it('renders all filter labels', () => {
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByLabelText(/ouvrage/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date début/i)).toBeInTheDocument();
@@ -111,7 +112,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useOuvrages>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     // Open the autocomplete dropdown
     fireEvent.click(screen.getByLabelText(/ouvrage/i));
@@ -127,7 +128,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/chargement des mesures/i)).toBeInTheDocument();
   });
@@ -139,13 +140,13 @@ describe('DepotDetailsPage', () => {
       error: new Error('Network error'),
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
   it('renders table with all column headers', () => {
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     const table = screen.getByRole('table');
     expect(table.querySelector('th[scope="col"]')).toBeInTheDocument();
@@ -170,7 +171,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText('Matières en suspension')).toBeInTheDocument();
     expect(screen.getByText('12.5')).toBeInTheDocument();
@@ -185,7 +186,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     // Brut → info badge (inside tbody, not the filter dropdown option)
     const badge = screen.getByRole('table').querySelector('tbody .fr-badge');
@@ -199,7 +200,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     // Qualifié → success badge (inside tbody, not the filter dropdown option)
     const badge = screen.getByRole('table').querySelector('tbody .fr-badge');
@@ -207,7 +208,7 @@ describe('DepotDetailsPage', () => {
   });
 
   it('shows "Aucune mesure trouvée" when total is 0', () => {
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/aucune mesure trouvée/i)).toBeInTheDocument();
   });
@@ -219,7 +220,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/affichage de 1 à 1 sur 1 mesure/i)).toBeInTheDocument();
   });
@@ -232,7 +233,7 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     // DSFR Pagination renders numbered page links
     expect(screen.getByRole('navigation', { name: /pagination/i })).toBeInTheDocument();
@@ -245,13 +246,13 @@ describe('DepotDetailsPage', () => {
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
 
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();
   });
 
   it('shows validation error on search without ouvrage selected', () => {
-    render(<DepotDetailsPage />);
+    renderWithQueryClient(<DepotDetailsPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
