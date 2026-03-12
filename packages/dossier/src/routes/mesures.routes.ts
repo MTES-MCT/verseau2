@@ -15,8 +15,6 @@ export const listMesures = {
       parametreCode: z.string().optional(),
       qualification: z.string().optional(),
       finalite: z.string().optional(),
-      sortBy: z.string().optional(),
-      sortOrder: z.enum(['ASC', 'DESC']).optional(),
     })
     .extend(PaginationQuerySchema.shape),
   response: PaginatedMesuresResponseSchema,
