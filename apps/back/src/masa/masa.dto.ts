@@ -84,6 +84,7 @@ export interface ParametreMesure {
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters {
   steuSandreCdas: string[];
+  pmoCdn?: number;
   dateDebut?: string;
   dateFin?: string;
   parametreCode?: string;

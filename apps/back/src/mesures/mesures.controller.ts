@@ -20,6 +20,7 @@ export class MesuresController {
     return this.mesuresService.listMesures({
       itvCdn,
       steuSandreCdas: query.steuSandreCdas,
+      pmoCdn: query.pmoCdn,
       dateDebut: query.dateDebut,
       dateFin: query.dateFin,
       parametreCode: query.parametreCode,

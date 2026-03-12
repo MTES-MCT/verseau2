@@ -7,6 +7,7 @@ export const listMesures = {
   path: '/mesures',
   query: z.object({
     steuSandreCdas: z.union([z.array(z.string()), z.string().transform((v) => [v])]).optional(),
+    pmoCdn: z.coerce.number().optional(),
     dateDebut: z.string().optional(),
     dateFin: z.string().optional(),
     parametreCode: z.string().optional(),

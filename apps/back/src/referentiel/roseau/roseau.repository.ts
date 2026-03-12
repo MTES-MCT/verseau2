@@ -260,7 +260,8 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
-    const { steuSandreCdas, dateDebut, dateFin, parametreCode, qualification, finalite, page, pageSize } = filters;
+    const { steuSandreCdas, pmoCdn, dateDebut, dateFin, parametreCode, qualification, finalite, page, pageSize } =
+      filters;
     const sortBy = filters.sortBy ?? 'default';
     const sortOrder = filters.sortOrder ?? 'ASC';
 
@@ -281,6 +282,9 @@ export class RoseauRepository implements RoseauGateway {
     const applyFilters = (qb: ReturnType<typeof buildBaseQuery>) => {
       if (steuSandreCdas.length > 0) {
         qb.andWhere('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas });
+      }
+      if (pmoCdn !== undefined) {
+        qb.andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
       }
       if (dateDebut) {
         qb.andWhere('ple.ple_prelev_dt >= :dateDebut', { dateDebut });

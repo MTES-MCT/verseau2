@@ -7,6 +7,7 @@ import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 export interface ListMesuresOptions {
   itvCdn: number | null;
   steuSandreCdas?: string[];
+  pmoCdn?: number;
   dateDebut?: string;
   dateFin?: string;
   parametreCode?: string;
