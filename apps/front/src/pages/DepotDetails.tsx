@@ -15,6 +15,7 @@ export function DepotDetailsPage() {
     updateForm,
     updateSelectedPmo,
     handleSearch,
+    setSort,
     ouvrages,
     ouvragesLoading,
     ouvrageError,
@@ -55,6 +56,46 @@ export function DepotDetailsPage() {
   }));
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
+
+  const headers = [
+    { label: 'Date', field: 'date' },
+    { label: 'Point de mesure', field: null },
+    { label: 'Localisation', field: null },
+    { label: 'Paramètre', field: 'parametre_code' },
+    { label: 'Valeur', field: 'valeur' },
+    { label: 'Unité', field: null },
+    { label: 'Qualification', field: null },
+    { label: 'Finalité', field: null },
+    { label: 'Statut', field: 'statut' },
+  ].map((col) => {
+    if (!col.field) {
+      return col.label;
+    }
+
+    const isSorted = form.sortBy === col.field;
+    const order = isSorted ? form.sortOrder : null;
+
+    return (
+      <button
+        type="button"
+        onClick={() => setSort(col.field!, isSorted && order === 'ASC' ? 'DESC' : 'ASC')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+        }}
+      >
+        {col.label}
+        {isSorted && (
+          <span className={fr.cx(order === 'ASC' ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line')} />
+        )}
+      </button>
+    );
+  });
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-6w')}>
@@ -172,17 +213,7 @@ export function DepotDetailsPage() {
               caption="Liste des mesures d'autosurveillance"
               noCaption
               bordered
-              headers={[
-                'Date',
-                'Point de mesure',
-                'Localisation',
-                'Paramètre',
-                'Valeur',
-                'Unité',
-                'Qualification',
-                'Finalité',
-                'Statut',
-              ]}
+              headers={headers}
               data={tableData}
               noScroll={false}
               className={fr.cx('fr-mb-1w')}

@@ -15,6 +15,8 @@ interface FilterState {
   dateDebut: string;
   dateFin: string;
   finalite: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 const INITIAL_FILTERS: FilterState = {
@@ -24,6 +26,8 @@ const INITIAL_FILTERS: FilterState = {
   dateDebut: getNYearsAgoAsISODate(1),
   dateFin: getTodayAsISODate(),
   finalite: '',
+  sortBy: undefined,
+  sortOrder: undefined,
 };
 
 export function useMesureFilters() {
@@ -48,6 +52,8 @@ export function useMesureFilters() {
     ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
     ...(submitted.dateFin ? { dateFin: submitted.dateFin } : {}),
     ...(submitted.finalite ? { finalite: submitted.finalite } : {}),
+    ...(submitted.sortBy ? { sortBy: submitted.sortBy } : {}),
+    ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
     page,
     pageSize: PAGE_SIZE,
   };
@@ -84,11 +90,18 @@ export function useMesureFilters() {
     setForm((f) => ({ ...f, selectedPmoCdn: pmoCdn, selectedParametre: '' }));
   }
 
+  function setSort(sortBy: string, sortOrder: 'ASC' | 'DESC') {
+    setForm((f) => ({ ...f, sortBy, sortOrder }));
+    setSubmitted((s) => ({ ...s, sortBy, sortOrder }));
+    setPage(1);
+  }
+
   return {
     form,
     updateForm,
     updateSelectedPmo,
     handleSearch,
+    setSort,
     ouvrages,
     ouvragesLoading,
     ouvrageError,

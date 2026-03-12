@@ -329,6 +329,13 @@ export class RoseauRepository implements RoseauGateway {
       )
       .addSelect('t18.tlref_mnemo_lb', 'qualification');
 
+    const sortMap: Record<string, string> = {
+      date: 'ple.ple_prelev_dt',
+      parametreCode: 'par.par_rfa',
+      valeur: 'alr.alr_res_val',
+      statut: 'statut',
+    };
+
     if (sortBy === 'default') {
       dataQb
         .orderBy('scl.scl_lb', sortOrder)
@@ -337,7 +344,8 @@ export class RoseauRepository implements RoseauGateway {
         .addOrderBy('ple.ple_prelev_dt', sortOrder)
         .addOrderBy('par.par_rfa', sortOrder);
     } else {
-      dataQb.orderBy(sortBy, sortOrder);
+      const sortColumn = sortMap[sortBy] || sortBy;
+      dataQb.orderBy(sortColumn, sortOrder);
     }
 
     dataQb.offset((page - 1) * pageSize).limit(pageSize);
