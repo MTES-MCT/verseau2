@@ -75,6 +75,12 @@ export interface ParametreMesure {
   parCourtNomLb: string | null;
 }
 
+/** Élément de nomenclature (ex: finalité, statut) — utilisé pour les dropdowns de sélection */
+export interface NomenclatureItem {
+  code: string;
+  label: string | null;
+}
+
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters extends PaginationQuery {
   steuSandreCdas: string[];

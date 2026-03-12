@@ -3,7 +3,7 @@ import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
-import { listMesures, listOuvrages, listPointsMesure, listParametresMesure } from '@lib/dossier';
+import { listMesures, listOuvrages, listPointsMesure, listParametresMesure, listFinalites } from '@lib/dossier';
 import { MesuresService } from './mesures.service';
 
 @Controller('mesures')
@@ -52,5 +52,10 @@ export class MesuresController {
     @Query(new ZodValidationPipe(listParametresMesure['query'])) query: RouteQuery<typeof listParametresMesure>,
   ): Promise<RouteResponse<typeof listParametresMesure>> {
     return this.mesuresService.listParametresMesure(req.user.itvCdn, query.steuSandreCda, query.pmoCdn);
+  }
+
+  @Get('finalites')
+  async listFinalites(): Promise<RouteResponse<typeof listFinalites>> {
+    return this.mesuresService.listFinalites();
   }
 }

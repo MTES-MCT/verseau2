@@ -62,3 +62,14 @@ export const listParametresMesure = {
     }),
   ),
 } as const satisfies RouteDefinition;
+
+export const listFinalites = {
+  method: 'GET',
+  path: '/mesures/finalites',
+  response: z.array(
+    z.object({
+      code: z.string(),
+      label: z.string().nullable(),
+    }),
+  ),
+} as const satisfies RouteDefinition;

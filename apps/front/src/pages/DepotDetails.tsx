@@ -22,6 +22,8 @@ export function DepotDetailsPage() {
     pointsMesureLoading,
     parametres,
     parametresLoading,
+    finalites,
+    finalitesLoading,
     data,
     isLoading,
     error,
@@ -46,6 +48,11 @@ export function DepotDetailsPage() {
     label: p.parCourtNomLb ? `${p.parCourtNomLb} (${p.parRfa})` : p.parRfa,
   }));
 
+  const finalitesOptions: AutocompleteOption[] = finalites.map((f) => ({
+    value: f.code,
+    label: f.label ? `${f.label} (${f.code})` : f.code,
+  }));
+
   const tableData = data ? buildMesureTableRows(data.data) : [];
 
   return (
@@ -60,7 +67,7 @@ export function DepotDetailsPage() {
       <div className={fr.cx('fr-mb-4w')}>
         {/* Row 1: Ouvrage, Point de mesure, Paramètre */}
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
-          <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
             <SelectAutocomplete
               label="Ouvrage (STEU)"
               placeholder={ouvragesLoading ? 'Chargement…' : 'Tous les ouvrages'}
@@ -72,7 +79,7 @@ export function DepotDetailsPage() {
             />
           </div>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
             <SelectAutocomplete
               label="Point de mesure"
               placeholder={
@@ -84,7 +91,7 @@ export function DepotDetailsPage() {
             />
           </div>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
             <SelectAutocomplete
               label="Paramètre"
               placeholder={
@@ -97,6 +104,16 @@ export function DepotDetailsPage() {
               options={parametresOptions}
               value={form.selectedParametre || null}
               onChange={(v) => updateForm('selectedParametre', v ?? '')}
+            />
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+            <SelectAutocomplete
+              label="Finalité"
+              placeholder={finalitesLoading ? 'Chargement…' : 'Toutes les finalités'}
+              options={finalitesOptions}
+              value={form.finalite || null}
+              onChange={(v) => updateForm('finalite', v ?? '')}
             />
           </div>
         </div>
@@ -121,18 +138,6 @@ export function DepotDetailsPage() {
                 type: 'date',
                 value: form.dateFin,
                 onChange: (e) => updateForm('dateFin', e.target.value),
-              }}
-            />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
-            <Input
-              label="Finalité"
-              nativeInputProps={{
-                type: 'text',
-                value: form.finalite,
-                placeholder: 'Finalité',
-                onChange: (e) => updateForm('finalite', e.target.value),
               }}
             />
           </div>

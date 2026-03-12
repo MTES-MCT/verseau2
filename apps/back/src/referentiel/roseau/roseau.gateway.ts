@@ -11,6 +11,7 @@ import {
   SteuWithName,
   PointMesure,
   ParametreMesure,
+  NomenclatureItem,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
@@ -36,6 +37,7 @@ export interface RoseauGateway {
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]>;
   findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]>;
+  findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

@@ -3,6 +3,7 @@ import { useMesures } from './useMesures';
 import { useOuvrages } from './useOuvrages';
 import { usePointsMesure } from './usePointsMesure';
 import { useParametresMesure } from './useParametresMesure';
+import { useFinalites } from './useFinalites';
 
 const PAGE_SIZE = 20;
 
@@ -37,6 +38,7 @@ export function useMesureFilters() {
     form.selectedSteu || null,
     form.selectedPmoCdn,
   );
+  const { data: finalites = [], isLoading: finalitesLoading } = useFinalites();
 
   const query = {
     ...(submitted.selectedSteu ? { steuSandreCdas: [submitted.selectedSteu] } : {}),
@@ -93,6 +95,8 @@ export function useMesureFilters() {
     pointsMesureLoading,
     parametres,
     parametresLoading,
+    finalites,
+    finalitesLoading,
     data,
     isLoading,
     error,

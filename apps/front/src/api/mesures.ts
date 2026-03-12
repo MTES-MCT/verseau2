@@ -1,4 +1,4 @@
-import { listMesures, listOuvrages, listPointsMesure, listParametresMesure } from '@lib/dossier';
+import { listMesures, listOuvrages, listPointsMesure, listParametresMesure, listFinalites } from '@lib/dossier';
 import type { RouteQuery } from '@lib/dossier';
 import { apiCall } from './apiClient';
 
@@ -16,4 +16,8 @@ export async function fetchPointsMesure(steuSandreCda: string) {
 
 export async function fetchParametresMesure(steuSandreCda: string, pmoCdn: number) {
   return apiCall(listParametresMesure, { query: { steuSandreCda, pmoCdn } });
+}
+
+export async function fetchFinalites() {
+  return apiCall(listFinalites);
 }

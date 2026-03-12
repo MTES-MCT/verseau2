@@ -1,7 +1,7 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedMesuresResponse, PaginationQuery } from '@lib/dossier';
-import { MesureFilters, SteuWithName, PointMesure, ParametreMesure } from '@masa/masa.dto';
+import { MesureFilters, SteuWithName, PointMesure, ParametreMesure, NomenclatureItem } from '@masa/masa.dto';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListMesuresOptions extends PaginationQuery {
@@ -94,5 +94,9 @@ export class MesuresService {
     if (!isAuthorized) return [];
 
     return this.masaProvider.findParametresBySteuAndPmo(steuSandreCda, pmoCdn);
+  }
+
+  async listFinalites(): Promise<NomenclatureItem[]> {
+    return this.masaProvider.findFinalites();
   }
 }

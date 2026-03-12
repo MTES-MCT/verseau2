@@ -25,6 +25,7 @@ import {
   SteuWithName,
   PointMesure,
   ParametreMesure,
+  NomenclatureItem,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
@@ -433,6 +434,19 @@ export class RoseauRepository implements RoseauGateway {
     return rows.map((r) => ({
       parRfa: r.par_rfa?.trim() ?? '',
       parCourtNomLb: r.par_court_nom_lb?.trim() ?? null,
+    }));
+  }
+
+  async findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]> {
+    const rows = await this.tlrefRepository
+      .createQueryBuilder('tlref')
+      .where('tlref.trl_rfa = :trlRfa', { trlRfa })
+      .orderBy('tlref.tlref_elt_cda', 'ASC')
+      .getMany();
+
+    return rows.map((r) => ({
+      code: r.tlrefEltCda?.trim() ?? '',
+      label: r.tlrefMnemoLb?.trim() ?? null,
     }));
   }
 }

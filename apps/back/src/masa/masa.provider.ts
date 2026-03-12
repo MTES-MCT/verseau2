@@ -17,6 +17,7 @@ import {
   SteuWithName,
   PointMesure,
   ParametreMesure,
+  NomenclatureItem,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -230,5 +231,14 @@ export class MasaProvider {
 
   async findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]> {
     return this.roseauGateway.findParametresBySteuAndPmo(steuSandreCda, pmoCdn);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Finalités (nomenclature tlref rfa=17) pour le dropdown de sélection
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findFinalites(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findNomenclatureByRfa('LREF_17');
   }
 }
