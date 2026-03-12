@@ -14,6 +14,6 @@ export async function fetchPointsMesure(steuSandreCda: string) {
   return apiCall(listPointsMesure, { query: { steuSandreCda } });
 }
 
-export async function fetchParametresMesure(steuSandreCda: string, pmoNo: string) {
-  return apiCall(listParametresMesure, { query: { steuSandreCda, pmoNo } });
+export async function fetchParametresMesure(steuSandreCda: string, pmoCdn: number) {
+  return apiCall(listParametresMesure, { query: { steuSandreCda, pmoCdn } });
 }

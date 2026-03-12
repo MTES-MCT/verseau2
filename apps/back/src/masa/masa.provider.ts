@@ -228,7 +228,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findParametresBySteuAndPmo(steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]> {
-    return this.roseauGateway.findParametresBySteuAndPmo(steuSandreCda, pmoNo);
+  async findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]> {
+    return this.roseauGateway.findParametresBySteuAndPmo(steuSandreCda, pmoCdn);
   }
 }

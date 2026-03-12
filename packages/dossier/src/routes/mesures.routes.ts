@@ -39,6 +39,7 @@ export const listPointsMesure = {
   }),
   response: z.array(
     z.object({
+      pmoCdn: z.number(),
       pmoNo: z.string(),
       pmoLb: z.string().nullable(),
     }),
@@ -50,7 +51,7 @@ export const listParametresMesure = {
   path: '/mesures/parametres',
   query: z.object({
     steuSandreCda: z.string(),
-    pmoNo: z.string(),
+    pmoCdn: z.coerce.number(),
   }),
   response: z.array(
     z.object({

@@ -35,7 +35,7 @@ export interface RoseauGateway {
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]>;
-  findParametresBySteuAndPmo(steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]>;
+  findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

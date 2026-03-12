@@ -13,6 +13,7 @@ export function DepotDetailsPage() {
   const {
     form,
     updateForm,
+    updateSelectedPmo,
     handleSearch,
     ouvrages,
     ouvragesLoading,
@@ -36,7 +37,7 @@ export function DepotDetailsPage() {
   }));
 
   const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((p) => ({
-    value: p.pmoNo,
+    value: String(p.pmoCdn),
     label: p.pmoLb ? `${p.pmoLb} (${p.pmoNo})` : p.pmoNo,
   }));
 
@@ -77,8 +78,8 @@ export function DepotDetailsPage() {
                 !form.selectedSteu ? 'Sélectionnez un ouvrage' : pointsMesureLoading ? 'Chargement…' : 'Tous les points'
               }
               options={pointsMesureOptions}
-              value={form.selectedPmo || null}
-              onChange={(v) => updateForm('selectedPmo', v ?? '')}
+              value={form.selectedPmoCdn !== null ? String(form.selectedPmoCdn) : null}
+              onChange={(v) => updateSelectedPmo(v ? Number(v) : null)}
             />
           </div>
 
@@ -86,7 +87,11 @@ export function DepotDetailsPage() {
             <SelectAutocomplete
               label="Paramètre"
               placeholder={
-                !form.selectedPmo ? 'Sélectionnez un point' : parametresLoading ? 'Chargement…' : 'Tous les paramètres'
+                form.selectedPmoCdn === null
+                  ? 'Sélectionnez un point'
+                  : parametresLoading
+                    ? 'Chargement…'
+                    : 'Tous les paramètres'
               }
               options={parametresOptions}
               value={form.selectedParametre || null}

@@ -87,13 +87,13 @@ export class MesuresService {
     return this.masaProvider.findPointsMesureBySandreCda(steuSandreCda);
   }
 
-  async listParametresMesure(itvCdn: number | null, steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]> {
+  async listParametresMesure(itvCdn: number | null, steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]> {
     if (itvCdn === null) return [];
 
     const authorizedSteus = await this.listOuvrages(itvCdn);
     const isAuthorized = authorizedSteus.some((s) => s.steuSandreCda === steuSandreCda);
     if (!isAuthorized) return [];
 
-    return this.masaProvider.findParametresBySteuAndPmo(steuSandreCda, pmoNo);
+    return this.masaProvider.findParametresBySteuAndPmo(steuSandreCda, pmoCdn);
   }
 }

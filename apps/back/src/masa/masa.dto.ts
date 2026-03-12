@@ -70,6 +70,7 @@ export interface PaginatedResult<T> {
 
 /** Point de mesure (PMO) — utilisé pour le dropdown de sélection */
 export interface PointMesure {
+  pmoCdn: number;
   pmoNo: string;
   pmoLb: string | null;
 }

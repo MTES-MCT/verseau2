@@ -393,19 +393,25 @@ export class RoseauRepository implements RoseauGateway {
   async findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]> {
     const rows = await this.pmoRepository
       .createQueryBuilder('pmo')
-      .select('pmo.pmo_no', 'pmo_no')
+      .select('pmo.pmo_cdn', 'pmo_cdn')
+      .addSelect('pmo.pmo_no', 'pmo_no')
       .addSelect('pmo.pmo_lb', 'pmo_lb')
-      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
-      .where('steu.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
+      .leftJoin(SteuEntity, 'steu_direct', 'steu_direct.steu_cdn = pmo.steu_cdn')
+      .leftJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+      .leftJoin(SteuEntity, 'steu_scl', 'steu_scl.steu_cdn = scl.steu_cdn')
+      .where('steu_direct.steu_sandre_cda = :steuSandreCda OR steu_scl.steu_sandre_cda = :steuSandreCda', {
+        steuSandreCda,
+      })
       .orderBy('pmo.pmo_no', 'ASC')
-      .getRawMany<{ pmo_no: string; pmo_lb: string | null }>();
+      .getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
     return rows.map((r) => ({
+      pmoCdn: r.pmo_cdn,
       pmoNo: r.pmo_no?.trim() ?? '',
       pmoLb: r.pmo_lb?.trim() ?? null,
     }));
   }
 
-  async findParametresBySteuAndPmo(steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]> {
+  async findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]> {
     const rows = await this.alrRepository
       .createQueryBuilder('alr')
       .select('alr.par_rfa', 'par_rfa')
@@ -416,7 +422,7 @@ export class RoseauRepository implements RoseauGateway {
       .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = scl.steu_cdn')
       .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
       .where('steu.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
-      .andWhere('pmo.pmo_no = :pmoNo', { pmoNo })
+      .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn })
       .distinct(true)
       .orderBy('alr.par_rfa', 'ASC')
       .getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();

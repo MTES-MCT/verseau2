@@ -50,6 +50,6 @@ export class MesuresController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listParametresMesure['query'])) query: RouteQuery<typeof listParametresMesure>,
   ): Promise<RouteResponse<typeof listParametresMesure>> {
-    return this.mesuresService.listParametresMesure(req.user.itvCdn, query.steuSandreCda, query.pmoNo);
+    return this.mesuresService.listParametresMesure(req.user.itvCdn, query.steuSandreCda, query.pmoCdn);
   }
 }
