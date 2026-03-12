@@ -1,10 +1,10 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
-import { PaginatedMesuresResponse } from '@lib/dossier';
+import { PaginatedMesuresResponse, PaginationQuery } from '@lib/dossier';
 import { MesureFilters, SteuWithName, PointMesure, ParametreMesure } from '@masa/masa.dto';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
-export interface ListMesuresOptions {
+export interface ListMesuresOptions extends PaginationQuery {
   itvCdn: number | null;
   steuSandreCdas?: string[];
   pmoCdn?: number;
@@ -13,8 +13,6 @@ export interface ListMesuresOptions {
   parametreCode?: string;
   qualification?: string;
   finalite?: string;
-  page: number;
-  pageSize: number;
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
 }

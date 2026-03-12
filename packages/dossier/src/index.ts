@@ -14,3 +14,4 @@ export * from './routes/referentiel.routes';
 export * from './routes/controle.routes';
 export * from './routes/indicateurs.routes';
 export * from './routes/mesures.routes';
+export * from './shared/pagination.schema';

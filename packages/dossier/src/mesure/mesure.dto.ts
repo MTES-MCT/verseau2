@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
 export const MesureDtoSchema = z.object({
   steuSandreCda: z.string(),
@@ -21,11 +22,6 @@ export const MesureDtoSchema = z.object({
 
 export type MesureDto = z.infer<typeof MesureDtoSchema>;
 
-export const PaginatedMesuresResponseSchema = z.object({
-  data: z.array(MesureDtoSchema),
-  total: z.number(),
-  page: z.number(),
-  pageSize: z.number(),
-});
+export const PaginatedMesuresResponseSchema = createPaginatedResponseSchema(MesureDtoSchema);
 
 export type PaginatedMesuresResponse = z.infer<typeof PaginatedMesuresResponseSchema>;

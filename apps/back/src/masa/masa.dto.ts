@@ -1,4 +1,6 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
+import { PaginationQuery } from '@lib/dossier';
+
 export interface CmaBySandreCdaAndParam {
   sandreCda: string;
   paramCode: string;
@@ -60,14 +62,6 @@ export interface VSteuSclItvResult {
   aeItvRfa: string | null;
 }
 
-/** Résultat paginé générique */
-export interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 /** Point de mesure (PMO) — utilisé pour le dropdown de sélection */
 export interface PointMesure {
   pmoCdn: number;
@@ -82,7 +76,7 @@ export interface ParametreMesure {
 }
 
 /** Filtres pour la recherche de mesures */
-export interface MesureFilters {
+export interface MesureFilters extends PaginationQuery {
   steuSandreCdas: string[];
   pmoCdn?: number;
   dateDebut?: string;
@@ -90,8 +84,6 @@ export interface MesureFilters {
   parametreCode?: string;
   qualification?: string;
   finalite?: string;
-  page: number;
-  pageSize: number;
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
 }
