@@ -1,13 +1,7 @@
-import * as dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config({
-  path: path.join(__dirname, '../../test.envfile'),
-  override: true,
-});
-
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { ConfigServiceTestMock } from '../mock/shared-mocks';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import cookieParser from 'cookie-parser';
@@ -75,6 +69,8 @@ describe('MesuresController (e2e)', () => {
       .useValue(null)
       .overrideProvider(LoggerService)
       .useValue(loggerValueMock)
+      .overrideProvider(ConfigService)
+      .useValue(new ConfigServiceTestMock())
       .compile();
 
     app = moduleFixture.createNestApplication({ logger: false });
