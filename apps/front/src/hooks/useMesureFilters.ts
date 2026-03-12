@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
 import { useMesures } from './useMesures';
 import { useOuvrages } from './useOuvrages';
 import { usePointsMesure } from './usePointsMesure';
@@ -20,8 +21,8 @@ const INITIAL_FILTERS: FilterState = {
   selectedSteu: '',
   selectedPmoCdn: null,
   selectedParametre: '',
-  dateDebut: '',
-  dateFin: '',
+  dateDebut: getNYearsAgoAsISODate(1),
+  dateFin: getTodayAsISODate(),
   finalite: '',
 };
 

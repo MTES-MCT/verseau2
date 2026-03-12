@@ -21,3 +21,17 @@ export const getPreviousYear = (): number => {
 export const getYearMinus = (numberOfYearsBefore: number): number => {
   return new Date().getFullYear() - numberOfYearsBefore;
 };
+
+export const getTodayAsISODate = (): string => {
+  return new Date().toISOString().split('T')[0];
+};
+
+export const getNYearsAgoAsISODate = (n: number): string => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - n);
+  return date.toISOString().split('T')[0];
+};
+
+export const getDateAsISODate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
