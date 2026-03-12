@@ -52,6 +52,11 @@
   bottom: 2.1rem;
 }
 
+.select-autocomplete-container:has(.fr-input-group--error) .select-autocomplete-listbox,
+.select-autocomplete-container:has(.fr-input-group--valid) .select-autocomplete-listbox {
+  top: calc(100% - 2.1rem);
+}
+
 .select-autocomplete-btn {
   display: flex;
   align-items: center;
