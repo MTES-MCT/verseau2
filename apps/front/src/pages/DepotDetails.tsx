@@ -26,6 +26,7 @@ export function DepotDetailsPage() {
     finalitesLoading,
     data,
     isLoading,
+    isFetching,
     error,
     page,
     setPage,
@@ -150,7 +151,7 @@ export function DepotDetailsPage() {
         </div>
       </div>
 
-      {/* Loading */}
+      {/* Initial loading (no data yet) */}
       {isLoading && <p className={fr.cx('fr-text--sm')}>Chargement des mesures...</p>}
 
       {/* Error */}
@@ -163,56 +164,58 @@ export function DepotDetailsPage() {
         />
       )}
 
-      {/* Table */}
+      {/* Table — stays mounted while paginating; opacity signals background refresh */}
       {!isLoading && !error && (
-        <>
-          <Table
-            caption="Liste des mesures d'autosurveillance"
-            noCaption
-            bordered
-            headers={[
-              'Date',
-              'Point de mesure',
-              'Localisation',
-              'Paramètre',
-              'Valeur',
-              'Unité',
-              'Qualification',
-              'Finalité',
-              'Statut',
-            ]}
-            data={tableData}
-            noScroll={false}
-            className={fr.cx('fr-mb-1w')}
-          />
+        <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
+          <>
+            <Table
+              caption="Liste des mesures d'autosurveillance"
+              noCaption
+              bordered
+              headers={[
+                'Date',
+                'Point de mesure',
+                'Localisation',
+                'Paramètre',
+                'Valeur',
+                'Unité',
+                'Qualification',
+                'Finalité',
+                'Statut',
+              ]}
+              data={tableData}
+              noScroll={false}
+              className={fr.cx('fr-mb-1w')}
+            />
 
-          {data && (
-            <div className={fr.cx('fr-mt-2w')}>
-              <p className={fr.cx('fr-text--sm')}>
-                {data.total === 0
-                  ? 'Aucune mesure trouvée.'
-                  : `Affichage de ${(page - 1) * PAGE_SIZE + 1} à ${Math.min(page * PAGE_SIZE, data.total)} sur ${data.total} mesure${data.total > 1 ? 's' : ''}`}
-              </p>
-            </div>
-          )}
+            {data && (
+              <div className={fr.cx('fr-mt-2w')}>
+                <p className={fr.cx('fr-text--sm')}>
+                  {data.total === 0
+                    ? 'Aucune mesure trouvée.'
+                    : `Affichage de ${(page - 1) * PAGE_SIZE + 1} à ${Math.min(page * PAGE_SIZE, data.total)} sur ${data.total} mesure${data.total > 1 ? 's' : ''}`}
+                </p>
+              </div>
+            )}
 
-          {totalPages > 1 && (
-            <div className={fr.cx('fr-mt-4w')}>
-              <Pagination
-                count={totalPages}
-                defaultPage={page}
-                getPageLinkProps={(pageNumber) => ({
-                  href: `#page-${pageNumber}`,
-                  onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-                    e.preventDefault();
-                    setPage(pageNumber);
-                  },
-                })}
-                showFirstLast={true}
-              />
-            </div>
-          )}
-        </>
+            {totalPages > 1 && (
+              <div className={fr.cx('fr-mt-4w')}>
+                <Pagination
+                  count={totalPages}
+                  defaultPage={page}
+                  getPageLinkProps={(pageNumber) => ({
+                    href: `#page-${pageNumber}`,
+                    onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                      e.preventDefault();
+                      setPage(pageNumber);
+                    },
+                  })}
+                  showFirstLast={true}
+                />
+              </div>
+            )}
+          </>
+        </div>
       )}
     </div>
   );

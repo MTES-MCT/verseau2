@@ -52,7 +52,7 @@ export function useMesureFilters() {
   };
   console.log('Mesure filters query', query);
 
-  const { data, isLoading, error } = useMesures(query, hasSearched);
+  const { data, isLoading, isFetching, error } = useMesures(query, hasSearched);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -99,6 +99,7 @@ export function useMesureFilters() {
     finalitesLoading,
     data,
     isLoading,
+    isFetching,
     error,
     page,
     setPage,
