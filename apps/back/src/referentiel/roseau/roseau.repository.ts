@@ -23,6 +23,8 @@ import {
   MesureFilters,
   MesureRow,
   SteuWithName,
+  PointMesure,
+  ParametreMesure,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
@@ -385,6 +387,42 @@ export class RoseauRepository implements RoseauGateway {
     return rows.map((s) => ({
       steuSandreCda: s.steuSandreCda?.trim() ?? '',
       steuNom: s.steuNomLb?.trim() ?? null,
+    }));
+  }
+
+  async findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]> {
+    const rows = await this.pmoRepository
+      .createQueryBuilder('pmo')
+      .select('pmo.pmo_no', 'pmo_no')
+      .addSelect('pmo.pmo_lb', 'pmo_lb')
+      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
+      .where('steu.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
+      .orderBy('pmo.pmo_no', 'ASC')
+      .getRawMany<{ pmo_no: string; pmo_lb: string | null }>();
+    return rows.map((r) => ({
+      pmoNo: r.pmo_no?.trim() ?? '',
+      pmoLb: r.pmo_lb?.trim() ?? null,
+    }));
+  }
+
+  async findParametresBySteuAndPmo(steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]> {
+    const rows = await this.alrRepository
+      .createQueryBuilder('alr')
+      .select('alr.par_rfa', 'par_rfa')
+      .addSelect('par.par_court_nom_lb', 'par_court_nom_lb')
+      .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
+      .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
+      .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = scl.steu_cdn')
+      .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
+      .where('steu.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
+      .andWhere('pmo.pmo_no = :pmoNo', { pmoNo })
+      .distinct(true)
+      .orderBy('alr.par_rfa', 'ASC')
+      .getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
+    return rows.map((r) => ({
+      parRfa: r.par_rfa?.trim() ?? '',
+      parCourtNomLb: r.par_court_nom_lb?.trim() ?? null,
     }));
   }
 }

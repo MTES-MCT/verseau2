@@ -1,7 +1,7 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedMesuresResponse } from '@lib/dossier';
-import { MesureFilters, SteuWithName } from '@masa/masa.dto';
+import { MesureFilters, SteuWithName, PointMesure, ParametreMesure } from '@masa/masa.dto';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListMesuresOptions {
@@ -75,5 +75,25 @@ export class MesuresService {
     if (sandreCdas.length === 0) return [];
 
     return this.masaProvider.findSteuWithNamesBySandreCdas(sandreCdas);
+  }
+
+  async listPointsMesure(itvCdn: number | null, steuSandreCda: string): Promise<PointMesure[]> {
+    if (itvCdn === null) return [];
+
+    const authorizedSteus = await this.listOuvrages(itvCdn);
+    const isAuthorized = authorizedSteus.some((s) => s.steuSandreCda === steuSandreCda);
+    if (!isAuthorized) return [];
+
+    return this.masaProvider.findPointsMesureBySandreCda(steuSandreCda);
+  }
+
+  async listParametresMesure(itvCdn: number | null, steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]> {
+    if (itvCdn === null) return [];
+
+    const authorizedSteus = await this.listOuvrages(itvCdn);
+    const isAuthorized = authorizedSteus.some((s) => s.steuSandreCda === steuSandreCda);
+    if (!isAuthorized) return [];
+
+    return this.masaProvider.findParametresBySteuAndPmo(steuSandreCda, pmoNo);
   }
 }

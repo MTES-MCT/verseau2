@@ -30,3 +30,32 @@ export const listOuvrages = {
     }),
   ),
 } as const satisfies RouteDefinition;
+
+export const listPointsMesure = {
+  method: 'GET',
+  path: '/mesures/points-mesure',
+  query: z.object({
+    steuSandreCda: z.string(),
+  }),
+  response: z.array(
+    z.object({
+      pmoNo: z.string(),
+      pmoLb: z.string().nullable(),
+    }),
+  ),
+} as const satisfies RouteDefinition;
+
+export const listParametresMesure = {
+  method: 'GET',
+  path: '/mesures/parametres',
+  query: z.object({
+    steuSandreCda: z.string(),
+    pmoNo: z.string(),
+  }),
+  response: z.array(
+    z.object({
+      parRfa: z.string(),
+      parCourtNomLb: z.string().nullable(),
+    }),
+  ),
+} as const satisfies RouteDefinition;

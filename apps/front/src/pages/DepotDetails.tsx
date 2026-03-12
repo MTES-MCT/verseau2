@@ -3,8 +3,9 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
-import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { SelectAutocomplete } from '../components/SelectAutocomplete';
+import type { AutocompleteOption } from '../components/SelectAutocomplete';
 import { useMesureFilters } from '../hooks/useMesureFilters';
 import { buildMesureTableRows } from '../helper/mesureTableData';
 
@@ -15,6 +16,11 @@ export function DepotDetailsPage() {
     handleSearch,
     ouvrages,
     ouvragesLoading,
+    ouvrageError,
+    pointsMesure,
+    pointsMesureLoading,
+    parametres,
+    parametresLoading,
     data,
     isLoading,
     error,
@@ -23,6 +29,21 @@ export function DepotDetailsPage() {
     totalPages,
     PAGE_SIZE,
   } = useMesureFilters();
+
+  const ouvragesOptions: AutocompleteOption[] = ouvrages.map((o) => ({
+    value: o.steuSandreCda,
+    label: o.steuNom ?? o.steuSandreCda,
+  }));
+
+  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((p) => ({
+    value: p.pmoNo,
+    label: p.pmoLb ? `${p.pmoLb} (${p.pmoNo})` : p.pmoNo,
+  }));
+
+  const parametresOptions: AutocompleteOption[] = parametres.map((p) => ({
+    value: p.parRfa,
+    label: p.parCourtNomLb ? `${p.parCourtNomLb} (${p.parRfa})` : p.parRfa,
+  }));
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
 
@@ -38,21 +59,39 @@ export function DepotDetailsPage() {
       <div className={fr.cx('fr-mb-4w')}>
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
-            <Select
+            <SelectAutocomplete
               label="Ouvrage (STEU)"
-              nativeSelectProps={{
-                value: form.selectedSteu,
-                onChange: (e) => updateForm('selectedSteu', e.target.value),
-                disabled: ouvragesLoading,
-              }}
-            >
-              <option value="">Tous les ouvrages</option>
-              {ouvrages.map((o) => (
-                <option key={o.steuSandreCda} value={o.steuSandreCda}>
-                  {o.steuNom ?? o.steuSandreCda}
-                </option>
-              ))}
-            </Select>
+              placeholder={ouvragesLoading ? 'Chargement…' : 'Tous les ouvrages'}
+              options={ouvragesOptions}
+              value={form.selectedSteu || null}
+              onChange={(v) => updateForm('selectedSteu', v ?? '')}
+              state={ouvrageError ? 'error' : 'default'}
+              stateRelatedMessage={ouvrageError || undefined}
+            />
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+            <SelectAutocomplete
+              label="Point de mesure"
+              placeholder={
+                !form.selectedSteu ? 'Sélectionnez un ouvrage' : pointsMesureLoading ? 'Chargement…' : 'Tous les points'
+              }
+              options={pointsMesureOptions}
+              value={form.selectedPmo || null}
+              onChange={(v) => updateForm('selectedPmo', v ?? '')}
+            />
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+            <SelectAutocomplete
+              label="Paramètre"
+              placeholder={
+                !form.selectedPmo ? 'Sélectionnez un point' : parametresLoading ? 'Chargement…' : 'Tous les paramètres'
+              }
+              options={parametresOptions}
+              value={form.selectedParametre || null}
+              onChange={(v) => updateForm('selectedParametre', v ?? '')}
+            />
           </div>
 
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
@@ -75,32 +114,6 @@ export function DepotDetailsPage() {
                 onChange: (e) => updateForm('dateFin', e.target.value),
               }}
             />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
-            <Input
-              label="Paramètre"
-              nativeInputProps={{
-                type: 'text',
-                value: form.parametreCode,
-                placeholder: 'Code paramètre',
-                onChange: (e) => updateForm('parametreCode', e.target.value),
-              }}
-            />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
-            <Select
-              label="Qualification"
-              nativeSelectProps={{
-                value: form.qualification,
-                onChange: (e) => updateForm('qualification', e.target.value),
-              }}
-            >
-              <option value="">Toutes</option>
-              <option value="Brut">Brut</option>
-              <option value="Qualifié">Qualifié</option>
-            </Select>
           </div>
 
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>

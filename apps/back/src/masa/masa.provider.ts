@@ -15,6 +15,8 @@ import {
   MesureFilters,
   MesureRow,
   SteuWithName,
+  PointMesure,
+  ParametreMesure,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -210,5 +212,23 @@ export class MasaProvider {
 
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
     return this.roseauGateway.findSteuWithNamesBySandreCdas(sandreCdas);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Points de mesure (PMO) pour un ouvrage donné
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureBySandreCda(steuSandreCda);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Paramètres disponibles pour un ouvrage + point de mesure donné
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findParametresBySteuAndPmo(steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]> {
+    return this.roseauGateway.findParametresBySteuAndPmo(steuSandreCda, pmoNo);
   }
 }

@@ -9,6 +9,8 @@ import {
   MesureFilters,
   MesureRow,
   SteuWithName,
+  PointMesure,
+  ParametreMesure,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
@@ -32,6 +34,8 @@ export interface RoseauGateway {
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
+  findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]>;
+  findParametresBySteuAndPmo(steuSandreCda: string, pmoNo: string): Promise<ParametreMesure[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

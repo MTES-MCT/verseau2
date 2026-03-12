@@ -68,6 +68,18 @@ export interface PaginatedResult<T> {
   pageSize: number;
 }
 
+/** Point de mesure (PMO) — utilisé pour le dropdown de sélection */
+export interface PointMesure {
+  pmoNo: string;
+  pmoLb: string | null;
+}
+
+/** Paramètre — utilisé pour le dropdown de sélection */
+export interface ParametreMesure {
+  parRfa: string;
+  parCourtNomLb: string | null;
+}
+
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters {
   steuSandreCdas: string[];
