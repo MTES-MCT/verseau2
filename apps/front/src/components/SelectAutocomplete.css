@@ -15,6 +15,98 @@
   margin-bottom: 0;
 }
 
+/* Wrapper that holds the DSFR Input + the action buttons overlay */
+.select-autocomplete-input-wrapper {
+  position: relative;
+}
+
+/* The action buttons (clear + toggle) sit inside the input area on the right.
+ *
+ * Positioning strategy:
+ * We anchor to the bottom of the <input> element, not the fr-input-group wrapper.
+ * The fr-input height is 2.5rem. We align the buttons at the bottom of the input
+ * by using bottom: 0 on the wrapper, then adjusting upward when a state message
+ * is present below the input.
+ *
+ * DSFR message heights (fr-error-text / fr-valid-text):
+ *   - margin-top: 0.25rem  (fr-mt-1v)
+ *   - line-height: ~1.5rem
+ *   - icon before: 1rem
+ *   Total offset ≈ 1.75rem
+ */
+.select-autocomplete-actions {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0;
+  height: 2.5rem; /* matches DSFR fr-input height */
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: auto;
+}
+
+/* When the input group has an error or success state, a message paragraph
+   is rendered below the input. Offset the buttons upward by its height. */
+.select-autocomplete-input-wrapper:has(.fr-input-group--error) .select-autocomplete-actions,
+.select-autocomplete-input-wrapper:has(.fr-input-group--valid) .select-autocomplete-actions {
+  bottom: 2.1rem;
+}
+
+.select-autocomplete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-mention-grey);
+  border-radius: 2px;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.select-autocomplete-btn:hover {
+  color: var(--text-default-grey);
+  background-color: var(--background-alt-grey);
+}
+
+.select-autocomplete-btn span[class*='fr-icon'] {
+  font-size: 1rem;
+}
+
+/* Rotate chevron when dropdown is open */
+.select-autocomplete-toggle span[class*='fr-icon'] {
+  transition: transform 0.2s ease;
+}
+
+.select-autocomplete-toggle--open span[class*='fr-icon'] {
+  transform: rotate(180deg);
+}
+
+/* Make the native input have enough right padding so text doesn't overlap buttons.
+   buttons footprint = right offset (0.5rem) + 2×1.75rem + 2px gap ≈ 4.01rem.
+   Using 4.5rem gives ~8px of safety buffer.
+   IMPORTANT: must be applied via classes.nativeInputOrTextArea in the DSFR Input
+   component — nativeInputProps.className is silently overridden by DSFR internally. */
+.select-autocomplete-input {
+  padding-right: 4.5rem !important;
+}
+
+/* Truncate long values when the input is not focused so text never scrolls
+   past the action buttons. Normal scroll behaviour is restored on focus.
+   Both overflow:hidden AND text-overflow:ellipsis are needed — without
+   overflow:hidden the browser still allows horizontal text scroll over the
+   buttons even when padding-right reserves the space. */
+.select-autocomplete-input:not(:focus) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .select-autocomplete-listbox {
   position: absolute;
   top: 100%;
@@ -29,4 +121,5 @@
   border: 1px solid var(--border-default-grey);
   margin: 0;
   padding: 0;
+  text-align: left;
 }

@@ -48,6 +48,7 @@ export const SelectAutocomplete = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedLabel = options.find((opt) => opt.value === value)?.label ?? '';
 
@@ -67,6 +68,12 @@ export const SelectAutocomplete = ({
     }
   };
 
+  const openAllOptions = () => {
+    setSearchText(null);
+    setIsOpen(true);
+    setHighlightedIndex(-1);
+  };
+
   const closeAndReset = () => {
     setIsOpen(false);
     setSearchText(null);
@@ -79,6 +86,27 @@ export const SelectAutocomplete = ({
       onInputChange(option.label);
     }
     closeAndReset();
+    inputRef.current?.focus();
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange(null);
+    if (onInputChange) {
+      onInputChange('');
+    }
+    closeAndReset();
+  };
+
+  const handleToggleDropdown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isOpen) {
+      closeAndReset();
+    } else {
+      openAllOptions();
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,30 +206,60 @@ export const SelectAutocomplete = ({
 
   return (
     <div ref={containerRef} className="select-autocomplete-container" onBlur={handleBlur}>
-      <Input
-        label={label}
-        hintText={hintText}
-        state={state}
-        stateRelatedMessage={stateRelatedMessage}
-        classes={{ root: 'select-autocomplete-input-group' }}
-        nativeInputProps={{
-          id,
-          type: 'text',
-          value: displayedValue,
-          onChange: handleInputChange,
-          onKeyDown: handleKeyDown,
-          onFocus: handleFocus,
-          onClick: handleFocus,
-          placeholder,
-          required,
-          role: 'combobox',
-          'aria-expanded': isOpen,
-          'aria-autocomplete': 'list',
-          'aria-controls': isOpen ? listboxId : undefined,
-          'aria-activedescendant': highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined,
-          autoComplete: 'off',
-        }}
-      />
+      <div className="select-autocomplete-input-wrapper">
+        <Input
+          label={label}
+          hintText={hintText}
+          state={state}
+          stateRelatedMessage={stateRelatedMessage}
+          classes={{
+            root: 'select-autocomplete-input-group',
+            // nativeInputOrTextArea is the only way to add a class to the native <input>
+            // in DSFR: the component overrides nativeInputProps.className internally.
+            nativeInputOrTextArea: 'select-autocomplete-input',
+          }}
+          nativeInputProps={{
+            id,
+            ref: inputRef,
+            type: 'text',
+            value: displayedValue,
+            onChange: handleInputChange,
+            onKeyDown: handleKeyDown,
+            onFocus: handleFocus,
+            onClick: handleFocus,
+            placeholder,
+            required,
+            role: 'combobox',
+            'aria-expanded': isOpen,
+            'aria-autocomplete': 'list',
+            'aria-controls': isOpen ? listboxId : undefined,
+            'aria-activedescendant': highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined,
+            autoComplete: 'off',
+          }}
+        />
+        <div className="select-autocomplete-actions">
+          {value && (
+            <button
+              type="button"
+              className="select-autocomplete-btn select-autocomplete-clear"
+              aria-label="Effacer la sélection"
+              tabIndex={-1}
+              onMouseDown={handleClear}
+            >
+              <span className={fr.cx('fr-icon-close-line')} aria-hidden="true" />
+            </button>
+          )}
+          <button
+            type="button"
+            className={`select-autocomplete-btn select-autocomplete-toggle${isOpen ? ' select-autocomplete-toggle--open' : ''}`}
+            aria-label={isOpen ? 'Fermer la liste' : 'Ouvrir la liste'}
+            tabIndex={-1}
+            onMouseDown={handleToggleDropdown}
+          >
+            <span className={fr.cx('fr-icon-arrow-down-s-line')} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
       {isOpen && filteredOptions.length > 0 && (
         <ul
           id={listboxId}

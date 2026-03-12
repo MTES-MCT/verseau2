@@ -316,6 +316,105 @@ describe('SelectAutocomplete', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Toggle button (chevron)
+  // ---------------------------------------------------------------------------
+
+  it('renders a toggle button', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Ouvrir la liste' })).toBeInTheDocument();
+  });
+
+  it('opens the dropdown with all options when toggle button is clicked', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Ouvrir la liste' }));
+
+    const listbox = screen.getByRole('listbox');
+    expect(listbox).toBeInTheDocument();
+    options.forEach((option) => {
+      expect(within(listbox).getByText(option.label)).toBeInTheDocument();
+    });
+  });
+
+  it('closes the dropdown when toggle button is clicked while open', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Fermer la liste' }));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('shows all options via toggle even when a value is already selected', () => {
+    render(<SelectAutocomplete label="Ville" options={options} value="lyon" onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Ouvrir la liste' }));
+
+    const listbox = screen.getByRole('listbox');
+    options.forEach((option) => {
+      expect(within(listbox).getByText(option.label)).toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Clear button (cross)
+  // ---------------------------------------------------------------------------
+
+  it('does not render the clear button when no value is selected', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Effacer la sélection' })).not.toBeInTheDocument();
+  });
+
+  it('renders the clear button when a value is selected', () => {
+    render(<SelectAutocomplete label="Ville" options={options} value="paris" onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Effacer la sélection' })).toBeInTheDocument();
+  });
+
+  it('calls onChange(null) and empties the input when the clear button is clicked', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return <SelectAutocomplete label="Ville" options={options} value={value} onChange={setValue} />;
+    };
+    render(<Wrapper />);
+
+    expect(screen.getByRole('combobox')).toHaveValue('Paris');
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+
+    expect(screen.getByRole('combobox')).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Effacer la sélection' })).not.toBeInTheDocument();
+  });
+
+  it('closes the dropdown when the clear button is clicked', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return <SelectAutocomplete label="Ville" options={options} value={value} onChange={setValue} />;
+    };
+    render(<Wrapper />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('opens the dropdown on a single click after clearing', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return <SelectAutocomplete label="Ville" options={options} value={value} onChange={setValue} />;
+    };
+    render(<Wrapper />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
   // State / stateRelatedMessage (DSFR validation states)
   // ---------------------------------------------------------------------------
 
