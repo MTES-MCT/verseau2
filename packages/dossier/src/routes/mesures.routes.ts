@@ -6,7 +6,7 @@ export const listMesures = {
   method: 'GET',
   path: '/mesures',
   query: z.object({
-    steuSandreCdas: z.array(z.string()).optional(),
+    steuSandreCdas: z.union([z.array(z.string()), z.string().transform((v) => [v])]).optional(),
     dateDebut: z.string().optional(),
     dateFin: z.string().optional(),
     parametreCode: z.string().optional(),
