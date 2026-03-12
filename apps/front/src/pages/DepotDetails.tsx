@@ -58,7 +58,8 @@ export function DepotDetailsPage() {
 
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>
-        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom')}>
+        {/* Row 1: Ouvrage, Point de mesure, Paramètre */}
+        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
             <SelectAutocomplete
               label="Ouvrage (STEU)"
@@ -71,7 +72,7 @@ export function DepotDetailsPage() {
             />
           </div>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
             <SelectAutocomplete
               label="Point de mesure"
               placeholder={
@@ -83,7 +84,7 @@ export function DepotDetailsPage() {
             />
           </div>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
             <SelectAutocomplete
               label="Paramètre"
               placeholder={
@@ -98,7 +99,10 @@ export function DepotDetailsPage() {
               onChange={(v) => updateForm('selectedParametre', v ?? '')}
             />
           </div>
+        </div>
 
+        {/* Row 2: Date début, Date fin, Finalité, Rechercher */}
+        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom', 'fr-mt-2w')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
             <Input
               label="Date début"
@@ -133,7 +137,7 @@ export function DepotDetailsPage() {
             />
           </div>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-2')} style={{ display: 'flex', alignItems: 'flex-end' }}>
             <Button onClick={handleSearch} iconId="fr-icon-search-line" iconPosition="right">
               Rechercher
             </Button>
