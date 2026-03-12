@@ -26,12 +26,14 @@
     "baseUrl": ".",
     "paths": {
       "@lib/dossier": ["../../packages/dossier/src/index.ts"],
-      "@lib/parser": ["../../packages/parser/src/index.ts"]
+      "@lib/parser": ["../../packages/parser/src/index.ts"],
+      "@lib/shared": ["../../packages/shared/src/index.ts"]
     }
   },
   "references": [
     { "path": "../../packages/parser" },
-    { "path": "../../packages/dossier" }
+    { "path": "../../packages/dossier" },
+    { "path": "../../packages/shared" }
   ],
   "include": ["src"]
 }
