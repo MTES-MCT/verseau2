@@ -37,19 +37,11 @@ _Grows over time. Capture insights._
 
 ### Start of session
 
-1. Read `active-context.md` and `todo.md`
-2. Load Layer 1 files only if relevant to the current task
-
-### During work
-
-3. Update `todo.md` after completing each step
-4. Write discoveries or decisions to `active-context.md`
+1. Load Layer 1 files if relevant
 
 ### End of session
 
-5. Update `progress.md` with what was accomplished
-6. Move reusable insights from `active-context.md` to `lessons-learned.md`
-7. Update `todo.md` with remaining/new tasks
+2. Remember reusable insights in `lessons-learned.md`
 
 ## Critical Rules
 

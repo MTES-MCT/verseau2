@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
@@ -26,6 +28,7 @@ export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -135,7 +138,13 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
-    return this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
+    const cacheKey = `vSteuSclItv:${itvRfa}`;
+    const cached = await this.cacheManager.get<VSteuSclItvResult[]>(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
+    await this.cacheManager.set(cacheKey, result, 3_600_000);
+    return result;
   }
 
   // ---------------------------------------------------------------------------
