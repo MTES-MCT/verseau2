@@ -348,8 +348,8 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
     fireEvent.click(screen.getByLabelText(/qualification/i));
 
-    expect(screen.getByRole('option', { name: 'Correcte' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Incorrecte' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /1 - Correcte/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /2 - Incorrecte/i })).toBeInTheDocument();
   });
 
   it('shows loading placeholder for statut and qualification when loading', () => {

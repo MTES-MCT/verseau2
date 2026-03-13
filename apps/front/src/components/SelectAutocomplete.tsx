@@ -49,6 +49,38 @@ export const SelectAutocomplete = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
+  const [actionsTop, setActionsTop] = useState<number | undefined>(undefined);
+  const [listboxTop, setListboxTop] = useState<number | undefined>(undefined);
+
+  // Dynamically position action buttons and listbox aligned with the native <input>.
+  // The DSFR fr-input-group contains label + input + error/valid message, so
+  // fixed CSS offsets break when the state message wraps to multiple lines.
+  // We measure the input position relative to each parent and update via ResizeObserver.
+  useEffect(() => {
+    const inputEl = inputRef.current;
+    const wrapperEl = inputWrapperRef.current;
+    const containerEl = containerRef.current;
+    if (!inputEl || !wrapperEl || !containerEl) {
+      return;
+    }
+
+    const update = () => {
+      const inputRect = inputEl.getBoundingClientRect();
+      const wrapperRect = wrapperEl.getBoundingClientRect();
+      const containerRect = containerEl.getBoundingClientRect();
+      setActionsTop(inputRect.top - wrapperRect.top);
+      setListboxTop(inputRect.bottom - containerRect.top);
+    };
+
+    update();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(update);
+    observer.observe(wrapperEl);
+    return () => observer.disconnect();
+  }, [state, stateRelatedMessage, label, hintText]);
 
   const selectedLabel = options.find((opt) => opt.value === value)?.label ?? '';
 
@@ -206,7 +238,7 @@ export const SelectAutocomplete = ({
 
   return (
     <div ref={containerRef} className="select-autocomplete-container" onBlur={handleBlur}>
-      <div className="select-autocomplete-input-wrapper">
+      <div ref={inputWrapperRef} className="select-autocomplete-input-wrapper">
         <Input
           label={label}
           hintText={hintText}
@@ -237,7 +269,10 @@ export const SelectAutocomplete = ({
             autoComplete: 'off',
           }}
         />
-        <div className="select-autocomplete-actions">
+        <div
+          className="select-autocomplete-actions"
+          style={actionsTop !== undefined ? { top: actionsTop, bottom: 'auto' } : undefined}
+        >
           {value && (
             <button
               type="button"
@@ -266,6 +301,7 @@ export const SelectAutocomplete = ({
           ref={listboxRef}
           role="listbox"
           className={`${fr.cx('fr-p-0', 'fr-m-0')} select-autocomplete-listbox`}
+          style={listboxTop !== undefined ? { top: listboxTop } : undefined}
         >
           {filteredOptions.map((option, index) => {
             const isHighlighted = index === highlightedIndex;

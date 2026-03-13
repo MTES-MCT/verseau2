@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SelectAutocomplete } from './SelectAutocomplete';
 
 describe('SelectAutocomplete', () => {
@@ -415,8 +415,81 @@ describe('SelectAutocomplete', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // State / stateRelatedMessage (DSFR validation states)
+  // Listbox positioning (dynamic top via ResizeObserver / getBoundingClientRect)
   // ---------------------------------------------------------------------------
+
+  describe('listbox positioning relative to the native input', () => {
+    // jsdom returns all zeros for getBoundingClientRect. We mock it on
+    // Element.prototype before each render (so the useEffect sees the mocked
+    // values on mount) using CSS class names to discriminate elements:
+    //   .select-autocomplete-input-wrapper  → top: 100
+    //   .select-autocomplete-container      → top: 100
+    //   input (combobox)                    → top: 130, bottom: 170
+    //
+    // Expected computed values:
+    //   actionsTop  = inputTop  - wrapperTop  = 130 - 100 = 30
+    //   listboxTop  = inputBottom - containerTop = 170 - 100 = 70
+
+    beforeEach(() => {
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        if (this.classList.contains('select-autocomplete-input-wrapper')) {
+          return { top: 100, bottom: 180, left: 0, right: 300, width: 300, height: 80 } as DOMRect;
+        }
+        if (this.classList.contains('select-autocomplete-container')) {
+          return { top: 100, bottom: 210, left: 0, right: 300, width: 300, height: 110 } as DOMRect;
+        }
+        if (this.tagName === 'INPUT') {
+          return { top: 130, bottom: 170, left: 0, right: 300, width: 300, height: 40 } as DOMRect;
+        }
+        return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 } as DOMRect;
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('positions the listbox flush under the input in default state', () => {
+      render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('combobox'));
+
+      // listboxTop = inputBottom - containerTop = 170 - 100 = 70
+      expect(screen.getByRole('listbox')).toHaveStyle({ top: '70px' });
+    });
+
+    it('positions the listbox flush under the input in error state', () => {
+      render(
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          onChange={vi.fn()}
+          state="error"
+          stateRelatedMessage="Veuillez sélectionner une ville"
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByRole('listbox')).toHaveStyle({ top: '70px' });
+    });
+
+    it('positions the listbox flush under the input in success state', () => {
+      render(
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          onChange={vi.fn()}
+          state="success"
+          stateRelatedMessage="Ville valide"
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByRole('listbox')).toHaveStyle({ top: '70px' });
+    });
+  });
 
   it('passes stateRelatedMessage to the underlying Input when state is error', () => {
     render(

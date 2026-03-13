@@ -45,18 +45,6 @@
   pointer-events: auto;
 }
 
-/* When the input group has an error or success state, a message paragraph
-   is rendered below the input. Offset the buttons upward by its height. */
-.select-autocomplete-input-wrapper:has(.fr-input-group--error) .select-autocomplete-actions,
-.select-autocomplete-input-wrapper:has(.fr-input-group--valid) .select-autocomplete-actions {
-  bottom: 2.1rem;
-}
-
-.select-autocomplete-container:has(.fr-input-group--error) .select-autocomplete-listbox,
-.select-autocomplete-container:has(.fr-input-group--valid) .select-autocomplete-listbox {
-  top: calc(100% - 2.1rem);
-}
-
 .select-autocomplete-btn {
   display: flex;
   align-items: center;
