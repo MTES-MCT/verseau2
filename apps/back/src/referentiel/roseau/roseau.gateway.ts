@@ -9,6 +9,7 @@ import {
   MesureFilters,
   MesureRow,
   SteuWithName,
+  SclWithName,
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
@@ -35,8 +36,9 @@ export interface RoseauGateway {
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
-  findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]>;
-  findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]>;
+  findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
+  findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
+  findParametresByOuvrageAndPmo(ouvrageType: 'steu' | 'scl', ouvrageCode: string, pmoCdn: number): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
 }
 

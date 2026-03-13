@@ -1,5 +1,5 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
-import { PaginationQuery, MesuresSortByValue } from '@lib/dossier';
+import { PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 
 export interface CmaBySandreCdaAndParam {
   sandreCda: string;
@@ -33,6 +33,13 @@ export interface SteuWithName {
   steuSandreCda: string;
   steuNom: string | null;
 }
+
+/** SCL avec nom — utilisé pour le dropdown système de collecte */
+export interface SclWithName {
+  sclSandreCda: string;
+  sclNom: string | null;
+}
+
 /** Résultat ITV retourné par un fetch batch MASA */
 
 export interface ItvCdnByRfa {
@@ -83,7 +90,9 @@ export interface NomenclatureItem {
 
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters extends PaginationQuery {
+  ouvrageType: OuvrageTypeValue;
   steuSandreCdas: string[];
+  sclSandreCdas: string[];
   pmoCdn?: number;
   dateDebut?: string;
   dateFin?: string;

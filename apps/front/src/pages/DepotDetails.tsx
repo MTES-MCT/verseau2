@@ -3,6 +3,7 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
+import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
@@ -14,11 +15,14 @@ export function DepotDetailsPage() {
   const {
     form,
     updateForm,
+    updateOuvrageType,
     updateSelectedPmo,
     handleSearch,
     setSort,
     ouvrages,
     ouvragesLoading,
+    systemesCollecte,
+    systemesCollecteLoading,
     ouvrageError,
     pointsMesure,
     pointsMesureLoading,
@@ -36,10 +40,19 @@ export function DepotDetailsPage() {
     PAGE_SIZE,
   } = useMesureFilters();
 
-  const ouvragesOptions: AutocompleteOption[] = ouvrages.map((o) => ({
-    value: o.steuSandreCda,
-    label: o.steuNom ?? o.steuSandreCda,
-  }));
+  const isScl = form.ouvrageType === 'scl';
+
+  const ouvragesOptions: AutocompleteOption[] = isScl
+    ? systemesCollecte.map((s) => ({
+        value: s.sclSandreCda,
+        label: s.sclNom ?? s.sclSandreCda,
+      }))
+    : ouvrages.map((o) => ({
+        value: o.steuSandreCda,
+        label: o.steuNom ?? o.steuSandreCda,
+      }));
+
+  const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
 
   const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((p) => ({
     value: String(p.pmoCdn),
@@ -110,15 +123,42 @@ export function DepotDetailsPage() {
 
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>
-        {/* Row 1: Ouvrage, Point de mesure, Paramètre */}
+        {/* Sélection du type d'ouvrage */}
+        <div className={fr.cx('fr-mb-3w')}>
+          <RadioButtons
+            legend="Type d'ouvrage"
+            name="ouvrageType"
+            orientation="horizontal"
+            options={[
+              {
+                label: 'Station (STEU)',
+                nativeInputProps: {
+                  value: 'steu',
+                  checked: form.ouvrageType === 'steu',
+                  onChange: () => updateOuvrageType('steu'),
+                },
+              },
+              {
+                label: 'Système de collecte',
+                nativeInputProps: {
+                  value: 'scl',
+                  checked: form.ouvrageType === 'scl',
+                  onChange: () => updateOuvrageType('scl'),
+                },
+              },
+            ]}
+          />
+        </div>
+
+        {/* Row 1: Ouvrage, Point de mesure, Paramètre, Finalité */}
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
             <SelectAutocomplete
-              label="Ouvrage (STEU)"
-              placeholder={ouvragesLoading ? 'Chargement…' : 'Tous les ouvrages'}
+              label={isScl ? 'Système de collecte' : 'Ouvrage (STEU)'}
+              placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
               options={ouvragesOptions}
-              value={form.selectedSteu || null}
-              onChange={(v) => updateForm('selectedSteu', v ?? '')}
+              value={form.selectedOuvrageCode || null}
+              onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
               state={ouvrageError ? 'error' : 'default'}
               stateRelatedMessage={ouvrageError || undefined}
             />
@@ -128,7 +168,13 @@ export function DepotDetailsPage() {
             <SelectAutocomplete
               label="Point de mesure"
               placeholder={
-                !form.selectedSteu ? 'Sélectionnez un ouvrage' : pointsMesureLoading ? 'Chargement…' : 'Tous les points'
+                !form.selectedOuvrageCode
+                  ? isScl
+                    ? 'Sélectionnez un système'
+                    : 'Sélectionnez un ouvrage'
+                  : pointsMesureLoading
+                    ? 'Chargement…'
+                    : 'Tous les points'
               }
               options={pointsMesureOptions}
               value={form.selectedPmoCdn !== null ? String(form.selectedPmoCdn) : null}
@@ -163,7 +209,7 @@ export function DepotDetailsPage() {
           </div>
         </div>
 
-        {/* Row 2: Date début, Date fin, Finalité, Rechercher */}
+        {/* Row 2: Date début, Date fin, Rechercher */}
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom', 'fr-mt-2w')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
             <Input

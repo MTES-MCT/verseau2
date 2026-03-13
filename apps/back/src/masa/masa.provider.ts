@@ -15,6 +15,7 @@ import {
   MesureFilters,
   MesureRow,
   SteuWithName,
+  SclWithName,
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
@@ -216,12 +217,21 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Mesures — Points de mesure (PMO) pour un ouvrage donné
+  // Mesures — SCL autorisés avec noms pour le dropdown système de collecte
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]> {
-    return this.roseauGateway.findPointsMesureBySandreCda(steuSandreCda);
+  async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
+    return this.roseauGateway.findSclWithNamesBySandreCdas(sandreCdas);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Points de mesure (PMO) pour un ouvrage donné (STEU ou SCL)
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
   }
 
   // ---------------------------------------------------------------------------
@@ -229,8 +239,12 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  async findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]> {
-    return this.roseauGateway.findParametresBySteuAndPmo(steuSandreCda, pmoCdn);
+  async findParametresByOuvrageAndPmo(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    pmoCdn: number,
+  ): Promise<ParametreMesure[]> {
+    return this.roseauGateway.findParametresByOuvrageAndPmo(ouvrageType, ouvrageCode, pmoCdn);
   }
 
   // ---------------------------------------------------------------------------

@@ -10,6 +10,9 @@ vi.mock('../hooks/useMesures', () => ({
 vi.mock('../hooks/useOuvrages', () => ({
   useOuvrages: vi.fn(),
 }));
+vi.mock('../hooks/useSystemesCollecte', () => ({
+  useSystemesCollecte: vi.fn(),
+}));
 vi.mock('../hooks/usePointsMesure', () => ({
   usePointsMesure: vi.fn(),
 }));
@@ -19,11 +22,13 @@ vi.mock('../hooks/useParametresMesure', () => ({
 
 import { useMesures } from '../hooks/useMesures';
 import { useOuvrages } from '../hooks/useOuvrages';
+import { useSystemesCollecte } from '../hooks/useSystemesCollecte';
 import { usePointsMesure } from '../hooks/usePointsMesure';
 import { useParametresMesure } from '../hooks/useParametresMesure';
 
 const mockUseMesures = vi.mocked(useMesures);
 const mockUseOuvrages = vi.mocked(useOuvrages);
+const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseParametresMesure = vi.mocked(useParametresMesure);
 
@@ -75,6 +80,7 @@ describe('DepotDetailsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseOuvrages.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useOuvrages>);
+    mockUseSystemesCollecte.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useSystemesCollecte>);
     mockUseMesures.mockReturnValue(emptyMesuresResult as unknown as ReturnType<typeof useMesures>);
     mockUsePointsMesure.mockReturnValue(emptyPointsMesureResult as unknown as ReturnType<typeof usePointsMesure>);
     mockUseParametresMesure.mockReturnValue(emptyParametresResult as unknown as ReturnType<typeof useParametresMesure>);
@@ -92,14 +98,34 @@ describe('DepotDetailsPage', () => {
     expect(screen.getByText(/données mises à jour chaque semaine \(J-7\)/i)).toBeInTheDocument();
   });
 
+  it('renders the radio button for ouvrage type selection', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    expect(screen.getByRole('radio', { name: /station \(steu\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /système de collecte/i })).toBeInTheDocument();
+    // STEU is selected by default
+    expect(screen.getByRole('radio', { name: /station \(steu\)/i })).toBeChecked();
+  });
+
   it('renders all filter labels', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    expect(screen.getByLabelText(/ouvrage/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/ouvrage \(steu\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date début/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date fin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/finalité/i)).toBeInTheDocument();
+  });
+
+  it('changes ouvrage dropdown label when SCL radio is selected', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    // Switch to SCL
+    fireEvent.click(screen.getByRole('radio', { name: /système de collecte/i }));
+
+    // The dropdown label should change from "Ouvrage (STEU)" to something else
+    expect(screen.queryByLabelText(/ouvrage \(steu\)/i)).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/tous les systèmes/i)).toBeInTheDocument();
   });
 
   it('renders ouvrage dropdown showing options after clicking', () => {
@@ -115,7 +141,7 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     // Open the autocomplete dropdown
-    fireEvent.click(screen.getByLabelText(/ouvrage/i));
+    fireEvent.click(screen.getByLabelText(/ouvrage \(steu\)/i));
 
     expect(screen.getByRole('option', { name: /Station A/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Station B/i })).toBeInTheDocument();
@@ -251,11 +277,21 @@ describe('DepotDetailsPage', () => {
     expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();
   });
 
-  it('shows validation error on search without ouvrage selected', () => {
+  it('shows validation error on search without ouvrage selected (STEU mode)', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
     expect(screen.getByText(/veuillez sélectionner au moins un ouvrage/i)).toBeInTheDocument();
+  });
+
+  it('shows validation error on search without SCL selected (SCL mode)', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    // Switch to SCL mode
+    fireEvent.click(screen.getByRole('radio', { name: /système de collecte/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    expect(screen.getByText(/veuillez sélectionner au moins un système de collecte/i)).toBeInTheDocument();
   });
 });

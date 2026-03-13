@@ -23,6 +23,7 @@ import {
   MesureFilters,
   MesureRow,
   SteuWithName,
+  SclWithName,
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
@@ -261,28 +262,62 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
-    const { steuSandreCdas, pmoCdn, dateDebut, dateFin, parametreCode, qualification, finalite, page, pageSize } =
-      filters;
+    const {
+      ouvrageType,
+      steuSandreCdas,
+      sclSandreCdas,
+      pmoCdn,
+      dateDebut,
+      dateFin,
+      parametreCode,
+      qualification,
+      finalite,
+      page,
+      pageSize,
+    } = filters;
     const sortBy = filters.sortBy ?? 'default';
     const sortOrder = filters.sortOrder ?? 'ASC';
 
-    const buildBaseQuery = () =>
-      this.alrRepository
-        .createQueryBuilder('alr')
-        .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
-        .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
-        .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
-        .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = scl.steu_cdn')
-        .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
-        .leftJoin(TlrefEntity, 't20', 't20.tlref_cdn = alr.tlref_20_cdn')
-        .leftJoin(TlrefEntity, 't18', 't18.tlref_cdn = alr.tlref_18_cdn')
-        .leftJoin(TlrefEntity, 't17', 't17.tlref_cdn = alr.tlref_17_cdn')
-        .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
-        .leftJoin(UrfEntity, 'urf', 'urf.urf_rfa = alr.urf_rfa');
+    const buildBaseQuery = () => {
+      if (ouvrageType === 'scl') {
+        // Mode SCL : pmo -> scl -> steu (chemin via le système de collecte)
+        return this.alrRepository
+          .createQueryBuilder('alr')
+          .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
+          .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
+          .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+          .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = scl.steu_cdn')
+          .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+          .leftJoin(TlrefEntity, 't20', 't20.tlref_cdn = alr.tlref_20_cdn')
+          .leftJoin(TlrefEntity, 't18', 't18.tlref_cdn = alr.tlref_18_cdn')
+          .leftJoin(TlrefEntity, 't17', 't17.tlref_cdn = alr.tlref_17_cdn')
+          .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
+          .leftJoin(UrfEntity, 'urf', 'urf.urf_rfa = alr.urf_rfa');
+      } else {
+        // Mode STEU : pmo -> steu (jointure directe)
+        return this.alrRepository
+          .createQueryBuilder('alr')
+          .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
+          .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
+          .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
+          .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+          .leftJoin(TlrefEntity, 't20', 't20.tlref_cdn = alr.tlref_20_cdn')
+          .leftJoin(TlrefEntity, 't18', 't18.tlref_cdn = alr.tlref_18_cdn')
+          .leftJoin(TlrefEntity, 't17', 't17.tlref_cdn = alr.tlref_17_cdn')
+          .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
+          .leftJoin(UrfEntity, 'urf', 'urf.urf_rfa = alr.urf_rfa');
+      }
+    };
 
     const applyFilters = (qb: ReturnType<typeof buildBaseQuery>) => {
-      if (steuSandreCdas.length > 0) {
-        qb.andWhere('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas });
+      if (ouvrageType === 'scl') {
+        if (sclSandreCdas.length > 0) {
+          qb.andWhere('scl.scl_sandre_cda IN (:...sclSandreCdas)', { sclSandreCdas });
+        }
+      } else {
+        if (steuSandreCdas.length > 0) {
+          qb.andWhere('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas });
+        }
       }
       if (pmoCdn !== undefined) {
         qb.andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
@@ -311,8 +346,8 @@ export class RoseauRepository implements RoseauGateway {
     const dataQb = applyFilters(buildBaseQuery())
       .select('steu.steu_sandre_cda', 'steu_sandre_cda')
       .addSelect('steu.steu_nom_lb', 'steu_nom')
-      .addSelect('scl.scl_sandre_cda', 'scl_sandre_cda')
-      .addSelect('scl.scl_lb', 'scl_nom')
+      .addSelect(ouvrageType === 'scl' ? 'scl.scl_sandre_cda' : 'NULL::text', 'scl_sandre_cda')
+      .addSelect(ouvrageType === 'scl' ? 'scl.scl_lb' : 'NULL::text', 'scl_nom')
       .addSelect('t16.tlref_elt_cda', 'localisation_point')
       .addSelect('pmo.pmo_ae_cda', 'num_point_agence')
       .addSelect('pmo.pmo_no', 'num_point')
@@ -337,12 +372,21 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     if (sortBy === 'default') {
-      dataQb
-        .orderBy('scl.scl_lb', sortOrder)
-        .addOrderBy('t16.tlref_elt_cda', sortOrder)
-        .addOrderBy('pmo.pmo_no', sortOrder)
-        .addOrderBy('ple.ple_prelev_dt', sortOrder)
-        .addOrderBy('par.par_rfa', sortOrder);
+      if (ouvrageType === 'scl') {
+        dataQb
+          .orderBy('scl.scl_lb', sortOrder)
+          .addOrderBy('t16.tlref_elt_cda', sortOrder)
+          .addOrderBy('pmo.pmo_no', sortOrder)
+          .addOrderBy('ple.ple_prelev_dt', sortOrder)
+          .addOrderBy('par.par_rfa', sortOrder);
+      } else {
+        dataQb
+          .orderBy('steu.steu_nom_lb', sortOrder)
+          .addOrderBy('t16.tlref_elt_cda', sortOrder)
+          .addOrderBy('pmo.pmo_no', sortOrder)
+          .addOrderBy('ple.ple_prelev_dt', sortOrder)
+          .addOrderBy('par.par_rfa', sortOrder);
+      }
     } else {
       const sortColumn = sortMap[sortBy];
       if (!sortColumn) {
@@ -406,20 +450,38 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findPointsMesureBySandreCda(steuSandreCda: string): Promise<PointMesure[]> {
-    const rows = await this.pmoRepository
+  async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
+    if (sandreCdas.length === 0) return [];
+    const rows = await this.sclRepository
+      .createQueryBuilder('scl')
+      .where('scl.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .getMany();
+    return rows.map((s) => ({
+      sclSandreCda: s.sclSandreCda?.trim() ?? '',
+      sclNom: s.sclLb?.trim() ?? null,
+    }));
+  }
+
+  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
+    const qb = this.pmoRepository
       .createQueryBuilder('pmo')
       .select('pmo.pmo_cdn', 'pmo_cdn')
       .addSelect('pmo.pmo_no', 'pmo_no')
-      .addSelect('pmo.pmo_lb', 'pmo_lb')
-      .leftJoin(SteuEntity, 'steu_direct', 'steu_direct.steu_cdn = pmo.steu_cdn')
-      .leftJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
-      .leftJoin(SteuEntity, 'steu_scl', 'steu_scl.steu_cdn = scl.steu_cdn')
-      .where('steu_direct.steu_sandre_cda = :steuSandreCda OR steu_scl.steu_sandre_cda = :steuSandreCda', {
-        steuSandreCda,
-      })
-      .orderBy('pmo.pmo_no', 'ASC')
-      .getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+      .addSelect('pmo.pmo_lb', 'pmo_lb');
+
+    if (ouvrageType === 'scl') {
+      // Mode SCL : pmo -> scl (jointure directe via scl_cdn)
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+        .where('scl.scl_sandre_cda = :ouvrageCode', { ouvrageCode });
+    } else {
+      // Mode STEU : pmo -> steu (jointure directe via steu_cdn)
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
+        .where('steu.steu_sandre_cda = :ouvrageCode', { ouvrageCode });
+    }
+
+    qb.orderBy('pmo.pmo_no', 'ASC');
+
+    const rows = await qb.getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
     return rows.map((r) => ({
       pmoCdn: r.pmo_cdn,
       pmoNo: r.pmo_no?.trim() ?? '',
@@ -427,21 +489,31 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findParametresBySteuAndPmo(steuSandreCda: string, pmoCdn: number): Promise<ParametreMesure[]> {
-    const rows = await this.alrRepository
+  async findParametresByOuvrageAndPmo(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    pmoCdn: number,
+  ): Promise<ParametreMesure[]> {
+    const qb = this.alrRepository
       .createQueryBuilder('alr')
       .select('alr.par_rfa', 'par_rfa')
       .addSelect('par.par_court_nom_lb', 'par_court_nom_lb')
       .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
       .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
-      .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
-      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = scl.steu_cdn')
       .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
-      .where('steu.steu_sandre_cda = :steuSandreCda', { steuSandreCda })
-      .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn })
-      .distinct(true)
-      .orderBy('alr.par_rfa', 'ASC')
-      .getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
+      .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+
+    if (ouvrageType === 'scl') {
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+        .where('scl.scl_sandre_cda = :ouvrageCode', { ouvrageCode });
+    } else {
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
+        .where('steu.steu_sandre_cda = :ouvrageCode', { ouvrageCode });
+    }
+
+    qb.distinct(true).orderBy('alr.par_rfa', 'ASC');
+
+    const rows = await qb.getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
     return rows.map((r) => ({
       parRfa: r.par_rfa?.trim() ?? '',
       parCourtNomLb: r.par_court_nom_lb?.trim() ?? null,

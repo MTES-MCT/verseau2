@@ -1,5 +1,12 @@
-import { listMesures, listOuvrages, listPointsMesure, listParametresMesure, listFinalites } from '@lib/dossier';
-import type { RouteQuery } from '@lib/dossier';
+import {
+  listMesures,
+  listOuvrages,
+  listSystemesCollecte,
+  listPointsMesure,
+  listParametresMesure,
+  listFinalites,
+} from '@lib/dossier';
+import type { RouteQuery, OuvrageTypeValue } from '@lib/dossier';
 import { apiCall } from './apiClient';
 
 export async function fetchMesures(query: RouteQuery<typeof listMesures>) {
@@ -10,12 +17,16 @@ export async function fetchOuvrages() {
   return apiCall(listOuvrages);
 }
 
-export async function fetchPointsMesure(steuSandreCda: string) {
-  return apiCall(listPointsMesure, { query: { steuSandreCda } });
+export async function fetchSystemesCollecte() {
+  return apiCall(listSystemesCollecte);
 }
 
-export async function fetchParametresMesure(steuSandreCda: string, pmoCdn: number) {
-  return apiCall(listParametresMesure, { query: { steuSandreCda, pmoCdn } });
+export async function fetchPointsMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string) {
+  return apiCall(listPointsMesure, { query: { ouvrageType, ouvrageCode } });
+}
+
+export async function fetchParametresMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string, pmoCdn: number) {
+  return apiCall(listParametresMesure, { query: { ouvrageType, ouvrageCode, pmoCdn } });
 }
 
 export async function fetchFinalites() {

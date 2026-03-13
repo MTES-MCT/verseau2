@@ -3,7 +3,14 @@ import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
-import { listMesures, listOuvrages, listPointsMesure, listParametresMesure, listFinalites } from '@lib/dossier';
+import {
+  listMesures,
+  listOuvrages,
+  listSystemesCollecte,
+  listPointsMesure,
+  listParametresMesure,
+  listFinalites,
+} from '@lib/dossier';
 import { MesuresService } from './mesures.service';
 
 @Controller('mesures')
@@ -19,7 +26,9 @@ export class MesuresController {
     const itvCdn = req.user.itvCdn;
     return this.mesuresService.listMesures({
       itvCdn,
+      ouvrageType: query.ouvrageType,
       steuSandreCdas: query.steuSandreCdas,
+      sclSandreCdas: query.sclSandreCdas,
       pmoCdn: query.pmoCdn,
       dateDebut: query.dateDebut,
       dateFin: query.dateFin,
@@ -38,12 +47,17 @@ export class MesuresController {
     return this.mesuresService.listOuvrages(req.user.itvCdn);
   }
 
+  @Get('systemes-collecte')
+  async listSystemesCollecte(@Req() req: CustomRequest): Promise<RouteResponse<typeof listSystemesCollecte>> {
+    return this.mesuresService.listSystemesCollecte(req.user.itvCdn);
+  }
+
   @Get('points-mesure')
   async listPointsMesure(
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listPointsMesure['query'])) query: RouteQuery<typeof listPointsMesure>,
   ): Promise<RouteResponse<typeof listPointsMesure>> {
-    return this.mesuresService.listPointsMesure(req.user.itvCdn, query.steuSandreCda);
+    return this.mesuresService.listPointsMesure(req.user.itvCdn, query.ouvrageType, query.ouvrageCode);
   }
 
   @Get('parametres')
@@ -51,7 +65,7 @@ export class MesuresController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listParametresMesure['query'])) query: RouteQuery<typeof listParametresMesure>,
   ): Promise<RouteResponse<typeof listParametresMesure>> {
-    return this.mesuresService.listParametresMesure(req.user.itvCdn, query.steuSandreCda, query.pmoCdn);
+    return this.mesuresService.listParametresMesure(req.user.itvCdn, query.ouvrageType, query.ouvrageCode, query.pmoCdn);
   }
 
   @Get('finalites')

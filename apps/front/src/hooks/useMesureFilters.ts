@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
-import type { MesuresSortByValue } from '@lib/dossier';
+import type { MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
 import { useOuvrages } from './useOuvrages';
+import { useSystemesCollecte } from './useSystemesCollecte';
 import { usePointsMesure } from './usePointsMesure';
 import { useParametresMesure } from './useParametresMesure';
 import { useFinalites } from './useFinalites';
@@ -10,7 +11,8 @@ import { useFinalites } from './useFinalites';
 const PAGE_SIZE = 20;
 
 interface FilterState {
-  selectedSteu: string;
+  ouvrageType: OuvrageTypeValue;
+  selectedOuvrageCode: string;
   selectedPmoCdn: number | null;
   selectedParametre: string;
   dateDebut: string;
@@ -21,7 +23,8 @@ interface FilterState {
 }
 
 const INITIAL_FILTERS: FilterState = {
-  selectedSteu: '',
+  ouvrageType: 'steu',
+  selectedOuvrageCode: '',
   selectedPmoCdn: null,
   selectedParametre: '',
   dateDebut: getNYearsAgoAsISODate(1),
@@ -39,15 +42,27 @@ export function useMesureFilters() {
   const [ouvrageError, setOuvrageError] = useState<string>('');
 
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: pointsMesure = [], isLoading: pointsMesureLoading } = usePointsMesure(form.selectedSteu || null);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: pointsMesure = [], isLoading: pointsMesureLoading } = usePointsMesure(
+    form.ouvrageType,
+    form.selectedOuvrageCode || null,
+  );
   const { data: parametres = [], isLoading: parametresLoading } = useParametresMesure(
-    form.selectedSteu || null,
+    form.ouvrageType,
+    form.selectedOuvrageCode || null,
     form.selectedPmoCdn,
   );
   const { data: finalites = [], isLoading: finalitesLoading } = useFinalites();
 
   const query = {
-    ...(submitted.selectedSteu ? { steuSandreCdas: [submitted.selectedSteu] } : {}),
+    ouvrageType: submitted.ouvrageType,
+    ...(submitted.ouvrageType === 'scl'
+      ? submitted.selectedOuvrageCode
+        ? { sclSandreCdas: [submitted.selectedOuvrageCode] }
+        : {}
+      : submitted.selectedOuvrageCode
+        ? { steuSandreCdas: [submitted.selectedOuvrageCode] }
+        : {}),
     ...(submitted.selectedPmoCdn !== null ? { pmoCdn: submitted.selectedPmoCdn } : {}),
     ...(submitted.selectedParametre ? { parametreCode: submitted.selectedParametre } : {}),
     ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
@@ -64,8 +79,12 @@ export function useMesureFilters() {
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
   function handleSearch() {
-    if (!form.selectedSteu) {
-      setOuvrageError('Veuillez sélectionner au moins un ouvrage.');
+    if (!form.selectedOuvrageCode) {
+      setOuvrageError(
+        form.ouvrageType === 'scl'
+          ? 'Veuillez sélectionner au moins un système de collecte.'
+          : 'Veuillez sélectionner au moins un ouvrage.',
+      );
       return;
     }
     setSubmitted(form);
@@ -73,14 +92,24 @@ export function useMesureFilters() {
     setPage(1);
   }
 
-  function updateForm(field: Exclude<keyof FilterState, 'selectedPmoCdn'>, value: string) {
+  function updateOuvrageType(ouvrageType: OuvrageTypeValue) {
+    setOuvrageError('');
+    setForm({
+      ...INITIAL_FILTERS,
+      ouvrageType,
+      dateDebut: form.dateDebut,
+      dateFin: form.dateFin,
+    });
+  }
+
+  function updateForm(field: Exclude<keyof FilterState, 'selectedPmoCdn' | 'ouvrageType'>, value: string) {
     setForm((f) => {
       // Cascade: changement d'ouvrage → reset PMO + paramètre
-      if (field === 'selectedSteu') {
+      if (field === 'selectedOuvrageCode') {
         if (value) {
           setOuvrageError('');
         }
-        return { ...f, selectedSteu: value, selectedPmoCdn: null, selectedParametre: '' };
+        return { ...f, selectedOuvrageCode: value, selectedPmoCdn: null, selectedParametre: '' };
       }
       return { ...f, [field]: value };
     });
@@ -99,11 +128,14 @@ export function useMesureFilters() {
   return {
     form,
     updateForm,
+    updateOuvrageType,
     updateSelectedPmo,
     handleSearch,
     setSort,
     ouvrages,
     ouvragesLoading,
+    systemesCollecte,
+    systemesCollecteLoading,
     ouvrageError,
     pointsMesure,
     pointsMesureLoading,
