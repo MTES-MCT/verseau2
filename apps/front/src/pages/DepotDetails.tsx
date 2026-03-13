@@ -176,7 +176,7 @@ export function DepotDetailsPage() {
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
             <SelectAutocomplete
-              label={isScl ? 'Système de collecte' : 'Ouvrage (STEU)'}
+              label={isScl ? 'Système de collecte' : 'Station'}
               placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
               options={ouvragesOptions}
               value={form.selectedOuvrageCode || null}
@@ -193,7 +193,7 @@ export function DepotDetailsPage() {
                 !form.selectedOuvrageCode
                   ? isScl
                     ? 'Sélectionnez un système'
-                    : 'Sélectionnez un ouvrage'
+                    : 'Sélectionnez une station'
                   : pointsMesureLoading
                     ? 'Chargement…'
                     : 'Tous les points'

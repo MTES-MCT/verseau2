@@ -93,7 +93,7 @@ export function useMesureFilters() {
       setOuvrageError(
         form.ouvrageType === 'scl'
           ? 'Veuillez sélectionner au moins un système de collecte.'
-          : 'Veuillez sélectionner au moins un ouvrage.',
+          : 'Veuillez sélectionner au moins une station.',
       );
       return;
     }
