@@ -10,6 +10,7 @@ import type { AutocompleteOption } from '../components/SelectAutocomplete';
 import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesureFilters } from '../hooks/useMesureFilters';
 import { buildMesureTableRows } from '../helper/mesureTableData';
+import { formatOption } from '../helper/optionsFormatter';
 
 export function DepotDetailsPage() {
   const {
@@ -58,30 +59,37 @@ export function DepotDetailsPage() {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
 
-  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((p) => ({
-    value: String(p.pmoCdn),
-    label: p.pmoLb ? `${p.pmoLb} (${p.pmoNo})` : p.pmoNo,
-  }));
+  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) =>
+    formatOption({ code: String(option.pmoCdn), label: option.pmoLb }),
+  );
 
-  const parametresOptions: AutocompleteOption[] = parametres.map((p) => ({
-    value: p.parRfa,
-    label: p.parCourtNomLb ? `${p.parCourtNomLb} (${p.parRfa})` : p.parRfa,
-  }));
+  const parametresOptions: AutocompleteOption[] = parametres.map((option) =>
+    formatOption({ code: option.parRfa, label: option.parCourtNomLb }),
+  );
 
-  const finalitesOptions: AutocompleteOption[] = finalites.map((f) => ({
-    value: f.code,
-    label: f.label ? `${f.label} (${f.code})` : f.code,
-  }));
+  const finalitesOptions: AutocompleteOption[] = finalites
+    .slice()
+    .sort((a, b) => {
+      const preferred = ['1', '11', '9', '2'];
+      const aIndex = preferred.indexOf(String(a.code));
+      const bIndex = preferred.indexOf(String(b.code));
 
-  const statutsOptions: AutocompleteOption[] = statuts.map((s) => ({
-    value: s.code,
-    label: s.label ? `${s.label} (${s.code})` : s.code,
-  }));
+      if (aIndex === -1 && bIndex === -1) {
+        return 0;
+      }
+      if (aIndex === -1) {
+        return 1;
+      }
+      if (bIndex === -1) {
+        return -1;
+      }
+      return aIndex - bIndex;
+    })
+    .map(formatOption);
 
-  const qualificationsOptions: AutocompleteOption[] = qualifications.map((q) => ({
-    value: q.code,
-    label: q.label ?? q.code,
-  }));
+  const statutsOptions: AutocompleteOption[] = statuts.map(formatOption);
+
+  const qualificationsOptions: AutocompleteOption[] = qualifications.map(formatOption);
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
 
