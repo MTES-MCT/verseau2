@@ -68,6 +68,7 @@ describe('MesuresController', () => {
       const result = await controller.listMesures(makeRequest(42), {
         page: 1,
         pageSize: 20,
+        ouvrageType: 'steu',
       });
 
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
@@ -90,6 +91,7 @@ describe('MesuresController', () => {
         pageSize: 10,
         sortBy: 'date',
         sortOrder: 'DESC',
+        ouvrageType: 'steu',
       });
 
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
@@ -112,7 +114,7 @@ describe('MesuresController', () => {
     it('works with null itvCdn', async () => {
       mesuresService.listMesures.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 });
 
-      await controller.listMesures(makeRequest(null), { page: 1, pageSize: 20 });
+      await controller.listMesures(makeRequest(null), { page: 1, pageSize: 20, ouvrageType: 'steu' });
 
       expect(mesuresService.listMesures).toHaveBeenCalledWith(expect.objectContaining({ itvCdn: null }));
     });
