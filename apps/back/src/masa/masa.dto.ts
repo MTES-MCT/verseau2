@@ -1,5 +1,5 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
-import { PaginationQuery } from '@lib/dossier';
+import { PaginationQuery, MesuresSortByValue } from '@lib/dossier';
 
 export interface CmaBySandreCdaAndParam {
   sandreCda: string;
@@ -90,6 +90,7 @@ export interface MesureFilters extends PaginationQuery {
   parametreCode?: string;
   qualification?: string;
   finalite?: string;
+  sortBy?: MesuresSortByValue;
 }
 
 /** Une mesure avec tous ses champs joints */

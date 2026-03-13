@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
+import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
 import { useOuvrages } from './useOuvrages';
 import { usePointsMesure } from './usePointsMesure';
@@ -15,7 +16,7 @@ interface FilterState {
   dateDebut: string;
   dateFin: string;
   finalite: string;
-  sortBy?: string;
+  sortBy?: MesuresSortByValue;
   sortOrder?: 'ASC' | 'DESC';
 }
 
@@ -57,7 +58,6 @@ export function useMesureFilters() {
     page,
     pageSize: PAGE_SIZE,
   };
-  console.log('Mesure filters query', query);
 
   const { data, isLoading, isFetching, error } = useMesures(query, hasSearched);
 
@@ -90,7 +90,7 @@ export function useMesureFilters() {
     setForm((f) => ({ ...f, selectedPmoCdn: pmoCdn, selectedParametre: '' }));
   }
 
-  function setSort(sortBy: string, sortOrder: 'ASC' | 'DESC') {
+  function setSort(sortBy: MesuresSortByValue, sortOrder: 'ASC' | 'DESC') {
     setForm((f) => ({ ...f, sortBy, sortOrder }));
     setSubmitted((s) => ({ ...s, sortBy, sortOrder }));
     setPage(1);

@@ -6,6 +6,7 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
+import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesureFilters } from '../hooks/useMesureFilters';
 import { buildMesureTableRows } from '../helper/mesureTableData';
 
@@ -57,17 +58,19 @@ export function DepotDetailsPage() {
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
 
-  const headers = [
+  const columns: { label: string; field: MesuresSortByValue | null }[] = [
     { label: 'Date', field: 'date' },
     { label: 'Point de mesure', field: null },
     { label: 'Localisation', field: null },
-    { label: 'Paramètre', field: 'parametre_code' },
+    { label: 'Paramètre', field: 'parametreCode' },
     { label: 'Valeur', field: 'valeur' },
     { label: 'Unité', field: null },
     { label: 'Qualification', field: null },
     { label: 'Finalité', field: null },
     { label: 'Statut', field: 'statut' },
-  ].map((col) => {
+  ];
+
+  const headers = columns.map((col) => {
     if (!col.field) {
       return col.label;
     }

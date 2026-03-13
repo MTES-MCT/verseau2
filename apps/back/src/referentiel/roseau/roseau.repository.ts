@@ -344,7 +344,10 @@ export class RoseauRepository implements RoseauGateway {
         .addOrderBy('ple.ple_prelev_dt', sortOrder)
         .addOrderBy('par.par_rfa', sortOrder);
     } else {
-      const sortColumn = sortMap[sortBy] || sortBy;
+      const sortColumn = sortMap[sortBy];
+      if (!sortColumn) {
+        throw new Error(`Invalid sortBy value: "${sortBy}"`);
+      }
       dataQb.orderBy(sortColumn, sortOrder);
     }
 

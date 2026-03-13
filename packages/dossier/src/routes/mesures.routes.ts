@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { PaginatedMesuresResponseSchema } from '../mesure/mesure.dto';
-import { PaginationQuerySchema } from '../shared/pagination.schema';
+import { createPaginationQuerySchema } from '../shared/pagination.schema';
+
+/** Allow-list of sortable columns for the mesures list endpoint. */
+export const MesuresSortBy = z.enum(['date', 'parametreCode', 'valeur', 'statut']);
+export type MesuresSortByValue = z.infer<typeof MesuresSortBy>;
 
 export const listMesures = {
   method: 'GET',
@@ -16,7 +20,7 @@ export const listMesures = {
       qualification: z.string().optional(),
       finalite: z.string().optional(),
     })
-    .extend(PaginationQuerySchema.shape),
+    .extend(createPaginationQuerySchema(MesuresSortBy).shape),
   response: PaginatedMesuresResponseSchema,
 } as const satisfies RouteDefinition;
 
