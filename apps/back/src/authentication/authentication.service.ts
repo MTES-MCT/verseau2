@@ -262,14 +262,14 @@ export class AuthenticationService implements Authentication {
   }
 
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    const cookieOptions: CookieOptions = {
+    const accessTokenOptions: CookieOptions = {
       ...this.baseCookieOptions,
       maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
     };
-    res.cookie('access_token', tokens.accessToken, cookieOptions);
+    res.cookie('access_token', tokens.accessToken, accessTokenOptions);
 
     if (tokens.refreshToken) {
-      res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
+      res.cookie('refresh_token', tokens.refreshToken, this.baseCookieOptions);
     }
   }
 
