@@ -19,18 +19,38 @@ vi.mock('../hooks/usePointsMesure', () => ({
 vi.mock('../hooks/useParametresMesure', () => ({
   useParametresMesure: vi.fn(),
 }));
+vi.mock('../hooks/useFinalites', () => ({
+  useFinalites: vi.fn(),
+}));
+vi.mock('../hooks/useStatuts', () => ({
+  useStatuts: vi.fn(),
+}));
+vi.mock('../hooks/useQualifications', () => ({
+  useQualifications: vi.fn(),
+}));
 
 import { useMesures } from '../hooks/useMesures';
 import { useOuvrages } from '../hooks/useOuvrages';
 import { useSystemesCollecte } from '../hooks/useSystemesCollecte';
 import { usePointsMesure } from '../hooks/usePointsMesure';
 import { useParametresMesure } from '../hooks/useParametresMesure';
+import { useFinalites } from '../hooks/useFinalites';
+import { useStatuts } from '../hooks/useStatuts';
+import { useQualifications } from '../hooks/useQualifications';
 
 const mockUseMesures = vi.mocked(useMesures);
 const mockUseOuvrages = vi.mocked(useOuvrages);
 const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseParametresMesure = vi.mocked(useParametresMesure);
+const mockUseFinalites = vi.mocked(useFinalites);
+const mockUseStatuts = vi.mocked(useStatuts);
+const mockUseQualifications = vi.mocked(useQualifications);
+
+const emptyNomenclatureResult = {
+  data: [],
+  isLoading: false,
+};
 
 const emptyMesuresResult = {
   data: { data: [], total: 0, page: 1, pageSize: 20 },
@@ -84,6 +104,9 @@ describe('DepotDetailsPage', () => {
     mockUseMesures.mockReturnValue(emptyMesuresResult as unknown as ReturnType<typeof useMesures>);
     mockUsePointsMesure.mockReturnValue(emptyPointsMesureResult as unknown as ReturnType<typeof usePointsMesure>);
     mockUseParametresMesure.mockReturnValue(emptyParametresResult as unknown as ReturnType<typeof useParametresMesure>);
+    mockUseFinalites.mockReturnValue(emptyNomenclatureResult as unknown as ReturnType<typeof useFinalites>);
+    mockUseStatuts.mockReturnValue(emptyNomenclatureResult as unknown as ReturnType<typeof useStatuts>);
+    mockUseQualifications.mockReturnValue(emptyNomenclatureResult as unknown as ReturnType<typeof useQualifications>);
   });
 
   it('renders the page title', () => {
@@ -115,6 +138,8 @@ describe('DepotDetailsPage', () => {
     expect(screen.getByLabelText(/date fin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/finalité/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/statut/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/qualification/i)).toBeInTheDocument();
   });
 
   it('changes ouvrage dropdown label when SCL radio is selected', () => {
@@ -293,5 +318,48 @@ describe('DepotDetailsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
     expect(screen.getByText(/veuillez sélectionner au moins un système de collecte/i)).toBeInTheDocument();
+  });
+
+  it('renders statut dropdown populated with nomenclature items', () => {
+    mockUseStatuts.mockReturnValue({
+      data: [
+        { code: 'A', label: 'Donnée brute' },
+        { code: 'B', label: 'Pré-qualification' },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useStatuts>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+    fireEvent.click(screen.getByLabelText(/statut/i));
+
+    expect(screen.getByRole('option', { name: /donnée brute/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /pré-qualification/i })).toBeInTheDocument();
+  });
+
+  it('renders qualification dropdown populated with nomenclature items', () => {
+    mockUseQualifications.mockReturnValue({
+      data: [
+        { code: '1', label: 'Correcte' },
+        { code: '2', label: 'Incorrecte' },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useQualifications>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+    fireEvent.click(screen.getByLabelText(/qualification/i));
+
+    expect(screen.getByRole('option', { name: 'Correcte' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Incorrecte' })).toBeInTheDocument();
+  });
+
+  it('shows loading placeholder for statut and qualification when loading', () => {
+    mockUseStatuts.mockReturnValue({ data: undefined, isLoading: true } as unknown as ReturnType<typeof useStatuts>);
+    mockUseQualifications.mockReturnValue({ data: undefined, isLoading: true } as unknown as ReturnType<
+      typeof useQualifications
+    >);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    expect(screen.getAllByPlaceholderText(/chargement/i).length).toBeGreaterThanOrEqual(2);
   });
 });

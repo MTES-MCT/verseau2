@@ -24,6 +24,7 @@ export const listMesures = {
       dateFin: z.string().optional(),
       parametreCode: z.string().optional(),
       qualification: z.string().optional(),
+      statut: z.string().optional(),
       finalite: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(MesuresSortBy).shape),
@@ -87,6 +88,28 @@ export const listParametresMesure = {
 export const listFinalites = {
   method: 'GET',
   path: '/mesures/finalites',
+  response: z.array(
+    z.object({
+      code: z.string(),
+      label: z.string().nullable(),
+    }),
+  ),
+} as const satisfies RouteDefinition;
+
+export const listStatuts = {
+  method: 'GET',
+  path: '/mesures/statuts',
+  response: z.array(
+    z.object({
+      code: z.string(),
+      label: z.string().nullable(),
+    }),
+  ),
+} as const satisfies RouteDefinition;
+
+export const listQualifications = {
+  method: 'GET',
+  path: '/mesures/qualifications',
   response: z.array(
     z.object({
       code: z.string(),

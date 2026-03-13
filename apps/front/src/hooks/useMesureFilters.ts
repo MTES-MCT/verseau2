@@ -7,6 +7,8 @@ import { useSystemesCollecte } from './useSystemesCollecte';
 import { usePointsMesure } from './usePointsMesure';
 import { useParametresMesure } from './useParametresMesure';
 import { useFinalites } from './useFinalites';
+import { useStatuts } from './useStatuts';
+import { useQualifications } from './useQualifications';
 
 const PAGE_SIZE = 20;
 
@@ -18,6 +20,8 @@ interface FilterState {
   dateDebut: string;
   dateFin: string;
   finalite: string;
+  statut: string;
+  qualification: string;
   sortBy?: MesuresSortByValue;
   sortOrder?: 'ASC' | 'DESC';
 }
@@ -30,6 +34,8 @@ const INITIAL_FILTERS: FilterState = {
   dateDebut: getNYearsAgoAsISODate(1),
   dateFin: getTodayAsISODate(),
   finalite: '',
+  statut: '',
+  qualification: '',
   sortBy: undefined,
   sortOrder: undefined,
 };
@@ -53,6 +59,8 @@ export function useMesureFilters() {
     form.selectedPmoCdn,
   );
   const { data: finalites = [], isLoading: finalitesLoading } = useFinalites();
+  const { data: statuts = [], isLoading: statutsLoading } = useStatuts();
+  const { data: qualifications = [], isLoading: qualificationsLoading } = useQualifications();
 
   const query = {
     ouvrageType: submitted.ouvrageType,
@@ -68,6 +76,8 @@ export function useMesureFilters() {
     ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
     ...(submitted.dateFin ? { dateFin: submitted.dateFin } : {}),
     ...(submitted.finalite ? { finalite: submitted.finalite } : {}),
+    ...(submitted.statut ? { statut: submitted.statut } : {}),
+    ...(submitted.qualification ? { qualification: submitted.qualification } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy } : {}),
     ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
     page,
@@ -143,6 +153,10 @@ export function useMesureFilters() {
     parametresLoading,
     finalites,
     finalitesLoading,
+    statuts,
+    statutsLoading,
+    qualifications,
+    qualificationsLoading,
     data,
     isLoading,
     isFetching,

@@ -30,6 +30,10 @@ export function DepotDetailsPage() {
     parametresLoading,
     finalites,
     finalitesLoading,
+    statuts,
+    statutsLoading,
+    qualifications,
+    qualificationsLoading,
     data,
     isLoading,
     isFetching,
@@ -67,6 +71,16 @@ export function DepotDetailsPage() {
   const finalitesOptions: AutocompleteOption[] = finalites.map((f) => ({
     value: f.code,
     label: f.label ? `${f.label} (${f.code})` : f.code,
+  }));
+
+  const statutsOptions: AutocompleteOption[] = statuts.map((s) => ({
+    value: s.code,
+    label: s.label ? `${s.label} (${s.code})` : s.code,
+  }));
+
+  const qualificationsOptions: AutocompleteOption[] = qualifications.map((q) => ({
+    value: q.code,
+    label: q.label ?? q.code,
   }));
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
@@ -205,6 +219,26 @@ export function DepotDetailsPage() {
               options={finalitesOptions}
               value={form.finalite || null}
               onChange={(v) => updateForm('finalite', v ?? '')}
+            />
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+            <SelectAutocomplete
+              label="Statut"
+              placeholder={statutsLoading ? 'Chargement…' : 'Indifférent'}
+              options={statutsOptions}
+              value={form.statut || null}
+              onChange={(v) => updateForm('statut', v ?? '')}
+            />
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+            <SelectAutocomplete
+              label="Qualification"
+              placeholder={qualificationsLoading ? 'Chargement…' : 'Indifférent'}
+              options={qualificationsOptions}
+              value={form.qualification || null}
+              onChange={(v) => updateForm('qualification', v ?? '')}
             />
           </div>
         </div>

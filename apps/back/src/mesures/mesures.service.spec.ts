@@ -36,6 +36,8 @@ const makeMesureRow = (): MesureRow => ({
   qualification: 'Brut',
 });
 
+const makeNomenclatureItem = (code: string, label: string) => ({ code, label });
+
 describe('MesuresService', () => {
   let service: MesuresService;
   let masaProvider: jest.Mocked<MasaProvider>;
@@ -47,6 +49,9 @@ describe('MesuresService', () => {
       findMesures: jest.fn(),
       findSteuWithNamesBySandreCdas: jest.fn(),
       findSclWithNamesBySandreCdas: jest.fn(),
+      findFinalites: jest.fn(),
+      findStatuts: jest.fn(),
+      findQualifications: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -122,7 +127,13 @@ describe('MesuresService', () => {
       masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001'), makeVSteuSclItv('STEU003')]);
       masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
 
-      await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', steuSandreCdas: ['STEU001', 'STEU002'], page: 1, pageSize: 20 });
+      await service.listMesures({
+        itvCdn: 42,
+        ouvrageType: 'steu',
+        steuSandreCdas: ['STEU001', 'STEU002'],
+        page: 1,
+        pageSize: 20,
+      });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ steuSandreCdas: ['STEU001'] }));
     });
@@ -209,6 +220,38 @@ describe('MesuresService', () => {
         expect.objectContaining({ ouvrageType: 'scl', sclSandreCdas: ['SCL001'] }),
       );
     });
+
+    it('passes statut filter to masaProvider.findMesures when provided', async () => {
+      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(1, 'ITV001'));
+      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001')]);
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+
+      await service.listMesures({
+        itvCdn: 1,
+        ouvrageType: 'steu',
+        statut: 'A',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ statut: 'A' }));
+    });
+
+    it('passes qualification filter to masaProvider.findMesures when provided', async () => {
+      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(1, 'ITV001'));
+      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001')]);
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+
+      await service.listMesures({
+        itvCdn: 1,
+        ouvrageType: 'steu',
+        qualification: '1',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ qualification: '1' }));
+    });
   });
 
   describe('listOuvrages', () => {
@@ -272,7 +315,10 @@ describe('MesuresService', () => {
 
     it('returns SCL list with names when authorized SCLs found', async () => {
       masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001', 'SCL001'), makeVSteuSclItv('STEU002', 'SCL002')]);
+      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        makeVSteuSclItv('STEU001', 'SCL001'),
+        makeVSteuSclItv('STEU002', 'SCL002'),
+      ]);
       masaProvider.findSclWithNamesBySandreCdas.mockResolvedValue([
         { sclSandreCda: 'SCL001', sclNom: 'Réseau A' },
         { sclSandreCda: 'SCL002', sclNom: 'Réseau B' },
@@ -283,6 +329,30 @@ describe('MesuresService', () => {
       expect(masaProvider.findSclWithNamesBySandreCdas).toHaveBeenCalledWith(['SCL001', 'SCL002']);
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ sclSandreCda: 'SCL001', sclNom: 'Réseau A' });
+    });
+  });
+
+  describe('listStatuts', () => {
+    it('delegates to masaProvider.findStatuts', async () => {
+      const items = [makeNomenclatureItem('A', 'Donnée brute'), makeNomenclatureItem('B', 'Pré-qualification')];
+      masaProvider.findStatuts!.mockResolvedValue(items);
+
+      const result = await service.listStatuts();
+
+      expect(masaProvider.findStatuts).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(items);
+    });
+  });
+
+  describe('listQualifications', () => {
+    it('delegates to masaProvider.findQualifications', async () => {
+      const items = [makeNomenclatureItem('1', 'Correcte'), makeNomenclatureItem('2', 'Incorrecte')];
+      masaProvider.findQualifications!.mockResolvedValue(items);
+
+      const result = await service.listQualifications();
+
+      expect(masaProvider.findQualifications).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(items);
     });
   });
 });

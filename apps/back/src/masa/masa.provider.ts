@@ -255,4 +255,12 @@ export class MasaProvider {
   async findFinalites(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_17');
   }
+
+  async findStatuts(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findStatuts();
+  }
+
+  async findQualifications(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findQualifications();
+  }
 }

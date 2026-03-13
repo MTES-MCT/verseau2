@@ -219,4 +219,45 @@ describe('MesuresController (e2e)', () => {
       });
     });
   });
+
+  describe('GET /mesures - SCL mode', () => {
+    beforeEach(async () => {
+      await seedMinimalDataset();
+      await seedItv(dataSource, ITV_CDN, ITV_RFA);
+    });
+
+    it('returns paginated mesures filtered by SCL code', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      const response = await request(app.getHttpServer())
+        .get('/mesures')
+        .query({ ouvrageType: 'scl', sclSandreCdas: 'SCL_TEST_001' })
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        page: 1,
+        pageSize: 20,
+      });
+      expect(response.body.total).toBeGreaterThanOrEqual(1);
+      expect(response.body.data[0]).toMatchObject({
+        steuSandreCda: STEU_SANDRE_CDA,
+        sclSandreCda: 'SCL_TEST_001',
+        parametreCode: PAR_RFA,
+        valeur: 42.5,
+      });
+    });
+
+    it('returns empty when SCL code does not match any authorized SCL', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      const response = await request(app.getHttpServer())
+        .get('/mesures')
+        .query({ ouvrageType: 'scl', sclSandreCdas: 'SCL_UNKNOWN' })
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.body).toMatchObject({ data: [], total: 0 });
+    });
+  });
 });

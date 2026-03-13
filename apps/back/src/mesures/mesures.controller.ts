@@ -10,6 +10,8 @@ import {
   listPointsMesure,
   listParametresMesure,
   listFinalites,
+  listStatuts,
+  listQualifications,
 } from '@lib/dossier';
 import { MesuresService } from './mesures.service';
 
@@ -34,6 +36,7 @@ export class MesuresController {
       dateFin: query.dateFin,
       parametreCode: query.parametreCode,
       qualification: query.qualification,
+      statut: query.statut,
       finalite: query.finalite,
       page: query.page,
       pageSize: query.pageSize,
@@ -65,11 +68,26 @@ export class MesuresController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listParametresMesure['query'])) query: RouteQuery<typeof listParametresMesure>,
   ): Promise<RouteResponse<typeof listParametresMesure>> {
-    return this.mesuresService.listParametresMesure(req.user.itvCdn, query.ouvrageType, query.ouvrageCode, query.pmoCdn);
+    return this.mesuresService.listParametresMesure(
+      req.user.itvCdn,
+      query.ouvrageType,
+      query.ouvrageCode,
+      query.pmoCdn,
+    );
   }
 
   @Get('finalites')
   async listFinalites(): Promise<RouteResponse<typeof listFinalites>> {
     return this.mesuresService.listFinalites();
+  }
+
+  @Get('statuts')
+  async listStatuts(): Promise<RouteResponse<typeof listStatuts>> {
+    return this.mesuresService.listStatuts();
+  }
+
+  @Get('qualifications')
+  async listQualifications(): Promise<RouteResponse<typeof listQualifications>> {
+    return this.mesuresService.listQualifications();
   }
 }

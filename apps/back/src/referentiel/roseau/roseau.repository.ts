@@ -271,6 +271,7 @@ export class RoseauRepository implements RoseauGateway {
       dateFin,
       parametreCode,
       qualification,
+      statut,
       finalite,
       page,
       pageSize,
@@ -333,6 +334,9 @@ export class RoseauRepository implements RoseauGateway {
       }
       if (qualification) {
         qb.andWhere('t18.tlref_elt_cda = :qualification', { qualification });
+      }
+      if (statut) {
+        qb.andWhere('t20.tlref_elt_cda = :statut', { statut });
       }
       if (finalite) {
         qb.andWhere('t17.tlref_elt_cda = :finalite', { finalite });
@@ -471,12 +475,14 @@ export class RoseauRepository implements RoseauGateway {
 
     if (ouvrageType === 'scl') {
       // Mode SCL : pmo -> scl (jointure directe via scl_cdn)
-      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
-        .where('scl.scl_sandre_cda = :ouvrageCode', { ouvrageCode });
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
     } else {
       // Mode STEU : pmo -> steu (jointure directe via steu_cdn)
-      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
-        .where('steu.steu_sandre_cda = :ouvrageCode', { ouvrageCode });
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
     }
 
     qb.orderBy('pmo.pmo_no', 'ASC');
@@ -504,11 +510,13 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
 
     if (ouvrageType === 'scl') {
-      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
-        .where('scl.scl_sandre_cda = :ouvrageCode', { ouvrageCode });
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
     } else {
-      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
-        .where('steu.steu_sandre_cda = :ouvrageCode', { ouvrageCode });
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
     }
 
     qb.distinct(true).orderBy('alr.par_rfa', 'ASC');
@@ -531,5 +539,13 @@ export class RoseauRepository implements RoseauGateway {
       code: r.tlrefEltCda?.trim() ?? '',
       label: r.tlrefMnemoLb?.trim() ?? null,
     }));
+  }
+
+  async findStatuts(): Promise<NomenclatureItem[]> {
+    return this.findNomenclatureByRfa('LREF_20');
+  }
+
+  async findQualifications(): Promise<NomenclatureItem[]> {
+    return this.findNomenclatureByRfa('LREF_18');
   }
 }

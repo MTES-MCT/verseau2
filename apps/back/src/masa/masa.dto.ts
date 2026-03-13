@@ -98,6 +98,7 @@ export interface MesureFilters extends PaginationQuery {
   dateFin?: string;
   parametreCode?: string;
   qualification?: string;
+  statut?: string;
   finalite?: string;
   sortBy?: MesuresSortByValue;
 }

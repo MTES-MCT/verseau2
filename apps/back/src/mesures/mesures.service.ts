@@ -1,7 +1,14 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedMesuresResponse, PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
-import { MesureFilters, SteuWithName, SclWithName, PointMesure, ParametreMesure, NomenclatureItem } from '@masa/masa.dto';
+import {
+  MesureFilters,
+  SteuWithName,
+  SclWithName,
+  PointMesure,
+  ParametreMesure,
+  NomenclatureItem,
+} from '@masa/masa.dto';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListMesuresOptions extends PaginationQuery {
@@ -14,6 +21,7 @@ export interface ListMesuresOptions extends PaginationQuery {
   dateFin?: string;
   parametreCode?: string;
   qualification?: string;
+  statut?: string;
   finalite?: string;
   sortBy?: MesuresSortByValue;
   sortOrder?: 'ASC' | 'DESC';
@@ -44,7 +52,13 @@ export class MesuresService {
   @TraceCalls(LOG_LEVELS[2])
   async listMesures(options: ListMesuresOptions): Promise<PaginatedMesuresResponse> {
     const masaProvider = this.masaProvider;
-    const { itvCdn, ouvrageType, steuSandreCdas: requestedSteus = [], sclSandreCdas: requestedScls = [], ...rest } = options;
+    const {
+      itvCdn,
+      ouvrageType,
+      steuSandreCdas: requestedSteus = [],
+      sclSandreCdas: requestedScls = [],
+      ...rest
+    } = options;
 
     // Helper local pour éviter le problème de proxy TraceCalls sur les méthodes this.*
     const getAuthorizedSteuCdas = async (): Promise<string[]> => {
@@ -78,7 +92,9 @@ export class MesuresService {
     } else {
       const authorizedSteuCdas = await getAuthorizedSteuCdas();
       const steuSandreCdas =
-        requestedSteus.length > 0 ? requestedSteus.filter((cda) => authorizedSteuCdas.includes(cda)) : authorizedSteuCdas;
+        requestedSteus.length > 0
+          ? requestedSteus.filter((cda) => authorizedSteuCdas.includes(cda))
+          : authorizedSteuCdas;
 
       if (steuSandreCdas.length === 0) {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
@@ -154,5 +170,13 @@ export class MesuresService {
 
   async listFinalites(): Promise<NomenclatureItem[]> {
     return this.masaProvider.findFinalites();
+  }
+
+  async listStatuts(): Promise<NomenclatureItem[]> {
+    return this.masaProvider.findStatuts();
+  }
+
+  async listQualifications(): Promise<NomenclatureItem[]> {
+    return this.masaProvider.findQualifications();
   }
 }

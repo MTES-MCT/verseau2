@@ -5,6 +5,8 @@ import {
   listPointsMesure,
   listParametresMesure,
   listFinalites,
+  listStatuts,
+  listQualifications,
 } from '@lib/dossier';
 import type { RouteQuery, OuvrageTypeValue } from '@lib/dossier';
 import { apiCall } from './apiClient';
@@ -31,4 +33,12 @@ export async function fetchParametresMesure(ouvrageType: OuvrageTypeValue, ouvra
 
 export async function fetchFinalites() {
   return apiCall(listFinalites);
+}
+
+export async function fetchStatuts() {
+  return apiCall(listStatuts);
+}
+
+export async function fetchQualifications() {
+  return apiCall(listQualifications);
 }

@@ -38,8 +38,14 @@ export interface RoseauGateway {
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
   findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
-  findParametresByOuvrageAndPmo(ouvrageType: 'steu' | 'scl', ouvrageCode: string, pmoCdn: number): Promise<ParametreMesure[]>;
+  findParametresByOuvrageAndPmo(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    pmoCdn: number,
+  ): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
+  findStatuts(): Promise<NomenclatureItem[]>;
+  findQualifications(): Promise<NomenclatureItem[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');
