@@ -133,7 +133,7 @@ describe('DepotDetailsPage', () => {
   it('renders all filter labels', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    expect(screen.getByLabelText(/ouvrage \(steu\)/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Station' })).toBeInTheDocument();
     expect(screen.getByLabelText(/date début/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date fin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe('DepotDetailsPage', () => {
     fireEvent.click(screen.getByRole('radio', { name: /système de collecte/i }));
 
     // The dropdown label should change from "Ouvrage (STEU)" to something else
-    expect(screen.queryByLabelText(/ouvrage \(steu\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Station' })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText(/tous les systèmes/i)).toBeInTheDocument();
   });
 
@@ -166,7 +166,7 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     // Open the autocomplete dropdown
-    fireEvent.click(screen.getByLabelText(/ouvrage \(steu\)/i));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Station' }));
 
     expect(screen.getByRole('option', { name: /Station A/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Station B/i })).toBeInTheDocument();
@@ -307,7 +307,7 @@ describe('DepotDetailsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
-    expect(screen.getByText(/veuillez sélectionner au moins un ouvrage/i)).toBeInTheDocument();
+    expect(screen.getByText(/veuillez sélectionner au moins une station/i)).toBeInTheDocument();
   });
 
   it('shows validation error on search without SCL selected (SCL mode)', () => {
