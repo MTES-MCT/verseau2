@@ -431,4 +431,57 @@ describe('SelectAutocomplete', () => {
 
     expect(screen.getByText('Veuillez sélectionner une ville')).toBeInTheDocument();
   });
+
+  it('fills the input with the selected value when clicking an option in error state', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>(null);
+      return (
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          value={value}
+          onChange={setValue}
+          state="error"
+          stateRelatedMessage="Veuillez sélectionner une ville"
+        />
+      );
+    };
+    render(<Wrapper />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.mouseDown(screen.getByText('Lyon'));
+    fireEvent.click(screen.getByText('Lyon'));
+
+    expect(screen.getByRole('combobox')).toHaveValue('Lyon');
+  });
+
+  it('renders and operates the clear button when state is success', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return (
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          value={value}
+          onChange={setValue}
+          state="success"
+          stateRelatedMessage="Ville valide"
+        />
+      );
+    };
+    render(<Wrapper />);
+
+    // Clear button is visible with a selected value in success state
+    const clearButton = screen.getByRole('button', { name: 'Effacer la sélection' });
+    expect(clearButton).toBeInTheDocument();
+
+    // The success message is displayed
+    expect(screen.getByText('Ville valide')).toBeInTheDocument();
+
+    // Clicking the clear button resets the value and hides the button
+    fireEvent.mouseDown(clearButton);
+
+    expect(screen.getByRole('combobox')).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Effacer la sélection' })).not.toBeInTheDocument();
+  });
 });

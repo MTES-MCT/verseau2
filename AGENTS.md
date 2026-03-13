@@ -12,6 +12,7 @@ npm run test:e2e --workspace=apps/back     # E2E tests (testcontainers)
 npm run build         # Production build (front + back)
 npm run lint --workspace=apps/back         # Lint backend
 npm run lint --workspace=apps/front        # Lint frontend
+npm run test --workspace=apps/front -- <file>  # Run a single frontend test file (e.g. SelectAutocomplete.spec.tsx)
 ```
 
 ## Memory System
@@ -65,23 +66,3 @@ bd show <id>          # View issue details
 bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
 ```
-
-### Landing the Plane (Session Completion)
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git commit` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **Clean up** - Clear stashes, prune remote branches
-5. **Verify** - All changes committed
-6. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git commit` succeeds
-- NEVER stop before commiting - that leaves work stranded locally
-- NEVER say "ready to commit when you are" - YOU must commit
-- If commit fails, resolve and retry until it succeeds
-
