@@ -1,0 +1,208 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { AuthenticationController } from './authentication.controller';
+import { Authentication, OIDCTokens } from './authentication';
+import { UserService } from '@user/user.service';
+import { DroitsUserService } from '@user/droitsUser.service';
+import type { CustomRequest } from '@shared/constants/customRequest';
+import type { Response } from 'express';
+
+const makeResponse = (): jest.Mocked<Response> =>
+  ({
+    cookie: jest.fn(),
+    clearCookie: jest.fn(),
+  }) as unknown as jest.Mocked<Response>;
+
+const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ cookies }) as unknown as CustomRequest;
+
+describe('AuthenticationController', () => {
+  let controller: AuthenticationController;
+  let mockAuthentication: jest.Mocked<Authentication>;
+  let mockUserService: jest.Mocked<UserService>;
+  let mockDroitsUserService: jest.Mocked<DroitsUserService>;
+
+  beforeEach(async () => {
+    mockAuthentication = {
+      validateToken: jest.fn(),
+      getOIDCConfiguration: jest.fn(),
+      handleCallback: jest.fn(),
+      getUserInfo: jest.fn(),
+      refreshTokens: jest.fn(),
+      generateLogoutUrl: jest.fn(),
+      buildCookieResponse: jest.fn(),
+      clearCookieResponse: jest.fn(),
+    } as jest.Mocked<Authentication>;
+
+    mockUserService = {
+      findOrCreateUser: jest.fn(),
+      findBySub: jest.fn(),
+    } as unknown as jest.Mocked<UserService>;
+
+    mockDroitsUserService = {
+      resolveItvCdn: jest.fn(),
+      isExpertNationalVerseau: jest.fn(),
+      canConsultDepot: jest.fn(),
+      canConsultControle: jest.fn(),
+      findIntervenantByUserSub: jest.fn(),
+    } as unknown as jest.Mocked<DroitsUserService>;
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [AuthenticationController],
+      providers: [
+        {
+          provide: Authentication,
+          useValue: mockAuthentication,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
+        },
+        {
+          provide: DroitsUserService,
+          useValue: mockDroitsUserService,
+        },
+      ],
+    }).compile();
+
+    controller = module.get<AuthenticationController>(AuthenticationController);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('refresh', () => {
+    it('should throw BadRequestException when refresh token cookie is missing', async () => {
+      const req = makeRequest({});
+      const res = makeResponse();
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should set updated cookie when the AS returns a new refresh token (rotation)', async () => {
+      const req = makeRequest({ refresh_token: 'old-refresh-token' });
+      const res = makeResponse();
+
+      const refreshedTokens: OIDCTokens = {
+        accessToken: 'new-internal-jwt',
+        idToken: 'new-id-token',
+        refreshToken: 'new-refresh-token', // AS rotated the token
+        expiresIn: 3600,
+        cerbereAccessToken: 'new-cerbere-token',
+      };
+      mockAuthentication.refreshTokens.mockResolvedValue(refreshedTokens);
+
+      const result = await controller.refresh(req, res);
+
+      expect(mockAuthentication.refreshTokens).toHaveBeenCalledWith('old-refresh-token');
+      expect(mockAuthentication.buildCookieResponse).toHaveBeenCalledWith(
+        res,
+        expect.objectContaining({ refreshToken: 'new-refresh-token' }),
+      );
+      expect(result).toEqual({ expiresIn: 3600 });
+    });
+
+    it('should fall back to old refresh token when the AS does not return a new one (no rotation)', async () => {
+      const req = makeRequest({ refresh_token: 'old-refresh-token' });
+      const res = makeResponse();
+
+      const refreshedTokens: OIDCTokens = {
+        accessToken: 'new-internal-jwt',
+        idToken: 'new-id-token',
+        refreshToken: undefined, // AS did NOT issue a new refresh token
+        expiresIn: 3600,
+        cerbereAccessToken: 'new-cerbere-token',
+      };
+      mockAuthentication.refreshTokens.mockResolvedValue(refreshedTokens);
+
+      await controller.refresh(req, res);
+
+      // The old refresh token must be reused so the user stays logged in
+      expect(mockAuthentication.buildCookieResponse).toHaveBeenCalledWith(
+        res,
+        expect.objectContaining({ refreshToken: 'old-refresh-token' }),
+      );
+    });
+
+    it('should throw UnauthorizedException when refreshTokens rejects (invalid grant / rotation enforced)', async () => {
+      const req = makeRequest({ refresh_token: 'expired-or-revoked-token' });
+      const res = makeResponse();
+
+      mockAuthentication.refreshTokens.mockRejectedValue(new Error('invalid_grant'));
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('logout', () => {
+    it('should throw BadRequestException when idToken is missing', async () => {
+      const res = makeResponse();
+
+      await expect(controller.logout('', res)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should clear cookies and return logout URL', async () => {
+      const res = makeResponse();
+      mockAuthentication.generateLogoutUrl.mockResolvedValue('https://auth.example.com/logout');
+
+      const result = await controller.logout('id-token-xyz', res);
+
+      expect(mockAuthentication.clearCookieResponse).toHaveBeenCalledWith(res);
+      expect(mockAuthentication.generateLogoutUrl).toHaveBeenCalledWith('id-token-xyz');
+      expect(result).toEqual({ logoutUrl: 'https://auth.example.com/logout' });
+    });
+  });
+
+  describe('callback', () => {
+    it('should throw BadRequestException when code is missing', async () => {
+      const res = makeResponse();
+      await expect(controller.callback('', 'nonce', '', '', res)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when nonce is missing', async () => {
+      const res = makeResponse();
+      await expect(controller.callback('code', '', '', '', res)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when OIDC error is present', async () => {
+      const res = makeResponse();
+      await expect(controller.callback('code', 'nonce', 'access_denied', 'User denied', res)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should set cookies and return user on successful callback', async () => {
+      const res = makeResponse();
+      const mockUser = {
+        cerbereId: 'user-123',
+        mel: 'user@example.com',
+        itvCdn: null,
+        isExpertNational: false,
+        nom: 'Doe',
+        prenom: 'John',
+      };
+      mockAuthentication.handleCallback.mockResolvedValue({
+        accessToken: 'internal-jwt',
+        idToken: 'id-token',
+        refreshToken: 'refresh-token',
+        expiresIn: 3600,
+        cerbereAccessToken: 'cerbere-token',
+        user: mockUser,
+      });
+      mockUserService.findOrCreateUser.mockResolvedValue({} as never);
+
+      const result = await controller.callback('auth-code', 'nonce-abc', '', '', res);
+
+      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith('auth-code', 'nonce-abc');
+      expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith('user-123', {
+        email: 'user@example.com',
+        nom: 'Doe',
+        prenom: 'John',
+      });
+      expect(mockAuthentication.buildCookieResponse).toHaveBeenCalled();
+      expect(result).toEqual({ user: mockUser, expiresIn: 3600 });
+    });
+  });
+});

@@ -479,6 +479,7 @@ describe('AuthenticationService', () => {
           httpOnly: true,
           secure: true,
           sameSite: 'strict',
+          maxAge: 3600 * 1000,
         }),
       );
 
@@ -489,8 +490,62 @@ describe('AuthenticationService', () => {
           httpOnly: true,
           secure: true,
           sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
         }),
       );
+    });
+
+    it('should not set refresh_token cookie when refreshToken is absent', () => {
+      const mockRes = {
+        cookie: jest.fn(),
+      } as unknown as import('express').Response;
+
+      service.buildCookieResponse(mockRes, {
+        accessToken: 'internal-jwt',
+        idToken: 'id-token',
+        expiresIn: 3600,
+      });
+
+      expect(mockRes.cookie).toHaveBeenCalledTimes(1);
+      expect(mockRes.cookie).toHaveBeenCalledWith('access_token', 'internal-jwt', expect.anything());
+    });
+  });
+
+  describe('refreshTokens — rotation logging', () => {
+    const mockRefreshToken = 'old-refresh-token';
+
+    it('should warn when the AS does not return a new refresh token', async () => {
+      const mockRefreshedTokens = {
+        access_token: 'new-cerbere-access-token',
+        id_token: 'new-id-token',
+        refresh_token: undefined,
+        expires_in: 3600,
+      };
+      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
+
+      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
+
+      await service.refreshTokens(mockRefreshToken);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('AS did not return a new refresh token');
+    });
+
+    it('should NOT warn when the AS returns a new refresh token', async () => {
+      const mockRefreshedTokens = {
+        access_token: 'new-cerbere-access-token',
+        id_token: 'new-id-token',
+        refresh_token: 'new-refresh-token',
+        expires_in: 3600,
+      };
+      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
+
+      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
+
+      await service.refreshTokens(mockRefreshToken);
+
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
   });
 });
