@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MesuresController } from './mesures.controller';
 import { MesuresService } from './mesures.service';
 import { MeGuard } from '@authentication/me.guard';
+import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 
 const makeMesureDto = () => ({
@@ -45,6 +46,8 @@ describe('MesuresController', () => {
     })
       .overrideGuard(MeGuard)
       .useValue({ canActivate: () => true })
+      .overrideGuard(HasUserAccessToOuvragesGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<MesuresController>(MesuresController);
@@ -55,24 +58,26 @@ describe('MesuresController', () => {
     jest.clearAllMocks();
   });
 
-  const makeRequest = (itvCdn: number | null): CustomRequest =>
+  const makeRequest = (authorizedSteuCdas: string[] = ['STEU001'], authorizedSclCdas: string[] = []): CustomRequest =>
     ({
-      user: { itvCdn, isExpertNational: false, cerbereId: 'test', mel: 'test@example.com' },
+      user: { itvCdn: 42, isExpertNational: false, cerbereId: 'test', mel: 'test@example.com' },
+      authorizedSteuCdas,
+      authorizedSclCdas,
     }) as unknown as CustomRequest;
 
   describe('listMesures', () => {
-    it('delegates to service with itvCdn from request user', async () => {
+    it('delegates to service with authorized codes from request', async () => {
       const paginated = { data: [makeMesureDto()], total: 1, page: 1, pageSize: 20 };
       mesuresService.listMesures.mockResolvedValue(paginated);
 
-      const result = await controller.listMesures(makeRequest(42), {
+      const result = await controller.listMesures(makeRequest(['STEU001'], []), {
         page: 1,
         pageSize: 20,
         ouvrageType: 'steu',
       });
 
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ itvCdn: 42, page: 1, pageSize: 20 }),
+        expect.objectContaining({ authorizedSteuCdas: ['STEU001'], authorizedSclCdas: [], page: 1, pageSize: 20 }),
       );
       expect(result).toEqual(paginated);
     });
@@ -80,7 +85,7 @@ describe('MesuresController', () => {
     it('passes all optional filters to service', async () => {
       mesuresService.listMesures.mockResolvedValue({ data: [], total: 0, page: 2, pageSize: 10 });
 
-      await controller.listMesures(makeRequest(42), {
+      await controller.listMesures(makeRequest(['STEU001'], []), {
         steuSandreCdas: ['STEU001'],
         dateDebut: '2024-01-01',
         dateFin: '2024-12-31',
@@ -96,7 +101,7 @@ describe('MesuresController', () => {
 
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
         expect.objectContaining({
-          itvCdn: 42,
+          authorizedSteuCdas: ['STEU001'],
           steuSandreCdas: ['STEU001'],
           dateDebut: '2024-01-01',
           dateFin: '2024-12-31',
@@ -110,33 +115,25 @@ describe('MesuresController', () => {
         }),
       );
     });
-
-    it('works with null itvCdn', async () => {
-      mesuresService.listMesures.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 20 });
-
-      await controller.listMesures(makeRequest(null), { page: 1, pageSize: 20, ouvrageType: 'steu' });
-
-      expect(mesuresService.listMesures).toHaveBeenCalledWith(expect.objectContaining({ itvCdn: null }));
-    });
   });
 
   describe('listOuvrages', () => {
-    it('delegates to service with itvCdn from request user', async () => {
+    it('delegates to service with authorized STEU codes from request', async () => {
       const ouvrages = [{ steuSandreCda: 'STEU001', steuNom: 'Station A' }];
       mesuresService.listOuvrages.mockResolvedValue(ouvrages);
 
-      const result = await controller.listOuvrages(makeRequest(42));
+      const result = await controller.listOuvrages(makeRequest(['STEU001'], []));
 
-      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(42);
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001']);
       expect(result).toEqual(ouvrages);
     });
 
-    it('works with null itvCdn', async () => {
+    it('delegates with empty STEU list', async () => {
       mesuresService.listOuvrages.mockResolvedValue([]);
 
-      const result = await controller.listOuvrages(makeRequest(null));
+      const result = await controller.listOuvrages(makeRequest([], []));
 
-      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(null);
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith([]);
       expect(result).toEqual([]);
     });
   });

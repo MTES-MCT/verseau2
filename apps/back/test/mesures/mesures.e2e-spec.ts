@@ -125,15 +125,10 @@ describe('MesuresController (e2e)', () => {
       return request(app.getHttpServer()).get('/mesures').expect(401);
     });
 
-    it('returns 200 with empty data when user has no itvCdn', async () => {
+    it('returns 403 when user has no itvCdn', async () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: null }));
 
-      const response = await request(app.getHttpServer())
-        .get('/mesures')
-        .set('Cookie', ['access_token=token'])
-        .expect(200);
-
-      expect(response.body).toMatchObject({ data: [], total: 0, page: 1, pageSize: 20 });
+      await request(app.getHttpServer()).get('/mesures').set('Cookie', ['access_token=token']).expect(403);
     });
   });
 
@@ -186,15 +181,10 @@ describe('MesuresController (e2e)', () => {
       return request(app.getHttpServer()).get('/mesures/ouvrages').expect(401);
     });
 
-    it('returns empty array when user has no itvCdn', async () => {
+    it('returns 403 when user has no itvCdn', async () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: null }));
 
-      const response = await request(app.getHttpServer())
-        .get('/mesures/ouvrages')
-        .set('Cookie', ['access_token=token'])
-        .expect(200);
-
-      expect(response.body).toEqual([]);
+      await request(app.getHttpServer()).get('/mesures/ouvrages').set('Cookie', ['access_token=token']).expect(403);
     });
   });
 
