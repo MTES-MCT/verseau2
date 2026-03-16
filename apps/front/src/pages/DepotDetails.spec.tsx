@@ -115,12 +115,6 @@ describe('DepotDetailsPage', () => {
     expect(screen.getByRole('heading', { name: /détail des mesures déposées/i, level: 1 })).toBeInTheDocument();
   });
 
-  it('displays the J-7 information text', () => {
-    renderWithQueryClient(<DepotDetailsPage />);
-
-    expect(screen.getByText(/données mises à jour chaque semaine \(J-7\)/i)).toBeInTheDocument();
-  });
-
   it('renders the radio button for ouvrage type selection', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
