@@ -12,8 +12,9 @@ import {
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListMesuresOptions extends PaginationQuery {
-  itvCdn: number | null;
   ouvrageType: OuvrageTypeValue;
+  authorizedSteuCdas: string[];
+  authorizedSclCdas: string[];
   steuSandreCdas?: string[];
   sclSandreCdas?: string[];
   pmoCdn?: number;
@@ -31,56 +32,20 @@ export interface ListMesuresOptions extends PaginationQuery {
 export class MesuresService {
   constructor(private readonly masaProvider: MasaProvider) {}
 
-  /** Résout les codes SANDRE des STEU autorisés pour un utilisateur donné. */
-  private async getAuthorizedSteuCdas(itvCdn: number | null): Promise<string[]> {
-    if (itvCdn === null) return [];
-    const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
-    if (!intervenant?.itvRfa) return [];
-    const authorizedSteus = await this.masaProvider.findVSteuSclItvByItvRfa(intervenant.itvRfa);
-    return [...new Set(authorizedSteus.map((s) => s.steuCda).filter(Boolean))];
-  }
-
-  /** Résout les codes SANDRE des SCL autorisés pour un utilisateur donné. */
-  private async getAuthorizedSclCdas(itvCdn: number | null): Promise<string[]> {
-    if (itvCdn === null) return [];
-    const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
-    if (!intervenant?.itvRfa) return [];
-    const authorizedEntries = await this.masaProvider.findVSteuSclItvByItvRfa(intervenant.itvRfa);
-    return [...new Set(authorizedEntries.map((s) => s.sclCda).filter(Boolean))];
-  }
-
   @TraceCalls(LOG_LEVELS[2])
   async listMesures(options: ListMesuresOptions): Promise<PaginatedMesuresResponse> {
-    const masaProvider = this.masaProvider;
     const {
-      itvCdn,
       ouvrageType,
+      authorizedSteuCdas,
+      authorizedSclCdas,
       steuSandreCdas: requestedSteus = [],
       sclSandreCdas: requestedScls = [],
       ...rest
     } = options;
 
-    // Helper local pour éviter le problème de proxy TraceCalls sur les méthodes this.*
-    const getAuthorizedSteuCdas = async (): Promise<string[]> => {
-      if (itvCdn === null) return [];
-      const intervenant = await masaProvider.findIntervenantById(itvCdn);
-      if (!intervenant?.itvRfa) return [];
-      const authorized = await masaProvider.findVSteuSclItvByItvRfa(intervenant.itvRfa);
-      return [...new Set(authorized.map((s) => s.steuCda).filter(Boolean))];
-    };
-
-    const getAuthorizedSclCdas = async (): Promise<string[]> => {
-      if (itvCdn === null) return [];
-      const intervenant = await masaProvider.findIntervenantById(itvCdn);
-      if (!intervenant?.itvRfa) return [];
-      const authorized = await masaProvider.findVSteuSclItvByItvRfa(intervenant.itvRfa);
-      return [...new Set(authorized.map((s) => s.sclCda).filter(Boolean))];
-    };
-
     let filters: MesureFilters;
 
     if (ouvrageType === 'scl') {
-      const authorizedSclCdas = await getAuthorizedSclCdas();
       const sclSandreCdas =
         requestedScls.length > 0 ? requestedScls.filter((cda) => authorizedSclCdas.includes(cda)) : authorizedSclCdas;
 
@@ -90,7 +55,6 @@ export class MesuresService {
 
       filters = { ouvrageType: 'scl', steuSandreCdas: [], sclSandreCdas, ...rest };
     } else {
-      const authorizedSteuCdas = await getAuthorizedSteuCdas();
       const steuSandreCdas =
         requestedSteus.length > 0
           ? requestedSteus.filter((cda) => authorizedSteuCdas.includes(cda))
@@ -103,7 +67,7 @@ export class MesuresService {
       filters = { ouvrageType: 'steu', steuSandreCdas, sclSandreCdas: [], ...rest };
     }
 
-    const { data, total } = await masaProvider.findMesures(filters);
+    const { data, total } = await this.masaProvider.findMesures(filters);
 
     return {
       data: data.map((row) => ({ ...row, date: row.date })),
@@ -113,56 +77,42 @@ export class MesuresService {
     };
   }
 
-  async listOuvrages(itvCdn: number | null): Promise<SteuWithName[]> {
-    if (itvCdn === null) return [];
-    const sandreCdas = await this.getAuthorizedSteuCdas(itvCdn);
-    if (sandreCdas.length === 0) return [];
-    return this.masaProvider.findSteuWithNamesBySandreCdas(sandreCdas);
+  async listOuvrages(authorizedSteuCdas: string[]): Promise<SteuWithName[]> {
+    if (authorizedSteuCdas.length === 0) return [];
+    return this.masaProvider.findSteuWithNamesBySandreCdas(authorizedSteuCdas);
   }
 
-  async listSystemesCollecte(itvCdn: number | null): Promise<SclWithName[]> {
-    if (itvCdn === null) return [];
-    const sandreCdas = await this.getAuthorizedSclCdas(itvCdn);
-    if (sandreCdas.length === 0) return [];
-    return this.masaProvider.findSclWithNamesBySandreCdas(sandreCdas);
+  async listSystemesCollecte(authorizedSclCdas: string[]): Promise<SclWithName[]> {
+    if (authorizedSclCdas.length === 0) return [];
+    return this.masaProvider.findSclWithNamesBySandreCdas(authorizedSclCdas);
   }
 
   async listPointsMesure(
-    itvCdn: number | null,
+    authorizedSteuCdas: string[],
+    authorizedSclCdas: string[],
     ouvrageType: OuvrageTypeValue,
     ouvrageCode: string,
   ): Promise<PointMesure[]> {
-    if (itvCdn === null) return [];
-
     if (ouvrageType === 'scl') {
-      const authorizedScls = await this.listSystemesCollecte(itvCdn);
-      const isAuthorized = authorizedScls.some((s) => s.sclSandreCda === ouvrageCode);
-      if (!isAuthorized) return [];
+      if (!authorizedSclCdas.includes(ouvrageCode)) return [];
     } else {
-      const authorizedSteus = await this.listOuvrages(itvCdn);
-      const isAuthorized = authorizedSteus.some((s) => s.steuSandreCda === ouvrageCode);
-      if (!isAuthorized) return [];
+      if (!authorizedSteuCdas.includes(ouvrageCode)) return [];
     }
 
     return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
   }
 
   async listParametresMesure(
-    itvCdn: number | null,
+    authorizedSteuCdas: string[],
+    authorizedSclCdas: string[],
     ouvrageType: OuvrageTypeValue,
     ouvrageCode: string,
     pmoCdn: number,
   ): Promise<ParametreMesure[]> {
-    if (itvCdn === null) return [];
-
     if (ouvrageType === 'scl') {
-      const authorizedScls = await this.listSystemesCollecte(itvCdn);
-      const isAuthorized = authorizedScls.some((s) => s.sclSandreCda === ouvrageCode);
-      if (!isAuthorized) return [];
+      if (!authorizedSclCdas.includes(ouvrageCode)) return [];
     } else {
-      const authorizedSteus = await this.listOuvrages(itvCdn);
-      const isAuthorized = authorizedSteus.some((s) => s.steuSandreCda === ouvrageCode);
-      if (!isAuthorized) return [];
+      if (!authorizedSteuCdas.includes(ouvrageCode)) return [];
     }
 
     return this.masaProvider.findParametresByOuvrageAndPmo(ouvrageType, ouvrageCode, pmoCdn);
