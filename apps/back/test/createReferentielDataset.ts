@@ -72,7 +72,8 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     CREATE TABLE roseau.tlref (
       tlref_cdn INTEGER PRIMARY KEY,
       trl_rfa VARCHAR,
-      tlref_elt_cda VARCHAR
+      tlref_elt_cda VARCHAR,
+      tlref_mnemo_lb VARCHAR
     )
   `);
 
@@ -94,7 +95,10 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       pmo_no VARCHAR,
       tlref_16_cdn INTEGER,
       pmo_val_deb_dt DATE,
-      pmo_val_fin_dt DATE
+      pmo_val_fin_dt DATE,
+      scl_cdn INTEGER,
+      pmo_ae_cda VARCHAR,
+      pmo_lb VARCHAR
     )
   `);
 
@@ -203,6 +207,28 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       PRIMARY KEY (steu_cdn, stchan_an)
     )
   `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.alr CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.ple CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE roseau.ple (
+      ple_cdn INTEGER PRIMARY KEY,
+      pmo_cdn INTEGER,
+      ple_prelev_dt TIMESTAMP
+    )
+  `);
+  await dataSource.query(`
+    CREATE TABLE roseau.alr (
+      alr_cdn INTEGER PRIMARY KEY,
+      ple_cdn INTEGER,
+      par_rfa VARCHAR,
+      urf_rfa VARCHAR,
+      alr_res_val NUMERIC,
+      tlref_20_cdn INTEGER,
+      tlref_18_cdn INTEGER,
+      tlref_17_cdn INTEGER
+    )
+  `);
 }
 
 export async function createLanceleauTables(dataSource: DataSource): Promise<void> {
@@ -281,14 +307,16 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
   await dataSource.query(`DROP TABLE IF EXISTS lanceleau.par CASCADE`);
   await dataSource.query(`
     CREATE TABLE lanceleau.par (
-      par_rfa VARCHAR PRIMARY KEY
+      par_rfa VARCHAR PRIMARY KEY,
+      par_court_nom_lb VARCHAR
     )
   `);
 
   await dataSource.query(`DROP TABLE IF EXISTS lanceleau.urf CASCADE`);
   await dataSource.query(`
     CREATE TABLE lanceleau.urf (
-      urf_rfa VARCHAR PRIMARY KEY
+      urf_rfa VARCHAR PRIMARY KEY,
+      urf_symb_lb VARCHAR
     )
   `);
 
@@ -325,6 +353,8 @@ export async function createReferentielDataset(dataSource: DataSource): Promise<
 }
 
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {
+  await dataSource.query(`DELETE FROM roseau.alr`);
+  await dataSource.query(`DELETE FROM roseau.ple`);
   await dataSource.query(`DELETE FROM roseau.stchan`);
   await dataSource.query(`DELETE FROM roseau.resa`);
   await dataSource.query(`DELETE FROM roseau.cpy`);
@@ -393,13 +423,22 @@ export async function seedPmo(
   steuCdn: number,
   pmoNo: string,
   tlref16Cdn?: number,
+  options?: { sclCdn?: number | null; pmoAeCda?: string | null; pmoLb?: string | null },
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.pmo (pmo_cdn, steu_cdn, pmo_no, tlref_16_cdn)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO roseau.pmo (pmo_cdn, steu_cdn, pmo_no, tlref_16_cdn, scl_cdn, pmo_ae_cda, pmo_lb)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
   `,
-    [pmoCdn, steuCdn, pmoNo, tlref16Cdn ?? null],
+    [
+      pmoCdn,
+      steuCdn,
+      pmoNo,
+      tlref16Cdn ?? null,
+      options?.sclCdn ?? null,
+      options?.pmoAeCda ?? null,
+      options?.pmoLb ?? null,
+    ],
   );
 }
 
@@ -408,13 +447,14 @@ export async function seedTlref(
   tlrefCdn: number,
   trlRfa: string,
   tlrefEltCda: string,
+  tlrefMnemoLb?: string | null,
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.tlref (tlref_cdn, trl_rfa, tlref_elt_cda)
-    VALUES ($1, $2, $3)
+    INSERT INTO roseau.tlref (tlref_cdn, trl_rfa, tlref_elt_cda, tlref_mnemo_lb)
+    VALUES ($1, $2, $3, $4)
   `,
-    [tlrefCdn, trlRfa, tlrefEltCda],
+    [tlrefCdn, trlRfa, tlrefEltCda, tlrefMnemoLb ?? null],
   );
 }
 
@@ -497,13 +537,18 @@ export async function seedAg(dataSource: DataSource, prCdn: number, itvCdn: numb
 
 // ============= Roseau Additional Seed Functions =============
 
-export async function seedScl(dataSource: DataSource, sclCdn: number, sclSandreCda: string): Promise<void> {
+export async function seedScl(
+  dataSource: DataSource,
+  sclCdn: number,
+  sclSandreCda: string,
+  sclLb?: string | null,
+): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.scl (scl_cdn, scl_sandre_cda)
-    VALUES ($1, $2)
+    INSERT INTO roseau.scl (scl_cdn, scl_sandre_cda, scl_lb)
+    VALUES ($1, $2, $3)
   `,
-    [sclCdn, sclSandreCda],
+    [sclCdn, sclSandreCda, sclLb ?? null],
   );
 }
 
@@ -581,23 +626,69 @@ export async function seedFan(dataSource: DataSource, fanRfa: string): Promise<v
   );
 }
 
-export async function seedPar(dataSource: DataSource, parRfa: string): Promise<void> {
+export async function seedPar(dataSource: DataSource, parRfa: string, parCourtNomLb?: string | null): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO lanceleau.par (par_rfa)
-    VALUES ($1)
+    INSERT INTO lanceleau.par (par_rfa, par_court_nom_lb)
+    VALUES ($1, $2)
   `,
-    [parRfa],
+    [parRfa, parCourtNomLb ?? null],
   );
 }
 
-export async function seedUrf(dataSource: DataSource, urfRfa: string): Promise<void> {
+export async function seedUrf(dataSource: DataSource, urfRfa: string, urfSymbLb?: string | null): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO lanceleau.urf (urf_rfa)
-    VALUES ($1)
+    INSERT INTO lanceleau.urf (urf_rfa, urf_symb_lb)
+    VALUES ($1, $2)
   `,
-    [urfRfa],
+    [urfRfa, urfSymbLb ?? null],
+  );
+}
+
+export async function seedPle(
+  dataSource: DataSource,
+  pleCdn: number,
+  pmoCdn: number,
+  plePrelevDt: Date | string,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.ple (ple_cdn, pmo_cdn, ple_prelev_dt)
+    VALUES ($1, $2, $3)
+  `,
+    [pleCdn, pmoCdn, plePrelevDt],
+  );
+}
+
+export async function seedAlr(
+  dataSource: DataSource,
+  alrCdn: number,
+  pleCdn: number,
+  parRfa: string,
+  urfRfa: string | null,
+  alrResVal: number | null,
+  options?: {
+    tlref20Cdn?: number | null;
+    tlref18Cdn?: number | null;
+    tlref17Cdn?: number | null;
+  },
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.alr (alr_cdn, ple_cdn, par_rfa, urf_rfa, alr_res_val, tlref_20_cdn, tlref_18_cdn, tlref_17_cdn)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  `,
+    [
+      alrCdn,
+      pleCdn,
+      parRfa,
+      urfRfa,
+      alrResVal,
+      options?.tlref20Cdn ?? null,
+      options?.tlref18Cdn ?? null,
+      options?.tlref17Cdn ?? null,
+    ],
   );
 }
 

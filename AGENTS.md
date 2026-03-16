@@ -12,11 +12,12 @@ npm run test:e2e --workspace=apps/back     # E2E tests (testcontainers)
 npm run build         # Production build (front + back)
 npm run lint --workspace=apps/back         # Lint backend
 npm run lint --workspace=apps/front        # Lint frontend
+npm run test --workspace=apps/front -- <file>  # Run a single frontend test file (e.g. SelectAutocomplete.spec.tsx)
 ```
 
 ## Memory System
 
-This project uses a 3-layer memory structure in `.agent-memory/`.
+This project uses a 2-layer memory structure in `.agent-memory/`.
 
 ### Layer 1: Static Identity (read mostly)
 
@@ -27,37 +28,21 @@ _Rarely changes. Defines the project DNA._
 - `.agent-memory/tech-context.md` -- Stack, dependencies, setup, path aliases, constraints
 - `.agent-memory/conventions.md` -- Code style, naming, git, testing patterns
 
-### Layer 2: Working Context (read-write)
-
-_Changes every session. Tracks current state._
-
-- `.agent-memory/active-context.md` -- Current focus, recent decisions, open questions, blockers
-- `.agent-memory/todo.md` -- Current task steps (recitation pattern: read at start, update as you work)
-
-### Layer 3: Accumulated Experience (append-only)
+### Layer 2: Accumulated Experience (append-only)
 
 _Grows over time. Capture insights._
 
-- `.agent-memory/progress.md` -- Chronological log of what was done: must be described concisely in one or two lines
 - `.agent-memory/lessons-learned.md` -- Solutions to tricky problems, strategies that worked
 
 ## Session Protocol
 
 ### Start of session
 
-1. Read `active-context.md` and `todo.md`
-2. Load Layer 1 files only if relevant to the current task
-
-### During work
-
-3. Update `todo.md` after completing each step
-4. Write discoveries or decisions to `active-context.md`
+1. Load Layer 1 files if relevant
 
 ### End of session
 
-5. Update `progress.md` with what was accomplished
-6. Move reusable insights from `active-context.md` to `lessons-learned.md`
-7. Update `todo.md` with remaining/new tasks
+2. Remember reusable insights in `lessons-learned.md`
 
 ## Critical Rules
 
@@ -70,3 +55,14 @@ _Grows over time. Capture insights._
 - Use npm, not yarn or pnpm
 - Mock providers exist for S3, SANDRE, Auth, Email, SFTP -- toggled via env vars
 - Shared packages (`packages/*`) must be built before backend/frontend can use them
+
+## Issue Tracking
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --status in_progress  # Claim work
+bd close <id>         # Complete work
+```

@@ -1,3 +1,4 @@
+import { CacheModule } from '@nestjs/cache-manager';
 import { INestApplication, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
@@ -42,7 +43,7 @@ describe('DroitsDepotService (e2e)', () => {
     const connectionUri = getPostgresConnectionUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [...initTestContainerImports(connectionUri)],
+      imports: [...initTestContainerImports(connectionUri), CacheModule.register()],
       providers: [
         DroitsDepotService,
         DroitsUserService,

@@ -19,6 +19,13 @@ export const Breadcrumb = () => {
       });
     }
 
+    if (pathname === AppRoutes.DEPOT_DETAILS) {
+      segments.push({
+        label: 'Tableau de bord',
+        href: AppRoutes.DASHBOARD,
+      });
+    }
+
     return segments.length > 0 ? segments : [];
   };
 
@@ -41,6 +48,8 @@ export const Breadcrumb = () => {
       label: 'Tableau de bord',
       href: AppRoutes.DASHBOARD,
     });
+  } else if (location.pathname === AppRoutes.DEPOT_DETAILS) {
+    currentPageLabel = 'Détail des mesures déposées';
   }
 
   return (

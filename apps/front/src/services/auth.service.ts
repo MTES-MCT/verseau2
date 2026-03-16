@@ -161,7 +161,7 @@ class AuthService {
       } else {
         this.clearTokens();
       }
-    } catch (error) {
+    } catch {
       this.clearTokens();
     }
   }
@@ -180,7 +180,7 @@ class AuthService {
       try {
         await this.refreshToken();
         return 'cookie-stored';
-      } catch (error) {
+      } catch {
         this.clearTokens();
         return null;
       }

@@ -11,6 +11,7 @@ import { VersionController } from './version.controller';
 import { AuthenticationModule } from '@authentication/authentication.module';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { IndicateursModule } from '../indicateurs/indicateurs.module';
+import { MesuresModule } from '../mesures/mesures.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { IndicateursModule } from '../indicateurs/indicateurs.module';
     InfraModule,
     ReferentielModule,
     IndicateursModule,
+    MesuresModule,
   ],
   controllers: [VersionController],
   providers: [

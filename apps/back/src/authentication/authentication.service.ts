@@ -178,10 +178,8 @@ export class AuthenticationService implements Authentication {
 
   private async fetchUserInfoClaims(accessToken: string): Promise<UserInfoResponse> {
     const configuration = await this.getConfiguration();
-    this.logger.debug(`Getting user info for access token: ${accessToken}`);
 
     const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, skipSubjectCheck);
-    this.logger.debug(`User info received: ${JSON.stringify(userInfo)}`);
 
     return userInfo;
   }
