@@ -229,6 +229,10 @@ export class AuthenticationService implements Authentication {
       tokens.expires_in,
     );
 
+    if (!tokens.refresh_token) {
+      this.logger.warn('AS did not return a new refresh token');
+    }
+
     return {
       accessToken: internalToken,
       idToken: tokens.id_token || '',
@@ -261,6 +265,9 @@ export class AuthenticationService implements Authentication {
     };
   }
 
+  // 7 days in ms — conservative upper bound when the AS does not advertise refresh_token lifetime
+  private readonly REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {
     const accessTokenOptions: CookieOptions = {
       ...this.baseCookieOptions,
@@ -269,7 +276,11 @@ export class AuthenticationService implements Authentication {
     res.cookie('access_token', tokens.accessToken, accessTokenOptions);
 
     if (tokens.refreshToken) {
-      res.cookie('refresh_token', tokens.refreshToken, this.baseCookieOptions);
+      const refreshTokenOptions: CookieOptions = {
+        ...this.baseCookieOptions,
+        maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
+      };
+      res.cookie('refresh_token', tokens.refreshToken, refreshTokenOptions);
     }
   }
 
