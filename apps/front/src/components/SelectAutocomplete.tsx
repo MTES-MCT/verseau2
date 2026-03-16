@@ -23,6 +23,7 @@ export interface SelectAutocompleteProps {
   placeholder?: string;
   id?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
 export const SelectAutocomplete = ({
@@ -37,6 +38,7 @@ export const SelectAutocomplete = ({
   placeholder,
   id: idProp,
   required,
+  disabled,
 }: SelectAutocompleteProps) => {
   const generatedId = useId();
   const id = idProp ?? generatedId;
@@ -268,6 +270,7 @@ export const SelectAutocomplete = ({
             'aria-activedescendant': highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined,
             autoComplete: 'off',
           }}
+          disabled={disabled}
         />
         <div
           className="select-autocomplete-actions"
@@ -290,6 +293,7 @@ export const SelectAutocomplete = ({
             aria-label={isOpen ? 'Fermer la liste' : 'Ouvrir la liste'}
             tabIndex={-1}
             onMouseDown={handleToggleDropdown}
+            disabled={disabled}
           >
             <span className={fr.cx('fr-icon-arrow-down-s-line')} aria-hidden="true" />
           </button>

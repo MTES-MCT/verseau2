@@ -35,3 +35,15 @@ export const getNYearsAgoAsISODate = (n: number): string => {
 export const getDateAsISODate = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
+
+export const getPreviousSunday = (date: Date = new Date()): string => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const daysBack = day === 0 ? 7 : day;
+  d.setDate(d.getDate() - daysBack);
+  return d.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};

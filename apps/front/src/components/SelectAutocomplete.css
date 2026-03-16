@@ -68,6 +68,12 @@
   background-color: var(--background-alt-grey);
 }
 
+.select-autocomplete-btn:disabled {
+  cursor: not-allowed;
+  color: var(--text-mention-grey);
+  background-color: transparent;
+}
+
 .select-autocomplete-btn span[class*='fr-icon'] {
   font-size: 1rem;
 }

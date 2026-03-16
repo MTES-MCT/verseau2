@@ -11,6 +11,8 @@ import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesureFilters } from '../hooks/useMesureFilters';
 import { buildMesureTableRows } from '../helper/mesureTableData';
 import { formatOption } from '../helper/optionsFormatter';
+import Notice from '@codegouvfr/react-dsfr/Notice';
+import { getPreviousSunday } from '@lib/shared';
 
 export function DepotDetailsPage() {
   const {
@@ -136,12 +138,14 @@ export function DepotDetailsPage() {
   });
 
   return (
-    <div className={fr.cx('fr-container', 'fr-py-6w')}>
+    <div className={fr.cx('fr-container', 'fr-py-2w')}>
+      <Notice
+        title="Les données ne sont pas en temps réel"
+        description={` - Données mises à jour le ${getPreviousSunday()}`}
+        severity="info"
+        className={fr.cx('fr-mb-2w')}
+      />
       <h1>Détail des mesures déposées</h1>
-
-      <p className={fr.cx('fr-text--sm', 'fr-mb-4w')} style={{ color: 'var(--text-mention-grey)' }}>
-        Données mises à jour chaque semaine (J-7)
-      </p>
 
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>
@@ -174,7 +178,7 @@ export function DepotDetailsPage() {
 
         {/* Row 1: Ouvrage, Point de mesure, Paramètre, Finalité */}
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
             <SelectAutocomplete
               label={isScl ? 'Système de collecte' : 'Station'}
               placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
@@ -201,6 +205,7 @@ export function DepotDetailsPage() {
               options={pointsMesureOptions}
               value={form.selectedPmoCdn !== null ? String(form.selectedPmoCdn) : null}
               onChange={(v) => updateSelectedPmo(v ? Number(v) : null)}
+              disabled={!form.selectedOuvrageCode || pointsMesureLoading || pointsMesure.length === 0}
             />
           </div>
 
@@ -217,10 +222,11 @@ export function DepotDetailsPage() {
               options={parametresOptions}
               value={form.selectedParametre || null}
               onChange={(v) => updateForm('selectedParametre', v ?? '')}
+              disabled={!form.selectedOuvrageCode || pointsMesureLoading || pointsMesure.length === 0}
             />
           </div>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
             <SelectAutocomplete
               label="Finalité"
               placeholder={finalitesLoading ? 'Chargement…' : 'Toutes les finalités'}
