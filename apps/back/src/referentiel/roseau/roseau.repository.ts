@@ -442,6 +442,14 @@ export class RoseauRepository implements RoseauGateway {
     return { data, total };
   }
 
+  async findAllSteuWithNames(): Promise<SteuWithName[]> {
+    const rows = await this.steuRepository.createQueryBuilder('s').getMany();
+    return rows.map((s) => ({
+      steuSandreCda: s.steuSandreCda?.trim() ?? '',
+      steuNom: s.steuNomLb?.trim() ?? null,
+    }));
+  }
+
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
     if (sandreCdas.length === 0) return [];
     const rows = await this.steuRepository
@@ -451,6 +459,14 @@ export class RoseauRepository implements RoseauGateway {
     return rows.map((s) => ({
       steuSandreCda: s.steuSandreCda?.trim() ?? '',
       steuNom: s.steuNomLb?.trim() ?? null,
+    }));
+  }
+
+  async findAllSclWithNames(): Promise<SclWithName[]> {
+    const rows = await this.sclRepository.createQueryBuilder('scl').getMany();
+    return rows.map((s) => ({
+      sclSandreCda: s.sclSandreCda?.trim() ?? '',
+      sclNom: s.sclLb?.trim() ?? null,
     }));
   }
 

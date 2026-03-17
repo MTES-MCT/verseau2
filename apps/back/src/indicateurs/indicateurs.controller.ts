@@ -1,5 +1,4 @@
-import { Controller, Get, Req, UseGuards, UseInterceptors } from '@nestjs/common';
-import { MeGuard } from '@authentication/me.guard';
+import { Controller, Get, Req, UseInterceptors } from '@nestjs/common';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { IndicateursService } from './indicateurs.service';
 import type { RouteResponse } from '@lib/dossier';
@@ -8,7 +7,6 @@ import { CerbereIdCacheInterceptor } from '@shared/cerbereIdCache.interceptor';
 import { CacheTTL } from '@nestjs/cache-manager';
 
 @Controller('indicateurs')
-@UseGuards(MeGuard)
 @UseInterceptors(CerbereIdCacheInterceptor)
 @CacheTTL(3600000)
 export class IndicateursController {

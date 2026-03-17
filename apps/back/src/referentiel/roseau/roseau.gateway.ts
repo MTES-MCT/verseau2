@@ -35,7 +35,9 @@ export interface RoseauGateway {
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
+  findAllSteuWithNames(): Promise<SteuWithName[]>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
+  findAllSclWithNames(): Promise<SclWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
   findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
   findParametresByOuvrageAndPmo(
