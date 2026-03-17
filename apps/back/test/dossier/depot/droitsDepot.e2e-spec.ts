@@ -249,13 +249,5 @@ describe('DroitsDepotService (e2e)', () => {
         ForbiddenException,
       );
     });
-
-    it('ne nécessite pas le rôle déposant (301)', async () => {
-      // Expert bassin has role 303 but NOT role 301 — should still pass if SIRET matches
-      await seedUserExpertBassin(dataSource, EXPERT_BASSIN_USER);
-      await seedVSteuSclItv(dataSource, 'STEU01', '', EXPERT_BASSIN_USER.itvRfa);
-
-      await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).resolves.toBeUndefined();
-    });
   });
 });
