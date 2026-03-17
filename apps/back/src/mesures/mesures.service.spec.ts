@@ -2,20 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MesuresService } from './mesures.service';
 import { MasaProvider } from '@masa/masa.provider';
-import type { IntervenantAuth, VSteuSclItvResult, MesureRow } from '@masa/masa.dto';
-
-const makeIntervenant = (itvCdn: number, itvRfa: string): IntervenantAuth => ({
-  itvCdn,
-  itvRfa,
-});
-
-const makeVSteuSclItv = (steuCda: string, sclCda = 'SCL001'): VSteuSclItvResult => ({
-  steuCda,
-  sclCda,
-  moItvRfa: null,
-  satItvRfa: null,
-  aeItvRfa: null,
-});
+import type { MesureRow } from '@masa/masa.dto';
 
 const makeMesureRow = (): MesureRow => ({
   steuSandreCda: 'STEU001',
@@ -44,11 +31,11 @@ describe('MesuresService', () => {
 
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
-      findIntervenantById: jest.fn(),
-      findVSteuSclItvByItvRfa: jest.fn(),
       findMesures: jest.fn(),
       findSteuWithNamesBySandreCdas: jest.fn(),
       findSclWithNamesBySandreCdas: jest.fn(),
+      findPointsMesureByOuvrage: jest.fn(),
+      findParametresByOuvrageAndPmo: jest.fn(),
       findFinalites: jest.fn(),
       findStatuts: jest.fn(),
       findQualifications: jest.fn(),
@@ -73,47 +60,16 @@ describe('MesuresService', () => {
   });
 
   describe('listMesures', () => {
-    it('returns empty result when itvCdn is null', async () => {
-      const result = await service.listMesures({ itvCdn: null, ouvrageType: 'steu', page: 1, pageSize: 20 });
-
-      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
-      expect(masaProvider.findIntervenantById).not.toHaveBeenCalled();
-    });
-
-    it('returns empty result when intervenant is not found', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(null as unknown as IntervenantAuth);
-
-      const result = await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', page: 1, pageSize: 20 });
-
-      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
-      expect(masaProvider.findMesures).not.toHaveBeenCalled();
-    });
-
-    it('returns empty result when intervenant has no itvRfa', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, ''));
-
-      const result = await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', page: 1, pageSize: 20 });
-
-      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
-      expect(masaProvider.findMesures).not.toHaveBeenCalled();
-    });
-
-    it('returns empty result when no STEUs are authorized', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([]);
-
-      const result = await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', page: 1, pageSize: 20 });
-
-      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
-      expect(masaProvider.findMesures).not.toHaveBeenCalled();
-    });
-
     it('calls findMesures with all authorized STEUs when no filter given', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001'), makeVSteuSclItv('STEU002')]);
       masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
 
-      const result = await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', page: 1, pageSize: 20 });
+      const result = await service.listMesures({
+        authorizedSteuCdas: ['STEU001', 'STEU002'],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        page: 1,
+        pageSize: 20,
+      });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
         expect.objectContaining({ steuSandreCdas: ['STEU001', 'STEU002'], ouvrageType: 'steu' }),
@@ -122,13 +78,25 @@ describe('MesuresService', () => {
       expect(result.data).toHaveLength(1);
     });
 
+    it('returns empty result when authorized STEUs is empty', async () => {
+      const result = await service.listMesures({
+        authorizedSteuCdas: [],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
+      expect(masaProvider.findMesures).not.toHaveBeenCalled();
+    });
+
     it('intersects requested STEUs with authorized STEUs', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001'), makeVSteuSclItv('STEU003')]);
       masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
 
       await service.listMesures({
-        itvCdn: 42,
+        authorizedSteuCdas: ['STEU001', 'STEU003'],
+        authorizedSclCdas: [],
         ouvrageType: 'steu',
         steuSandreCdas: ['STEU001', 'STEU002'],
         page: 1,
@@ -139,11 +107,9 @@ describe('MesuresService', () => {
     });
 
     it('returns empty when requested STEUs are not in authorized list', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU999')]);
-
       const result = await service.listMesures({
-        itvCdn: 42,
+        authorizedSteuCdas: ['STEU999'],
+        authorizedSclCdas: [],
         ouvrageType: 'steu',
         steuSandreCdas: ['STEU001', 'STEU002'],
         page: 1,
@@ -154,26 +120,12 @@ describe('MesuresService', () => {
       expect(masaProvider.findMesures).not.toHaveBeenCalled();
     });
 
-    it('deduplicates STEU cdas from VSteuSclItv results', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
-        makeVSteuSclItv('STEU001'),
-        makeVSteuSclItv('STEU001'), // duplicate
-      ]);
-      masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
-
-      await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', page: 1, pageSize: 20 });
-
-      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ steuSandreCdas: ['STEU001'] }));
-    });
-
     it('passes optional filters to findMesures', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001')]);
       masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
 
       await service.listMesures({
-        itvCdn: 42,
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
         ouvrageType: 'steu',
         dateDebut: '2024-01-01',
         dateFin: '2024-12-31',
@@ -198,11 +150,15 @@ describe('MesuresService', () => {
     });
 
     it('returns page metadata in response', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001')]);
       masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 42 });
 
-      const result = await service.listMesures({ itvCdn: 42, ouvrageType: 'steu', page: 3, pageSize: 10 });
+      const result = await service.listMesures({
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        page: 3,
+        pageSize: 10,
+      });
 
       expect(result.page).toBe(3);
       expect(result.pageSize).toBe(10);
@@ -210,24 +166,41 @@ describe('MesuresService', () => {
     });
 
     it('routes to SCL authorization when ouvrageType is scl', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001', 'SCL001')]);
       masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
 
-      await service.listMesures({ itvCdn: 42, ouvrageType: 'scl', sclSandreCdas: ['SCL001'], page: 1, pageSize: 20 });
+      await service.listMesures({
+        authorizedSteuCdas: [],
+        authorizedSclCdas: ['SCL001'],
+        ouvrageType: 'scl',
+        sclSandreCdas: ['SCL001'],
+        page: 1,
+        pageSize: 20,
+      });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
         expect.objectContaining({ ouvrageType: 'scl', sclSandreCdas: ['SCL001'] }),
       );
     });
 
+    it('returns empty result when authorized SCLs is empty', async () => {
+      const result = await service.listMesures({
+        authorizedSteuCdas: [],
+        authorizedSclCdas: [],
+        ouvrageType: 'scl',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
+      expect(masaProvider.findMesures).not.toHaveBeenCalled();
+    });
+
     it('passes statut filter to masaProvider.findMesures when provided', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(1, 'ITV001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001')]);
       masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
 
       await service.listMesures({
-        itvCdn: 1,
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
         ouvrageType: 'steu',
         statut: 'A',
         page: 1,
@@ -238,12 +211,11 @@ describe('MesuresService', () => {
     });
 
     it('passes qualification filter to masaProvider.findMesures when provided', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(1, 'ITV001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001')]);
       masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
 
       await service.listMesures({
-        itvCdn: 1,
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
         ouvrageType: 'steu',
         qualification: '1',
         page: 1,
@@ -255,40 +227,20 @@ describe('MesuresService', () => {
   });
 
   describe('listOuvrages', () => {
-    it('returns empty array when itvCdn is null', async () => {
-      const result = await service.listOuvrages(null);
-
-      expect(result).toEqual([]);
-      expect(masaProvider.findIntervenantById).not.toHaveBeenCalled();
-    });
-
-    it('returns empty array when intervenant has no itvRfa', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, ''));
-
-      const result = await service.listOuvrages(42);
+    it('returns empty array when authorized STEUs is empty', async () => {
+      const result = await service.listOuvrages([]);
 
       expect(result).toEqual([]);
       expect(masaProvider.findSteuWithNamesBySandreCdas).not.toHaveBeenCalled();
     });
 
-    it('returns empty array when no STEUs found', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([]);
-
-      const result = await service.listOuvrages(42);
-
-      expect(result).toEqual([]);
-    });
-
     it('returns STEU list with names when authorized STEUs found', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([makeVSteuSclItv('STEU001'), makeVSteuSclItv('STEU002')]);
       masaProvider.findSteuWithNamesBySandreCdas.mockResolvedValue([
         { steuSandreCda: 'STEU001', steuNom: 'Station A' },
         { steuSandreCda: 'STEU002', steuNom: 'Station B' },
       ]);
 
-      const result = await service.listOuvrages(42);
+      const result = await service.listOuvrages(['STEU001', 'STEU002']);
 
       expect(masaProvider.findSteuWithNamesBySandreCdas).toHaveBeenCalledWith(['STEU001', 'STEU002']);
       expect(result).toHaveLength(2);
@@ -297,34 +249,20 @@ describe('MesuresService', () => {
   });
 
   describe('listSystemesCollecte', () => {
-    it('returns empty array when itvCdn is null', async () => {
-      const result = await service.listSystemesCollecte(null);
+    it('returns empty array when authorized SCLs is empty', async () => {
+      const result = await service.listSystemesCollecte([]);
 
       expect(result).toEqual([]);
-      expect(masaProvider.findIntervenantById).not.toHaveBeenCalled();
-    });
-
-    it('returns empty array when no SCL found', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([]);
-
-      const result = await service.listSystemesCollecte(42);
-
-      expect(result).toEqual([]);
+      expect(masaProvider.findSclWithNamesBySandreCdas).not.toHaveBeenCalled();
     });
 
     it('returns SCL list with names when authorized SCLs found', async () => {
-      masaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
-      masaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
-        makeVSteuSclItv('STEU001', 'SCL001'),
-        makeVSteuSclItv('STEU002', 'SCL002'),
-      ]);
       masaProvider.findSclWithNamesBySandreCdas.mockResolvedValue([
         { sclSandreCda: 'SCL001', sclNom: 'Réseau A' },
         { sclSandreCda: 'SCL002', sclNom: 'Réseau B' },
       ]);
 
-      const result = await service.listSystemesCollecte(42);
+      const result = await service.listSystemesCollecte(['SCL001', 'SCL002']);
 
       expect(masaProvider.findSclWithNamesBySandreCdas).toHaveBeenCalledWith(['SCL001', 'SCL002']);
       expect(result).toHaveLength(2);

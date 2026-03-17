@@ -6,4 +6,8 @@ export interface CustomRequest extends Request {
   user: AuthenticatedUser;
   correlationId: string;
   token: string;
+  /** Codes SANDRE des STEU autorisés — attachés par HasUserAccessToOuvragesGuard */
+  authorizedSteuCdas?: string[];
+  /** Codes SANDRE des SCL autorisés — attachés par HasUserAccessToOuvragesGuard */
+  authorizedSclCdas?: string[];
 }

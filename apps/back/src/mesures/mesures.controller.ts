@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { MeGuard } from '@authentication/me.guard';
+import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
@@ -21,13 +22,14 @@ export class MesuresController {
   constructor(private readonly mesuresService: MesuresService) {}
 
   @Get()
+  @UseGuards(HasUserAccessToOuvragesGuard)
   async listMesures(
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listMesures['query'])) query: RouteQuery<typeof listMesures>,
   ): Promise<RouteResponse<typeof listMesures>> {
-    const itvCdn = req.user.itvCdn;
     return this.mesuresService.listMesures({
-      itvCdn,
+      authorizedSteuCdas: req.authorizedSteuCdas!,
+      authorizedSclCdas: req.authorizedSclCdas!,
       ouvrageType: query.ouvrageType,
       steuSandreCdas: query.steuSandreCdas,
       sclSandreCdas: query.sclSandreCdas,
@@ -46,30 +48,40 @@ export class MesuresController {
   }
 
   @Get('ouvrages')
+  @UseGuards(HasUserAccessToOuvragesGuard)
   async listOuvrages(@Req() req: CustomRequest): Promise<RouteResponse<typeof listOuvrages>> {
-    return this.mesuresService.listOuvrages(req.user.itvCdn);
+    return this.mesuresService.listOuvrages(req.authorizedSteuCdas!);
   }
 
   @Get('systemes-collecte')
+  @UseGuards(HasUserAccessToOuvragesGuard)
   async listSystemesCollecte(@Req() req: CustomRequest): Promise<RouteResponse<typeof listSystemesCollecte>> {
-    return this.mesuresService.listSystemesCollecte(req.user.itvCdn);
+    return this.mesuresService.listSystemesCollecte(req.authorizedSclCdas!);
   }
 
   @Get('points-mesure')
+  @UseGuards(HasUserAccessToOuvragesGuard)
   async listPointsMesure(
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listPointsMesure['query'])) query: RouteQuery<typeof listPointsMesure>,
   ): Promise<RouteResponse<typeof listPointsMesure>> {
-    return this.mesuresService.listPointsMesure(req.user.itvCdn, query.ouvrageType, query.ouvrageCode);
+    return this.mesuresService.listPointsMesure(
+      req.authorizedSteuCdas!,
+      req.authorizedSclCdas!,
+      query.ouvrageType,
+      query.ouvrageCode,
+    );
   }
 
   @Get('parametres')
+  @UseGuards(HasUserAccessToOuvragesGuard)
   async listParametresMesure(
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listParametresMesure['query'])) query: RouteQuery<typeof listParametresMesure>,
   ): Promise<RouteResponse<typeof listParametresMesure>> {
     return this.mesuresService.listParametresMesure(
-      req.user.itvCdn,
+      req.authorizedSteuCdas!,
+      req.authorizedSclCdas!,
       query.ouvrageType,
       query.ouvrageCode,
       query.pmoCdn,
