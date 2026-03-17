@@ -21,6 +21,7 @@ export class DroitsDepotService {
     subId: string,
     cdOuvrageDepollutionList: string[],
     cdSystemeCollecteList: string[],
+    isFluxQualifie: boolean = false,
   ): Promise<void> {
     if (cdOuvrageDepollutionList.length === 0 && cdSystemeCollecteList.length === 0) {
       throw new ForbiddenException('Aucun code fourni pour la validation des droits de dépôt');
@@ -97,6 +98,13 @@ export class DroitsDepotService {
       );
       if (!hasRights) {
         throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour le système de collecte ${code}`);
+      }
+    }
+
+    if (isFluxQualifie) {
+      const isExpertBassin = await this.droitsUserService.isExpertBassinVerseau(subId);
+      if (!isExpertBassin) {
+        throw new ForbiddenException('FLUX_QUALIFIE_INTERDIT');
       }
     }
   }

@@ -1,7 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { type UseMutationResult, type UseQueryResult, useMutation, useQuery } from '@tanstack/react-query';
-import { checkScenarioCodeAndVersion, parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
+import {
+  checkScenarioCodeAndVersion,
+  parseScenarioAssainissementXml,
+  isFluxQualifie,
+  type FctAssainissement,
+} from '@lib/parser';
 import { checkDroitsDeDepot, type DroitsDeDepotResponse, uploadDepot } from '../../api/depot';
 import { fetchParametresFromCodes } from '../../api/referentiel';
 import { AppRoutes } from '../../routes';
@@ -10,6 +15,8 @@ type LocationState = {
   fileName?: string;
   fileContent?: string;
 };
+
+export type DroitsDeDepotStatus = 'loading' | 'authorized' | 'unauthorized' | 'error' | 'flux_qualifie_interdit';
 
 type UseDepotRecapResult = {
   fileName?: string;
@@ -23,7 +30,7 @@ type UseDepotRecapResult = {
   parseMutation: UseMutationResult<FctAssainissement, unknown, string>;
   uploadMutation: UseMutationResult<unknown, unknown, File>;
   droitsDeDepotQuery: UseQueryResult<DroitsDeDepotResponse, unknown>;
-  droitsDeDepotStatus: 'error' | 'loading' | 'authorized' | 'unauthorized';
+  droitsDeDepotStatus: DroitsDeDepotStatus;
   handleReturn: () => void;
   handleFinalize: () => void;
 };
@@ -79,9 +86,11 @@ export function useDepotRecap(): UseDepotRecapResult {
 
   const cdOuvrage = useMemo(() => parsedData?.ouvrages?.[0]?.cdOuvrageDepollution, [parsedData]);
 
+  const fluxQualifieVal = useMemo(() => (parsedData ? isFluxQualifie(parsedData) : false), [parsedData]);
+
   const droitsDeDepotQuery = useQuery({
-    queryKey: ['depot', 'droits-de-depot', cdOuvrageDepollutionList, cdSystemeCollecteList],
-    queryFn: () => checkDroitsDeDepot(cdOuvrageDepollutionList, cdSystemeCollecteList),
+    queryKey: ['depot', 'droits-de-depot', cdOuvrageDepollutionList, cdSystemeCollecteList, fluxQualifieVal],
+    queryFn: () => checkDroitsDeDepot(cdOuvrageDepollutionList, cdSystemeCollecteList, fluxQualifieVal),
     enabled: (cdOuvrageDepollutionList.length > 0 || cdSystemeCollecteList.length > 0) && parseMutation.isSuccess,
     retry: false,
   });
@@ -89,7 +98,7 @@ export function useDepotRecap(): UseDepotRecapResult {
   const totalAnalyses = useMemo(() => (parsedData ? countAnalyses(parsedData) : 0), [parsedData]);
   const params = useMemo(() => (parsedData ? extractParams(parsedData) : []), [parsedData]);
 
-  const droitsDeDepotStatus = useMemo(() => {
+  const droitsDeDepotStatus: DroitsDeDepotStatus = useMemo(() => {
     if (cdOuvrageDepollutionList.length === 0 && cdSystemeCollecteList.length === 0) {
       return parseMutation.isSuccess ? 'authorized' : 'error';
     }
@@ -99,7 +108,13 @@ export function useDepotRecap(): UseDepotRecapResult {
     if (droitsDeDepotQuery.isError) {
       return 'error';
     }
-    return droitsDeDepotQuery.data?.authorized ? 'authorized' : 'unauthorized';
+    if (droitsDeDepotQuery.data?.authorized) {
+      return 'authorized';
+    }
+    if (droitsDeDepotQuery.data?.errorCode === 'FLUX_QUALIFIE_INTERDIT') {
+      return 'flux_qualifie_interdit';
+    }
+    return 'unauthorized';
   }, [
     cdOuvrageDepollutionList.length,
     cdSystemeCollecteList.length,
@@ -107,6 +122,7 @@ export function useDepotRecap(): UseDepotRecapResult {
     droitsDeDepotQuery.isLoading,
     droitsDeDepotQuery.isError,
     droitsDeDepotQuery.data?.authorized,
+    droitsDeDepotQuery.data?.errorCode,
   ]);
 
   const handleReturn = () => navigate(AppRoutes.DEPOT_UPLOAD);

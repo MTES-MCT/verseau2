@@ -1,4 +1,5 @@
 export * from './scenarioAssainissement.parser';
+export * from './fluxQualifie';
 export type {
   FctAssainissement,
   Scenario,

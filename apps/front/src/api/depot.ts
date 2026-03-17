@@ -9,12 +9,11 @@ import {
   getControles,
   getControlesSandre,
   getMasa,
+  type RouteResponse,
 } from '@lib/dossier';
 import { apiPostFormData, apiDownload, apiCall, buildRoutePath } from './apiClient';
 
-export type DroitsDeDepotResponse = {
-  authorized: boolean;
-};
+export type DroitsDeDepotResponse = RouteResponse<typeof checkDroitsRoute>;
 
 export async function fetchDepots() {
   return apiCall(listDepots);
@@ -41,11 +40,13 @@ export async function uploadDepot(file: File): Promise<void> {
 export async function checkDroitsDeDepot(
   cdOuvrageDepollutionList: string[],
   cdSystemeCollecteList: string[],
+  isFluxQualifie: boolean = false,
 ): Promise<DroitsDeDepotResponse> {
   return apiCall(checkDroitsRoute, {
     query: {
       cdOuvrageDepollution: cdOuvrageDepollutionList.join(','),
       cdSystemeCollecte: cdSystemeCollecteList.join(','),
+      isFluxQualifie: isFluxQualifie ? 'true' : 'false',
     },
   });
 }

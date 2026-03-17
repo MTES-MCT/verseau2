@@ -23,9 +23,11 @@ export const checkDroitsDeDepot = {
   query: z.object({
     cdOuvrageDepollution: z.string().optional(),
     cdSystemeCollecte: z.string().optional(),
+    isFluxQualifie: z.enum(['true', 'false']).optional(),
   }),
   response: z.object({
     authorized: z.boolean(),
+    errorCode: z.enum(['DROITS_INSUFFISANTS', 'FLUX_QUALIFIE_INTERDIT']).optional(),
   }),
 } as const satisfies RouteDefinition;
 
