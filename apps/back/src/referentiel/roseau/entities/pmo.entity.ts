@@ -19,4 +19,13 @@ export class PmoEntity {
 
   @Column({ name: 'pmo_val_fin_dt', type: 'date', nullable: true })
   pmoValFinDt: Date;
+
+  @Column({ name: 'scl_cdn', nullable: true })
+  sclCdn: number;
+
+  @Column({ name: 'pmo_ae_cda', nullable: true })
+  pmoAeCda: string;
+
+  @Column({ name: 'pmo_lb', nullable: true })
+  pmoLb: string;
 }

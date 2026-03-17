@@ -2,7 +2,18 @@ import { SclEntity } from './entities/scl.entity';
 import { SteuEntity } from './entities/steu.entity';
 import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from '@masa/masa.dto';
+import {
+  CmaBySandreCdaAndParam,
+  MaxDebitBySandreCda,
+  ChargeEntranteMaxComparison,
+  MesureFilters,
+  MesureRow,
+  SteuWithName,
+  SclWithName,
+  PointMesure,
+  ParametreMesure,
+  NomenclatureItem,
+} from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
@@ -23,6 +34,18 @@ export interface RoseauGateway {
   ): Promise<CmaBySandreCdaAndParam[]>;
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
+  findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
+  findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
+  findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
+  findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
+  findParametresByOuvrageAndPmo(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    pmoCdn: number,
+  ): Promise<ParametreMesure[]>;
+  findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
+  findStatuts(): Promise<NomenclatureItem[]>;
+  findQualifications(): Promise<NomenclatureItem[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

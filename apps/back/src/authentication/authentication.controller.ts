@@ -102,8 +102,13 @@ export class AuthenticationController {
     try {
       const tokens = await this.authentication.refreshTokens(refreshToken);
 
+      const tokensWithFallbackRefresh: typeof tokens = {
+        ...tokens,
+        refreshToken: tokens.refreshToken ?? refreshToken,
+      };
+
       // Set cookies via AuthenticationService helper (re-forged internal token)
-      this.authentication.buildCookieResponse(res, tokens);
+      this.authentication.buildCookieResponse(res, tokensWithFallbackRefresh);
 
       return {
         expiresIn: tokens.expiresIn,

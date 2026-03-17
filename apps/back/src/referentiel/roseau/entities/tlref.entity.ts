@@ -10,4 +10,7 @@ export class TlrefEntity {
 
   @Column({ name: 'tlref_elt_cda', nullable: true })
   tlrefEltCda: string;
+
+  @Column({ name: 'tlref_mnemo_lb', nullable: true })
+  tlrefMnemoLb: string;
 }

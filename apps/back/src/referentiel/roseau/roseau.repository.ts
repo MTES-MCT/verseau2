@@ -14,8 +14,23 @@ import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { TltoblEntity } from './entities/tltobl.entity';
 import { AgacEntity } from './entities/agac.entity';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ChargeEntranteMaxComparison } from '@masa/masa.dto';
+import { PleEntity } from './entities/ple.entity';
+import { AlrEntity } from './entities/alr.entity';
+import {
+  CmaBySandreCdaAndParam,
+  MaxDebitBySandreCda,
+  ChargeEntranteMaxComparison,
+  MesureFilters,
+  MesureRow,
+  SteuWithName,
+  SclWithName,
+  PointMesure,
+  ParametreMesure,
+  NomenclatureItem,
+} from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
+import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
+import { UrfEntity } from '@referentiel/lanceleau/entities/urf.entity';
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -40,6 +55,10 @@ export class RoseauRepository implements RoseauGateway {
     private readonly resaRepository: Repository<ResaEntity>,
     @InjectRepository(StchanEntity)
     private readonly stchanRepository: Repository<StchanEntity>,
+    @InjectRepository(PleEntity)
+    private readonly pleRepository: Repository<PleEntity>,
+    @InjectRepository(AlrEntity)
+    private readonly alrRepository: Repository<AlrEntity>,
   ) {}
 
   async findSteu(): Promise<SteuEntity[]> {
@@ -240,5 +259,293 @@ export class RoseauRepository implements RoseauGateway {
       trancheLabel: r.tranche_label.trim(),
       annee: parseInt(r.annee.toString(), 10),
     }));
+  }
+
+  async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
+    const {
+      ouvrageType,
+      steuSandreCdas,
+      sclSandreCdas,
+      pmoCdn,
+      dateDebut,
+      dateFin,
+      parametreCode,
+      qualification,
+      statut,
+      finalite,
+      page,
+      pageSize,
+    } = filters;
+    const sortBy = filters.sortBy ?? 'default';
+    const sortOrder = filters.sortOrder ?? 'ASC';
+
+    const buildBaseQuery = () => {
+      if (ouvrageType === 'scl') {
+        // Mode SCL : pmo -> scl -> steu (chemin via le système de collecte)
+        return this.alrRepository
+          .createQueryBuilder('alr')
+          .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
+          .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
+          .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+          .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = scl.steu_cdn')
+          .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+          .leftJoin(TlrefEntity, 't20', 't20.tlref_cdn = alr.tlref_20_cdn')
+          .leftJoin(TlrefEntity, 't18', 't18.tlref_cdn = alr.tlref_18_cdn')
+          .leftJoin(TlrefEntity, 't17', 't17.tlref_cdn = alr.tlref_17_cdn')
+          .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
+          .leftJoin(UrfEntity, 'urf', 'urf.urf_rfa = alr.urf_rfa');
+      } else {
+        // Mode STEU : pmo -> steu (jointure directe)
+        return this.alrRepository
+          .createQueryBuilder('alr')
+          .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
+          .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
+          .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn')
+          .innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+          .leftJoin(TlrefEntity, 't20', 't20.tlref_cdn = alr.tlref_20_cdn')
+          .leftJoin(TlrefEntity, 't18', 't18.tlref_cdn = alr.tlref_18_cdn')
+          .leftJoin(TlrefEntity, 't17', 't17.tlref_cdn = alr.tlref_17_cdn')
+          .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
+          .leftJoin(UrfEntity, 'urf', 'urf.urf_rfa = alr.urf_rfa');
+      }
+    };
+
+    const applyFilters = (qb: ReturnType<typeof buildBaseQuery>) => {
+      if (ouvrageType === 'scl') {
+        if (sclSandreCdas.length > 0) {
+          qb.andWhere('scl.scl_sandre_cda IN (:...sclSandreCdas)', { sclSandreCdas });
+        }
+      } else {
+        if (steuSandreCdas.length > 0) {
+          qb.andWhere('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas });
+        }
+      }
+      if (pmoCdn !== undefined) {
+        qb.andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+      }
+      if (dateDebut) {
+        qb.andWhere('ple.ple_prelev_dt >= :dateDebut', { dateDebut });
+      }
+      if (dateFin) {
+        qb.andWhere('ple.ple_prelev_dt <= :dateFin', { dateFin });
+      }
+      if (parametreCode) {
+        qb.andWhere('par.par_rfa = :parametreCode', { parametreCode });
+      }
+      if (qualification) {
+        qb.andWhere('t18.tlref_elt_cda = :qualification', { qualification });
+      }
+      if (statut) {
+        qb.andWhere('t20.tlref_elt_cda = :statut', { statut });
+      }
+      if (finalite) {
+        qb.andWhere('t17.tlref_elt_cda = :finalite', { finalite });
+      }
+      return qb;
+    };
+
+    const countQb = applyFilters(buildBaseQuery());
+    const total = await countQb.getCount();
+
+    const dataQb = applyFilters(buildBaseQuery())
+      .select('steu.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('steu.steu_nom_lb', 'steu_nom')
+      .addSelect(ouvrageType === 'scl' ? 'scl.scl_sandre_cda' : 'NULL::text', 'scl_sandre_cda')
+      .addSelect(ouvrageType === 'scl' ? 'scl.scl_lb' : 'NULL::text', 'scl_nom')
+      .addSelect('t16.tlref_elt_cda', 'localisation_point')
+      .addSelect('pmo.pmo_ae_cda', 'num_point_agence')
+      .addSelect('pmo.pmo_no', 'num_point')
+      .addSelect('pmo.pmo_lb', 'nom_point')
+      .addSelect('ple.ple_prelev_dt', 'date')
+      .addSelect('par.par_rfa', 'parametre_code')
+      .addSelect('par.par_court_nom_lb', 'parametre_nom')
+      .addSelect('alr.alr_res_val', 'valeur')
+      .addSelect('urf.urf_symb_lb', 'unite')
+      .addSelect('t17.tlref_mnemo_lb', 'finalite')
+      .addSelect(
+        "CASE WHEN t20.tlref_elt_cda IS NOT NULL THEN t20.tlref_elt_cda || '-' || COALESCE(t20.tlref_mnemo_lb, '') ELSE NULL END",
+        'statut',
+      )
+      .addSelect('t18.tlref_mnemo_lb', 'qualification');
+
+    const sortMap: Record<string, string> = {
+      date: 'ple.ple_prelev_dt',
+      parametreCode: 'par.par_rfa',
+      valeur: 'alr.alr_res_val',
+      statut: 'statut',
+    };
+
+    if (sortBy === 'default') {
+      if (ouvrageType === 'scl') {
+        dataQb
+          .orderBy('scl.scl_lb', sortOrder)
+          .addOrderBy('t16.tlref_elt_cda', sortOrder)
+          .addOrderBy('pmo.pmo_no', sortOrder)
+          .addOrderBy('ple.ple_prelev_dt', sortOrder)
+          .addOrderBy('par.par_rfa', sortOrder);
+      } else {
+        dataQb
+          .orderBy('steu.steu_nom_lb', sortOrder)
+          .addOrderBy('t16.tlref_elt_cda', sortOrder)
+          .addOrderBy('pmo.pmo_no', sortOrder)
+          .addOrderBy('ple.ple_prelev_dt', sortOrder)
+          .addOrderBy('par.par_rfa', sortOrder);
+      }
+    } else {
+      const sortColumn = sortMap[sortBy];
+      if (!sortColumn) {
+        throw new Error(`Invalid sortBy value: "${sortBy}"`);
+      }
+      dataQb.orderBy(sortColumn, sortOrder);
+    }
+
+    dataQb.offset((page - 1) * pageSize).limit(pageSize);
+
+    const rows = await dataQb.getRawMany<{
+      steu_sandre_cda: string;
+      steu_nom: string | null;
+      scl_sandre_cda: string | null;
+      scl_nom: string | null;
+      localisation_point: string | null;
+      num_point_agence: string | null;
+      num_point: string | null;
+      nom_point: string | null;
+      date: Date | null;
+      parametre_code: string;
+      parametre_nom: string | null;
+      valeur: string | null;
+      unite: string | null;
+      finalite: string | null;
+      statut: string | null;
+      qualification: string | null;
+    }>();
+
+    const data: MesureRow[] = rows.map((r) => ({
+      steuSandreCda: r.steu_sandre_cda?.trim() ?? '',
+      steuNom: r.steu_nom?.trim() ?? null,
+      sclSandreCda: r.scl_sandre_cda?.trim() ?? null,
+      sclNom: r.scl_nom?.trim() ?? null,
+      localisationPoint: r.localisation_point?.trim() ?? null,
+      numPointAgence: r.num_point_agence?.trim() ?? null,
+      numPoint: r.num_point?.trim() ?? null,
+      nomPoint: r.nom_point?.trim() ?? null,
+      date: r.date ? new Date(r.date) : null,
+      parametreCode: r.parametre_code?.trim() ?? '',
+      parametreNom: r.parametre_nom?.trim() ?? null,
+      valeur: r.valeur !== null && r.valeur !== undefined ? parseFloat(r.valeur) : null,
+      unite: r.unite?.trim() ?? null,
+      finalite: r.finalite?.trim() ?? null,
+      statut: r.statut?.trim() ?? null,
+      qualification: r.qualification?.trim() ?? null,
+    }));
+
+    return { data, total };
+  }
+
+  async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
+    if (sandreCdas.length === 0) return [];
+    const rows = await this.steuRepository
+      .createQueryBuilder('s')
+      .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .getMany();
+    return rows.map((s) => ({
+      steuSandreCda: s.steuSandreCda?.trim() ?? '',
+      steuNom: s.steuNomLb?.trim() ?? null,
+    }));
+  }
+
+  async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
+    if (sandreCdas.length === 0) return [];
+    const rows = await this.sclRepository
+      .createQueryBuilder('scl')
+      .where('scl.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .getMany();
+    return rows.map((s) => ({
+      sclSandreCda: s.sclSandreCda?.trim() ?? '',
+      sclNom: s.sclLb?.trim() ?? null,
+    }));
+  }
+
+  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
+    const qb = this.pmoRepository
+      .createQueryBuilder('pmo')
+      .select('pmo.pmo_cdn', 'pmo_cdn')
+      .addSelect('pmo.pmo_no', 'pmo_no')
+      .addSelect('pmo.pmo_lb', 'pmo_lb');
+
+    if (ouvrageType === 'scl') {
+      // Mode SCL : pmo -> scl (jointure directe via scl_cdn)
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
+    } else {
+      // Mode STEU : pmo -> steu (jointure directe via steu_cdn)
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
+    }
+
+    qb.orderBy('pmo.pmo_no', 'ASC');
+
+    const rows = await qb.getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+    return rows.map((r) => ({
+      pmoCdn: r.pmo_cdn,
+      pmoNo: r.pmo_no?.trim() ?? '',
+      pmoLb: r.pmo_lb?.trim() ?? null,
+    }));
+  }
+
+  async findParametresByOuvrageAndPmo(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    pmoCdn: number,
+  ): Promise<ParametreMesure[]> {
+    const qb = this.alrRepository
+      .createQueryBuilder('alr')
+      .select('alr.par_rfa', 'par_rfa')
+      .addSelect('par.par_court_nom_lb', 'par_court_nom_lb')
+      .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
+      .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
+      .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
+      .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+
+    if (ouvrageType === 'scl') {
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
+    } else {
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
+        ouvrageCode,
+      });
+    }
+
+    qb.distinct(true).orderBy('alr.par_rfa', 'ASC');
+
+    const rows = await qb.getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
+    return rows.map((r) => ({
+      parRfa: r.par_rfa?.trim() ?? '',
+      parCourtNomLb: r.par_court_nom_lb?.trim() ?? null,
+    }));
+  }
+
+  async findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]> {
+    const rows = await this.tlrefRepository
+      .createQueryBuilder('tlref')
+      .where('tlref.trl_rfa = :trlRfa', { trlRfa })
+      .orderBy('tlref.tlref_elt_cda', 'ASC')
+      .getMany();
+
+    return rows.map((r) => ({
+      code: r.tlrefEltCda?.trim() ?? '',
+      label: r.tlrefMnemoLb?.trim() ?? null,
+    }));
+  }
+
+  async findStatuts(): Promise<NomenclatureItem[]> {
+    return this.findNomenclatureByRfa('LREF_20');
+  }
+
+  async findQualifications(): Promise<NomenclatureItem[]> {
+    return this.findNomenclatureByRfa('LREF_18');
   }
 }

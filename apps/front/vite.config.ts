@@ -10,10 +10,11 @@ export default defineConfig({
     alias: {
       '@lib/parser': path.resolve(__dirname, '../../packages/parser/src/index.ts'),
       '@lib/dossier': path.resolve(__dirname, '../../packages/dossier/src/index.ts'),
+      '@lib/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   optimizeDeps: {
-    exclude: ['@lib/parser', '@lib/dossier'],
+    exclude: ['@lib/parser', '@lib/dossier', '@lib/shared'],
   },
   test: {
     globals: true,

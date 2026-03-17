@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
@@ -10,6 +12,13 @@ import {
   AgByEmail,
   IntervenantAuth,
   VSteuSclItvResult,
+  MesureFilters,
+  MesureRow,
+  SteuWithName,
+  SclWithName,
+  PointMesure,
+  ParametreMesure,
+  NomenclatureItem,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -23,6 +32,7 @@ export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -132,7 +142,13 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
-    return this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
+    const cacheKey = `vSteuSclItv:${itvRfa}`;
+    const cached = await this.cacheManager.get<VSteuSclItvResult[]>(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
+    await this.cacheManager.set(cacheKey, result, 3_600_000);
+    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -180,5 +196,71 @@ export class MasaProvider {
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
     return await this.lanceleauGateway.findByItvCdn(itvCdn);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Récupération des mesures déposées filtrées et paginées
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
+    return this.roseauGateway.findMesures(filters);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Récupération des STEU autorisés avec noms pour le dropdown ouvrage
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
+    return this.roseauGateway.findSteuWithNamesBySandreCdas(sandreCdas);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — SCL autorisés avec noms pour le dropdown système de collecte
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
+    return this.roseauGateway.findSclWithNamesBySandreCdas(sandreCdas);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Points de mesure (PMO) pour un ouvrage donné (STEU ou SCL)
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Paramètres disponibles pour un ouvrage + point de mesure donné
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findParametresByOuvrageAndPmo(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    pmoCdn: number,
+  ): Promise<ParametreMesure[]> {
+    return this.roseauGateway.findParametresByOuvrageAndPmo(ouvrageType, ouvrageCode, pmoCdn);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mesures — Finalités (nomenclature tlref rfa=17) pour le dropdown de sélection
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findFinalites(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findNomenclatureByRfa('LREF_17');
+  }
+
+  async findStatuts(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findStatuts();
+  }
+
+  async findQualifications(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findQualifications();
   }
 }

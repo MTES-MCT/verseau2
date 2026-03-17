@@ -123,6 +123,8 @@ function useAsyncSearch(searchFn: (q: string) => Promise<AutocompleteOption[]>) 
 export function DesignSystemPage() {
   const [selectedSimple, setSelectedSimple] = useState<string | null>(null);
   const [selectedRich, setSelectedRich] = useState<string | null>(null);
+  const [selectedError, setSelectedError] = useState<string | null>(null);
+  const [selectedSuccess, setSelectedSuccess] = useState<string | null>('bordeaux');
   const [selectedAsync, setSelectedAsync] = useState<string | null>(null);
   const { options: asyncOptions, isLoading: asyncLoading, search: searchAsync } = useAsyncSearch(searchCommunes);
 
@@ -186,8 +188,8 @@ export function DesignSystemPage() {
               state="error"
               stateRelatedMessage="Veuillez sélectionner une ville dans la liste."
               options={villeOptions}
-              value={null}
-              onChange={() => {}}
+              value={selectedError}
+              onChange={setSelectedError}
             />
           </div>
 
@@ -199,8 +201,8 @@ export function DesignSystemPage() {
               state="success"
               stateRelatedMessage="Ville valide."
               options={villeOptions}
-              value="bordeaux"
-              onChange={() => {}}
+              value={selectedSuccess}
+              onChange={setSelectedSuccess}
             />
           </div>
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SelectAutocomplete } from './SelectAutocomplete';
 
 describe('SelectAutocomplete', () => {
@@ -316,8 +316,180 @@ describe('SelectAutocomplete', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // State / stateRelatedMessage (DSFR validation states)
+  // Toggle button (chevron)
   // ---------------------------------------------------------------------------
+
+  it('renders a toggle button', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Ouvrir la liste' })).toBeInTheDocument();
+  });
+
+  it('opens the dropdown with all options when toggle button is clicked', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Ouvrir la liste' }));
+
+    const listbox = screen.getByRole('listbox');
+    expect(listbox).toBeInTheDocument();
+    options.forEach((option) => {
+      expect(within(listbox).getByText(option.label)).toBeInTheDocument();
+    });
+  });
+
+  it('closes the dropdown when toggle button is clicked while open', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Fermer la liste' }));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('shows all options via toggle even when a value is already selected', () => {
+    render(<SelectAutocomplete label="Ville" options={options} value="lyon" onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Ouvrir la liste' }));
+
+    const listbox = screen.getByRole('listbox');
+    options.forEach((option) => {
+      expect(within(listbox).getByText(option.label)).toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Clear button (cross)
+  // ---------------------------------------------------------------------------
+
+  it('does not render the clear button when no value is selected', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Effacer la sélection' })).not.toBeInTheDocument();
+  });
+
+  it('renders the clear button when a value is selected', () => {
+    render(<SelectAutocomplete label="Ville" options={options} value="paris" onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Effacer la sélection' })).toBeInTheDocument();
+  });
+
+  it('calls onChange(null) and empties the input when the clear button is clicked', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return <SelectAutocomplete label="Ville" options={options} value={value} onChange={setValue} />;
+    };
+    render(<Wrapper />);
+
+    expect(screen.getByRole('combobox')).toHaveValue('Paris');
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+
+    expect(screen.getByRole('combobox')).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Effacer la sélection' })).not.toBeInTheDocument();
+  });
+
+  it('closes the dropdown when the clear button is clicked', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return <SelectAutocomplete label="Ville" options={options} value={value} onChange={setValue} />;
+    };
+    render(<Wrapper />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('opens the dropdown on a single click after clearing', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return <SelectAutocomplete label="Ville" options={options} value={value} onChange={setValue} />;
+    };
+    render(<Wrapper />);
+
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Listbox positioning (dynamic top via ResizeObserver / getBoundingClientRect)
+  // ---------------------------------------------------------------------------
+
+  describe('listbox positioning relative to the native input', () => {
+    // jsdom returns all zeros for getBoundingClientRect. We mock it on
+    // Element.prototype before each render (so the useEffect sees the mocked
+    // values on mount) using CSS class names to discriminate elements:
+    //   .select-autocomplete-input-wrapper  → top: 100
+    //   .select-autocomplete-container      → top: 100
+    //   input (combobox)                    → top: 130, bottom: 170
+    //
+    // Expected computed values:
+    //   actionsTop  = inputTop  - wrapperTop  = 130 - 100 = 30
+    //   listboxTop  = inputBottom - containerTop = 170 - 100 = 70
+
+    beforeEach(() => {
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        if (this.classList.contains('select-autocomplete-input-wrapper')) {
+          return { top: 100, bottom: 180, left: 0, right: 300, width: 300, height: 80 } as DOMRect;
+        }
+        if (this.classList.contains('select-autocomplete-container')) {
+          return { top: 100, bottom: 210, left: 0, right: 300, width: 300, height: 110 } as DOMRect;
+        }
+        if (this.tagName === 'INPUT') {
+          return { top: 130, bottom: 170, left: 0, right: 300, width: 300, height: 40 } as DOMRect;
+        }
+        return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 } as DOMRect;
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('positions the listbox flush under the input in default state', () => {
+      render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('combobox'));
+
+      // listboxTop = inputBottom - containerTop = 170 - 100 = 70
+      expect(screen.getByRole('listbox')).toHaveStyle({ top: '70px' });
+    });
+
+    it('positions the listbox flush under the input in error state', () => {
+      render(
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          onChange={vi.fn()}
+          state="error"
+          stateRelatedMessage="Veuillez sélectionner une ville"
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByRole('listbox')).toHaveStyle({ top: '70px' });
+    });
+
+    it('positions the listbox flush under the input in success state', () => {
+      render(
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          onChange={vi.fn()}
+          state="success"
+          stateRelatedMessage="Ville valide"
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('combobox'));
+
+      expect(screen.getByRole('listbox')).toHaveStyle({ top: '70px' });
+    });
+  });
 
   it('passes stateRelatedMessage to the underlying Input when state is error', () => {
     render(
@@ -331,5 +503,58 @@ describe('SelectAutocomplete', () => {
     );
 
     expect(screen.getByText('Veuillez sélectionner une ville')).toBeInTheDocument();
+  });
+
+  it('fills the input with the selected value when clicking an option in error state', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>(null);
+      return (
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          value={value}
+          onChange={setValue}
+          state="error"
+          stateRelatedMessage="Veuillez sélectionner une ville"
+        />
+      );
+    };
+    render(<Wrapper />);
+
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.mouseDown(screen.getByText('Lyon'));
+    fireEvent.click(screen.getByText('Lyon'));
+
+    expect(screen.getByRole('combobox')).toHaveValue('Lyon');
+  });
+
+  it('renders and operates the clear button when state is success', () => {
+    const Wrapper = () => {
+      const [value, setValue] = useState<string | null>('paris');
+      return (
+        <SelectAutocomplete
+          label="Ville"
+          options={options}
+          value={value}
+          onChange={setValue}
+          state="success"
+          stateRelatedMessage="Ville valide"
+        />
+      );
+    };
+    render(<Wrapper />);
+
+    // Clear button is visible with a selected value in success state
+    const clearButton = screen.getByRole('button', { name: 'Effacer la sélection' });
+    expect(clearButton).toBeInTheDocument();
+
+    // The success message is displayed
+    expect(screen.getByText('Ville valide')).toBeInTheDocument();
+
+    // Clicking the clear button resets the value and hides the button
+    fireEvent.mouseDown(clearButton);
+
+    expect(screen.getByRole('combobox')).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Effacer la sélection' })).not.toBeInTheDocument();
   });
 });

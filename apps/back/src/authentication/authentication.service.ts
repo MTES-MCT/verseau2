@@ -138,7 +138,8 @@ export class AuthenticationService implements Authentication {
       pkceCodeVerifier: undefined,
     });
 
-    const user = await this.getUserInfo(tokens.access_token);
+    const userInfo = await this.fetchUserInfoClaims(tokens.access_token);
+    const user = this.mapOpenIdUserToUser(userInfo);
 
     // Résoudre les claims métier depuis Lanceleau
     const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
@@ -152,7 +153,13 @@ export class AuthenticationService implements Authentication {
       tokens.expires_in,
     );
 
-    const enrichedUser: AuthenticatedUser = { ...user, itvCdn, isExpertNational };
+    const enrichedUser: AuthenticatedUserAndNomPrenom = {
+      ...user,
+      itvCdn,
+      isExpertNational,
+      nom: (userInfo.family_name as string) || undefined,
+      prenom: (userInfo.given_name as string) || undefined,
+    };
 
     return {
       accessToken: internalToken,
@@ -165,13 +172,16 @@ export class AuthenticationService implements Authentication {
   }
 
   async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
+    const userInfo = await this.fetchUserInfoClaims(accessToken);
+    return this.mapOpenIdUserToUser(userInfo);
+  }
+
+  private async fetchUserInfoClaims(accessToken: string): Promise<UserInfoResponse> {
     const configuration = await this.getConfiguration();
-    this.logger.debug(`Getting user info for access token: ${accessToken}`);
 
     const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, skipSubjectCheck);
-    this.logger.debug(`User info received: ${JSON.stringify(userInfo)}`);
 
-    return this.mapOpenIdUserToUser(userInfo);
+    return userInfo;
   }
 
   private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
@@ -217,6 +227,10 @@ export class AuthenticationService implements Authentication {
       tokens.expires_in,
     );
 
+    if (!tokens.refresh_token) {
+      this.logger.warn('AS did not return a new refresh token');
+    }
+
     return {
       accessToken: internalToken,
       idToken: tokens.id_token || '',
@@ -249,15 +263,22 @@ export class AuthenticationService implements Authentication {
     };
   }
 
+  // 7 days in ms — conservative upper bound when the AS does not advertise refresh_token lifetime
+  private readonly REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    const cookieOptions: CookieOptions = {
+    const accessTokenOptions: CookieOptions = {
       ...this.baseCookieOptions,
       maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
     };
-    res.cookie('access_token', tokens.accessToken, cookieOptions);
+    res.cookie('access_token', tokens.accessToken, accessTokenOptions);
 
     if (tokens.refreshToken) {
-      res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
+      const refreshTokenOptions: CookieOptions = {
+        ...this.baseCookieOptions,
+        maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
+      };
+      res.cookie('refresh_token', tokens.refreshToken, refreshTokenOptions);
     }
   }
 

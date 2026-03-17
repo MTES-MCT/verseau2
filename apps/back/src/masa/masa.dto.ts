@@ -1,4 +1,6 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
+import { PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
+
 export interface CmaBySandreCdaAndParam {
   sandreCda: string;
   paramCode: string;
@@ -25,6 +27,19 @@ export interface SteuCdnBySandreCda {
   sandreCda: string;
   steuCdn: number;
 }
+
+/** STEU avec nom — utilisé pour les dropdowns et listes d'ouvrages */
+export interface SteuWithName {
+  steuSandreCda: string;
+  steuNom: string | null;
+}
+
+/** SCL avec nom — utilisé pour le dropdown système de collecte */
+export interface SclWithName {
+  sclSandreCda: string;
+  sclNom: string | null;
+}
+
 /** Résultat ITV retourné par un fetch batch MASA */
 
 export interface ItvCdnByRfa {
@@ -52,4 +67,58 @@ export interface VSteuSclItvResult {
   moItvRfa: string | null;
   satItvRfa: string | null;
   aeItvRfa: string | null;
+}
+
+/** Point de mesure (PMO) — utilisé pour le dropdown de sélection */
+export interface PointMesure {
+  pmoCdn: number;
+  pmoNo: string;
+  pmoLb: string | null;
+}
+
+/** Paramètre — utilisé pour le dropdown de sélection */
+export interface ParametreMesure {
+  parRfa: string;
+  parCourtNomLb: string | null;
+}
+
+/** Élément de nomenclature (ex: finalité, statut) — utilisé pour les dropdowns de sélection */
+export interface NomenclatureItem {
+  code: string;
+  label: string | null;
+}
+
+/** Filtres pour la recherche de mesures */
+export interface MesureFilters extends PaginationQuery {
+  ouvrageType: OuvrageTypeValue;
+  steuSandreCdas: string[];
+  sclSandreCdas: string[];
+  pmoCdn?: number;
+  dateDebut?: string;
+  dateFin?: string;
+  parametreCode?: string;
+  qualification?: string;
+  statut?: string;
+  finalite?: string;
+  sortBy?: MesuresSortByValue;
+}
+
+/** Une mesure avec tous ses champs joints */
+export interface MesureRow {
+  steuSandreCda: string;
+  steuNom: string | null;
+  sclSandreCda: string | null;
+  sclNom: string | null;
+  localisationPoint: string | null;
+  numPointAgence: string | null;
+  numPoint: string | null;
+  nomPoint: string | null;
+  date: Date | null;
+  parametreCode: string;
+  parametreNom: string | null;
+  valeur: number | null;
+  unite: string | null;
+  finalite: string | null;
+  statut: string | null;
+  qualification: string | null;
 }

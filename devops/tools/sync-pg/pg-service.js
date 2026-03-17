@@ -89,6 +89,7 @@ class PgService {
     const env = { ...process.env };
 
     const sql = `
+      CREATE EXTENSION IF NOT EXISTS pg_trgm;
       DROP SCHEMA IF EXISTS custom_ingestion_roseau CASCADE;
       DROP SCHEMA IF EXISTS custom_ingestion_lanceleau CASCADE;
       DROP SCHEMA IF EXISTS custom_ingestion_verseau CASCADE;
