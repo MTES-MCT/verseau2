@@ -130,6 +130,12 @@ describe('MesuresController (e2e)', () => {
 
       await request(app.getHttpServer()).get('/mesures').set('Cookie', ['access_token=token']).expect(403);
     });
+
+    it('returns 200 when user is expert national even without itvCdn', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: null, isExpertNational: true }));
+
+      await request(app.getHttpServer()).get('/mesures').set('Cookie', ['access_token=token']).expect(200);
+    });
   });
 
   describe('GET /mesures - nominal case', () => {
@@ -185,6 +191,17 @@ describe('MesuresController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: null }));
 
       await request(app.getHttpServer()).get('/mesures/ouvrages').set('Cookie', ['access_token=token']).expect(403);
+    });
+
+    it('returns 200 when user is expert national even without itvCdn', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser({ itvCdn: null, isExpertNational: true }));
+
+      const response = await request(app.getHttpServer())
+        .get('/mesures/ouvrages')
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(Array.isArray(response.body)).toBe(true);
     });
   });
 

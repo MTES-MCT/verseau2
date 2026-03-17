@@ -9,14 +9,12 @@ import {
   NotFoundException,
   Req,
   Res,
-  UseGuards,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Authentication, AuthenticatedUserWithIntervenant, AuthenticatedUserAndNomPrenom } from './authentication';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
-import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 
@@ -134,7 +132,6 @@ export class AuthenticationController {
 
   @Get('me')
   @SkipThrottle({ default: true })
-  @UseGuards(MeGuard)
   async me(@Req() req: CustomRequest): Promise<AuthenticatedUserWithIntervenant> {
     const authenticatedUser = req.user;
 

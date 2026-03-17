@@ -2,8 +2,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MesuresController } from './mesures.controller';
 import { MesuresService } from './mesures.service';
-import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
+import { IsAdminGuard } from '@authentication/isAdmin.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 
 const makeMesureDto = () => ({
@@ -44,9 +44,9 @@ describe('MesuresController', () => {
         },
       ],
     })
-      .overrideGuard(MeGuard)
-      .useValue({ canActivate: () => true })
       .overrideGuard(HasUserAccessToOuvragesGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(IsAdminGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -115,6 +115,21 @@ describe('MesuresController', () => {
         }),
       );
     });
+
+    it('passes undefined authorized lists for expert national (no guard-set values)', async () => {
+      const paginated = { data: [makeMesureDto()], total: 1, page: 1, pageSize: 20 };
+      mesuresService.listMesures.mockResolvedValue(paginated);
+
+      const expertRequest = {
+        user: { itvCdn: null, isExpertNational: true, cerbereId: 'expert', mel: 'expert@example.com' },
+      } as unknown as CustomRequest;
+
+      await controller.listMesures(expertRequest, { page: 1, pageSize: 20, ouvrageType: 'steu' });
+
+      expect(mesuresService.listMesures).toHaveBeenCalledWith(
+        expect.objectContaining({ authorizedSteuCdas: undefined, authorizedSclCdas: undefined }),
+      );
+    });
   });
 
   describe('listOuvrages', () => {
@@ -135,6 +150,18 @@ describe('MesuresController', () => {
 
       expect(mesuresService.listOuvrages).toHaveBeenCalledWith([]);
       expect(result).toEqual([]);
+    });
+
+    it('delegates with undefined for expert national', async () => {
+      mesuresService.listOuvrages.mockResolvedValue([]);
+
+      const expertRequest = {
+        user: { itvCdn: null, isExpertNational: true, cerbereId: 'expert', mel: 'expert@example.com' },
+      } as unknown as CustomRequest;
+
+      await controller.listOuvrages(expertRequest);
+
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(undefined);
     });
   });
 });

@@ -32,7 +32,9 @@ describe('MesuresService', () => {
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
       findMesures: jest.fn(),
+      findAllSteuWithNames: jest.fn(),
       findSteuWithNamesBySandreCdas: jest.fn(),
+      findAllSclWithNames: jest.fn(),
       findSclWithNamesBySandreCdas: jest.fn(),
       findPointsMesureByOuvrage: jest.fn(),
       findParametresByOuvrageAndPmo: jest.fn(),
@@ -224,6 +226,36 @@ describe('MesuresService', () => {
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ qualification: '1' }));
     });
+
+    it('skips authorization filtering when authorizedSteuCdas is undefined (expert national)', async () => {
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+
+      const result = await service.listMesures({
+        ouvrageType: 'steu',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(
+        expect.objectContaining({ steuSandreCdas: [], ouvrageType: 'steu' }),
+      );
+      expect(result.total).toBe(1);
+    });
+
+    it('skips authorization filtering when authorizedSclCdas is undefined (expert national, SCL mode)', async () => {
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+
+      const result = await service.listMesures({
+        ouvrageType: 'scl',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(
+        expect.objectContaining({ sclSandreCdas: [], ouvrageType: 'scl' }),
+      );
+      expect(result.total).toBe(1);
+    });
   });
 
   describe('listOuvrages', () => {
@@ -246,6 +278,16 @@ describe('MesuresService', () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ steuSandreCda: 'STEU001', steuNom: 'Station A' });
     });
+
+    it('returns all STEUs when authorized list is undefined (expert national)', async () => {
+      masaProvider.findAllSteuWithNames!.mockResolvedValue([{ steuSandreCda: 'STEU001', steuNom: 'Station A' }]);
+
+      const result = await service.listOuvrages(undefined);
+
+      expect(masaProvider.findAllSteuWithNames).toHaveBeenCalledTimes(1);
+      expect(masaProvider.findSteuWithNamesBySandreCdas).not.toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+    });
   });
 
   describe('listSystemesCollecte', () => {
@@ -267,6 +309,16 @@ describe('MesuresService', () => {
       expect(masaProvider.findSclWithNamesBySandreCdas).toHaveBeenCalledWith(['SCL001', 'SCL002']);
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ sclSandreCda: 'SCL001', sclNom: 'Réseau A' });
+    });
+
+    it('returns all SCLs when authorized list is undefined (expert national)', async () => {
+      masaProvider.findAllSclWithNames!.mockResolvedValue([{ sclSandreCda: 'SCL001', sclNom: 'Réseau A' }]);
+
+      const result = await service.listSystemesCollecte(undefined);
+
+      expect(masaProvider.findAllSclWithNames).toHaveBeenCalledTimes(1);
+      expect(masaProvider.findSclWithNamesBySandreCdas).not.toHaveBeenCalled();
+      expect(result).toHaveLength(1);
     });
   });
 
