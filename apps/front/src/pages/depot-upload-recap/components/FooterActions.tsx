@@ -9,8 +9,8 @@ type FooterActionsProps = {
 export function FooterActions({ onBack, onFinalize, finalizeDisabled }: FooterActionsProps) {
   return (
     <section className="fr-card fr-card--no-border fr-p-4w">
-      <div className="fr-grid-row fr-grid-row--space-between fr-grid-row--middle">
-        <div className="fr-col-auto">
+      <div className="fr-grid-row ">
+        <div className="fr-col-auto fr-mr-2w">
           <Button priority="secondary" iconId="ri-arrow-left-line" onClick={onBack}>
             Retour à l&apos;étape précédente
           </Button>
