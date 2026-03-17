@@ -181,7 +181,8 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Non utilisé actuellement, mais potentiellement utile
+  // Autorisation — Récupération des rôles d'un principal
+  // Utilisé par DroitsDepotService pour vérifier déposant/expert bassin
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
   async findRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {

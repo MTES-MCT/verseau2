@@ -80,4 +80,8 @@ script/
 .npmrc
 
 .codex/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
 .playwright-cli/

@@ -69,5 +69,6 @@ export enum SandreScenarioCode {
 }
 
 export enum SandreScenarioVersion {
+  V3 = '3',
   V4 = '4',
 }

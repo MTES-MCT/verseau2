@@ -26,8 +26,8 @@ export class DroitsDepotService {
       throw new ForbiddenException('Aucun code fourni pour la validation des droits de dépôt');
     }
 
-    const isExpert = await this.droitsUserService.isExpertNationalVerseau(subId);
-    if (isExpert) {
+    const isExpertNational = await this.droitsUserService.isExpertNationalVerseau(subId);
+    if (isExpertNational) {
       this.logger.log('Expert national Verseau — droits de dépôt accordés sans restriction', { subId });
       return;
     }
@@ -47,10 +47,12 @@ export class DroitsDepotService {
       throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
     }
 
-    const hasRoleDeposant = await this.masaProvider.hasRole(ag.prCdn, ROLE.DEPOSANT);
-    this.logger.log('Deposant role found', hasRoleDeposant);
-    if (!hasRoleDeposant) {
-      throw new ForbiddenException(`L'utilisateur n'a pas le rôle déposant requis pour le dépôt`);
+    const roles = await this.masaProvider.findRolesByPrCdn(ag.prCdn);
+    const roleCdns = new Set(roles?.map((r) => r.roleCdn));
+    const hasRoleDeposantOrExpertBassin = roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU);
+    this.logger.log('hasRoleDeposantOrExpertBassin', hasRoleDeposantOrExpertBassin);
+    if (!hasRoleDeposantOrExpertBassin) {
+      throw new ForbiddenException(`L'utilisateur n'a pas le rôle requis pour le dépôt`);
     }
 
     const intervenant = await this.masaProvider.findIntervenantById(ag.itvCdn);

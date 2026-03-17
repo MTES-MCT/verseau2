@@ -5,4 +5,5 @@ export type UserModel = Pick<UserEntity, 'id' | 'sub' | 'email' | 'nom' | 'preno
 export enum ROLE {
   DEPOSANT = 301,
   EXPERT_NATIONAL_VERSEAU = 305,
+  EXPERT_BASSIN_VERSEAU = 303,
 }
