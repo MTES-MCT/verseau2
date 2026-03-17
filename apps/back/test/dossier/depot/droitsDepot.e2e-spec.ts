@@ -19,6 +19,7 @@ import { startPostgresContainer, getPostgresConnectionUri } from '../../testcont
 import { createReferentielDataset } from '../../createReferentielDataset';
 import {
   seedUserWithDroits,
+  seedUserExpertBassin,
   seedVSteuSclItv,
   seedUserWithoutDroits,
   clearUserWithDroits,
@@ -31,6 +32,14 @@ const TEST_USER = {
   itvCdn: 100,
   prCdn: 1000,
   itvRfa: '12345678901234',
+};
+
+const EXPERT_BASSIN_USER = {
+  sub: 'expert-bassin-sub',
+  email: 'expert-bassin@example.com',
+  itvCdn: 200,
+  prCdn: 2000,
+  itvRfa: '99887766554433',
 };
 
 describe('DroitsDepotService (e2e)', () => {
@@ -205,6 +214,48 @@ describe('DroitsDepotService (e2e)', () => {
       await expect(
         droitsDepotService.validateDroits(TEST_USER.sub, ['STEU01', 'STEU02'], ['SCL01']),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('expert bassin — droits par ouvrage', () => {
+    it('valide les droits pour un STEU si le SIRET correspond', async () => {
+      await seedUserExpertBassin(dataSource, EXPERT_BASSIN_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', EXPERT_BASSIN_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).resolves.toBeUndefined();
+    });
+
+    it('valide les droits pour un SCL si le SIRET correspond', async () => {
+      await seedUserExpertBassin(dataSource, EXPERT_BASSIN_USER);
+      await seedVSteuSclItv(dataSource, '', 'SCL01', EXPERT_BASSIN_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, [], ['SCL01'])).resolves.toBeUndefined();
+    });
+
+    it("refuse si le SIRET ne correspond pas à l'ouvrage", async () => {
+      await seedUserExpertBassin(dataSource, EXPERT_BASSIN_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_SIRET');
+
+      await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('refuse si le SIRET ne correspond à aucun des trois champs', async () => {
+      await seedUserExpertBassin(dataSource, EXPERT_BASSIN_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_MO', 'AUTRE_SAT', 'AUTRE_AE');
+
+      await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('ne nécessite pas le rôle déposant (301)', async () => {
+      // Expert bassin has role 303 but NOT role 301 — should still pass if SIRET matches
+      await seedUserExpertBassin(dataSource, EXPERT_BASSIN_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', EXPERT_BASSIN_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).resolves.toBeUndefined();
     });
   });
 });
