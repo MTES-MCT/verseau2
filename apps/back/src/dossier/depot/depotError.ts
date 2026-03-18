@@ -4,3 +4,10 @@ export enum DepotError {
   DROITS_INSUFFISANTS = 'DROITS_INSUFFISANTS',
   FLUX_QUALIFIE_INTERDIT = 'FLUX_QUALIFIE_INTERDIT',
 }
+
+export class DepotRightsException extends Error {
+  constructor(public readonly code: DepotError) {
+    super(code);
+    this.name = 'DepotRightsException';
+  }
+}

@@ -10,7 +10,7 @@ import { UserService } from '@user/user.service';
 import { S3 } from '@infra/s3/s3';
 import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement } from '@lib/parser';
 import { DepotStep, DepotStatus, EtapeMetier, ControleSandreStatus, ControleStatus } from '@lib/dossier';
-import { DepotError } from '@dossier/depot/depotError';
+import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import { AsyncTask } from '@worker/asyncTask';
 
 @Injectable()
@@ -58,11 +58,11 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
           isFluxQualifie(parsed),
         );
       } catch (rightsError) {
-        const isFluxQualifieError = rightsError.message === DepotError.FLUX_QUALIFIE_INTERDIT;
-        this.logger.warn(`Depot ${fichierDeDepot.depotId} - Rights check failed: ${rightsError.message}`);
+        if (!(rightsError instanceof DepotRightsException)) throw rightsError;
+        this.logger.warn(`Depot ${fichierDeDepot.depotId} - Rights check failed: ${rightsError.code}`);
         await this.depotService.update(fichierDeDepot.depotId, {
           status: DepotStatus.REJETE,
-          error: isFluxQualifieError ? DepotError.FLUX_QUALIFIE_INTERDIT : DepotError.DROITS_INSUFFISANTS,
+          error: rightsError.code,
           step: DepotStep.CONTROLE_FAILED,
         });
         return;
