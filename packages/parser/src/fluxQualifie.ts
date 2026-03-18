@@ -9,22 +9,11 @@ import type { FctAssainissement, Analyse } from './scenarioAssainissement';
  * Les exploitants / MO (rôle DEPOSANT) n'ont pas le droit de déposer un flux qualifié.
  */
 export function isFluxQualifie(parsed: FctAssainissement): boolean {
-  const allAnalyses = extractAllAnalyses(parsed);
-  return allAnalyses.some((analyse) => !isAnalyseStandard(analyse));
-}
-
-function isAnalyseStandard(analyse: Analyse): boolean {
-  return analyse.statutRsAnalyse === 'A' && analyse.qualRsAnalyse === '4';
-}
-
-function extractAllAnalyses(parsed: FctAssainissement): Analyse[] {
-  const analyses: Analyse[] = [];
-
   for (const ouvrage of parsed.ouvrages ?? []) {
     for (const pm of ouvrage.pointMesure ?? []) {
       for (const prlv of pm.prelevement ?? []) {
-        for (const analyse of prlv.analyse ?? []) {
-          analyses.push(analyse);
+        if (prlv.analyse?.some((a) => !isAnalyseStandard(a))) {
+          return true;
         }
       }
     }
@@ -33,12 +22,16 @@ function extractAllAnalyses(parsed: FctAssainissement): Analyse[] {
   for (const sc of parsed.systemesCollecte ?? []) {
     for (const pm of sc.pointMesure ?? []) {
       for (const prlv of pm.prelevement ?? []) {
-        for (const analyse of prlv.analyse ?? []) {
-          analyses.push(analyse);
+        if (prlv.analyse?.some((a) => !isAnalyseStandard(a))) {
+          return true;
         }
       }
     }
   }
 
-  return analyses;
+  return false;
+}
+
+function isAnalyseStandard(analyse: Analyse): boolean {
+  return analyse.statutRsAnalyse === 'A' && analyse.qualRsAnalyse === '4';
 }
