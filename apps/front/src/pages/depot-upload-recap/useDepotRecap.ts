@@ -1,10 +1,16 @@
 import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { type UseMutationResult, type UseQueryResult, useMutation, useQuery } from '@tanstack/react-query';
-import { checkScenarioCodeAndVersion, parseScenarioAssainissementXml, type FctAssainissement } from '@lib/parser';
-import { checkDroitsDeDepot, type DroitsDeDepotResponse, uploadDepot } from '../../api/depot';
+import { type UseMutationResult, useMutation, useQuery } from '@tanstack/react-query';
+import {
+  checkScenarioCodeAndVersion,
+  parseScenarioAssainissementXml,
+  isFluxQualifie,
+  type FctAssainissement,
+} from '@lib/parser';
+import { uploadDepot } from '../../api/depot';
 import { fetchParametresFromCodes } from '../../api/referentiel';
 import { AppRoutes } from '../../routes';
+import { useCheckDroitsDeDepot, type DroitsDeDepotStatus } from '../../hooks/useCheckDroitsDeDepot';
 
 type LocationState = {
   fileName?: string;
@@ -22,8 +28,7 @@ type UseDepotRecapResult = {
   totalAnalyses: number;
   parseMutation: UseMutationResult<FctAssainissement, unknown, string>;
   uploadMutation: UseMutationResult<unknown, unknown, File>;
-  droitsDeDepotQuery: UseQueryResult<DroitsDeDepotResponse, unknown>;
-  droitsDeDepotStatus: 'error' | 'loading' | 'authorized' | 'unauthorized';
+  droitsDeDepotStatus: DroitsDeDepotStatus;
   handleReturn: () => void;
   handleFinalize: () => void;
 };
@@ -79,35 +84,17 @@ export function useDepotRecap(): UseDepotRecapResult {
 
   const cdOuvrage = useMemo(() => parsedData?.ouvrages?.[0]?.cdOuvrageDepollution, [parsedData]);
 
-  const droitsDeDepotQuery = useQuery({
-    queryKey: ['depot', 'droits-de-depot', cdOuvrageDepollutionList, cdSystemeCollecteList],
-    queryFn: () => checkDroitsDeDepot(cdOuvrageDepollutionList, cdSystemeCollecteList),
-    enabled: (cdOuvrageDepollutionList.length > 0 || cdSystemeCollecteList.length > 0) && parseMutation.isSuccess,
-    retry: false,
+  const fluxQualifieVal = useMemo(() => (parsedData ? isFluxQualifie(parsedData) : false), [parsedData]);
+
+  const { status: droitsDeDepotStatus } = useCheckDroitsDeDepot({
+    cdOuvrageDepollutionList,
+    cdSystemeCollecteList,
+    isFluxQualifie: fluxQualifieVal,
+    enabled: parseMutation.isSuccess,
   });
 
   const totalAnalyses = useMemo(() => (parsedData ? countAnalyses(parsedData) : 0), [parsedData]);
   const params = useMemo(() => (parsedData ? extractParams(parsedData) : []), [parsedData]);
-
-  const droitsDeDepotStatus = useMemo(() => {
-    if (cdOuvrageDepollutionList.length === 0 && cdSystemeCollecteList.length === 0) {
-      return parseMutation.isSuccess ? 'authorized' : 'error';
-    }
-    if (droitsDeDepotQuery.isLoading) {
-      return 'loading';
-    }
-    if (droitsDeDepotQuery.isError) {
-      return 'error';
-    }
-    return droitsDeDepotQuery.data?.authorized ? 'authorized' : 'unauthorized';
-  }, [
-    cdOuvrageDepollutionList.length,
-    cdSystemeCollecteList.length,
-    parseMutation.isSuccess,
-    droitsDeDepotQuery.isLoading,
-    droitsDeDepotQuery.isError,
-    droitsDeDepotQuery.data?.authorized,
-  ]);
 
   const handleReturn = () => navigate(AppRoutes.DEPOT_UPLOAD);
 
@@ -144,7 +131,6 @@ export function useDepotRecap(): UseDepotRecapResult {
     totalAnalyses,
     parseMutation,
     uploadMutation,
-    droitsDeDepotQuery,
     droitsDeDepotStatus,
     handleReturn,
     handleFinalize,

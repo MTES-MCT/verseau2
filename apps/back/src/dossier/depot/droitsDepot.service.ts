@@ -1,10 +1,11 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserGateway } from '@user/user.gateway';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { MasaProvider } from '@masa/masa.provider';
 import { ROLE } from '@user/user.model';
+import { DepotError, DepotRightsException } from './depotError';
 
 @Injectable()
 export class DroitsDepotService {
@@ -21,9 +22,10 @@ export class DroitsDepotService {
     subId: string,
     cdOuvrageDepollutionList: string[],
     cdSystemeCollecteList: string[],
+    isFluxQualifie: boolean = false,
   ): Promise<void> {
     if (cdOuvrageDepollutionList.length === 0 && cdSystemeCollecteList.length === 0) {
-      throw new ForbiddenException('Aucun code fourni pour la validation des droits de dépôt');
+      throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
     const isExpertNational = await this.droitsUserService.isExpertNationalVerseau(subId);
@@ -35,16 +37,16 @@ export class DroitsDepotService {
     const user = await this.userGateway.findBySub(subId);
     this.logger.log('Checking droits de depot for user', user);
     if (!user) {
-      throw new ForbiddenException(`Utilisateur non trouvé : ${subId}`);
+      throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
     if (!user.email) {
-      throw new ForbiddenException(`Email manquant pour l'utilisateur : ${subId}`);
+      throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
     const ag = await this.masaProvider.findAgByEmail(user.email);
     this.logger.log('Ag entity found', ag);
     if (!ag) {
-      throw new ForbiddenException(`Aucun lien intervenant trouvé pour l'utilisateur ${user.email}`);
+      throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
     const roles = await this.masaProvider.findRolesByPrCdn(ag.prCdn);
@@ -52,13 +54,13 @@ export class DroitsDepotService {
     const hasRoleDeposantOrExpertBassin = roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU);
     this.logger.log('hasRoleDeposantOrExpertBassin', hasRoleDeposantOrExpertBassin);
     if (!hasRoleDeposantOrExpertBassin) {
-      throw new ForbiddenException(`L'utilisateur n'a pas le rôle requis pour le dépôt`);
+      throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
     const intervenant = await this.masaProvider.findIntervenantById(ag.itvCdn);
     this.logger.log('Intervenant found', { itvCdn: intervenant?.itvCdn, siret: intervenant?.itvRfa });
     if (!intervenant?.itvRfa) {
-      throw new ForbiddenException(`Intervenant non trouvé ou SIRET manquant`);
+      throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
     const userSiret = intervenant.itvRfa;
 
@@ -74,14 +76,14 @@ export class DroitsDepotService {
       const matchesForCode = matches.filter((m) => m.steuCda === code);
 
       if (matchesForCode.length === 0) {
-        throw new ForbiddenException(`L'ouvrage de dépollution ${code} n'a pas été trouvé`);
+        throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
 
       const hasRights = matchesForCode.some(
         (m) => m.moItvRfa === userSiret || m.satItvRfa === userSiret || m.aeItvRfa === userSiret,
       );
       if (!hasRights) {
-        throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour l'ouvrage de dépollution ${code}`);
+        throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
     }
 
@@ -89,14 +91,21 @@ export class DroitsDepotService {
       const matchesForCode = matches.filter((m) => m.sclCda === code);
 
       if (matchesForCode.length === 0) {
-        throw new ForbiddenException(`Le système de collecte ${code} n'a pas été trouvé`);
+        throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
 
       const hasRights = matchesForCode.some(
         (m) => m.moItvRfa === userSiret || m.satItvRfa === userSiret || m.aeItvRfa === userSiret,
       );
       if (!hasRights) {
-        throw new ForbiddenException(`Vous n'avez pas les droits de dépôt pour le système de collecte ${code}`);
+        throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
+      }
+    }
+
+    if (isFluxQualifie) {
+      const isExpertBassin = await this.droitsUserService.isExpertBassinVerseau(subId);
+      if (!isExpertBassin) {
+        throw new DepotRightsException(DepotError.FLUX_QUALIFIE_INTERDIT);
       }
     }
   }

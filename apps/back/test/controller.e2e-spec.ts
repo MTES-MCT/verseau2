@@ -24,6 +24,8 @@ import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { DataSource } from 'typeorm';
 import { DepotStatus } from '@lib/dossier';
+import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
+import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import {
   createLanceleauTables,
   createReferentielSchemas,
@@ -170,6 +172,99 @@ describe('Controller (e2e) - Unauthorized', () => {
         .set('Cookie', ['access_token=token-user-1'])
         .expect(200);
     });
+  });
+});
+
+describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
+  let app: INestApplication<App>;
+  let droitsDepotService: DroitsDepotService;
+
+  beforeAll(async () => {
+    await startPostgresContainer();
+    const connectionUri = getPostgresConnectionUri();
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [...initTestContainerImports(connectionUri), ApiModule, ThrottlerConfigModule],
+    })
+      .overrideModule(InfraModule)
+      .useModule(InfraMockModule)
+      .overrideProvider(PGBOSS)
+      .useValue(null)
+      .overrideProvider(LoggerService)
+      .useValue(loggerValueMock)
+      .compile();
+
+    app = moduleFixture.createNestApplication({ logger: false });
+    app.use(cookieParser());
+    await app.init();
+
+    droitsDepotService = moduleFixture.get(DroitsDepotService);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('should return authorized: true when validateDroits succeeds', async () => {
+    jest.spyOn(droitsDepotService, 'validateDroits').mockResolvedValue(undefined);
+
+    const response = await request(app.getHttpServer())
+      .get('/depot/droits-de-depot')
+      .query({ cdOuvrageDepollution: 'STEU01', isFluxQualifie: 'true' })
+      .set('Cookie', ['access_token=token-user-1'])
+      .expect(200);
+
+    expect(response.body).toEqual({ authorized: true });
+    expect(droitsDepotService.validateDroits).toHaveBeenCalledWith(expect.any(String), ['STEU01'], [], true);
+  });
+
+  it('should return errorCode FLUX_QUALIFIE_INTERDIT when service throws FLUX_QUALIFIE_INTERDIT', async () => {
+    jest
+      .spyOn(droitsDepotService, 'validateDroits')
+      .mockRejectedValue(new DepotRightsException(DepotError.FLUX_QUALIFIE_INTERDIT));
+
+    const response = await request(app.getHttpServer())
+      .get('/depot/droits-de-depot')
+      .query({ cdOuvrageDepollution: 'STEU01', isFluxQualifie: 'true' })
+      .set('Cookie', ['access_token=token-user-1'])
+      .expect(200);
+
+    expect(response.body).toEqual({
+      authorized: false,
+      errorCode: 'FLUX_QUALIFIE_INTERDIT',
+    });
+  });
+
+  it('should return errorCode DROITS_INSUFFISANTS when service throws DROITS_INSUFFISANTS', async () => {
+    jest
+      .spyOn(droitsDepotService, 'validateDroits')
+      .mockRejectedValue(new DepotRightsException(DepotError.DROITS_INSUFFISANTS));
+
+    const response = await request(app.getHttpServer())
+      .get('/depot/droits-de-depot')
+      .query({ cdOuvrageDepollution: 'STEU01' })
+      .set('Cookie', ['access_token=token-user-1'])
+      .expect(200);
+
+    expect(response.body).toEqual({
+      authorized: false,
+      errorCode: 'DROITS_INSUFFISANTS',
+    });
+  });
+
+  it('should pass isFluxQualifie=false when query param is absent', async () => {
+    jest.spyOn(droitsDepotService, 'validateDroits').mockResolvedValue(undefined);
+
+    await request(app.getHttpServer())
+      .get('/depot/droits-de-depot')
+      .query({ cdOuvrageDepollution: 'STEU01' })
+      .set('Cookie', ['access_token=token-user-1'])
+      .expect(200);
+
+    expect(droitsDepotService.validateDroits).toHaveBeenCalledWith(expect.any(String), ['STEU01'], [], false);
   });
 });
 

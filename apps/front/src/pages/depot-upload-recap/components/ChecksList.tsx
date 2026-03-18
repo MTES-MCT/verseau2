@@ -1,8 +1,7 @@
 import { fr } from '@codegouvfr/react-dsfr';
 import { RecapCard } from './RecapCard';
+import type { DroitsDeDepotStatus } from '../../../hooks/useCheckDroitsDeDepot';
 import '../../../../icons/fr-icon-loader-5-line.css';
-
-type DroitsDeDepotStatus = 'loading' | 'authorized' | 'unauthorized' | 'error';
 
 type DroitsDeDepotIcon =
   | 'fr-icon-loader-5-line'
@@ -16,36 +15,48 @@ type ChecksListProps = {
   droitsDeDepotStatus: DroitsDeDepotStatus;
 };
 
+function getDroitsDeDepotDisplay(status: DroitsDeDepotStatus): {
+  icon: DroitsDeDepotIcon;
+  label: string;
+  colorClassName: DroitsDeDepotColorClassName;
+} {
+  switch (status) {
+    case 'loading':
+      return {
+        icon: 'fr-icon-loader-5-line',
+        label: 'Droits de dépôt - vérification en cours',
+        colorClassName: undefined,
+      };
+    case 'authorized':
+      return {
+        icon: 'fr-icon-checkbox-circle-line',
+        label: 'Droits de dépôt - habilitations du déposant vérifiées',
+        colorClassName: 'fr-label--success',
+      };
+    case 'unauthorized':
+      return {
+        icon: 'fr-icon-close-circle-line',
+        label: 'Droits de dépôt - habilitations du déposant insuffisantes',
+        colorClassName: 'fr-label--error',
+      };
+    case 'flux_qualifie_interdit':
+      return {
+        icon: 'fr-icon-close-circle-line',
+        label:
+          "Droits de dépôt - vous n'avez pas les droits pour déposer un flux qualifié (StatutRsAnalyse/QualRsAnalyse)",
+        colorClassName: 'fr-label--error',
+      };
+    case 'error':
+      return {
+        icon: 'fr-icon-warning-line',
+        label: 'Droits de dépôt - vérification impossible',
+        colorClassName: undefined,
+      };
+  }
+}
+
 export function ChecksList({ droitsDeDepotStatus }: ChecksListProps) {
-  const droitsDeDepot: { icon: DroitsDeDepotIcon; label: string; colorClassName: DroitsDeDepotColorClassName } =
-    (() => {
-      switch (droitsDeDepotStatus) {
-        case 'loading':
-          return {
-            icon: 'fr-icon-loader-5-line',
-            label: 'Droits de dépôt - vérification en cours',
-            colorClassName: undefined,
-          } as const;
-        case 'authorized':
-          return {
-            icon: 'fr-icon-checkbox-circle-line',
-            label: 'Droits de dépôt - habilitations du déposant vérifiées',
-            colorClassName: 'fr-label--success',
-          } as const;
-        case 'unauthorized':
-          return {
-            icon: 'fr-icon-close-circle-line',
-            label: 'Droits de dépôt - habilitations du déposant insuffisantes',
-            colorClassName: 'fr-label--error',
-          } as const;
-        case 'error':
-          return {
-            icon: 'fr-icon-warning-line',
-            label: 'Droits de dépôt - vérification impossible',
-            colorClassName: undefined,
-          } as const;
-      }
-    })();
+  const droitsDeDepot = getDroitsDeDepotDisplay(droitsDeDepotStatus);
 
   return (
     <RecapCard className="fr-mb-0">

@@ -1,10 +1,11 @@
 import { CacheModule } from '@nestjs/cache-manager';
-import { INestApplication, ForbiddenException } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { App } from 'supertest/types';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
+import { DepotRightsException } from '@dossier/depot/depotError';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
@@ -89,19 +90,21 @@ describe('DroitsDepotService (e2e)', () => {
     it('refuse si aucun code fourni', async () => {
       await seedUserWithDroits(dataSource, TEST_USER);
 
-      await expect(droitsDepotService.validateDroits(TEST_USER.sub, [], [])).rejects.toThrow(ForbiddenException);
+      await expect(droitsDepotService.validateDroits(TEST_USER.sub, [], [])).rejects.toThrow(DepotRightsException);
     });
 
     it('refuse si utilisateur non trouvé', async () => {
       await expect(droitsDepotService.validateDroits('unknown-sub', ['STEU01'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
 
     it('refuse si pas de lien AG', async () => {
       await seedUserWithoutDroits(dataSource, { sub: 'no-ag-sub', email: 'noag@example.com' });
 
-      await expect(droitsDepotService.validateDroits('no-ag-sub', ['STEU01'], [])).rejects.toThrow(ForbiddenException);
+      await expect(droitsDepotService.validateDroits('no-ag-sub', ['STEU01'], [])).rejects.toThrow(
+        DepotRightsException,
+      );
     });
 
     it('refuse si pas de role 301', async () => {
@@ -109,7 +112,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedUserWithDroits(dataSource, userWithoutRole);
 
       await expect(droitsDepotService.validateDroits('no-role-sub', ['STEU01'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
 
@@ -117,7 +120,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedUserWithDroits(dataSource, TEST_USER);
 
       await expect(droitsDepotService.validateDroits(TEST_USER.sub, ['STEU_INCONNU'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
 
@@ -125,7 +128,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedUserWithDroits(dataSource, TEST_USER);
 
       await expect(droitsDepotService.validateDroits(TEST_USER.sub, [], ['SCL_INCONNU'])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
   });
@@ -150,7 +153,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_SIRET');
 
       await expect(droitsDepotService.validateDroits(TEST_USER.sub, ['STEU01'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
   });
@@ -201,7 +204,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_MO', 'AUTRE_SAT', 'AUTRE_AE');
 
       await expect(droitsDepotService.validateDroits(TEST_USER.sub, ['STEU01'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
 
@@ -237,7 +240,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_SIRET');
 
       await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
 
@@ -246,7 +249,7 @@ describe('DroitsDepotService (e2e)', () => {
       await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_MO', 'AUTRE_SAT', 'AUTRE_AE');
 
       await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).rejects.toThrow(
-        ForbiddenException,
+        DepotRightsException,
       );
     });
   });

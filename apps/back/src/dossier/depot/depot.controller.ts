@@ -36,6 +36,7 @@ import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
 import { sanitizeFilename } from '@shared/schema/filename.service';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { DepotError } from './depotError';
 
 interface MulterFile {
   fieldname: string;
@@ -131,12 +132,24 @@ export class DepotController {
     const user = req.user;
     const cdOuvrageDepollutionList = query.cdOuvrageDepollution ? query.cdOuvrageDepollution.split(',') : [];
     const cdSystemeCollecteList = query.cdSystemeCollecte ? query.cdSystemeCollecte.split(',') : [];
+    const isFluxQualifie = query.isFluxQualifie === 'true';
     try {
-      await this.droitsDepotService.validateDroits(user.cerbereId, cdOuvrageDepollutionList, cdSystemeCollecteList);
+      await this.droitsDepotService.validateDroits(
+        user.cerbereId,
+        cdOuvrageDepollutionList,
+        cdSystemeCollecteList,
+        isFluxQualifie,
+      );
       return { authorized: true };
     } catch (error) {
       this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${error.message as string}`);
-      return { authorized: false };
+      return {
+        authorized: false,
+        errorCode:
+          error.message === DepotError.FLUX_QUALIFIE_INTERDIT
+            ? DepotError.FLUX_QUALIFIE_INTERDIT
+            : DepotError.DROITS_INSUFFISANTS,
+      };
     }
   }
 
