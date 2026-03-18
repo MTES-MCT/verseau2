@@ -5,6 +5,7 @@ import { UserGateway } from '@user/user.gateway';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { MasaProvider } from '@masa/masa.provider';
 import { ROLE } from '@user/user.model';
+import { DepotError } from './depotError';
 
 @Injectable()
 export class DroitsDepotService {
@@ -104,7 +105,7 @@ export class DroitsDepotService {
     if (isFluxQualifie) {
       const isExpertBassin = await this.droitsUserService.isExpertBassinVerseau(subId);
       if (!isExpertBassin) {
-        throw new ForbiddenException('FLUX_QUALIFIE_INTERDIT');
+        throw new ForbiddenException(DepotError.FLUX_QUALIFIE_INTERDIT);
       }
     }
   }

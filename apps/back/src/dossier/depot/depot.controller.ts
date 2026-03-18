@@ -36,6 +36,7 @@ import type { Response } from 'express';
 import { mapDepotEntityToDepotDto } from './depot.mapper';
 import { sanitizeFilename } from '@shared/schema/filename.service';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { DepotError } from './depotError';
 
 interface MulterFile {
   fieldname: string;
@@ -144,7 +145,10 @@ export class DepotController {
       this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${error.message as string}`);
       return {
         authorized: false,
-        errorCode: error.message === 'FLUX_QUALIFIE_INTERDIT' ? 'FLUX_QUALIFIE_INTERDIT' : 'DROITS_INSUFFISANTS',
+        errorCode:
+          error.message === DepotError.FLUX_QUALIFIE_INTERDIT
+            ? DepotError.FLUX_QUALIFIE_INTERDIT
+            : DepotError.DROITS_INSUFFISANTS,
       };
     }
   }

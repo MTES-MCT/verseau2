@@ -58,7 +58,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
           isFluxQualifie(parsed),
         );
       } catch (rightsError) {
-        const isFluxQualifieError = rightsError.message === 'FLUX_QUALIFIE_INTERDIT';
+        const isFluxQualifieError = rightsError.message === DepotError.FLUX_QUALIFIE_INTERDIT;
         this.logger.warn(`Depot ${fichierDeDepot.depotId} - Rights check failed: ${rightsError.message}`);
         await this.depotService.update(fichierDeDepot.depotId, {
           status: DepotStatus.REJETE,
