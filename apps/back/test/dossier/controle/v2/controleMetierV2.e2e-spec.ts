@@ -1422,7 +1422,7 @@ describe('ControleMetierV2Service (e2e)', () => {
   });
 
   describe('CTL046 - verifyPhRange', () => {
-    it('should pass when pH is within valid range (2 < pH < 12)', async () => {
+    it('should pass when pH is within valid range (4 < pH < 10)', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
           {
@@ -1430,6 +1430,7 @@ describe('ControleMetierV2Service (e2e)', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM001',
+                locGlobalePointMesure: 'A4',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
@@ -1449,7 +1450,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors).toHaveLength(0);
     });
 
-    it('should report error when pH is too low (pH <= 2)', async () => {
+    it('should report ERREUR when pH is too low (pH <= 2)', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
           {
@@ -1457,6 +1458,7 @@ describe('ControleMetierV2Service (e2e)', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM001',
+                locGlobalePointMesure: 'A4',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-15',
@@ -1475,11 +1477,11 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       expect(ctlErrors).toHaveLength(1);
       expect(ctlErrors[0].error).toBe(ErrorCode.E2_046);
-      expect(ctlErrors[0].errorParams).toEqual(['STEU001', 'A3', '2024-01-15', '3', '2']);
-      expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+      expect(ctlErrors[0].errorParams).toEqual(['STEU001', 'A4', '2024-01-15', '3', '2']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.ERREUR);
     });
 
-    it('should report error when pH is too high (pH >= 12)', async () => {
+    it('should report ERREUR when pH is too high (pH >= 12)', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
           {
@@ -1487,6 +1489,7 @@ describe('ControleMetierV2Service (e2e)', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM002',
+                locGlobalePointMesure: 'A4',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-16',
@@ -1505,7 +1508,69 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       expect(ctlErrors).toHaveLength(1);
       expect(ctlErrors[0].error).toBe(ErrorCode.E2_046);
-      expect(ctlErrors[0].errorParams).toEqual(['STEU002', 'A3', '2024-01-16', '3', '12']);
+      expect(ctlErrors[0].errorParams).toEqual(['STEU002', 'A4', '2024-01-16', '3', '12']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.ERREUR);
+    });
+
+    it('should report AVERTISSEMENT when pH is in warning range low (2 < pH <= 4)', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM001',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.pH.toString(), '3')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL046);
+
+      expect(ctlErrors).toHaveLength(1);
+      expect(ctlErrors[0].error).toBe(ErrorCode.E2_046);
+      expect(ctlErrors[0].errorParams).toEqual(['STEU001', 'A4', '2024-01-15', '3', '3']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should report AVERTISSEMENT when pH is in warning range high (10 <= pH < 12)', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.pH.toString(), '11')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL046);
+
+      expect(ctlErrors).toHaveLength(1);
+      expect(ctlErrors[0].error).toBe(ErrorCode.E2_046);
+      expect(ctlErrors[0].errorParams).toEqual(['STEU002', 'A4', '2024-01-16', '3', '11']);
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });

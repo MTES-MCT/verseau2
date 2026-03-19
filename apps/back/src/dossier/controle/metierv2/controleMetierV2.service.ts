@@ -197,15 +197,47 @@ export class ControleMetierV2Service {
     });
   }
 
-  // CTL046: Analyse des concentrations en pH hors fourchette (2 < pH < 12)
+  // CTL046: Analyse des concentrations en pH hors fourchette
+  // ERREUR: pH <= 2 ou pH >= 12
+  // AVERTISSEMENT: 2 < pH <= 4 ou 10 <= pH < 12
   verifyPhRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
-    return this.verifyParameterRange(fctAssainissement, {
-      name: ControleName.CTL046,
-      errorCode: ErrorCode.E2_046,
-      paramCode: CodeParametre.pH,
-      min: 4,
-      max: 10,
+    const errors: ControleError[] = [];
+    const paramCodeStr = CodeParametre.pH.toString();
+
+    this.forEachPrelevement(fctAssainissement, (context, analyses) => {
+      const paramValue = this.extractAnalyseValue(analyses, paramCodeStr);
+      const hasParamAnalyse = analyses.some((a) => a.cdParametre === paramCodeStr);
+
+      if (hasParamAnalyse && paramValue !== undefined) {
+        if (paramValue <= 2 || paramValue >= 12) {
+          errors.push({
+            code: ErrorCode.E2_046,
+            params: [
+              context.cdOuvrageDepollution,
+              context.locGlobalePointMesure,
+              context.datePrlvt,
+              context.cdSupport,
+              paramValue.toString(),
+            ],
+            evenementType: EvenementType.ERREUR,
+          });
+        } else if (paramValue <= 4 || paramValue >= 10) {
+          errors.push({
+            code: ErrorCode.E2_046,
+            params: [
+              context.cdOuvrageDepollution,
+              context.locGlobalePointMesure,
+              context.datePrlvt,
+              context.cdSupport,
+              paramValue.toString(),
+            ],
+            evenementType: EvenementType.AVERTISSEMENT,
+          });
+        }
+      }
     });
+
+    return { name: ControleName.CTL046, errors };
   }
 
   // CTL047: Vérification que la concentration DCO > DBO5
@@ -262,7 +294,6 @@ export class ControleMetierV2Service {
       min: number;
       max: number;
       uniteMesureCode?: CodeUniteMesure;
-      evenementType?: EvenementType;
     },
   ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
@@ -283,7 +314,7 @@ export class ControleMetierV2Service {
               context.cdSupport,
               paramValue.toString(),
             ],
-            evenementType: config.evenementType ?? EvenementType.AVERTISSEMENT,
+            evenementType: EvenementType.AVERTISSEMENT,
           });
         }
       }
