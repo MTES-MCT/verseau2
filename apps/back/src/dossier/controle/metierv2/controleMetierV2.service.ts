@@ -21,8 +21,31 @@ export class ControleMetierV2Service {
   ) {}
 
   async execute(depotId: string, xmlObj: FctAssainissement, manager?: EntityManager): Promise<ControleModel[]> {
-    const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
-      filterFctAssainissementForMetierV2(xmlObj);
+    const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement = filterFctAssainissementForMetierV2(
+      xmlObj,
+      {
+        allowedLocGlobalePointMesure: ['A3', 'A4'],
+        allowedCdSupport: '3',
+      },
+    );
+
+    const dataWithLocGlobalePointMesureA3AndCdSupport3: FctAssainissement = filterFctAssainissementForMetierV2(xmlObj, {
+      allowedLocGlobalePointMesure: ['A3'],
+      allowedCdSupport: '3',
+    });
+
+    const dataWithLocGlobalePointMesureA4AndCdSupport3: FctAssainissement = filterFctAssainissementForMetierV2(xmlObj, {
+      allowedLocGlobalePointMesure: ['A4'],
+      allowedCdSupport: '3',
+    });
+
+    const dataWithLocGlobalePointMesureA1R1AndCdSupport3: FctAssainissement = filterFctAssainissementForMetierV2(
+      xmlObj,
+      {
+        allowedLocGlobalePointMesure: ['A1', 'R1'],
+        allowedCdSupport: '3',
+      },
+    );
 
     const { cmas, maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
@@ -31,11 +54,11 @@ export class ControleMetierV2Service {
       // Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyDcoRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyDbo5Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      Promise.resolve(this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3AndCdSupport3)),
       // Promise.resolve(this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       // Promise.resolve(this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       // Promise.resolve(this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA4AndCdSupport3)),
       // Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       // Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       // Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
@@ -43,7 +66,12 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
       this.verifyChargeEntranteVsTranche(xmlObj),
-      Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
+      // Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
+      Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
+      Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
+      Promise.resolve(this.verifyConcentrationsNegativesOuNulles(xmlObj)),
+      this.verifyChargePollutionVsCapaciteNominale(xmlObj),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -65,17 +93,24 @@ export class ControleMetierV2Service {
 
     const allSteuCdas = xmlObj.ouvrages.map((o) => o.cdOuvrageDepollution).filter((cda): cda is string => !!cda);
 
+    const cmasPromise = !isNaN(currentYear)
+      ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
+          String(CodeParametre.DBO5),
+          String(CodeParametre.DCO),
+        ])
+      : Promise.resolve([] as CmaBySandreCdaAndParam[]);
+
+    // TODO : remove comments when file and filere table are available
+    // const productionsBoueZeroPromise = !isNaN(currentYear)
+    //   ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
+    //   : Promise.resolve([] as ProductionBoueZero[]);
+
+    const productionsBoueZeroPromise = Promise.resolve([] as ProductionBoueZero[]);
+
     const [cmas, maxDebits, productionsBoueZero] = await Promise.all([
-      !isNaN(currentYear)
-        ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
-            String(CodeParametre.DBO5),
-            String(CodeParametre.DCO),
-          ])
-        : Promise.resolve([] as CmaBySandreCdaAndParam[]),
+      cmasPromise,
       this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
-      !isNaN(currentYear)
-        ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
-        : Promise.resolve([] as ProductionBoueZero[]),
+      productionsBoueZeroPromise,
     ]);
 
     return { cmas, maxDebits, productionsBoueZero };
@@ -168,8 +203,8 @@ export class ControleMetierV2Service {
       name: ControleName.CTL046,
       errorCode: ErrorCode.E2_046,
       paramCode: CodeParametre.pH,
-      min: 2,
-      max: 12,
+      min: 4,
+      max: 10,
     });
   }
 
@@ -227,6 +262,7 @@ export class ControleMetierV2Service {
       min: number;
       max: number;
       uniteMesureCode?: CodeUniteMesure;
+      evenementType?: EvenementType;
     },
   ): ControleIndividuelWithoutSuccess {
     const errors: ControleError[] = [];
@@ -247,7 +283,7 @@ export class ControleMetierV2Service {
               context.cdSupport,
               paramValue.toString(),
             ],
-            evenementType: EvenementType.AVERTISSEMENT,
+            evenementType: config.evenementType ?? EvenementType.AVERTISSEMENT,
           });
         }
       }
@@ -743,6 +779,257 @@ export class ControleMetierV2Service {
     }
 
     return { name: ControleName.CTL055, errors };
+  }
+
+  // CTL056: Contrôle métier sur la température en sortie de station (point A4)
+  // Avertissement si ≤ 0 °C ou > 35 °C (paramètre SANDRE 1301)
+  verifyTemperatureA4Range(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const temperatureCode = String(CodeParametre.Temperature);
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A4') continue;
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+          const tempValue = this.extractAnalyseValue(prelevement.analyse, temperatureCode);
+
+          if (tempValue !== undefined && (tempValue <= 0 || tempValue > 35)) {
+            errors.push({
+              code: ErrorCode.E2_056,
+              params: [cdOuvrageDepollution, 'A4', datePrlvt, cdSupport, tempValue.toString()],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return { name: ControleName.CTL056, errors };
+  }
+
+  // CTL057: Contrôle sur la pluviométrie journalière au niveau du système de collecte (points A1 et R1)
+  // Avertissement si < 0 mm ou > 200 mm, Bloquant si > 1000 mm (paramètre SANDRE 1553)
+  verifyPluviometrieRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const pluvioCode = String(CodeParametre.Pluviometrie);
+
+    for (const systemeCollecte of fctAssainissement.systemesCollecte ?? []) {
+      const cdSystemeCollecte = systemeCollecte.cdSystemeCollecte || '';
+
+      for (const pointMesure of systemeCollecte.pointMesure) {
+        const locGlobale = pointMesure.locGlobalePointMesure ?? '';
+        if (locGlobale !== 'A1' && locGlobale !== 'R1') continue;
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+          const pluvioValue = this.extractAnalyseValue(prelevement.analyse, pluvioCode);
+
+          if (pluvioValue === undefined) continue;
+
+          if (pluvioValue > 1000) {
+            errors.push({
+              code: ErrorCode.E2_057,
+              params: [cdSystemeCollecte, locGlobale, datePrlvt, cdSupport, pluvioValue.toString()],
+              evenementType: EvenementType.ERREUR,
+            });
+          } else if (pluvioValue < 0 || pluvioValue > 200) {
+            errors.push({
+              code: ErrorCode.E2_057,
+              params: [cdSystemeCollecte, locGlobale, datePrlvt, cdSupport, pluvioValue.toString()],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return { name: ControleName.CTL057, errors };
+  }
+
+  // CTL058: Contrôle sur les volumes négatifs (Vol.Moy.J 1552, Volume 1098, Masse 1099) sur tous les points de mesure
+  // Bloquant si volume négatif
+  verifyVolumesNegatifs(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const volumeParams: { code: CodeParametre; label: string }[] = [
+      { code: CodeParametre.Volume, label: 'Vol.Moy.J' },
+      { code: CodeParametre.VolumeRef, label: 'Volume' },
+      { code: CodeParametre.Masse, label: 'Masse' },
+    ];
+
+    const checkPrelevements = (
+      cdOuvrage: string,
+      pointMesures: {
+        locGlobalePointMesure?: string;
+        prelevement: {
+          datePrlvt?: string;
+          cdSupport?: string;
+          analyse: { cdParametre?: string; rsAnalyse?: string }[];
+        }[];
+      }[],
+    ) => {
+      for (const pointMesure of pointMesures) {
+        const locGlobale = pointMesure.locGlobalePointMesure ?? '';
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+
+          for (const { code, label } of volumeParams) {
+            const value = this.extractAnalyseValue(prelevement.analyse, String(code));
+            if (value !== undefined && value < 0) {
+              errors.push({
+                code: ErrorCode.E2_058,
+                params: [cdOuvrage, locGlobale, datePrlvt, cdSupport, label, value.toString()],
+                evenementType: EvenementType.ERREUR,
+              });
+            }
+          }
+        }
+      }
+    };
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      checkPrelevements(ouvrage.cdOuvrageDepollution || '', ouvrage.pointMesure);
+    }
+
+    for (const systemeCollecte of fctAssainissement.systemesCollecte ?? []) {
+      checkPrelevements(systemeCollecte.cdSystemeCollecte || '', systemeCollecte.pointMesure);
+    }
+
+    return { name: ControleName.CTL058, errors };
+  }
+
+  // CTL059: Contrôle sur les concentrations négatives ou nulles sur tous les points de mesure
+  // Bloquant si valeur ≤ 0 pour DBO5, DCO, MES, NH4, NTK, NO2, NO3, Ptot, MS105, NGL
+  verifyConcentrationsNegativesOuNulles(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const concentrationParams: { code: CodeParametre; label: string }[] = [
+      { code: CodeParametre.DBO5, label: 'DBO5' },
+      { code: CodeParametre.DCO, label: 'DCO' },
+      { code: CodeParametre.MES, label: 'MES' },
+      { code: CodeParametre.N_NH4, label: 'NH4' },
+      { code: CodeParametre.NTK, label: 'NTK' },
+      { code: CodeParametre.NO2, label: 'NO2' },
+      { code: CodeParametre.NO3, label: 'NO3' },
+      { code: CodeParametre.Ptot, label: 'P total' },
+      { code: CodeParametre.MS105, label: 'MS105' },
+      { code: CodeParametre.NGL, label: 'NGL' },
+    ];
+
+    const checkPrelevements = (
+      cdOuvrage: string,
+      pointMesures: {
+        locGlobalePointMesure?: string;
+        prelevement: {
+          datePrlvt?: string;
+          cdSupport?: string;
+          analyse: { cdParametre?: string; rsAnalyse?: string }[];
+        }[];
+      }[],
+    ) => {
+      for (const pointMesure of pointMesures) {
+        const locGlobale = pointMesure.locGlobalePointMesure ?? '';
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const cdSupport = prelevement.cdSupport ?? '';
+
+          for (const { code, label } of concentrationParams) {
+            const value = this.extractAnalyseValue(prelevement.analyse, String(code));
+            if (value !== undefined && value <= 0) {
+              errors.push({
+                code: ErrorCode.E2_059,
+                params: [cdOuvrage, locGlobale, datePrlvt, cdSupport, label, value.toString()],
+                evenementType: EvenementType.ERREUR,
+              });
+            }
+          }
+        }
+      }
+    };
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      checkPrelevements(ouvrage.cdOuvrageDepollution || '', ouvrage.pointMesure);
+    }
+
+    for (const systemeCollecte of fctAssainissement.systemesCollecte ?? []) {
+      checkPrelevements(systemeCollecte.cdSystemeCollecte || '', systemeCollecte.pointMesure);
+    }
+
+    return { name: ControleName.CTL059, errors };
+  }
+
+  // CTL060: Contrôle sur la charge de pollution à traiter vs capacité nominale (only >= 2000 EH)
+  // Si la charge de pollution à traiter > 1,5 × la capacité nominale de la station
+  // Charge EH = (Volume_A3 × DBO5_A3) / 60
+  async verifyChargePollutionVsCapaciteNominale(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
+    const errors: ControleError[] = [];
+
+    const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
+    if (!dateDebutReference) {
+      return { name: ControleName.CTL060, errors };
+    }
+
+    const year = parseInt(dateDebutReference.substring(0, 4), 10);
+    if (isNaN(year)) {
+      return { name: ControleName.CTL060, errors };
+    }
+
+    const volumeCode = String(CodeParametre.Volume);
+    const dbo5Code = String(CodeParametre.DBO5);
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!cdOuvrageDepollution) continue;
+
+      const capaciteEH = await this.roseauGateway.findCapaciteNominaleBySteuSandreAndYear(cdOuvrageDepollution, year);
+
+      if (capaciteEH === null || capaciteEH < 2000) {
+        continue;
+      }
+
+      const seuilEH = 1.5 * capaciteEH;
+
+      // Collecter les volumes et DBO5 en A3 par date de prélèvement
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A3') continue;
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt ?? '';
+          const volumeValue = this.extractAnalyseValue(prelevement.analyse, volumeCode);
+          const dbo5Value = this.extractAnalyseValue(prelevement.analyse, dbo5Code);
+
+          if (volumeValue !== undefined && dbo5Value !== undefined && volumeValue > 0) {
+            // Charge en EH = (Volume en m³/j × DBO5 en mg/L) / 60
+            const chargeEH = (volumeValue * dbo5Value) / 60;
+
+            if (chargeEH > seuilEH) {
+              errors.push({
+                code: ErrorCode.E2_060,
+                params: [
+                  cdOuvrageDepollution,
+                  chargeEH.toFixed(2),
+                  capaciteEH.toString(),
+                  seuilEH.toFixed(2),
+                  datePrlvt,
+                ],
+                evenementType: EvenementType.AVERTISSEMENT,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return { name: ControleName.CTL060, errors };
   }
 }
 

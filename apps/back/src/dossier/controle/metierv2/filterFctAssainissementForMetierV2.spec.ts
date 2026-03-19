@@ -1,6 +1,14 @@
 import type { FctAssainissement } from '@lib/parser';
-import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
+import {
+  filterFctAssainissementForMetierV2,
+  type FilterFctAssainissementForMetierVOptions,
+} from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandreConstants';
+
+const defaultOptions: FilterFctAssainissementForMetierVOptions = {
+  allowedLocGlobalePointMesure: ['A3', 'A4'],
+  allowedCdSupport: '3',
+};
 
 function createFctAssainissement(overrides: Partial<FctAssainissement> = {}): FctAssainissement {
   return {
@@ -65,7 +73,7 @@ describe('filterFctAssainissementForMetierV2', () => {
       ],
     });
 
-    const output = filterFctAssainissementForMetierV2(input);
+    const output = filterFctAssainissementForMetierV2(input, defaultOptions);
 
     expect(output.ouvrages).toHaveLength(1);
     expect(output.ouvrages[0].pointMesure).toHaveLength(2);
@@ -120,9 +128,71 @@ describe('filterFctAssainissementForMetierV2', () => {
       ],
     });
 
-    const output = filterFctAssainissementForMetierV2(input);
+    const output = filterFctAssainissementForMetierV2(input, defaultOptions);
 
     expect(output.ouvrages).toEqual([]);
     expect(output.systemesCollecte).toEqual([]);
+  });
+
+  it('filters with custom options: locGlobalePointMesure A1/R1 and cdSupport=A3', () => {
+    const customOptions: FilterFctAssainissementForMetierVOptions = {
+      allowedLocGlobalePointMesure: ['A1', 'R1'],
+      allowedCdSupport: 'A3',
+    };
+
+    const input = createFctAssainissement({
+      ouvrages: [
+        {
+          cdOuvrageDepollution: 'STEU_1',
+          typeOuvrageDepollution: '',
+          pointMesure: [
+            {
+              numeroPointMesure: 'PM_A1_MATCH',
+              locGlobalePointMesure: 'A1',
+              prelevement: [
+                { cdSupport: 'A3', datePrlvt: '2024-01-01', analyse: [] },
+                { cdSupport: '3', datePrlvt: '2024-01-02', analyse: [] },
+              ],
+            },
+            {
+              numeroPointMesure: 'PM_A3_NO_MATCH',
+              locGlobalePointMesure: 'A3',
+              prelevement: [{ cdSupport: 'A3', datePrlvt: '2024-01-03', analyse: [] }],
+            },
+          ],
+        },
+      ],
+      systemesCollecte: [
+        {
+          cdSystemeCollecte: 'SC_1',
+          pointMesure: [
+            {
+              numeroPointMesure: 'PM_R1_MATCH',
+              locGlobalePointMesure: 'R1',
+              prelevement: [{ cdSupport: 'A3', datePrlvt: '2024-02-01', analyse: [] }],
+            },
+            {
+              numeroPointMesure: 'PM_R1_WRONG_SUPPORT',
+              locGlobalePointMesure: 'R1',
+              prelevement: [{ cdSupport: '3', datePrlvt: '2024-02-02', analyse: [] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const output = filterFctAssainissementForMetierV2(input, customOptions);
+
+    expect(output.ouvrages).toHaveLength(1);
+    expect(output.ouvrages[0].pointMesure).toHaveLength(1);
+    expect(output.ouvrages[0].pointMesure[0].numeroPointMesure).toBe('PM_A1_MATCH');
+    expect(output.ouvrages[0].pointMesure[0].prelevement).toHaveLength(1);
+    expect(output.ouvrages[0].pointMesure[0].prelevement[0].cdSupport).toBe('A3');
+
+    expect(output.systemesCollecte).toHaveLength(1);
+    expect(output.systemesCollecte[0].pointMesure).toHaveLength(1);
+    expect(output.systemesCollecte[0].pointMesure[0].numeroPointMesure).toBe('PM_R1_MATCH');
+    expect(output.systemesCollecte[0].pointMesure[0].prelevement).toHaveLength(1);
+    expect(output.systemesCollecte[0].pointMesure[0].prelevement[0].cdSupport).toBe('A3');
   });
 });

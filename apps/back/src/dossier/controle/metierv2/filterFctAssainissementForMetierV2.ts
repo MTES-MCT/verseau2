@@ -1,8 +1,15 @@
 import type { FctAssainissement, PointMesure } from '@lib/parser';
 
-export function filterFctAssainissementForMetierV2(xmlObj: FctAssainissement): FctAssainissement {
-  const allowedLocGlobalePointMesure = new Set(['A3', 'A4']);
-  const allowedCdSupport = '3';
+export interface FilterFctAssainissementForMetierVOptions {
+  allowedLocGlobalePointMesure: string[];
+  allowedCdSupport: string;
+}
+export function filterFctAssainissementForMetierV2(
+  xmlObj: FctAssainissement,
+  options: FilterFctAssainissementForMetierVOptions,
+): FctAssainissement {
+  const allowedLocGlobalePointMesure = new Set(options.allowedLocGlobalePointMesure);
+  const allowedCdSupport = options.allowedCdSupport;
 
   const filterPointMesure = (pointMesure: PointMesure) => {
     const loc = pointMesure.locGlobalePointMesure ?? '';

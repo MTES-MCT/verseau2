@@ -13,7 +13,10 @@ import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { MasaProvider } from '@masa/masa.provider';
-import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
+import {
+  filterFctAssainissementForMetierV2,
+  type FilterFctAssainissementForMetierVOptions,
+} from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
@@ -144,7 +147,11 @@ describe('ControleMetierV2Service (e2e)', () => {
         ],
       });
 
-      const filtered = filterFctAssainissementForMetierV2(fctAssainissement);
+      const filterOptions: FilterFctAssainissementForMetierVOptions = {
+        allowedLocGlobalePointMesure: ['A3', 'A4'],
+        allowedCdSupport: '3',
+      };
+      const filtered = filterFctAssainissementForMetierV2(fctAssainissement, filterOptions);
 
       expect(filtered.ouvrages).toHaveLength(1);
       expect(filtered.ouvrages[0].pointMesure.map((pm) => pm.numeroPointMesure)).toEqual(['PM_A3_KEEP', 'PM_A4_KEEP']);

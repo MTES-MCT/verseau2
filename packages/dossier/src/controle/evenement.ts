@@ -44,6 +44,11 @@ export enum ErrorCode {
   E2_053 = 'E2.053',
   E2_054 = 'E2.054',
   E2_055 = 'E2.055',
+  E2_056 = 'E2.056',
+  E2_057 = 'E2.057',
+  E2_058 = 'E2.058',
+  E2_059 = 'E2.059',
+  E2_060 = 'E2.060',
   E2_999 = 'E2.999',
 }
 
@@ -145,6 +150,25 @@ export type ErrorParamsMap = {
     variationPct: string,
   ];
   [ErrorCode.E2_055]: [cdOuvrage: string, annee: string, productionBoue: string];
+  [ErrorCode.E2_056]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_057]: [cdSystemeCollecte: string, locGlobale: string, date: string, cdSupport: string, val: string];
+  [ErrorCode.E2_058]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    parametre: string,
+    val: string,
+  ];
+  [ErrorCode.E2_059]: [
+    cdOuvrage: string,
+    locGlobale: string,
+    date: string,
+    cdSupport: string,
+    parametre: string,
+    val: string,
+  ];
+  [ErrorCode.E2_060]: [cdOuvrage: string, chargeEH: string, capaciteNominale: string, seuilEH: string, date: string];
   [ErrorCode.E2_999]: [message: string];
 };
 
