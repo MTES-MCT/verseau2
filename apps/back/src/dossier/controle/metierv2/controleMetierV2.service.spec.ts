@@ -2,18 +2,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ControleMetierV2Service } from './controleMetierV2.service';
 import { ControleGateway } from '../controle.gateway';
-import { ControleMapper } from '../isov1/controle.mapper';
+import { ControleMapper, ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
 import { FctAssainissement } from '@lib/parser';
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
-import { ControleName, ErrorCode } from '@lib/dossier';
+import { ControleName, ControleType, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
+import { ControleModel, CreateControleModel } from '../controle.model';
 
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
   let roseauGateway: jest.Mocked<RoseauGateway>;
   let masaProvider: jest.Mocked<MasaProvider>;
+  let controleGateway: jest.Mocked<ControleGateway>;
+  let controleMapper: jest.Mocked<ControleMapper>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -21,7 +24,9 @@ describe('ControleMetierV2Service', () => {
         ControleMetierV2Service,
         {
           provide: ControleGateway,
-          useValue: {},
+          useValue: {
+            createControles: jest.fn(),
+          },
         },
         {
           provide: RoseauGateway,
@@ -33,11 +38,16 @@ describe('ControleMetierV2Service', () => {
           provide: MasaProvider,
           useValue: {
             findChargeEntranteMaxComparison: jest.fn(),
+            findConcentrationsMoyennesBatch: jest.fn(),
+            findMaxDebitsReferenceBatch: jest.fn(),
+            findProductionBoueZeroBatch: jest.fn(),
           },
         },
         {
           provide: ControleMapper,
-          useValue: {},
+          useValue: {
+            mapControlesIndividuelsToCreateControleModel: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -45,6 +55,175 @@ describe('ControleMetierV2Service', () => {
     service = module.get<ControleMetierV2Service>(ControleMetierV2Service);
     roseauGateway = module.get(RoseauGateway);
     masaProvider = module.get(MasaProvider);
+    controleGateway = module.get(ControleGateway);
+    controleMapper = module.get(ControleMapper);
+  });
+
+  describe('execute', () => {
+    const depotId = 'depot-123';
+
+    const xmlObj: FctAssainissement = {
+      scenario: { dateDebutReference: '2024-01-01' },
+      ouvrages: [
+        {
+          cdOuvrageDepollution: 'STEU1',
+          pointMesure: [
+            {
+              numeroPointMesure: 'PM1',
+              locGlobalePointMesure: 'A3',
+              prelevement: [
+                {
+                  datePrlvt: '2024-01-15',
+                  cdSupport: '3',
+                  analyse: [
+                    { cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '500' },
+                    { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '200' },
+                    { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '100' },
+                  ],
+                },
+              ],
+            },
+            {
+              numeroPointMesure: 'PM2',
+              locGlobalePointMesure: 'A4',
+              prelevement: [
+                {
+                  datePrlvt: '2024-01-15',
+                  cdSupport: '3',
+                  analyse: [
+                    { cdParametre: CodeParametre.pH.toString(), rsAnalyse: '7' },
+                    { cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '20' },
+                    { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '90' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      systemesCollecte: [
+        {
+          cdSystemeCollecte: 'SCL1',
+          pointMesure: [
+            {
+              locGlobalePointMesure: 'A1',
+              prelevement: [
+                {
+                  datePrlvt: '2024-01-15',
+                  cdSupport: '3',
+                  analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '50' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    } as unknown as FctAssainissement;
+
+    beforeEach(() => {
+      masaProvider.findConcentrationsMoyennesBatch.mockResolvedValue([]);
+      masaProvider.findMaxDebitsReferenceBatch.mockResolvedValue([]);
+      masaProvider.findProductionBoueZeroBatch.mockResolvedValue([]);
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([]);
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(null);
+    });
+
+    it('should run all controls and return the complete list of tousControles names passed to the mapper', async () => {
+      const fakeCreateControles: CreateControleModel[] = [
+        { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
+      ] as CreateControleModel[];
+      const fakeCreatedControles: ControleModel[] = [{ id: 'c1' }] as unknown as ControleModel[];
+
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue(fakeCreateControles);
+      controleGateway.createControles.mockResolvedValue(fakeCreatedControles);
+
+      await service.execute(depotId, xmlObj);
+
+      // Verify the mapper was called with the correct control names (in order)
+      expect(controleMapper.mapControlesIndividuelsToCreateControleModel).toHaveBeenCalledTimes(1);
+
+      const [calledDepotId, calledType, calledControles] =
+        controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
+      expect(calledDepotId).toBe(depotId);
+      expect(calledType).toBe(ControleType.CONTROLE_V2);
+
+      const controleNames = calledControles.map((c) => c.name);
+      expect(controleNames).toEqual([
+        ControleName.CTL041, // verifyDcoRange
+        ControleName.CTL042, // verifyDbo5Range
+        ControleName.CTL047, // verifyDcoGreaterThanDbo5
+        ControleName.CTL046, // verifyPhRange
+        ControleName.CTL051, // verifyVolumeA3A4VsCapaciteEH
+        ControleName.CTL052, // verifyCmaComparisonForDcoDbo5
+        ControleName.CTL054, // verifyChargeEntranteVsTranche
+        ControleName.CTL055, // verifyProductionBoue
+        ControleName.CTL056, // verifyTemperatureA4Range
+        ControleName.CTL057, // verifyPluviometrieRange
+        ControleName.CTL058, // verifyVolumesNegatifs
+        ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
+        ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
+      ]);
+    });
+
+    it('should pass tousControles results to the mapper and return createdControles from the gateway', async () => {
+      const fakeCreateControles: CreateControleModel[] = [
+        { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
+        { depotId, name: ControleName.CTL042, type: ControleType.CONTROLE_V2, success: true },
+      ] as CreateControleModel[];
+      const fakeCreatedControles: ControleModel[] = [
+        { id: 'c1', name: ControleName.CTL041 },
+        { id: 'c2', name: ControleName.CTL042 },
+      ] as unknown as ControleModel[];
+
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue(fakeCreateControles);
+      controleGateway.createControles.mockResolvedValue(fakeCreatedControles);
+
+      const result = await service.execute(depotId, xmlObj);
+
+      // Verify controleGateway.createControles was called with the mapped models
+      expect(controleGateway.createControles).toHaveBeenCalledWith(fakeCreateControles, undefined);
+
+      // Verify execute returns the created controles from the gateway
+      expect(result).toBe(fakeCreatedControles);
+    });
+
+    it('should call preloadMasaData with the correct parameters', async () => {
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
+      controleGateway.createControles.mockResolvedValue([]);
+
+      await service.execute(depotId, xmlObj);
+
+      // findConcentrationsMoyennesBatch called with all STEU codes, previous year, DBO5 + DCO
+      expect(masaProvider.findConcentrationsMoyennesBatch).toHaveBeenCalledWith(
+        ['STEU1'],
+        2023, // previous year
+        [String(CodeParametre.DBO5), String(CodeParametre.DCO)],
+      );
+
+      // findMaxDebitsReferenceBatch called with all STEU codes
+      expect(masaProvider.findMaxDebitsReferenceBatch).toHaveBeenCalledWith(['STEU1']);
+
+      // findProductionBoueZeroBatch called with all STEU codes and current year
+      expect(masaProvider.findProductionBoueZeroBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+    });
+
+    it('should produce 13 controls even when all data is valid (no errors)', async () => {
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
+      controleGateway.createControles.mockResolvedValue([]);
+
+      await service.execute(depotId, xmlObj);
+
+      const [, , calledControles] = controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
+      const typedControles = calledControles;
+
+      expect(typedControles).toHaveLength(13);
+      // Each control should have an errors array (possibly empty)
+      for (const controle of typedControles) {
+        expect(controle).toHaveProperty('name');
+        expect(controle).toHaveProperty('errors');
+        expect(Array.isArray(controle.errors)).toBe(true);
+      }
+    });
   });
 
   describe('verifyDcoGreaterThanDbo5', () => {

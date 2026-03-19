@@ -73,6 +73,10 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyConcentrationsNegativesOuNulles(xmlObj)),
       this.verifyChargePollutionVsCapaciteNominale(xmlObj),
     ]);
+    // Filtrer les contrôles nuls (certains contrôles ne sont pas applicables et renvoient null), afin qu'ils ne soient pas enregistrés ni affichés en SUCCESS
+    // TODO: Les contrôles qui ne sont pas effectués car pas de point de mesure ou de valeur doivent renvoyer null
+    //.filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null);
+
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
       ControleType.CONTROLE_V2,
