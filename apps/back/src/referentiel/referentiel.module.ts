@@ -32,6 +32,7 @@ import { RegEntity } from './lanceleau/entities/reg.entity';
 import { ParametreGateway } from './parametre/parametre.gateway';
 import { PleEntity } from './roseau/entities/ple.entity';
 import { AlrEntity } from './roseau/entities/alr.entity';
+import { PabEntity } from './roseau/entities/pab.entity';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { AlrEntity } from './roseau/entities/alr.entity';
       RegEntity,
       PleEntity,
       AlrEntity,
+      PabEntity,
     ]),
   ],
   controllers: [ReferentielController],

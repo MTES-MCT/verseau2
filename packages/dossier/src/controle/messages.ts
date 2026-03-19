@@ -152,6 +152,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage53(params);
     case ErrorCode.E2_054:
       return buildErrorMessage54(params);
+    case ErrorCode.E2_055:
+      return buildErrorMessage55(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -287,4 +289,9 @@ const buildErrorMessage54 = (params: string[]) => {
   const [cdOuvrage, chargeMaxN, chargeMaxNMoins1, trancheLabel, variationPct] =
     params as ErrorParamsMap[ErrorCode.E2_054];
   return `La charge entrante retenue de ${chargeMaxN} EH pour l'ouvrage ${cdOuvrage} (tranche "${trancheLabel}") présente une variation de ${variationPct}% par rapport à l'année N-1 (${chargeMaxNMoins1} EH), dépassant le seuil de 20%.`;
+};
+
+const buildErrorMessage55 = (params: string[]) => {
+  const [cdOuvrage, annee, productionBoue] = params as ErrorParamsMap[ErrorCode.E2_055];
+  return `La production de boue pour l'ouvrage ${cdOuvrage} en ${annee} est égale à ${productionBoue}. Veuillez vérifier cette valeur.`;
 };

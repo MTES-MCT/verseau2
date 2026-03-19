@@ -8,7 +8,7 @@ import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParam
 import { ControleName, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
-import { CmaBySandreCdaAndParam } from '@masa/masa.dto';
+import { CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
 
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
@@ -1336,6 +1336,73 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
       expect(result.errors[0].params).toEqual(['STEU1', '3000', '5000', 'Tranche 2', '40.0']);
+    });
+  });
+
+  describe('verifyProductionBoue', () => {
+    it('should return an error when production boue is zero for a STEU', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const productionsBoueZero: ProductionBoueZero[] = [{ sandreCda: 'STEU1', annee: 2025, productionBoue: 0 }];
+
+      const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
+
+      expect(result.name).toBe(ControleName.CTL055);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_055);
+      expect(result.errors[0].params).toEqual(['STEU1', '2025', '0']);
+    });
+
+    it('should return no error when STEU is not in the zero-production list', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyProductionBoue(xmlObj, []);
+
+      expect(result.name).toBe(ControleName.CTL055);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return errors for multiple STEUs with zero production', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [
+          { cdOuvrageDepollution: 'STEU1' },
+          { cdOuvrageDepollution: 'STEU2' },
+          { cdOuvrageDepollution: 'STEU3' },
+        ],
+      } as unknown as FctAssainissement;
+
+      const productionsBoueZero: ProductionBoueZero[] = [
+        { sandreCda: 'STEU1', annee: 2025, productionBoue: 0 },
+        { sandreCda: 'STEU3', annee: 2025, productionBoue: 0 },
+      ];
+
+      const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
+
+      expect(result.name).toBe(ControleName.CTL055);
+      expect(result.errors).toHaveLength(2);
+      expect(result.errors[0].params).toEqual(['STEU1', '2025', '0']);
+      expect(result.errors[1].params).toEqual(['STEU3', '2025', '0']);
+    });
+
+    it('should skip ouvrages without cdOuvrageDepollution', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: undefined }, { cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const productionsBoueZero: ProductionBoueZero[] = [{ sandreCda: 'STEU1', annee: 2025, productionBoue: 0 }];
+
+      const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params).toEqual(['STEU1', '2025', '0']);
     });
   });
 });

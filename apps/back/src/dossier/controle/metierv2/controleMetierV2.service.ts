@@ -9,7 +9,7 @@ import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda } from '@masa/masa.dto';
+import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ProductionBoueZero } from '@masa/masa.dto';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -24,7 +24,7 @@ export class ControleMetierV2Service {
     const dataWithLocGlobalePointMesureA3A4AndCdSupport3: FctAssainissement =
       filterFctAssainissementForMetierV2(xmlObj);
 
-    const { cmas, maxDebits } = await this.preloadMasaData(xmlObj);
+    const { cmas, maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
     const tousControles = await Promise.all([
       // Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
@@ -43,6 +43,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
       this.verifyChargeEntranteVsTranche(xmlObj),
+      Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
     ]);
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -53,16 +54,18 @@ export class ControleMetierV2Service {
     return createdControles;
   }
 
-  private async preloadMasaData(
-    xmlObj: FctAssainissement,
-  ): Promise<{ cmas: CmaBySandreCdaAndParam[]; maxDebits: MaxDebitBySandreCda[] }> {
+  private async preloadMasaData(xmlObj: FctAssainissement): Promise<{
+    cmas: CmaBySandreCdaAndParam[];
+    maxDebits: MaxDebitBySandreCda[];
+    productionsBoueZero: ProductionBoueZero[];
+  }> {
     const dateDebutReference = xmlObj.scenario?.dateDebutReference;
     const currentYear = dateDebutReference ? parseInt(dateDebutReference.substring(0, 4), 10) : NaN;
     const previousYear = currentYear - 1;
 
     const allSteuCdas = xmlObj.ouvrages.map((o) => o.cdOuvrageDepollution).filter((cda): cda is string => !!cda);
 
-    const [cmas, maxDebits] = await Promise.all([
+    const [cmas, maxDebits, productionsBoueZero] = await Promise.all([
       !isNaN(currentYear)
         ? this.masaProvider.findConcentrationsMoyennesBatch(allSteuCdas, previousYear, [
             String(CodeParametre.DBO5),
@@ -70,9 +73,12 @@ export class ControleMetierV2Service {
           ])
         : Promise.resolve([] as CmaBySandreCdaAndParam[]),
       this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
+      !isNaN(currentYear)
+        ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
+        : Promise.resolve([] as ProductionBoueZero[]),
     ]);
 
-    return { cmas, maxDebits };
+    return { cmas, maxDebits, productionsBoueZero };
   }
 
   // CTL039: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5
@@ -709,6 +715,34 @@ export class ControleMetierV2Service {
     }
 
     return { name: ControleName.CTL054, errors };
+  }
+
+  // CTL055: Vérification que la production de boue est non nulle et renseignée
+  verifyProductionBoue(
+    fctAssainissement: FctAssainissement,
+    productionsBoueZero: ProductionBoueZero[],
+  ): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
+
+      const match = productionsBoueZero.find((p) => p.sandreCda === cdOuvrageDepollution);
+      if (!match) {
+        continue;
+      }
+
+      errors.push({
+        code: ErrorCode.E2_055,
+        params: [cdOuvrageDepollution, match.annee.toString(), match.productionBoue.toString()],
+        evenementType: EvenementType.AVERTISSEMENT,
+      });
+    }
+
+    return { name: ControleName.CTL055, errors };
   }
 }
 

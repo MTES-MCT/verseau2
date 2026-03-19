@@ -74,6 +74,7 @@ export enum ControleName {
   CTL052 = 'CTL052',
   CTL053 = 'CTL053',
   CTL054 = 'CTL054',
+  CTL055 = 'CTL055',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -125,5 +126,6 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL053]: 'Vérification du débit entrant A3/A4/A7 vs 2 x max(PC95, Dref)',
   [ControleName.CTL054]:
     "Vérification d'un dépassement de plus de 20% de la charge entrante entre l'année N et l'année N-1",
+  [ControleName.CTL055]: 'Vérification que la production de boue est non nulle et renseignée',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };

@@ -6,6 +6,7 @@ import {
   CmaBySandreCdaAndParam,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
+  ProductionBoueZero,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -34,6 +35,7 @@ export interface RoseauGateway {
   ): Promise<CmaBySandreCdaAndParam[]>;
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
+  findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;

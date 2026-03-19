@@ -7,6 +7,7 @@ import {
   CmaBySandreCdaAndParam,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
+  ProductionBoueZero,
   SteuCdnBySandreCda,
   ItvCdnByRfa,
   AgByEmail,
@@ -125,6 +126,15 @@ export class MasaProvider {
     year: number,
   ): Promise<ChargeEntranteMaxComparison[]> {
     return this.roseauGateway.findChargeEntranteMaxComparisonBatch(steuSandreCdas, year);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL055 — Production de boue nulle ou absente par STEU
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]> {
+    return this.roseauGateway.findProductionBoueZeroBatch(steuSandreCdas, year);
   }
 
   // ---------------------------------------------------------------------------

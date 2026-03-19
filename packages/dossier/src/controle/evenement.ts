@@ -43,6 +43,7 @@ export enum ErrorCode {
   E2_052 = 'E2.052',
   E2_053 = 'E2.053',
   E2_054 = 'E2.054',
+  E2_055 = 'E2.055',
   E2_999 = 'E2.999',
 }
 
@@ -143,6 +144,7 @@ export type ErrorParamsMap = {
     trancheLabel: string,
     variationPct: string,
   ];
+  [ErrorCode.E2_055]: [cdOuvrage: string, annee: string, productionBoue: string];
   [ErrorCode.E2_999]: [message: string];
 };
 
