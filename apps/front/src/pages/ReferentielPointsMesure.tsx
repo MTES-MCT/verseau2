@@ -17,29 +17,30 @@ function buildSignalerText(point: PointMesureReferentiel): string {
   return [
     'Bonjour,',
     '',
-    'Je souhaite signaler une incoh\u00e9rence concernant le point de mesure suivant :',
+    'Je souhaite signaler une incohérence concernant le point de mesure suivant :',
     '',
-    `- Ouvrage : ${point.ouvrageSandreCda}${point.ouvrageNom ? ` \u2014 ${point.ouvrageNom}` : ''}`,
-    `- Num\u00e9ro de point : ${point.numeroPoint ?? 'non renseign\u00e9'}`,
-    `- Nom du point : ${point.nomPoint ?? 'non renseign\u00e9'}`,
-    `- Localisation : ${point.localisationCode ?? 'non renseign\u00e9e'}${point.localisationGlobale ? ` \u2014 ${point.localisationGlobale}` : ''}`,
-    `- Date de d\u00e9but de validit\u00e9 : ${point.dateDebut ?? 'non renseign\u00e9e'}`,
-    `- Date de fin de validit\u00e9 : ${point.dateFin ?? 'non renseign\u00e9e'}`,
+    `- Ouvrage : ${point.ouvrageSandreCda}${point.ouvrageNom ? ` / ${point.ouvrageNom}` : ''}`,
+    `- Numéro de point : ${point.numeroPoint ?? 'non renseigné'}`,
+    `- Nom du point : ${point.nomPoint ?? 'non renseigné'}`,
+    `- Localisation : ${point.localisationCode ?? 'non renseignée'}${point.localisationGlobale ? ` / ${point.localisationGlobale}` : ''}`,
+    `- Date de début de validité : ${point.dateDebut ?? 'non renseignée'}`,
+    `- Date de fin de validité : ${point.dateFin ?? 'non renseignée'}`,
     '',
-    'Description de l\u2019incoh\u00e9rence : [\u00e0 compl\u00e9ter par l\u2019utilisateur]',
+    "Description de l'incohérence : [à compléter par l'utilisateur]",
     '',
     'Cordialement',
   ].join('\n');
 }
 
-function SignalerButton({ point }: { point: PointMesureReferentiel }) {
+function SignalerButton({ point, onClick }: { point: PointMesureReferentiel; onClick: () => void }) {
   const [copied, setCopied] = useState(false);
 
   const handleClick = useCallback(() => {
     void navigator.clipboard.writeText(buildSignalerText(point));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [point]);
+    onClick();
+  }, [point, onClick]);
 
   return (
     <Button
@@ -49,12 +50,12 @@ function SignalerButton({ point }: { point: PointMesureReferentiel }) {
       title="Copier les informations du point de mesure"
       onClick={handleClick}
     >
-      {copied ? 'Copi\u00e9 !' : 'Signaler'}
+      {copied ? 'Copié!' : 'Copier'}
     </Button>
   );
 }
 
-export function ReferentielPage() {
+export function ReferentielPointsMesurePage() {
   const {
     form,
     updateForm,
@@ -71,6 +72,7 @@ export function ReferentielPage() {
     isFetching,
     error,
   } = useReferentielFilters();
+  const [isCopiedNoticeVisible, setIsCopiedNoticeVisible] = useState(false);
 
   const isScl = form.ouvrageType === 'scl';
 
@@ -89,12 +91,12 @@ export function ReferentielPage() {
   const headers = [
     'Ouvrage',
     'Id. agence',
-    'N\u00b0 point',
+    'N° point',
     'Nom point',
     'Code loc.',
     'Localisation globale',
-    ...(isScl ? ['Cat\u00e9gorie'] : []),
-    'Date d\u00e9but',
+    ...(isScl ? ['Catégorie'] : []),
+    'Date début',
     'Date fin',
     '',
   ];
@@ -109,18 +111,34 @@ export function ReferentielPage() {
     ...(isScl ? [point.categorie ?? ''] : []),
     point.dateDebut ?? '',
     point.dateFin ?? '',
-    <SignalerButton key={`signaler-${point.ouvrageSandreCda}-${point.numeroPoint}`} point={point} />,
+    <SignalerButton
+      key={`signaler-${point.ouvrageSandreCda}-${point.numeroPoint}`}
+      point={point}
+      onClick={() => setIsCopiedNoticeVisible(true)}
+    />,
   ]);
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
       <Notice
-        title="Les donn\u00e9es ne sont pas en temps r\u00e9el"
-        description={` - Donn\u00e9es mises \u00e0 jour le ${getPreviousSunday()}`}
+        title="Les données ne sont pas en temps réel"
+        description={` - Données mises à jour le ${getPreviousSunday()}`}
         severity="info"
         className={fr.cx('fr-mb-2w')}
       />
-      <h1>R\u00e9f\u00e9rentiel \u2014 Points de mesure</h1>
+
+      {isCopiedNoticeVisible && (
+        <Notice
+          title="Signalement copié"
+          description="- Les informations du point de mesure ont été copiées dans le presse-papiers."
+          severity="info"
+          className={fr.cx('fr-mb-2w')}
+          isClosable
+          onClose={() => setIsCopiedNoticeVisible(false)}
+        />
+      )}
+
+      <h1>Points de mesure</h1>
 
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>
@@ -140,7 +158,7 @@ export function ReferentielPage() {
                 },
               },
               {
-                label: 'Syst\u00e8me de collecte',
+                label: 'Système de collecte',
                 nativeInputProps: {
                   value: 'scl',
                   checked: form.ouvrageType === 'scl',
@@ -155,10 +173,8 @@ export function ReferentielPage() {
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
             <SelectAutocomplete
-              label={isScl ? 'Syst\u00e8me de collecte' : 'Station'}
-              placeholder={
-                ouvragesLoadingCurrent ? 'Chargement\u2026' : isScl ? 'Tous les syst\u00e8mes' : 'Tous les ouvrages'
-              }
+              label={isScl ? 'Système de collecte' : 'Station'}
+              placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
               options={ouvragesOptions}
               value={form.selectedOuvrageCode || null}
               onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
@@ -173,7 +189,7 @@ export function ReferentielPage() {
               orientation="horizontal"
               options={[
                 {
-                  label: 'R\u00e9glementaire',
+                  label: 'Réglementaire',
                   nativeInputProps: {
                     checked: form.reglementaire,
                     onChange: () => toggleCheckbox('reglementaire'),
@@ -195,7 +211,7 @@ export function ReferentielPage() {
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom', 'fr-mt-2w')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
             <Input
-              label="Date d\u00e9but"
+              label="Date début"
               nativeInputProps={{
                 type: 'date',
                 value: form.dateDebut,
@@ -240,7 +256,7 @@ export function ReferentielPage() {
       {!isLoading && !error && data && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <Table
-            caption="R\u00e9f\u00e9rentiel des points de mesure"
+            caption="Référentiel des points de mesure"
             noCaption
             bordered
             headers={headers}
@@ -252,8 +268,8 @@ export function ReferentielPage() {
           <div className={fr.cx('fr-mt-2w')}>
             <p className={fr.cx('fr-text--sm')}>
               {data.points.length === 0
-                ? 'Aucun point de mesure trouv\u00e9.'
-                : `${data.points.length} point${data.points.length > 1 ? 's' : ''} de mesure trouv\u00e9${data.points.length > 1 ? 's' : ''}.`}
+                ? 'Aucun point de mesure trouvé.'
+                : `${data.points.length} point${data.points.length > 1 ? 's' : ''} de mesure trouvé${data.points.length > 1 ? 's' : ''}.`}
             </p>
           </div>
         </div>

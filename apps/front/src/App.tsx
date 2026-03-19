@@ -5,7 +5,7 @@ import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
 import { DepotDownloadPage } from './pages/DepotDownload';
 import { DepotDetailsPage } from './pages/DepotDetails';
-import { ReferentielPage } from './pages/Referentiel';
+import { ReferentielPointsMesurePage } from './pages/ReferentielPointsMesure';
 import { HomePage } from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
@@ -99,10 +99,10 @@ function App() {
               }
             />
             <Route
-              path={AppRoutes.REFERENTIEL}
+              path={AppRoutes.REFERENTIEL_POINTS_DE_MESURE}
               element={
                 <ProtectedRoute>
-                  <ReferentielPage />
+                  <ReferentielPointsMesurePage />
                 </ProtectedRoute>
               }
             />

@@ -8,6 +8,7 @@ export const AppRoutes = {
   DEPOT_DOWNLOAD: '/depot/download',
   DEPOT_DETAILS: '/depot/details',
   REFERENTIEL: '/referentiel',
+  REFERENTIEL_POINTS_DE_MESURE: '/referentiel/points-de-mesure',
   MOCK_AUTHORIZATION: '/mock_authorization',
   DESIGN_SYSTEM: '/design-system',
 } as const;
