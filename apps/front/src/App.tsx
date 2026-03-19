@@ -5,6 +5,7 @@ import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
 import { DepotDownloadPage } from './pages/DepotDownload';
 import { DepotDetailsPage } from './pages/DepotDetails';
+import { ReferentielPage } from './pages/Referentiel';
 import { HomePage } from './pages/HomePage';
 import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
@@ -94,6 +95,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DepotUploadRecapPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.REFERENTIEL}
+              element={
+                <ProtectedRoute>
+                  <ReferentielPage />
                 </ProtectedRoute>
               }
             />

@@ -26,6 +26,13 @@ export const Breadcrumb = () => {
       });
     }
 
+    if (pathname === AppRoutes.REFERENTIEL) {
+      segments.push({
+        label: 'Tableau de bord',
+        href: AppRoutes.DASHBOARD,
+      });
+    }
+
     return segments.length > 0 ? segments : [];
   };
 
@@ -50,6 +57,8 @@ export const Breadcrumb = () => {
     });
   } else if (location.pathname === AppRoutes.DEPOT_DETAILS) {
     currentPageLabel = 'Détail des mesures déposées';
+  } else if (location.pathname === AppRoutes.REFERENTIEL) {
+    currentPageLabel = 'Référentiel — Points de mesure';
   }
 
   return (

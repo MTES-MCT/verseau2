@@ -210,6 +210,7 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
 
   await dataSource.query(`DROP TABLE IF EXISTS roseau.alr CASCADE`);
   await dataSource.query(`DROP TABLE IF EXISTS roseau.ple CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.orm CASCADE`);
   await dataSource.query(`
     CREATE TABLE roseau.ple (
       ple_cdn INTEGER PRIMARY KEY,
@@ -227,6 +228,13 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       tlref_20_cdn INTEGER,
       tlref_18_cdn INTEGER,
       tlref_17_cdn INTEGER
+    )
+  `);
+  await dataSource.query(`
+    CREATE TABLE roseau.orm (
+      orm_cdn INTEGER PRIMARY KEY,
+      pmo_cdn INTEGER,
+      tlref_24_cdn INTEGER
     )
   `);
 }
@@ -355,6 +363,7 @@ export async function createReferentielDataset(dataSource: DataSource): Promise<
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {
   await dataSource.query(`DELETE FROM roseau.alr`);
   await dataSource.query(`DELETE FROM roseau.ple`);
+  await dataSource.query(`DELETE FROM roseau.orm`);
   await dataSource.query(`DELETE FROM roseau.stchan`);
   await dataSource.query(`DELETE FROM roseau.resa`);
   await dataSource.query(`DELETE FROM roseau.cpy`);
@@ -601,6 +610,21 @@ export async function seedCxntech(
     VALUES ($1, $2, $3, $4)
   `,
     [cxntechCdn, avalSclCdn, amontZgcCdn, cxntechRetraitDt],
+  );
+}
+
+export async function seedOrm(
+  dataSource: DataSource,
+  ormCdn: number,
+  pmoCdn: number,
+  tlref24Cdn?: number | null,
+): Promise<void> {
+  await dataSource.query(
+    `
+    INSERT INTO roseau.orm (orm_cdn, pmo_cdn, tlref_24_cdn)
+    VALUES ($1, $2, $3)
+  `,
+    [ormCdn, pmoCdn, tlref24Cdn ?? null],
   );
 }
 

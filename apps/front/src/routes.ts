@@ -7,6 +7,7 @@ export const AppRoutes = {
   DEPOT_UPLOAD_RECAP: '/depot/upload/recap',
   DEPOT_DOWNLOAD: '/depot/download',
   DEPOT_DETAILS: '/depot/details',
+  REFERENTIEL: '/referentiel',
   MOCK_AUTHORIZATION: '/mock_authorization',
   DESIGN_SYSTEM: '/design-system',
 } as const;

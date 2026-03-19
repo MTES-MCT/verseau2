@@ -88,6 +88,20 @@ export interface NomenclatureItem {
   label: string | null;
 }
 
+/** Point de mesure du référentiel — utilisé pour la page référentiel */
+export interface PointMesureReferentielRow {
+  ouvrageSandreCda: string;
+  ouvrageNom: string | null;
+  identifiantAgence: string | null;
+  numeroPoint: string | null;
+  nomPoint: string | null;
+  localisationCode: string | null;
+  localisationGlobale: string | null;
+  categorie: string | null;
+  dateDebut: string | null;
+  dateFin: string | null;
+}
+
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;

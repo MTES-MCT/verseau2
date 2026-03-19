@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
+import { OuvrageType } from './mesures.routes';
 
 // GET /referentiel/codes-to-parametres - Convert numeric codes to parametre names
 export const codesToParametres = {
@@ -10,5 +11,39 @@ export const codesToParametres = {
   }),
   response: z.object({
     parametres: z.array(z.string().nullable()),
+  }),
+} as const satisfies RouteDefinition;
+
+// --- Points de mesure du référentiel ---
+
+export const PointMesureReferentielSchema = z.object({
+  ouvrageSandreCda: z.string(),
+  ouvrageNom: z.string().nullable(),
+  identifiantAgence: z.string().nullable(),
+  numeroPoint: z.string().nullable(),
+  nomPoint: z.string().nullable(),
+  localisationCode: z.string().nullable(),
+  localisationGlobale: z.string().nullable(),
+  categorie: z.string().nullable(),
+  dateDebut: z.string().nullable(),
+  dateFin: z.string().nullable(),
+});
+
+export type PointMesureReferentiel = z.infer<typeof PointMesureReferentielSchema>;
+
+// GET /referentiel/points-mesure - List referentiel points de mesure for an ouvrage
+export const listPointsMesureReferentiel = {
+  method: 'GET',
+  path: '/referentiel/points-mesure',
+  query: z.object({
+    ouvrageType: OuvrageType,
+    ouvrageCode: z.string(),
+    dateDebut: z.string().optional(),
+    dateFin: z.string().optional(),
+    reglementaire: z.coerce.boolean().optional(),
+    logique: z.coerce.boolean().optional(),
+  }),
+  response: z.object({
+    points: z.array(PointMesureReferentielSchema),
   }),
 } as const satisfies RouteDefinition;

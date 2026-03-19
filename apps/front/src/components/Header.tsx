@@ -96,6 +96,11 @@ export function AppHeader() {
               },
             ],
           },
+          {
+            text: 'Référentiel',
+            linkProps: { href: AppRoutes.REFERENTIEL },
+            isActive: isNavItemActive(AppRoutes.REFERENTIEL),
+          },
           ...(import.meta.env.DEV
             ? [
                 {

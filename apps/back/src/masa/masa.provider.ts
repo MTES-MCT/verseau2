@@ -19,6 +19,7 @@ import {
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
+  PointMesureReferentielRow,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -263,5 +264,18 @@ export class MasaProvider {
 
   async findQualifications(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findQualifications();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Référentiel — Points de mesure du référentiel pour un ouvrage donné
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findPointsMesureReferentiel(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
+  ): Promise<PointMesureReferentielRow[]> {
+    return this.roseauGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
   }
 }
