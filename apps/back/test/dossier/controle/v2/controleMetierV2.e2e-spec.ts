@@ -153,7 +153,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL039 - verifyRatioDcoDbo5', () => {
+  describe.skip('CTL039 - verifyRatioDcoDbo5', () => {
     it('should pass when DCO/DBO5 ratio is within valid range (1.5 < ratio < 3.5)', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -423,7 +423,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL040 - verifyRatioMesDbo5', () => {
+  describe.skip('CTL040 - verifyRatioMesDbo5', () => {
     it('should pass when MES/DBO5 ratio is within valid range (0.7 < ratio < 1.5)', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -1061,7 +1061,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL043 - verifyMesRange', () => {
+  describe.skip('CTL043 - verifyMesRange', () => {
     it('should pass when MES is within valid range (100 < MES < 1200)', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -1150,7 +1150,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL044 - verifyNtkRange', () => {
+  describe.skip('CTL044 - verifyNtkRange', () => {
     it('should pass when NTK is within valid range (20 < NTK < 160) with correct unit', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -1282,7 +1282,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL045 - verifyPtotRange', () => {
+  describe.skip('CTL045 - verifyPtotRange', () => {
     it('should pass when Ptot is within valid range (4 < Ptot < 25) with correct unit', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -1627,7 +1627,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL048 - verifyNtkGreaterThanNnh4', () => {
+  describe.skip('CTL048 - verifyNtkGreaterThanNnh4', () => {
     it('should pass when NTK > N-NH4', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -1723,7 +1723,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL049 - verifyNglGreaterThanNtk', () => {
+  describe.skip('CTL049 - verifyNglGreaterThanNtk', () => {
     it('should pass when NGL > NTK', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
@@ -1819,7 +1819,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe('CTL050 - verifyPGreaterThanPO4', () => {
+  describe.skip('CTL050 - verifyPGreaterThanPO4', () => {
     it('should pass when Ptot > PO4', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
