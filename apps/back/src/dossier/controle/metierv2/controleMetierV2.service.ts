@@ -66,7 +66,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
       this.verifyChargeEntranteVsTranche(xmlObj),
-      // Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
+      Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
       Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
       Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
@@ -101,11 +101,11 @@ export class ControleMetierV2Service {
       : Promise.resolve([] as CmaBySandreCdaAndParam[]);
 
     // TODO : remove comments when file and filere table are available
-    // const productionsBoueZeroPromise = !isNaN(currentYear)
-    //   ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
-    //   : Promise.resolve([] as ProductionBoueZero[]);
+    const productionsBoueZeroPromise = !isNaN(currentYear)
+      ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
+      : Promise.resolve([] as ProductionBoueZero[]);
 
-    const productionsBoueZeroPromise = Promise.resolve([] as ProductionBoueZero[]);
+    // const productionsBoueZeroPromise = Promise.resolve([] as ProductionBoueZero[]);
 
     const [cmas, maxDebits, productionsBoueZero] = await Promise.all([
       cmasPromise,

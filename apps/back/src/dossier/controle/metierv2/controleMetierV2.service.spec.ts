@@ -1106,7 +1106,7 @@ describe('ControleMetierV2Service', () => {
       jest.clearAllMocks();
     });
 
-    it('should return an error when DBO5 value exceeds CMA N-1', async () => {
+    it('should return an error when DBO5 value exceeds CMA N-1', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: '2024-01-01',
@@ -1138,14 +1138,14 @@ describe('ControleMetierV2Service', () => {
         { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
       ];
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_052);
     });
 
-    it('should return no error when values are lower than CMA N-1', async () => {
+    it('should return no error when values are lower than CMA N-1', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: '2024-01-01',
@@ -1178,12 +1178,12 @@ describe('ControleMetierV2Service', () => {
         { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
       ];
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should skip comparison when no CMA found', async () => {
+    it('should skip comparison when no CMA found', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: '2024-01-01',
@@ -1209,12 +1209,12 @@ describe('ControleMetierV2Service', () => {
       } as unknown as FctAssainissement;
 
       // Empty array — no CMA found for any STEU
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should return error when dateDebutReference is missing', async () => {
+    it('should return error when dateDebutReference is missing', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: undefined,
@@ -1222,7 +1222,7 @@ describe('ControleMetierV2Service', () => {
         ouvrages: [],
       } as unknown as FctAssainissement;
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
