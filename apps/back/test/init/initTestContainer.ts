@@ -28,6 +28,7 @@ import { OrionCredentialsEntity } from '@referentiel/lanceleau/entities/orionCre
 import { VSteuSclItvEntity } from '@referentiel/lanceleau/entities/vSteuSclItv.entity';
 import { AgEntity } from '@referentiel/lanceleau/entities/ag.entity';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
+import { OrmEntity } from '@referentiel/roseau/entities/orm.entity';
 
 export function initTestContainerImports(connectionUri: string) {
   return [
@@ -57,6 +58,7 @@ export function initTestContainerImports(connectionUri: string) {
         AgacEntity,
         PleEntity,
         AlrEntity,
+        OrmEntity,
         // Lanceleau entities
         ItvEntity,
         SupEntity,
@@ -91,6 +93,7 @@ export function initTestContainerImports(connectionUri: string) {
       AgacEntity,
       PleEntity,
       AlrEntity,
+      OrmEntity,
       ItvEntity,
       SupEntity,
       FanEntity,
