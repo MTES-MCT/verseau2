@@ -27,6 +27,7 @@ import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/ori
 /**
  * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
  * Ce provider ne doit contenir aucune logique métier, mapping de données ou autre.
+ * Il représente le contrat de la future API MASA.
  */
 @Injectable()
 export class MasaProvider {
