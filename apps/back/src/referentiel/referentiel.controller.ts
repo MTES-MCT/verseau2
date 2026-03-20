@@ -6,6 +6,7 @@ import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { MasaProvider } from '@masa/masa.provider';
+import { toTypePointMesure, toLocalisationCodes } from '@masa/toMasa.mapper';
 import { ParametreGateway } from './parametre/parametre.gateway';
 
 @Controller('referentiel')
@@ -43,11 +44,13 @@ export class ReferentielController {
       }
     }
 
+    const typePointMesure = toTypePointMesure(reglementaire, logique);
+    const localisationCodes = toLocalisationCodes(typePointMesure);
+
     const points = await this.masaProvider.findPointsMesureReferentiel(ouvrageType, ouvrageCode, {
       dateDebut,
       dateFin,
-      reglementaire,
-      logique,
+      localisationCodes,
     });
 
     return { points };

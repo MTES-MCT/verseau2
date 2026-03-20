@@ -274,7 +274,7 @@ export class MasaProvider {
   async findPointsMesureReferentiel(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
-    filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
+    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): Promise<PointMesureReferentielRow[]> {
     return this.roseauGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
   }

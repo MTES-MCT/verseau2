@@ -556,7 +556,7 @@ export class RoseauRepository implements RoseauGateway {
   async findPointsMesureReferentiel(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
-    filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
+    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): Promise<PointMesureReferentielRow[]> {
     if (ouvrageType === 'steu') {
       return this.findPointsMesureReferentielSteu(ouvrageCode, filters);
@@ -566,7 +566,7 @@ export class RoseauRepository implements RoseauGateway {
 
   private async findPointsMesureReferentielSteu(
     ouvrageCode: string,
-    filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
+    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): Promise<PointMesureReferentielRow[]> {
     const qb = this.pmoRepository
       .createQueryBuilder('pmo')
@@ -616,7 +616,7 @@ export class RoseauRepository implements RoseauGateway {
 
   private async findPointsMesureReferentielScl(
     ouvrageCode: string,
-    filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
+    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): Promise<PointMesureReferentielRow[]> {
     const qb = this.pmoRepository
       .createQueryBuilder('pmo')
@@ -671,7 +671,7 @@ export class RoseauRepository implements RoseauGateway {
 
   private applyPointsMesureFilters(
     qb: SelectQueryBuilder<PmoEntity>,
-    filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
+    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): void {
     if (filters.dateDebut) {
       qb.andWhere('(pmo.pmo_val_fin_dt IS NULL OR pmo.pmo_val_fin_dt >= :dateDebut)', { dateDebut: filters.dateDebut });
@@ -679,13 +679,10 @@ export class RoseauRepository implements RoseauGateway {
     if (filters.dateFin) {
       qb.andWhere('(pmo.pmo_val_deb_dt IS NULL OR pmo.pmo_val_deb_dt <= :dateFin)', { dateFin: filters.dateFin });
     }
-    // Filtre type de point : réglementaire (A%) vs logique (R%/S%)
-    const { reglementaire, logique } = filters;
-    if (reglementaire && !logique) {
-      qb.andWhere("t16.tlref_elt_cda LIKE 'A%'");
-    } else if (logique && !reglementaire) {
-      qb.andWhere("(t16.tlref_elt_cda LIKE 'R%' OR t16.tlref_elt_cda LIKE 'S%')");
+    if (filters.localisationCodes && filters.localisationCodes.length > 0) {
+      qb.andWhere('t16.tlref_elt_cda IN (:...localisationCodes)', {
+        localisationCodes: filters.localisationCodes,
+      });
     }
-    // Both or neither → no filter
   }
 }
