@@ -6,7 +6,7 @@ import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { MasaProvider } from '@masa/masa.provider';
-import { toTypePointMesure, toLocalisationCodes } from '@masa/toMasa.mapper';
+import { toLocalisationCodes } from '@masa/toMasa.mapper';
 import { ParametreGateway } from './parametre/parametre.gateway';
 
 @Controller('referentiel')
@@ -32,7 +32,7 @@ export class ReferentielController {
     @Query(new ZodValidationPipe(listPointsMesureReferentiel['query']))
     query: RouteQuery<typeof listPointsMesureReferentiel>,
   ): Promise<RouteResponse<typeof listPointsMesureReferentiel>> {
-    const { ouvrageType, ouvrageCode, dateDebut, dateFin, reglementaire, logique } = query;
+    const { ouvrageType, ouvrageCode, dateDebut, dateFin, typePoint } = query;
 
     if (ouvrageType === 'scl') {
       if (!req.authorizedSclCdas?.includes(ouvrageCode)) {
@@ -44,8 +44,7 @@ export class ReferentielController {
       }
     }
 
-    const typePointMesure = toTypePointMesure(reglementaire, logique);
-    const localisationCodes = toLocalisationCodes(typePointMesure);
+    const localisationCodes = toLocalisationCodes(typePoint);
 
     const points = await this.masaProvider.findPointsMesureReferentiel(ouvrageType, ouvrageCode, {
       dateDebut,

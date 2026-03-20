@@ -1,4 +1,4 @@
-import { TypePointMesure } from './masa.dto';
+import type { TypePointMesureValue } from '@lib/dossier';
 
 /** Codes de localisation réglementaires (A1 à A8) */
 const LOCALISATION_CODES_REGLEMENTAIRE = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'];
@@ -26,25 +26,16 @@ const LOCALISATION_CODES_LOGIQUE = [
 ];
 
 /**
- * Résout les booleans UI (réglementaire/logique) en un TypePointMesure du domaine.
- */
-export function toTypePointMesure(reglementaire?: boolean, logique?: boolean): TypePointMesure {
-  if (reglementaire && !logique) return TypePointMesure.REGLEMENTAIRE;
-  if (logique && !reglementaire) return TypePointMesure.LOGIQUE;
-  return TypePointMesure.TOUS;
-}
-
-/**
  * Traduit un TypePointMesure en codes de localisation explicites exploitables par l'infra (SQL IN / REST query param).
- * Retourne undefined quand aucun filtre n'est nécessaire (TOUS).
+ * Retourne undefined quand aucun filtre n'est nécessaire (tous).
  */
-export function toLocalisationCodes(type: TypePointMesure): string[] | undefined {
+export function toLocalisationCodes(type: TypePointMesureValue): string[] | undefined {
   switch (type) {
-    case TypePointMesure.REGLEMENTAIRE:
+    case 'reglementaire':
       return LOCALISATION_CODES_REGLEMENTAIRE;
-    case TypePointMesure.LOGIQUE:
+    case 'logique':
       return LOCALISATION_CODES_LOGIQUE;
-    case TypePointMesure.TOUS:
+    case 'tous':
       return undefined;
   }
 }

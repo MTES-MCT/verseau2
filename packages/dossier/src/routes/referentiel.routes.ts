@@ -2,6 +2,10 @@ import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { OuvrageType } from './mesures.routes';
 
+/** Type de point de mesure : réglementaire (A1–A8), logique (R1, S1–S17) ou tous. */
+export const TypePointMesure = z.enum(['reglementaire', 'logique', 'tous']);
+export type TypePointMesureValue = z.infer<typeof TypePointMesure>;
+
 // GET /referentiel/codes-to-parametres - Convert numeric codes to parametre names
 export const codesToParametres = {
   method: 'GET',
@@ -40,8 +44,7 @@ export const listPointsMesureReferentiel = {
     ouvrageCode: z.string(),
     dateDebut: z.string().optional(),
     dateFin: z.string().optional(),
-    reglementaire: z.coerce.boolean().optional(),
-    logique: z.coerce.boolean().optional(),
+    typePoint: TypePointMesure.default('tous'),
   }),
   response: z.object({
     points: z.array(PointMesureReferentielSchema),

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
-import type { OuvrageTypeValue } from '@lib/dossier';
+import type { OuvrageTypeValue, TypePointMesureValue } from '@lib/dossier';
 import { useOuvrages } from './useOuvrages';
 import { useSystemesCollecte } from './useSystemesCollecte';
 import { usePointsMesureReferentiel } from './usePointsMesureReferentiel';
@@ -32,13 +32,22 @@ export function useReferentielFilters() {
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
 
+  function toTypePoint(reglementaire: boolean, logique: boolean): TypePointMesureValue {
+    if (reglementaire && !logique) {
+      return 'reglementaire';
+    }
+    if (logique && !reglementaire) {
+      return 'logique';
+    }
+    return 'tous';
+  }
+
   const query = {
     ouvrageType: submitted.ouvrageType,
     ouvrageCode: submitted.selectedOuvrageCode,
+    typePoint: toTypePoint(submitted.reglementaire, submitted.logique),
     ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
     ...(submitted.dateFin ? { dateFin: submitted.dateFin } : {}),
-    ...(submitted.reglementaire ? { reglementaire: submitted.reglementaire } : {}),
-    ...(submitted.logique ? { logique: submitted.logique } : {}),
   };
 
   const { data, isLoading, isFetching, error } = usePointsMesureReferentiel(

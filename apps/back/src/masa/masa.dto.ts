@@ -1,16 +1,6 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
 import { PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 
-/** Type de point de mesure — utilisé pour filtrer les points réglementaires vs logiques */
-export enum TypePointMesure {
-  /** Points réglementaires (localisation A*) */
-  REGLEMENTAIRE = 'reglementaire',
-  /** Points logiques (localisation R* ou S*) */
-  LOGIQUE = 'logique',
-  /** Tous les points — aucun filtre */
-  TOUS = 'tous',
-}
-
 export interface CmaBySandreCdaAndParam {
   sandreCda: string;
   paramCode: string;
