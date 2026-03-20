@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RoseauGateway } from './roseau.gateway';
 import { AgaEntity } from './entities/aga.entity';
 import { SclEntity } from './entities/scl.entity';
@@ -669,9 +669,8 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private applyPointsMesureFilters(
-    qb: any,
+    qb: SelectQueryBuilder<PmoEntity>,
     filters: { dateDebut?: string; dateFin?: string; reglementaire?: boolean; logique?: boolean },
   ): void {
     if (filters.dateDebut) {
