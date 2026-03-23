@@ -356,4 +356,56 @@ describe('DepotDetailsPage', () => {
 
     expect(screen.getAllByPlaceholderText(/chargement/i).length).toBeGreaterThanOrEqual(2);
   });
+
+  it('renders advanced filters inside an accordion labelled "Filtres avancés"', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    const accordion = screen.getByRole('button', { name: /filtres avancés/i });
+    expect(accordion).toBeInTheDocument();
+
+    // Advanced filter fields are in the DOM (accordion renders children regardless of expanded state)
+    expect(screen.getByLabelText(/finalité/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/statut/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/qualification/i)).toBeInTheDocument();
+  });
+
+  it('does not show active filter badge when no advanced filters are set', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    const accordion = screen.getByRole('button', { name: /filtres avancés/i });
+    // The badge should not be present inside the accordion trigger
+    expect(accordion.querySelector('.fr-badge')).not.toBeInTheDocument();
+  });
+
+  it('shows active filter count badge when advanced filters are set', async () => {
+    mockUseStatuts.mockReturnValue({
+      data: [{ code: 'A', label: 'Donnée brute' }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useStatuts>);
+    mockUseQualifications.mockReturnValue({
+      data: [{ code: '1', label: 'Correcte' }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useQualifications>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    // Open the accordion and select statut
+    fireEvent.click(screen.getByRole('button', { name: /filtres avancés/i }));
+    fireEvent.click(screen.getByLabelText(/statut/i));
+    fireEvent.click(screen.getByRole('option', { name: /donnée brute/i }));
+
+    // Badge should now show "1" inside the accordion trigger
+    const accordion = screen.getByRole('button', { name: /filtres avancés/i });
+    expect(accordion.querySelector('.fr-badge')).toBeInTheDocument();
+    expect(accordion.querySelector('.fr-badge')).toHaveTextContent('1');
+  });
+
+  it('renders primary filters (ouvrage fieldset) outside the accordion', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    const fieldset = document.querySelector('fieldset');
+    expect(fieldset).toBeInTheDocument();
+    // Station combobox is inside the fieldset, not inside the accordion
+    expect(fieldset).toContainElement(screen.getByRole('combobox', { name: 'Station' }));
+  });
 });
