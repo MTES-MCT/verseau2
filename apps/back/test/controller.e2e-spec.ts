@@ -21,6 +21,7 @@ import { InfraWithRealDbMockModule } from './mock/infraWithRealDbMock.module';
 import { Authentication } from '@authentication/authentication';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
+import { MasaProvider } from '@masa/masa.provider';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { DataSource } from 'typeorm';
 import { DepotStatus } from '@lib/dossier';
@@ -159,6 +160,13 @@ describe('Controller (e2e) - Unauthorized', () => {
   describe('Controller (e2e) - Referentiel', () => {
     it('/referentiel/codes-to-parametres (GET) - Should return 401 Unauthorized', async () => {
       return request(app.getHttpServer()).get('/referentiel/codes-to-parametres').expect(401);
+    });
+
+    it('/referentiel/points-mesure (GET) - Should return 401 Unauthorized', async () => {
+      return request(app.getHttpServer())
+        .get('/referentiel/points-mesure')
+        .query({ ouvrageType: 'steu', ouvrageCode: 'STEU001' })
+        .expect(401);
     });
   });
 
@@ -423,6 +431,100 @@ describe('ControleController (e2e) - UseOrGuards', () => {
         .get(`/depot/${DEPOT_ID}/masa`)
         .set('Cookie', ['access_token=token-user-1'])
         .expect(403);
+    });
+  });
+});
+
+describe('ReferentielController (e2e) - points-mesure', () => {
+  let app: INestApplication<App>;
+  let authService: Authentication;
+  let masaProvider: MasaProvider;
+
+  const STEU_CODE = 'STEU001';
+
+  beforeAll(async () => {
+    await startPostgresContainer();
+    const connectionUri = getPostgresConnectionUri();
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [...initTestContainerImports(connectionUri), ApiModule, ThrottlerConfigModule],
+    })
+      .overrideModule(InfraModule)
+      .useModule(InfraMockModule)
+      .overrideProvider(PGBOSS)
+      .useValue(null)
+      .overrideProvider(LoggerService)
+      .useValue(loggerValueMock)
+      .compile();
+
+    app = moduleFixture.createNestApplication({ logger: false });
+    app.use(cookieParser());
+    await app.init();
+
+    authService = app.get<Authentication>(Authentication);
+    masaProvider = app.get<MasaProvider>(MasaProvider);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('/referentiel/points-mesure (GET) - Should return 200 with points for an authorized steu', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
+    jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
+      itvCdn: 100,
+      itvRfa: 'SIRET001',
+    });
+    jest
+      .spyOn(masaProvider, 'findVSteuSclItvByItvRfa')
+      .mockResolvedValue([
+        { steuCda: STEU_CODE, sclCda: null as unknown as string, moItvRfa: null, satItvRfa: null, aeItvRfa: null },
+      ]);
+    jest.spyOn(masaProvider, 'findPointsMesureReferentiel').mockResolvedValue([
+      {
+        ouvrageSandreCda: STEU_CODE,
+        ouvrageNom: 'Station test',
+        identifiantAgence: 'AG001',
+        numeroPoint: 'P1',
+        nomPoint: 'Point entrée',
+        localisationCode: 'ENT',
+        localisationGlobale: 'Entrée',
+        categorie: 'REG',
+        dateDebut: '2020-01-01',
+        dateFin: null,
+      },
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .get('/referentiel/points-mesure')
+      .query({ ouvrageType: 'steu', ouvrageCode: STEU_CODE })
+      .set('Cookie', ['access_token=token-user-1'])
+      .expect(200);
+
+    expect(response.body).toEqual({
+      points: [
+        {
+          ouvrageSandreCda: STEU_CODE,
+          ouvrageNom: 'Station test',
+          identifiantAgence: 'AG001',
+          numeroPoint: 'P1',
+          nomPoint: 'Point entrée',
+          localisationCode: 'ENT',
+          localisationGlobale: 'Entrée',
+          categorie: 'REG',
+          dateDebut: '2020-01-01',
+          dateFin: null,
+        },
+      ],
     });
   });
 });

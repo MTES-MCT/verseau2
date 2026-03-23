@@ -273,7 +273,7 @@ describe('MesuresService', () => {
   describe('listStatuts', () => {
     it('delegates to masaProvider.findStatuts', async () => {
       const items = [makeNomenclatureItem('A', 'Donnée brute'), makeNomenclatureItem('B', 'Pré-qualification')];
-      masaProvider.findStatuts!.mockResolvedValue(items);
+      masaProvider.findStatuts.mockResolvedValue(items);
 
       const result = await service.listStatuts();
 
@@ -285,7 +285,7 @@ describe('MesuresService', () => {
   describe('listQualifications', () => {
     it('delegates to masaProvider.findQualifications', async () => {
       const items = [makeNomenclatureItem('1', 'Correcte'), makeNomenclatureItem('2', 'Incorrecte')];
-      masaProvider.findQualifications!.mockResolvedValue(items);
+      masaProvider.findQualifications.mockResolvedValue(items);
 
       const result = await service.listQualifications();
 

@@ -20,6 +20,7 @@ import {
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
+  PointMesureReferentielRow,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -27,6 +28,7 @@ import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/ori
 /**
  * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
  * Ce provider ne doit contenir aucune logique métier, mapping de données ou autre.
+ * Il représente le contrat de la future API MASA.
  */
 @Injectable()
 export class MasaProvider {
@@ -273,5 +275,18 @@ export class MasaProvider {
 
   async findQualifications(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findQualifications();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Référentiel — Points de mesure du référentiel pour un ouvrage donné
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findPointsMesureReferentiel(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
+  ): Promise<PointMesureReferentielRow[]> {
+    return this.roseauGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
   }
 }

@@ -96,6 +96,17 @@ export function AppHeader() {
               },
             ],
           },
+          {
+            text: 'Référentiel descriptif des ouvrages',
+            isActive: isNavItemActive(AppRoutes.REFERENTIEL),
+            menuLinks: [
+              {
+                text: 'Points de mesure',
+                linkProps: { href: AppRoutes.REFERENTIEL_POINTS_DE_MESURE },
+                isActive: isNavItemActive(AppRoutes.REFERENTIEL_POINTS_DE_MESURE),
+              },
+            ],
+          },
           ...(import.meta.env.DEV
             ? [
                 {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoseauGateway } from './roseau/roseau.gateway';
 import { AgaEntity } from './roseau/entities/aga.entity';
@@ -33,9 +33,12 @@ import { ParametreGateway } from './parametre/parametre.gateway';
 import { PleEntity } from './roseau/entities/ple.entity';
 import { AlrEntity } from './roseau/entities/alr.entity';
 import { PabEntity } from './roseau/entities/pab.entity';
+import { OrmEntity } from './roseau/entities/orm.entity';
+import { MasaModule } from '@masa/masa.module';
 
 @Module({
   imports: [
+    forwardRef(() => MasaModule),
     TypeOrmModule.forFeature([
       AgaEntity,
       SclEntity,
@@ -64,6 +67,7 @@ import { PabEntity } from './roseau/entities/pab.entity';
       PleEntity,
       AlrEntity,
       PabEntity,
+      OrmEntity,
     ]),
   ],
   controllers: [ReferentielController],
