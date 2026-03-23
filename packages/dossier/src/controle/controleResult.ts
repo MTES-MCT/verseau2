@@ -74,6 +74,12 @@ export enum ControleName {
   CTL052 = 'CTL052',
   CTL053 = 'CTL053',
   CTL054 = 'CTL054',
+  CTL055 = 'CTL055',
+  CTL056 = 'CTL056',
+  CTL057 = 'CTL057',
+  CTL058 = 'CTL058',
+  CTL059 = 'CTL059',
+  CTL060 = 'CTL060',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -125,5 +131,12 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL053]: 'Vérification du débit entrant A3/A4/A7 vs 2 x max(PC95, Dref)',
   [ControleName.CTL054]:
     "Vérification d'un dépassement de plus de 20% de la charge entrante entre l'année N et l'année N-1",
+  [ControleName.CTL055]: 'Vérification que la production de boue est non nulle et renseignée',
+  [ControleName.CTL056]: 'Contrôle métier sur la température en sortie de station (point A4)',
+  [ControleName.CTL057]: 'Contrôle sur la pluviométrie journalière au niveau du système de collecte (A1, R1)',
+  [ControleName.CTL058]: 'Contrôle sur les volumes négatifs (Vol.Moy.J, Volume, Masse) sur tous les points de mesure',
+  [ControleName.CTL059]: 'Contrôle sur les concentrations négatives ou nulles sur tous les points de mesure',
+  [ControleName.CTL060]:
+    'Contrôle sur la charge de pollution à traiter vs capacité nominale de la station (≥ 2 000 EH)',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };
