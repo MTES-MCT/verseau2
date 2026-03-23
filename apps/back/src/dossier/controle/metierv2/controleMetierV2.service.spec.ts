@@ -37,6 +37,7 @@ describe('ControleMetierV2Service', () => {
         {
           provide: MasaProvider,
           useValue: {
+            findCapaciteNominaleBatch: jest.fn(),
             findChargeEntranteMaxComparison: jest.fn(),
             findConcentrationsMoyennesBatch: jest.fn(),
             findMaxDebitsReferenceBatch: jest.fn(),
@@ -121,6 +122,7 @@ describe('ControleMetierV2Service', () => {
     } as unknown as FctAssainissement;
 
     beforeEach(() => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
       masaProvider.findConcentrationsMoyennesBatch.mockResolvedValue([]);
       masaProvider.findMaxDebitsReferenceBatch.mockResolvedValue([]);
       masaProvider.findProductionBoueZeroBatch.mockResolvedValue([]);
@@ -2227,7 +2229,7 @@ describe('ControleMetierV2Service', () => {
 
   describe('verifyChargePollutionVsCapaciteNominale (CTL060)', () => {
     it('should return AVERTISSEMENT when charge > 1.5 * capacite nominale', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(5000);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 5000 }]);
 
       // Volume = 1000 m³/j, DBO5 = 600 mg/L => charge = (1000*600)/60 = 10000 EH > 7500 (1.5*5000)
       const xmlObj: FctAssainissement = {
@@ -2264,7 +2266,7 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should return no error when charge <= 1.5 * capacite nominale', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(10000);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 10000 }]);
 
       // Volume = 500 m³/j, DBO5 = 300 mg/L => charge = (500*300)/60 = 2500 EH <= 15000 (1.5*10000)
       const xmlObj: FctAssainissement = {
@@ -2297,7 +2299,7 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should skip when capacite nominale < 2000 EH', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(1999);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 1999 }]);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },
@@ -2329,7 +2331,7 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should apply when capacite nominale = 2000 EH', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(2000);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 2000 }]);
 
       // Volume = 500 m³/j, DBO5 = 500 mg/L => charge = (500*500)/60 = 4166.67 EH > 3000 (1.5*2000)
       const xmlObj: FctAssainissement = {
@@ -2363,8 +2365,8 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors[0].code).toBe(ErrorCode.E2_060);
     });
 
-    it('should skip when capacite nominale is null', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(null);
+    it('should skip when capacite nominale is not found', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },
@@ -2396,7 +2398,7 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should only check A3 points', async () => {
-      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(5000);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 5000 }]);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },

@@ -4,6 +4,7 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import {
   CmaBySandreCdaAndParam,
+  CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
@@ -29,6 +30,7 @@ export interface RoseauGateway {
   checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>>;
   findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null>;
   findCapaciteNominaleBySteuSandreAndYear(steuSandreCda: string, year: number): Promise<number | null>;
+  findCapaciteNominaleBatch(steuSandreCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]>;
   findConcentrationsMoyennesAnnuellesBatch(
     steuSandreCdas: string[],
     year: number,

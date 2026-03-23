@@ -9,7 +9,12 @@ import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import { CmaBySandreCdaAndParam, MaxDebitBySandreCda, ProductionBoueZero } from '@masa/masa.dto';
+import {
+  CapaciteNominaleBySandreCda,
+  CmaBySandreCdaAndParam,
+  MaxDebitBySandreCda,
+  ProductionBoueZero,
+} from '@masa/masa.dto';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -66,6 +71,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
       this.verifyChargeEntranteVsTranche(xmlObj),
+      // TODO: réactiver le contrôle verifyProductionBoue quand les tables file et filiere seront disponible
       Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
       Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
@@ -104,7 +110,7 @@ export class ControleMetierV2Service {
         ])
       : Promise.resolve([] as CmaBySandreCdaAndParam[]);
 
-    // TODO : remove comments when file and filere table are available
+    // // TODO : remove comments when file and filere table are available
     const productionsBoueZeroPromise = !isNaN(currentYear)
       ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
       : Promise.resolve([] as ProductionBoueZero[]);
@@ -1018,6 +1024,12 @@ export class ControleMetierV2Service {
       return { name: ControleName.CTL060, errors };
     }
 
+    const allSteuCdas = fctAssainissement.ouvrages
+      .map((o) => o.cdOuvrageDepollution)
+      .filter((cda): cda is string => !!cda);
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(allSteuCdas, year);
+
     const volumeCode = String(CodeParametre.Volume);
     const dbo5Code = String(CodeParametre.DBO5);
 
@@ -1025,9 +1037,9 @@ export class ControleMetierV2Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const capaciteEH = await this.roseauGateway.findCapaciteNominaleBySteuSandreAndYear(cdOuvrageDepollution, year);
+      const capaciteEH = findCapaciteNominale(capacitesNominales, cdOuvrageDepollution);
 
-      if (capaciteEH === null || capaciteEH < 2000) {
+      if (capaciteEH === undefined || capaciteEH < 2000) {
         continue;
       }
 
@@ -1074,4 +1086,11 @@ function findCmaValue(cmas: CmaBySandreCdaAndParam[], sandreCda: string, paramCo
 
 function findMaxDebit(maxDebits: MaxDebitBySandreCda[], sandreCda: string): number | undefined {
   return maxDebits.find((d) => d.sandreCda === sandreCda)?.maxDebit;
+}
+
+function findCapaciteNominale(
+  capacitesNominales: CapaciteNominaleBySandreCda[],
+  sandreCda: string,
+): number | undefined {
+  return capacitesNominales.find((c) => c.sandreCda === sandreCda)?.capaciteNominale;
 }

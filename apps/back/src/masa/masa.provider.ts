@@ -5,6 +5,7 @@ import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
   CmaBySandreCdaAndParam,
+  CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
@@ -95,6 +96,15 @@ export class MasaProvider {
   // async findPmoWithValidityBatch(
   //   queries: { cdSteu: string; numPmo: string; locPoint: string; dateDebut: string; dateFin: string }[],
   // ): Promise<Set<string>> { ... }
+
+  // ---------------------------------------------------------------------------
+  // CTL051 / CTL060 — Capacité nominale en EH par STEU et année
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findCapaciteNominaleBatch(steuCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]> {
+    return this.roseauGateway.findCapaciteNominaleBatch(steuCdas, year);
+  }
 
   // ---------------------------------------------------------------------------
   // CTL052 — Concentrations moyennes annuelles N-1 par STEU et paramètre

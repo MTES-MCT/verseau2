@@ -20,6 +20,7 @@ import { PabEntity } from './entities/pab.entity';
 import { OrmEntity } from './entities/orm.entity';
 import {
   CmaBySandreCdaAndParam,
+  CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
@@ -163,6 +164,28 @@ export class RoseauRepository implements RoseauGateway {
       .andWhere('cpy.cpy_an = :year', { year })
       .getRawOne<{ capacite_nominale: number | null }>();
     return result?.capacite_nominale ?? null;
+  }
+
+  async findCapaciteNominaleBatch(steuSandreCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]> {
+    if (steuSandreCdas.length === 0) {
+      return [];
+    }
+
+    const rows = await this.cpyRepository
+      .createQueryBuilder('cpy')
+      .select('steu.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('cpy.cpy_eh_trait_nom_cap_mt', 'capacite_nominale')
+      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = cpy.steu_cdn')
+      .where('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
+      .andWhere('cpy.cpy_an = :year', { year })
+      .getRawMany<{ steu_sandre_cda: string; capacite_nominale: number | null }>();
+
+    return rows
+      .filter((row) => row.capacite_nominale !== null)
+      .map((row) => ({
+        sandreCda: row.steu_sandre_cda.trim(),
+        capaciteNominale: row.capacite_nominale!,
+      }));
   }
 
   async findConcentrationsMoyennesAnnuellesBatch(

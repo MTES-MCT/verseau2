@@ -7,6 +7,12 @@ export interface CmaBySandreCdaAndParam {
   value: number;
 }
 
+/** CTL051 / CTL060 — Capacité nominale en EH pour un STEU donné et une année */
+export interface CapaciteNominaleBySandreCda {
+  sandreCda: string;
+  capaciteNominale: number;
+}
+
 /** CTL053 — Débit max de référence (max(PC95, Dref)) pour un STEU donné */
 export interface MaxDebitBySandreCda {
   sandreCda: string;
