@@ -49,20 +49,14 @@ export class RoseauRepository implements RoseauGateway {
     private readonly pmoRepository: Repository<PmoEntity>,
     @InjectRepository(TlrefEntity)
     private readonly tlrefRepository: Repository<TlrefEntity>,
-    @InjectRepository(CxntechEntity)
-    private readonly cxntechRepository: Repository<CxntechEntity>,
     @InjectRepository(CpyEntity)
     private readonly cpyRepository: Repository<CpyEntity>,
     @InjectRepository(ResaEntity)
     private readonly resaRepository: Repository<ResaEntity>,
     @InjectRepository(StchanEntity)
     private readonly stchanRepository: Repository<StchanEntity>,
-    @InjectRepository(PleEntity)
-    private readonly pleRepository: Repository<PleEntity>,
     @InjectRepository(AlrEntity)
     private readonly alrRepository: Repository<AlrEntity>,
-    @InjectRepository(OrmEntity)
-    private readonly ormRepository: Repository<OrmEntity>,
   ) {}
 
   async findSteu(): Promise<SteuEntity[]> {

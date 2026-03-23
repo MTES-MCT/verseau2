@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { fr } from '@codegouvfr/react-dsfr';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Button } from '@codegouvfr/react-dsfr/Button';
@@ -6,12 +6,15 @@ import { Checkbox } from '@codegouvfr/react-dsfr/Checkbox';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { createModal } from '@codegouvfr/react-dsfr/Modal';
 import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
 import type { PointMesureReferentiel } from '@lib/dossier';
 import { useReferentielFilters } from '../hooks/useReferentielFilters';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
+
+const clipboardFallbackModal = createModal({ id: 'clipboard-fallback-modal', isOpenedByDefault: false });
 
 function buildSignalerText(point: PointMesureReferentiel): string {
   return [
@@ -32,15 +35,38 @@ function buildSignalerText(point: PointMesureReferentiel): string {
   ].join('\n');
 }
 
-function SignalerButton({ point, onClick }: { point: PointMesureReferentiel; onClick: () => void }) {
+function SignalerButton({
+  point,
+  onClick,
+  onFallback,
+}: {
+  point: PointMesureReferentiel;
+  onClick: (success: boolean) => void;
+  onFallback: (text: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleClick = useCallback(() => {
-    void navigator.clipboard.writeText(buildSignalerText(point));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    onClick();
-  }, [point, onClick]);
+    const text = buildSignalerText(point);
+
+    if (!navigator.clipboard?.writeText) {
+      onFallback(text);
+      onClick(false);
+      return;
+    }
+
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        onClick(true);
+      },
+      () => {
+        onFallback(text);
+        onClick(false);
+      },
+    );
+  }, [point, onClick, onFallback]);
 
   return (
     <Button
@@ -73,6 +99,12 @@ export function ReferentielPointsMesurePage() {
     error,
   } = useReferentielFilters();
   const [isCopiedNoticeVisible, setIsCopiedNoticeVisible] = useState(false);
+  const [fallbackText, setFallbackText] = useState('');
+  useEffect(() => {
+    if (fallbackText) {
+      clipboardFallbackModal.open();
+    }
+  }, [fallbackText]);
 
   const isScl = form.ouvrageType === 'scl';
 
@@ -114,7 +146,8 @@ export function ReferentielPointsMesurePage() {
     <SignalerButton
       key={`signaler-${point.ouvrageSandreCda}-${point.numeroPoint}`}
       point={point}
-      onClick={() => setIsCopiedNoticeVisible(true)}
+      onClick={(success) => setIsCopiedNoticeVisible(success)}
+      onFallback={setFallbackText}
     />,
   ]);
 
@@ -137,6 +170,23 @@ export function ReferentielPointsMesurePage() {
           onClose={() => setIsCopiedNoticeVisible(false)}
         />
       )}
+
+      <clipboardFallbackModal.Component
+        title="Presse-papiers indisponible"
+        size="large"
+        buttons={[{ children: 'Fermer' }]}
+      >
+        <p>
+          Le presse-papiers n&apos;est pas disponible dans ce contexte. Copiez le texte ci-dessous manuellement&nbsp;:
+        </p>
+        <textarea
+          readOnly
+          rows={12}
+          style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
+          value={fallbackText}
+          onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+        />
+      </clipboardFallbackModal.Component>
 
       <h1>Points de mesure</h1>
 
