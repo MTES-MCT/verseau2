@@ -6,7 +6,8 @@ class PgService {
   }
 
   /**
-   * Restaure le dump et renomme les schémas avec le suffixe de couleur
+   * Restaure le dump et renomme les schémas avec le suffixe de couleur.
+   *
    * @param {string} filePath - Chemin vers le fichier dump
    * @param {string} targetColor - 'blue' ou 'green'
    */
@@ -27,22 +28,22 @@ class PgService {
     console.log(`Target color: ${targetColor}`);
 
     // Étape 1 : Supprimer les schémas standards s'ils existent (pour que pg_restore puisse les créer)
-    console.log(`Dropping standard schemas if they exist...`);
+    console.log(`\n=== Dropping standard schemas ===`);
     await this._dropStandardSchemas(connectionString);
 
-    // Étape 2 : Restaurer le dump normalement (crée custom_ingestion_roseau et custom_ingestion_lanceleau)
-    console.log(`Restoring dump...`);
+    // Étape 2 : Restaurer le dump
+    console.log(`\n=== Restoring dump ===`);
     await this._restoreDump(filePath, connectionString);
 
     // Étape 3 : Mettre à jour les statistiques pour l'optimiseur de requêtes
-    console.log(`Running ANALYZE on restored schemas...`);
+    console.log(`\n=== Running ANALYZE on restored schemas ===`);
     await this._analyzeSchemas(connectionString);
 
     // Étape 4 : Renommer les schémas avec le suffixe de couleur
-    console.log(`Renaming schemas to ${targetColor}...`);
+    console.log(`\n=== Renaming schemas to ${targetColor} ===`);
     await this._renameSchemasToColor(targetColor, connectionString);
 
-    console.log('Database restore completed successfully.');
+    console.log('\nDatabase restore completed successfully.');
   }
 
   async verifyDumpContents(filePath) {
@@ -169,10 +170,27 @@ class PgService {
   async _analyzeSchemas(connectionString) {
     const env = { ...process.env };
 
+    // ANALYZE does not accept a schema name directly — we must discover
+    // all tables in each schema and analyze them individually.
     const sql = `
-      ANALYZE custom_ingestion_roseau;
-      ANALYZE custom_ingestion_lanceleau;
-      ANALYZE custom_ingestion_verseau;
+      DO $$
+      DECLARE
+        r RECORD;
+      BEGIN
+        FOR r IN
+          SELECT schemaname, tablename
+          FROM pg_tables
+          WHERE schemaname IN (
+            'custom_ingestion_roseau',
+            'custom_ingestion_lanceleau',
+            'custom_ingestion_verseau'
+          )
+        LOOP
+          RAISE NOTICE 'ANALYZE %.%', r.schemaname, r.tablename;
+          EXECUTE format('ANALYZE %I.%I', r.schemaname, r.tablename);
+        END LOOP;
+      END
+      $$;
     `;
 
     return new Promise((resolve, reject) => {
