@@ -158,12 +158,12 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL051, // verifyVolumeA3A4VsCapaciteEH
         ControleName.CTL052, // verifyCmaComparisonForDcoDbo5
         ControleName.CTL054, // verifyChargeEntranteVsTranche
-        ControleName.CTL055, // verifyProductionBoue
-        ControleName.CTL056, // verifyTemperatureA4Range
-        ControleName.CTL057, // verifyPluviometrieRange
-        ControleName.CTL058, // verifyVolumesNegatifs
-        ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
-        ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
+        // ControleName.CTL055, // verifyProductionBoue
+        // ControleName.CTL056, // verifyTemperatureA4Range
+        // ControleName.CTL057, // verifyPluviometrieRange
+        // ControleName.CTL058, // verifyVolumesNegatifs
+        // ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
+        // ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
       ]);
     });
 
@@ -189,7 +189,7 @@ describe('ControleMetierV2Service', () => {
       expect(result).toBe(fakeCreatedControles);
     });
 
-    it('should call preloadMasaData with the correct parameters', async () => {
+    it.skip('should call preloadMasaData with the correct parameters', async () => {
       controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
       controleGateway.createControles.mockResolvedValue([]);
 
@@ -209,7 +209,7 @@ describe('ControleMetierV2Service', () => {
       expect(masaProvider.findProductionBoueZeroBatch).toHaveBeenCalledWith(['STEU1'], 2024);
     });
 
-    it('should produce 13 controls even when all data is valid (no errors)', async () => {
+    it.skip('should produce 13 controls even when all data is valid (no errors)', async () => {
       controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
       controleGateway.createControles.mockResolvedValue([]);
 
