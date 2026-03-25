@@ -4,8 +4,10 @@ import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import {
   CmaBySandreCdaAndParam,
+  CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
+  ProductionBoueZero,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -28,6 +30,7 @@ export interface RoseauGateway {
   checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>>;
   findTlrefByRfaAndCda(trlRfa: string, tlrefEltCda: string): Promise<TlrefEntity | null>;
   findCapaciteNominaleBySteuSandreAndYear(steuSandreCda: string, year: number): Promise<number | null>;
+  findCapaciteNominaleBatch(steuSandreCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]>;
   findConcentrationsMoyennesAnnuellesBatch(
     steuSandreCdas: string[],
     year: number,
@@ -35,6 +38,7 @@ export interface RoseauGateway {
   ): Promise<CmaBySandreCdaAndParam[]>;
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
+  findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;

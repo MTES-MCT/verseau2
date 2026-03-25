@@ -16,11 +16,14 @@ import { TltoblEntity } from './entities/tltobl.entity';
 import { AgacEntity } from './entities/agac.entity';
 import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
+import { PabEntity } from './entities/pab.entity';
 import { OrmEntity } from './entities/orm.entity';
 import {
   CmaBySandreCdaAndParam,
+  CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
+  ProductionBoueZero,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -57,6 +60,8 @@ export class RoseauRepository implements RoseauGateway {
     private readonly stchanRepository: Repository<StchanEntity>,
     @InjectRepository(AlrEntity)
     private readonly alrRepository: Repository<AlrEntity>,
+    @InjectRepository(PabEntity)
+    private readonly pabRepository: Repository<PabEntity>,
   ) {}
 
   async findSteu(): Promise<SteuEntity[]> {
@@ -161,6 +166,28 @@ export class RoseauRepository implements RoseauGateway {
     return result?.capacite_nominale ?? null;
   }
 
+  async findCapaciteNominaleBatch(steuSandreCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]> {
+    if (steuSandreCdas.length === 0) {
+      return [];
+    }
+
+    const rows = await this.cpyRepository
+      .createQueryBuilder('cpy')
+      .select('steu.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('cpy.cpy_eh_trait_nom_cap_mt', 'capacite_nominale')
+      .innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = cpy.steu_cdn')
+      .where('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
+      .andWhere('cpy.cpy_an = :year', { year })
+      .getRawMany<{ steu_sandre_cda: string; capacite_nominale: number | null }>();
+
+    return rows
+      .filter((row) => row.capacite_nominale !== null)
+      .map((row) => ({
+        sandreCda: row.steu_sandre_cda.trim(),
+        capaciteNominale: row.capacite_nominale!,
+      }));
+  }
+
   async findConcentrationsMoyennesAnnuellesBatch(
     steuSandreCdas: string[],
     year: number,
@@ -256,6 +283,39 @@ export class RoseauRepository implements RoseauGateway {
       chargeMaxNMoins1: parseFloat(r.charge_max_n1.toString()),
       trancheLabel: r.tranche_label.trim(),
       annee: parseInt(r.annee.toString(), 10),
+    }));
+  }
+
+  async findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]> {
+    if (steuSandreCdas.length === 0) {
+      return [];
+    }
+
+    const rows = await this.pabRepository
+      .createQueryBuilder('pab')
+      .select('s.steu_sandre_cda', 'steu_sandre_cda')
+      .addSelect('pab.pab_an', 'pab_an')
+      .addSelect('pab.pab_an_reac_hors_prod_r_val', 'production_boue')
+      .innerJoin(SteuEntity, 's', 's.steu_cdn = pab.steu_cdn')
+      .where('s.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas })
+      .andWhere('pab.pab_an = :year', { year })
+      .andWhere('pab.pab_an_reac_hors_prod_r_val = 0')
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1
+          FROM roseau.file f
+          JOIN roseau.tlref t28 ON t28.tlref_cdn = f.tlref_28_cdn AND t28.tlref_elt_cda = '2'
+          JOIN roseau.filiere fil ON fil.file_cdn = f.file_cdn
+          JOIN roseau.tlref t29 ON t29.tlref_cdn = fil.tlref_29_cdn AND t29.tlref_elt_cda IN ('A5','A4','A6','BB','B1','D5','D6')
+          WHERE f.steu_cdn = s.steu_cdn
+        )`,
+      )
+      .getRawMany<{ steu_sandre_cda: string; pab_an: number; production_boue: number }>();
+
+    return rows.map((r) => ({
+      sandreCda: r.steu_sandre_cda.trim(),
+      annee: parseInt(r.pab_an.toString(), 10),
+      productionBoue: parseFloat(r.production_boue.toString()),
     }));
   }
 

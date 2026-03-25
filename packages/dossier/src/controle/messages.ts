@@ -152,6 +152,18 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage53(params);
     case ErrorCode.E2_054:
       return buildErrorMessage54(params);
+    case ErrorCode.E2_055:
+      return buildErrorMessage55(params);
+    case ErrorCode.E2_056:
+      return buildErrorMessage56(params);
+    case ErrorCode.E2_057:
+      return buildErrorMessage57(params);
+    case ErrorCode.E2_058:
+      return buildErrorMessage58(params);
+    case ErrorCode.E2_059:
+      return buildErrorMessage59(params);
+    case ErrorCode.E2_060:
+      return buildErrorMessage60(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -287,4 +299,34 @@ const buildErrorMessage54 = (params: string[]) => {
   const [cdOuvrage, chargeMaxN, chargeMaxNMoins1, trancheLabel, variationPct] =
     params as ErrorParamsMap[ErrorCode.E2_054];
   return `La charge entrante retenue de ${chargeMaxN} EH pour l'ouvrage ${cdOuvrage} (tranche "${trancheLabel}") présente une variation de ${variationPct}% par rapport à l'année N-1 (${chargeMaxNMoins1} EH), dépassant le seuil de 20%.`;
+};
+
+const buildErrorMessage55 = (params: string[]) => {
+  const [cdOuvrage, annee, productionBoue] = params as ErrorParamsMap[ErrorCode.E2_055];
+  return `La production de boue pour l'ouvrage ${cdOuvrage} en ${annee} est égale à ${productionBoue}. Veuillez vérifier cette valeur.`;
+};
+
+const buildErrorMessage56 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , val] = params as ErrorParamsMap[ErrorCode.E2_056];
+  return `La température (${val} °C) est en dehors de la plage de valeurs attendues (> 0 °C et ≤ 35 °C) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+};
+
+const buildErrorMessage57 = (params: string[]) => {
+  const [cdSystemeCollecte, locGlobale, date, , val] = params as ErrorParamsMap[ErrorCode.E2_057];
+  return `La pluviométrie journalière (${val} mm) est en dehors de la plage de valeurs attendues pour le système de collecte ${cdSystemeCollecte}, point de mesure ${locGlobale}, à la date du ${date}.`;
+};
+
+const buildErrorMessage58 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , parametre, val] = params as ErrorParamsMap[ErrorCode.E2_058];
+  return `Le volume/masse ${parametre} (${val}) est négatif pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+};
+
+const buildErrorMessage59 = (params: string[]) => {
+  const [cdOuvrage, locGlobale, date, , parametre, val] = params as ErrorParamsMap[ErrorCode.E2_059];
+  return `La concentration en ${parametre} (${val}) est négative ou nulle pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
+};
+
+const buildErrorMessage60 = (params: string[]) => {
+  const [cdOuvrage, chargeEH, capaciteNominale, seuilEH, date] = params as ErrorParamsMap[ErrorCode.E2_060];
+  return `La charge de pollution à traiter (${chargeEH} EH) dépasse 1,5 fois la capacité nominale (${capaciteNominale} EH, seuil = ${seuilEH} EH) pour l'ouvrage ${cdOuvrage}, à la date du ${date}.`;
 };

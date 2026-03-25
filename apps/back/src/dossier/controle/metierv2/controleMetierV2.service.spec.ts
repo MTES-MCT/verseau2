@@ -2,18 +2,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ControleMetierV2Service } from './controleMetierV2.service';
 import { ControleGateway } from '../controle.gateway';
-import { ControleMapper } from '../isov1/controle.mapper';
+import { ControleMapper, ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
 import { FctAssainissement } from '@lib/parser';
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
-import { ControleName, ErrorCode } from '@lib/dossier';
+import { ControleName, ControleType, ErrorCode } from '@lib/dossier';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
-import { CmaBySandreCdaAndParam } from '@masa/masa.dto';
+import { CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
+import { ControleModel, CreateControleModel } from '../controle.model';
 
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
   let roseauGateway: jest.Mocked<RoseauGateway>;
   let masaProvider: jest.Mocked<MasaProvider>;
+  let controleGateway: jest.Mocked<ControleGateway>;
+  let controleMapper: jest.Mocked<ControleMapper>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -21,7 +24,9 @@ describe('ControleMetierV2Service', () => {
         ControleMetierV2Service,
         {
           provide: ControleGateway,
-          useValue: {},
+          useValue: {
+            createControles: jest.fn(),
+          },
         },
         {
           provide: RoseauGateway,
@@ -32,12 +37,18 @@ describe('ControleMetierV2Service', () => {
         {
           provide: MasaProvider,
           useValue: {
+            findCapaciteNominaleBatch: jest.fn(),
             findChargeEntranteMaxComparison: jest.fn(),
+            findConcentrationsMoyennesBatch: jest.fn(),
+            findMaxDebitsReferenceBatch: jest.fn(),
+            findProductionBoueZeroBatch: jest.fn(),
           },
         },
         {
           provide: ControleMapper,
-          useValue: {},
+          useValue: {
+            mapControlesIndividuelsToCreateControleModel: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -45,6 +56,176 @@ describe('ControleMetierV2Service', () => {
     service = module.get<ControleMetierV2Service>(ControleMetierV2Service);
     roseauGateway = module.get(RoseauGateway);
     masaProvider = module.get(MasaProvider);
+    controleGateway = module.get(ControleGateway);
+    controleMapper = module.get(ControleMapper);
+  });
+
+  describe('execute', () => {
+    const depotId = 'depot-123';
+
+    const xmlObj: FctAssainissement = {
+      scenario: { dateDebutReference: '2024-01-01' },
+      ouvrages: [
+        {
+          cdOuvrageDepollution: 'STEU1',
+          pointMesure: [
+            {
+              numeroPointMesure: 'PM1',
+              locGlobalePointMesure: 'A3',
+              prelevement: [
+                {
+                  datePrlvt: '2024-01-15',
+                  cdSupport: '3',
+                  analyse: [
+                    { cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '500' },
+                    { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '200' },
+                    { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '100' },
+                  ],
+                },
+              ],
+            },
+            {
+              numeroPointMesure: 'PM2',
+              locGlobalePointMesure: 'A4',
+              prelevement: [
+                {
+                  datePrlvt: '2024-01-15',
+                  cdSupport: '3',
+                  analyse: [
+                    { cdParametre: CodeParametre.pH.toString(), rsAnalyse: '7' },
+                    { cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '20' },
+                    { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '90' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      systemesCollecte: [
+        {
+          cdSystemeCollecte: 'SCL1',
+          pointMesure: [
+            {
+              locGlobalePointMesure: 'A1',
+              prelevement: [
+                {
+                  datePrlvt: '2024-01-15',
+                  cdSupport: '3',
+                  analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '50' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    } as unknown as FctAssainissement;
+
+    beforeEach(() => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      masaProvider.findConcentrationsMoyennesBatch.mockResolvedValue([]);
+      masaProvider.findMaxDebitsReferenceBatch.mockResolvedValue([]);
+      masaProvider.findProductionBoueZeroBatch.mockResolvedValue([]);
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([]);
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(null);
+    });
+
+    it('should run all controls and return the complete list of tousControles names passed to the mapper', async () => {
+      const fakeCreateControles: CreateControleModel[] = [
+        { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
+      ] as CreateControleModel[];
+      const fakeCreatedControles: ControleModel[] = [{ id: 'c1' }] as unknown as ControleModel[];
+
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue(fakeCreateControles);
+      controleGateway.createControles.mockResolvedValue(fakeCreatedControles);
+
+      await service.execute(depotId, xmlObj);
+
+      // Verify the mapper was called with the correct control names (in order)
+      expect(controleMapper.mapControlesIndividuelsToCreateControleModel).toHaveBeenCalledTimes(1);
+
+      const [calledDepotId, calledType, calledControles] =
+        controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
+      expect(calledDepotId).toBe(depotId);
+      expect(calledType).toBe(ControleType.CONTROLE_V2);
+
+      const controleNames = calledControles.map((c) => c.name);
+      expect(controleNames).toEqual([
+        ControleName.CTL041, // verifyDcoRange
+        ControleName.CTL042, // verifyDbo5Range
+        ControleName.CTL047, // verifyDcoGreaterThanDbo5
+        ControleName.CTL046, // verifyPhRange
+        ControleName.CTL051, // verifyVolumeA3A4VsCapaciteEH
+        ControleName.CTL052, // verifyCmaComparisonForDcoDbo5
+        ControleName.CTL054, // verifyChargeEntranteVsTranche
+        ControleName.CTL055, // verifyProductionBoue
+        ControleName.CTL056, // verifyTemperatureA4Range
+        ControleName.CTL057, // verifyPluviometrieRange
+        ControleName.CTL058, // verifyVolumesNegatifs
+        ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
+        ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
+      ]);
+    });
+
+    it('should pass tousControles results to the mapper and return createdControles from the gateway', async () => {
+      const fakeCreateControles: CreateControleModel[] = [
+        { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
+        { depotId, name: ControleName.CTL042, type: ControleType.CONTROLE_V2, success: true },
+      ] as CreateControleModel[];
+      const fakeCreatedControles: ControleModel[] = [
+        { id: 'c1', name: ControleName.CTL041 },
+        { id: 'c2', name: ControleName.CTL042 },
+      ] as unknown as ControleModel[];
+
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue(fakeCreateControles);
+      controleGateway.createControles.mockResolvedValue(fakeCreatedControles);
+
+      const result = await service.execute(depotId, xmlObj);
+
+      // Verify controleGateway.createControles was called with the mapped models
+      expect(controleGateway.createControles).toHaveBeenCalledWith(fakeCreateControles, undefined);
+
+      // Verify execute returns the created controles from the gateway
+      expect(result).toBe(fakeCreatedControles);
+    });
+
+    it('should call preloadMasaData with the correct parameters', async () => {
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
+      controleGateway.createControles.mockResolvedValue([]);
+
+      await service.execute(depotId, xmlObj);
+
+      // findConcentrationsMoyennesBatch called with all STEU codes, previous year, DBO5 + DCO
+      expect(masaProvider.findConcentrationsMoyennesBatch).toHaveBeenCalledWith(
+        ['STEU1'],
+        2023, // previous year
+        [String(CodeParametre.DBO5), String(CodeParametre.DCO)],
+      );
+
+      // findMaxDebitsReferenceBatch called with all STEU codes
+      expect(masaProvider.findMaxDebitsReferenceBatch).toHaveBeenCalledWith(['STEU1']);
+
+      // findProductionBoueZeroBatch called with all STEU codes and current year
+      expect(masaProvider.findProductionBoueZeroBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+    });
+
+    it('should produce 13 controls even when all data is valid (no errors)', async () => {
+      controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
+      controleGateway.createControles.mockResolvedValue([]);
+
+      await service.execute(depotId, xmlObj);
+
+      const [, , calledControles] = controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
+      const typedControles = calledControles;
+
+      expect(typedControles).toHaveLength(13);
+      // Each control should have an errors array (possibly empty)
+      for (const controle of typedControles) {
+        expect(controle).toHaveProperty('name');
+        expect(controle).toHaveProperty('errors');
+        expect(Array.isArray(controle.errors)).toBe(true);
+      }
+    });
   });
 
   describe('verifyDcoGreaterThanDbo5', () => {
@@ -1106,7 +1287,7 @@ describe('ControleMetierV2Service', () => {
       jest.clearAllMocks();
     });
 
-    it('should return an error when DBO5 value exceeds CMA N-1', async () => {
+    it('should return an error when DBO5 value exceeds CMA N-1', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: '2024-01-01',
@@ -1138,14 +1319,14 @@ describe('ControleMetierV2Service', () => {
         { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
       ];
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_052);
     });
 
-    it('should return no error when values are lower than CMA N-1', async () => {
+    it('should return no error when values are lower than CMA N-1', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: '2024-01-01',
@@ -1178,12 +1359,12 @@ describe('ControleMetierV2Service', () => {
         { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
       ];
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should skip comparison when no CMA found', async () => {
+    it('should skip comparison when no CMA found', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: '2024-01-01',
@@ -1209,12 +1390,12 @@ describe('ControleMetierV2Service', () => {
       } as unknown as FctAssainissement;
 
       // Empty array — no CMA found for any STEU
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should return error when dateDebutReference is missing', async () => {
+    it('should return error when dateDebutReference is missing', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
           dateDebutReference: undefined,
@@ -1222,7 +1403,7 @@ describe('ControleMetierV2Service', () => {
         ouvrages: [],
       } as unknown as FctAssainissement;
 
-      const result = await service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
       expect(result.name).toBe(ControleName.CTL052);
       expect(result.errors).toHaveLength(1);
@@ -1336,6 +1517,928 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_054);
       expect(result.errors[0].params).toEqual(['STEU1', '3000', '5000', 'Tranche 2', '40.0']);
+    });
+  });
+
+  describe('verifyProductionBoue', () => {
+    it('should return an error when production boue is zero for a STEU', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const productionsBoueZero: ProductionBoueZero[] = [{ sandreCda: 'STEU1', annee: 2025, productionBoue: 0 }];
+
+      const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
+
+      expect(result.name).toBe(ControleName.CTL055);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_055);
+      expect(result.errors[0].params).toEqual(['STEU1', '2025', '0']);
+    });
+
+    it('should return no error when STEU is not in the zero-production list', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyProductionBoue(xmlObj, []);
+
+      expect(result.name).toBe(ControleName.CTL055);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return errors for multiple STEUs with zero production', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [
+          { cdOuvrageDepollution: 'STEU1' },
+          { cdOuvrageDepollution: 'STEU2' },
+          { cdOuvrageDepollution: 'STEU3' },
+        ],
+      } as unknown as FctAssainissement;
+
+      const productionsBoueZero: ProductionBoueZero[] = [
+        { sandreCda: 'STEU1', annee: 2025, productionBoue: 0 },
+        { sandreCda: 'STEU3', annee: 2025, productionBoue: 0 },
+      ];
+
+      const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
+
+      expect(result.name).toBe(ControleName.CTL055);
+      expect(result.errors).toHaveLength(2);
+      expect(result.errors[0].params).toEqual(['STEU1', '2025', '0']);
+      expect(result.errors[1].params).toEqual(['STEU3', '2025', '0']);
+    });
+
+    it('should skip ouvrages without cdOuvrageDepollution', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2025-01-01' },
+        ouvrages: [{ cdOuvrageDepollution: undefined }, { cdOuvrageDepollution: 'STEU1' }],
+      } as unknown as FctAssainissement;
+
+      const productionsBoueZero: ProductionBoueZero[] = [{ sandreCda: 'STEU1', annee: 2025, productionBoue: 0 }];
+
+      const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params).toEqual(['STEU1', '2025', '0']);
+    });
+  });
+
+  describe('verifyTemperatureA4Range (CTL056)', () => {
+    it('should return an error when temperature <= 0 on point A4', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '0' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyTemperatureA4Range(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL056);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_056);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', '0']);
+    });
+
+    it('should return an error when temperature > 35 on point A4', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-07-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '36' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyTemperatureA4Range(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_056);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-07-15', '3', '36']);
+    });
+
+    it('should return no error when temperature is within range (0 < T <= 35)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '20' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyTemperatureA4Range(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should not check temperature on non-A4 points', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '-5' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyTemperatureA4Range(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return no error when temperature is missing', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyTemperatureA4Range(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return error for negative temperature on A4', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '-3' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyTemperatureA4Range(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_056);
+    });
+  });
+
+  describe('verifyPluviometrieRange (CTL057)', () => {
+    it('should return AVERTISSEMENT when pluviometrie < 0 on SCL point A1', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '-5' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPluviometrieRange(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL057);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_057);
+      expect(result.errors[0].evenementType).toBe('AVERTISSEMENT');
+      expect(result.errors[0].params).toEqual(['SCL1', 'A1', '2024-01-15', '3', '-5']);
+    });
+
+    it('should return AVERTISSEMENT when pluviometrie > 200 but <= 1000 on R1', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'R1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-03-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '300' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPluviometrieRange(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].evenementType).toBe('AVERTISSEMENT');
+    });
+
+    it('should return ERREUR (bloquant) when pluviometrie > 1000', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-03-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '1500' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPluviometrieRange(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_057);
+      expect(result.errors[0].evenementType).toBe('ERREUR');
+    });
+
+    it('should return no error when pluviometrie is within range (0 <= P <= 200)', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '50' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPluviometrieRange(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should not check pluviometrie on non-A1/R1 points', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Pluviometrie.toString(), rsAnalyse: '-10' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyPluviometrieRange(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('verifyVolumesNegatifs (CTL058)', () => {
+    it('should return ERREUR when Vol.Moy.J (1552) is negative on ouvrage', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '-100' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyVolumesNegatifs(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL058);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_058);
+      expect(result.errors[0].evenementType).toBe('ERREUR');
+      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'Vol.Moy.J', '-100']);
+    });
+
+    it('should return ERREUR when Volume (1098) is negative on SCL', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.VolumeRef.toString(), rsAnalyse: '-50' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyVolumesNegatifs(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_058);
+      expect(result.errors[0].params).toEqual(['SCL1', 'A1', '2024-01-15', '3', 'Volume', '-50']);
+    });
+
+    it('should return ERREUR when Masse (1099) is negative', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Masse.toString(), rsAnalyse: '-10' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyVolumesNegatifs(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', 'Masse', '-10']);
+    });
+
+    it('should return no error when all volumes are positive', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '100' },
+                      { cdParametre: CodeParametre.VolumeRef.toString(), rsAnalyse: '200' },
+                      { cdParametre: CodeParametre.Masse.toString(), rsAnalyse: '50' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyVolumesNegatifs(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return no error when volume is zero', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '0' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyVolumesNegatifs(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('verifyConcentrationsNegativesOuNulles (CTL059)', () => {
+    it('should return ERREUR when DBO5 is negative', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '-10' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL059);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_059);
+      expect(result.errors[0].evenementType).toBe('ERREUR');
+      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'DBO5', '-10']);
+    });
+
+    it('should return ERREUR when MS105 is negative', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.MS105.toString(), rsAnalyse: '-10' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL059);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_059);
+      expect(result.errors[0].evenementType).toBe('ERREUR');
+      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'MS105', '-10']);
+    });
+
+    it('should return ERREUR when concentration is zero', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '0' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', 'DCO', '0']);
+    });
+
+    it('should return errors for multiple negative/zero concentrations in same prelevement', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '-5' },
+                      { cdParametre: CodeParametre.MES.toString(), rsAnalyse: '0' },
+                      { cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '500' }, // OK
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
+
+      expect(result.errors).toHaveLength(2);
+      expect(result.errors[0].params[4]).toBe('DBO5');
+      expect(result.errors[1].params[4]).toBe('MES');
+    });
+
+    it('should return no error when all concentrations are positive', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '200' },
+                      { cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '500' },
+                      { cdParametre: CodeParametre.MES.toString(), rsAnalyse: '300' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should also check concentrations on SCL', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'R1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.NTK.toString(), rsAnalyse: '-2' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].params).toEqual(['SCL1', 'R1', '2024-01-15', '3', 'NTK', '-2']);
+    });
+  });
+
+  describe('verifyChargePollutionVsCapaciteNominale (CTL060)', () => {
+    it('should return AVERTISSEMENT when charge > 1.5 * capacite nominale', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 5000 }]);
+
+      // Volume = 1000 m³/j, DBO5 = 600 mg/L => charge = (1000*600)/60 = 10000 EH > 7500 (1.5*5000)
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '1000' },
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '600' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL060);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_060);
+      expect(result.errors[0].evenementType).toBe('AVERTISSEMENT');
+      expect(result.errors[0].params).toEqual(['STEU1', '10000.00', '5000', '7500.00', '2024-01-15']);
+    });
+
+    it('should return no error when charge <= 1.5 * capacite nominale', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 10000 }]);
+
+      // Volume = 500 m³/j, DBO5 = 300 mg/L => charge = (500*300)/60 = 2500 EH <= 15000 (1.5*10000)
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '500' },
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '300' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should skip when capacite nominale < 2000 EH', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 1999 }]);
+
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '10000' },
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '10000' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should apply when capacite nominale = 2000 EH', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 2000 }]);
+
+      // Volume = 500 m³/j, DBO5 = 500 mg/L => charge = (500*500)/60 = 4166.67 EH > 3000 (1.5*2000)
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '500' },
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '500' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL060);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_060);
+    });
+
+    it('should skip when capacite nominale is not found', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '10000' },
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '10000' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should only check A3 points', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 5000 }]);
+
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A4', // Not A3
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '10000' },
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '10000' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should return empty errors when dateDebutReference is missing', async () => {
+      const xmlObj: FctAssainissement = {
+        scenario: { dateDebutReference: undefined },
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1', pointMesure: [] }],
+      } as unknown as FctAssainissement;
+
+      const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL060);
+      expect(result.errors).toHaveLength(0);
     });
   });
 });

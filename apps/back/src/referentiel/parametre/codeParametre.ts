@@ -17,8 +17,22 @@ export enum CodeParametre {
   pH = 1302,
   /** Orthophosphates (PO4) */
   PO4 = 1433,
-  /** Volume (m³) */
+  /** Volume moyen journalier (m³/j) */
   Volume = 1552,
+  /** Température (°C) */
+  Temperature = 1301,
+  /** Pluviométrie journalière (mm) */
+  Pluviometrie = 1553,
+  /** Volume (m³) */
+  VolumeRef = 1098,
+  /** Masse (kg) */
+  Masse = 1099,
+  /** Nitrites (NO2) */
+  NO2 = 1339,
+  /** Nitrates (NO3) */
+  NO3 = 1340,
+  /** Matières Sèches à 105°C (MS105) */
+  MS105 = 1307,
 }
 export enum CodeUniteMesure {
   //mg(N)/L

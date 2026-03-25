@@ -208,6 +208,33 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
     )
   `);
 
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.pab CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE roseau.pab (
+      pab_cdn INTEGER PRIMARY KEY,
+      steu_cdn INTEGER,
+      pab_an NUMERIC,
+      pab_an_reac_hors_prod_r_val NUMERIC
+    )
+  `);
+
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.filiere CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS roseau.file CASCADE`);
+  await dataSource.query(`
+    CREATE TABLE roseau.file (
+      file_cdn INTEGER PRIMARY KEY,
+      steu_cdn INTEGER,
+      tlref_28_cdn INTEGER
+    )
+  `);
+  await dataSource.query(`
+    CREATE TABLE roseau.filiere (
+      filiere_cdn INTEGER PRIMARY KEY,
+      file_cdn INTEGER,
+      tlref_29_cdn INTEGER
+    )
+  `);
+
   await dataSource.query(`DROP TABLE IF EXISTS roseau.alr CASCADE`);
   await dataSource.query(`DROP TABLE IF EXISTS roseau.ple CASCADE`);
   await dataSource.query(`DROP TABLE IF EXISTS roseau.orm CASCADE`);
@@ -361,6 +388,9 @@ export async function createReferentielDataset(dataSource: DataSource): Promise<
 }
 
 export async function clearReferentielData(dataSource: DataSource): Promise<void> {
+  await dataSource.query(`DELETE FROM roseau.filiere`);
+  await dataSource.query(`DELETE FROM roseau.file`);
+  await dataSource.query(`DELETE FROM roseau.pab`);
   await dataSource.query(`DELETE FROM roseau.alr`);
   await dataSource.query(`DELETE FROM roseau.ple`);
   await dataSource.query(`DELETE FROM roseau.orm`);

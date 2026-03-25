@@ -5,8 +5,10 @@ import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
   CmaBySandreCdaAndParam,
+  CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
+  ProductionBoueZero,
   SteuCdnBySandreCda,
   ItvCdnByRfa,
   AgByEmail,
@@ -96,6 +98,15 @@ export class MasaProvider {
   // ): Promise<Set<string>> { ... }
 
   // ---------------------------------------------------------------------------
+  // CTL051 / CTL060 — Capacité nominale en EH par STEU et année
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findCapaciteNominaleBatch(steuCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]> {
+    return this.roseauGateway.findCapaciteNominaleBatch(steuCdas, year);
+  }
+
+  // ---------------------------------------------------------------------------
   // CTL052 — Concentrations moyennes annuelles N-1 par STEU et paramètre
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
@@ -127,6 +138,15 @@ export class MasaProvider {
     year: number,
   ): Promise<ChargeEntranteMaxComparison[]> {
     return this.roseauGateway.findChargeEntranteMaxComparisonBatch(steuSandreCdas, year);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CTL055 — Production de boue nulle ou absente par STEU
+  // TODO: Remplacer par appel batch à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]> {
+    return this.roseauGateway.findProductionBoueZeroBatch(steuSandreCdas, year);
   }
 
   // ---------------------------------------------------------------------------

@@ -11,6 +11,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: verseau2
+    volumes:
+      - verseau2-postgres-data:/var/lib/postgresql
     networks:
       - verseau2-network
   s3mock:
@@ -25,10 +27,10 @@ services:
   mailcatcher:
     image: schickling/mailcatcher
     ports:
-      - "1025:1025"
-      - "1080:1080"
+      - '1025:1025'
+      - '1080:1080'
 
-# Pour tester l'application en local
+  # Pour tester l'application en local
   app:
     build:
       context: ../..
@@ -48,8 +50,7 @@ services:
     networks:
       - verseau2-network
 
-
-# Permet de tester la restauration de la base de données PG en local
+  # Permet de tester la restauration de la base de données PG en local
   sync-pg:
     build: ../tools/sync-pg
     container_name: verseau2-sync-pg
@@ -57,7 +58,10 @@ services:
       - verseau2-network
     volumes:
       - ../tools/sync-pg:/app
-    command: ["npm", "run", "dev"]
+    command: ['npm', 'run', 'dev']
+
+volumes:
+  verseau2-postgres-data:
 
 networks:
   verseau2-network:
