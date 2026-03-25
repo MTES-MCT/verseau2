@@ -72,12 +72,12 @@ export class ControleMetierV2Service {
       // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
       this.verifyChargeEntranteVsTranche(xmlObj),
       // TODO: réactiver le contrôle verifyProductionBoue quand les tables file et filiere seront disponible
-      // Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
-      // Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      // Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
-      // Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
-      // Promise.resolve(this.verifyConcentrationsNegativesOuNulles(xmlObj)),
-      // this.verifyChargePollutionVsCapaciteNominale(xmlObj),
+      Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
+      Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+      Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
+      Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
+      Promise.resolve(this.verifyConcentrationsNegativesOuNulles(xmlObj)),
+      this.verifyChargePollutionVsCapaciteNominale(xmlObj),
     ]);
     // Filtrer les contrôles nuls (certains contrôles ne sont pas applicables et renvoient null), afin qu'ils ne soient pas enregistrés ni affichés en SUCCESS
     // TODO: Les contrôles qui ne sont pas effectués car pas de point de mesure ou de valeur doivent renvoyer null
@@ -111,11 +111,11 @@ export class ControleMetierV2Service {
       : Promise.resolve([] as CmaBySandreCdaAndParam[]);
 
     // // TODO : remove comments when file and filere table are available
-    // const productionsBoueZeroPromise = !isNaN(currentYear)
-    //   ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
-    //   : Promise.resolve([] as ProductionBoueZero[]);
+    const productionsBoueZeroPromise = !isNaN(currentYear)
+      ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
+      : Promise.resolve([] as ProductionBoueZero[]);
 
-    const productionsBoueZeroPromise = Promise.resolve([] as ProductionBoueZero[]);
+    // const productionsBoueZeroPromise = Promise.resolve([] as ProductionBoueZero[]);
 
     const [cmas, maxDebits, productionsBoueZero] = await Promise.all([
       cmasPromise,
