@@ -34,7 +34,11 @@ class PgService {
     console.log(`Restoring dump...`);
     await this._restoreDump(filePath, connectionString);
 
-    // Étape 3 : Renommer les schémas avec le suffixe de couleur
+    // Étape 3 : Mettre à jour les statistiques pour l'optimiseur de requêtes
+    console.log(`Running ANALYZE on restored schemas...`);
+    await this._analyzeSchemas(connectionString);
+
+    // Étape 4 : Renommer les schémas avec le suffixe de couleur
     console.log(`Renaming schemas to ${targetColor}...`);
     await this._renameSchemasToColor(targetColor, connectionString);
 
@@ -159,6 +163,36 @@ class PgService {
       });
 
       restoreProcess.on('error', (err) => reject(err));
+    });
+  }
+
+  async _analyzeSchemas(connectionString) {
+    const env = { ...process.env };
+
+    const sql = `
+      ANALYZE custom_ingestion_roseau;
+      ANALYZE custom_ingestion_lanceleau;
+      ANALYZE custom_ingestion_verseau;
+    `;
+
+    return new Promise((resolve, reject) => {
+      const args = ['-d', connectionString, '-c', sql];
+      const psqlProcess = spawn('psql', args, { env });
+
+      psqlProcess.stderr.on('data', (data) => {
+        console.log(`  ${data}`);
+      });
+
+      psqlProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log(`✅ ANALYZE completed on all schemas.`);
+          resolve();
+        } else {
+          reject(new Error(`ANALYZE failed (exit code ${code})`));
+        }
+      });
+
+      psqlProcess.on('error', (err) => reject(err));
     });
   }
 
