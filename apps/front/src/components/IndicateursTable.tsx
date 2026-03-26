@@ -20,7 +20,7 @@ export function IndicateursTable() {
     'CBPO (EH)',
     'Débit de référence (m³/j)',
     'Capacité nominale (EH)',
-    "Mode d'évaluation tps de pluie",
+    'Date validation critère conf.',
     '% volume déversé tps de pluie',
     '% flux déversé tps de pluie',
     'Nb jours de déversement moyen (5 ans)',
@@ -33,24 +33,34 @@ export function IndicateursTable() {
     <div key="s3" className="fr-skeleton" style={{ width: '60px', height: '1rem' }} />,
     <div key="s4" className="fr-skeleton" style={{ width: '80px', height: '1rem' }} />,
     <div key="s5" className="fr-skeleton" style={{ width: '80px', height: '1rem' }} />,
-    '...',
-    '...',
-    '...',
-    '...',
+    <div key="s6" className="fr-skeleton" style={{ width: '120px', height: '1rem' }} />,
+    <div key="s7" className="fr-skeleton" style={{ width: '150px', height: '1rem' }} />,
+    <div key="s8" className="fr-skeleton" style={{ width: '150px', height: '1rem' }} />,
+    <div key="s9" className="fr-skeleton" style={{ width: '150px', height: '1rem' }} />,
   ]);
 
+  const formatConfNumber = (value: number | null, isEvaluated: boolean, suffix = '') => {
+    if (value !== null && value !== undefined) {
+      return `${value.toLocaleString('fr-FR')}${suffix}`;
+    }
+    return isEvaluated ? '-' : 'Non évalué';
+  };
+
   const tableData = indicateurs
-    ? indicateurs.map((ind) => [
-        ind.nomSteu || ind.codeSandreSteu,
-        ind.pc95Retenu !== null ? `${ind.pc95Retenu.toLocaleString('fr-FR')} m³/j` : '-',
-        ind.tailleAggloEhAnN !== null ? `${ind.tailleAggloEhAnN.toLocaleString('fr-FR')} EH` : '-',
-        ind.debitReference !== null ? `${ind.debitReference.toLocaleString('fr-FR')} m³/j` : '-',
-        ind.capaciteNominaleEhAnN !== null ? `${ind.capaciteNominaleEhAnN.toLocaleString('fr-FR')} EH` : '-',
-        'Non évalué',
-        'Non évalué',
-        'Non évalué',
-        'Non évalué',
-      ])
+    ? indicateurs.map((ind) => {
+        const isEvaluated = ind.dateValidationConformite !== null;
+        return [
+          ind.nomSteu || ind.codeSandreSteu,
+          ind.pc95Retenu !== null ? `${ind.pc95Retenu.toLocaleString('fr-FR')} m³/j` : '-',
+          ind.tailleAggloEhAnN !== null ? `${ind.tailleAggloEhAnN.toLocaleString('fr-FR')} EH` : '-',
+          ind.debitReference !== null ? `${ind.debitReference.toLocaleString('fr-FR')} m³/j` : '-',
+          ind.capaciteNominaleEhAnN !== null ? `${ind.capaciteNominaleEhAnN.toLocaleString('fr-FR')} EH` : '-',
+          ind.dateValidationConformite ?? 'Non évalué',
+          formatConfNumber(ind.volumeDeverse5ansPc, isEvaluated, ' %'),
+          formatConfNumber(ind.fluxDeverse5ansPc, isEvaluated, ' %'),
+          formatConfNumber(ind.joursDeversement5ansMoy, isEvaluated),
+        ];
+      })
     : [];
 
   return (

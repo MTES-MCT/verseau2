@@ -23,6 +23,12 @@ interface IndicateurSteuRecord {
   pc95_retenu: number | null;
   nb_annees_max_pc95: number;
   annee: number;
+  // Conformité SCL (sclconf) — temps de pluie
+  code_sandre_scl: string | null;
+  date_validation_conformite: string | null;
+  volume_deverse_5ans_pc: number | null;
+  flux_deverse_5ans_pc: number | null;
+  jours_deversement_5ans_moy: number | null;
 }
 @Injectable()
 export class IndicateursRepository implements IndicateursGateway {
@@ -35,7 +41,7 @@ export class IndicateursRepository implements IndicateursGateway {
 
     const placeholders = steuCodes.map((_, i) => `$${i + 1}`).join(',');
 
-    const twoYearsAgo = getYearMinus(2);
+    const previousYear = getYearMinus(1);
     const query = `
 SELECT
     TRIM(cdb.cdb_nom_lb)                       AS bassin,
@@ -68,16 +74,21 @@ SELECT
         WHEN stchan.stchan_r_2ans_jr_deb_95_perc_val IS NOT NULL THEN 2
         WHEN stchan.stchan_r_1an_jr_deb_95_perc_val IS NOT NULL THEN 1
         ELSE 0
-    END AS nb_annees_max_pc95
+    END AS nb_annees_max_pc95,
+    RTRIM(scl.scl_sandre_cda)                         AS code_sandre_scl,
+    sclconf.sclconf_eru_eval_tp_val_dt::text          AS date_validation_conformite,
+    sclconf.sclconf_eru_eval_vol_5ans_pc              AS volume_deverse_5ans_pc,
+    sclconf.sclconf_eru_eval_flux_5ans_pc             AS flux_deverse_5ans_pc,
+    sclconf.sclconf_eru_eval_j_dv_5ans_nb             AS jours_deversement_5ans_moy
 FROM roseau.steu steu
 JOIN roseau.tlref t09 ON t09.tlref_cdn = steu.tlref_09_cdn
 JOIN roseau.tlref t10 ON t10.tlref_cdn = steu.tlref_10_cdn
 JOIN roseau.cxntech cxn
     ON cxn.aval_steu_cdn = steu.steu_cdn
-   AND date_part('year', cxn.cxntech_creation_dt) <= ${twoYearsAgo}
-   AND (cxn.cxntech_retrait_dt IS NULL OR date_part('year', cxn.cxntech_retrait_dt) >= ${twoYearsAgo})
+   AND date_part('year', cxn.cxntech_creation_dt) <= ${previousYear}
+   AND (cxn.cxntech_retrait_dt IS NULL OR date_part('year', cxn.cxntech_retrait_dt) >= ${previousYear})
 JOIN roseau.aga aga ON aga.zgc_cdn = cxn.amont_zgc_cdn
-JOIN roseau.agac agac ON agac.aga_cdn = aga.aga_cdn AND agac.agac_conf_an = ${twoYearsAgo}
+JOIN roseau.agac agac ON agac.aga_cdn = aga.aga_cdn AND agac.agac_conf_an = ${previousYear}
 JOIN roseau.agat agat ON agat.aga_cdn = aga.aga_cdn AND agat.agat_taille_an = agac.agac_conf_an
 JOIN roseau.cpy cpy ON cpy.steu_cdn = steu.steu_cdn AND cpy.cpy_an = agac.agac_conf_an
 JOIN roseau.stchan stchan ON stchan.steu_cdn = steu.steu_cdn AND stchan.stchan_an = agac.agac_conf_an
@@ -86,6 +97,8 @@ JOIN lanceleau.reg reg ON reg.reg_rfa = aga.aga_reg_rfa
 JOIN roseau.tlref t64 ON t64.tlref_cdn = aga.tlref_64_cdn
 JOIN roseau.tlref t03 ON t03.tlref_cdn = aga.tlref_03_cdn
 JOIN roseau.tltobl tltobl ON tltobl.tltobl_rfa = aga.tltobl_rfa
+LEFT JOIN roseau.scl scl ON scl.steu_cdn = steu.steu_cdn
+LEFT JOIN roseau.sclconf sclconf ON sclconf.scl_cdn = scl.scl_cdn AND sclconf.sclconf_an = ${previousYear}
 WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders});
     `;
 
@@ -109,7 +122,19 @@ WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders});
       chargeEntranteEhAnN: Number(r.charge_entrante_eh_an_n),
       pc95Retenu: r.pc95_retenu !== null ? Number(r.pc95_retenu) : null,
       nbAnneesMaxPc95: Number(r.nb_annees_max_pc95),
-      annee: twoYearsAgo,
+      annee: previousYear,
+      codeSandreScl: r.code_sandre_scl ?? null,
+      dateValidationConformite: r.date_validation_conformite ?? null,
+      volumeDeverse5ansPc:
+        r.volume_deverse_5ans_pc !== null && r.volume_deverse_5ans_pc !== undefined
+          ? Number(r.volume_deverse_5ans_pc)
+          : null,
+      fluxDeverse5ansPc:
+        r.flux_deverse_5ans_pc !== null && r.flux_deverse_5ans_pc !== undefined ? Number(r.flux_deverse_5ans_pc) : null,
+      joursDeversement5ansMoy:
+        r.jours_deversement_5ans_moy !== null && r.jours_deversement_5ans_moy !== undefined
+          ? Number(r.jours_deversement_5ans_moy)
+          : null,
     }));
   }
 }
