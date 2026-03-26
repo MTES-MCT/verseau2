@@ -1,5 +1,5 @@
 const { Client } = require('pg');
-const { STAGING_SCHEMAS, STAGING_TO_LIVE, LIVE_TO_DUMP, EXCLUDED_TABLES } = require('./schemas');
+const { DUMP_SCHEMAS, STAGING_SCHEMAS, STAGING_TO_LIVE, LIVE_TO_DUMP, EXCLUDED_TABLES } = require('./schemas');
 
 /**
  * Returns a Set of table names excluded for a given dump schema.
@@ -31,17 +31,19 @@ class SchemaManager {
   }
 
   /**
-   * Drop _staging schemas if they exist (leftover from a failed previous run).
+   * Drop leftover work schemas from a failed previous run:
+   * - _staging schemas (renamed from dump schemas, not yet swapped)
+   * - custom_ingestion_* dump schemas (created but not yet renamed to staging)
    */
   async dropStagingSchemas() {
-    console.log('Dropping leftover staging schemas if they exist...');
+    console.log('Dropping leftover staging/dump schemas if they exist...');
     const client = await this._getClient();
 
     try {
-      for (const schema of STAGING_SCHEMAS) {
+      for (const schema of [...STAGING_SCHEMAS, ...DUMP_SCHEMAS]) {
         await client.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE;`);
       }
-      console.log('✅ Staging schemas cleaned up.');
+      console.log('✅ Leftover schemas cleaned up.');
     } finally {
       await client.end();
     }
@@ -110,21 +112,24 @@ class SchemaManager {
    *
    * @param {string}                  dumpSource - Identifier of the dump file
    * @param {Record<string, number>}  rowCounts  - Row-count snapshot from validation
+   * @param {Date}                    startedAt  - When the sync process started
    */
-  async swapStagingToLive(dumpSource, rowCounts) {
+  async swapStagingToLive(dumpSource, rowCounts, startedAt) {
     console.log('Performing atomic schema swap...');
     const client = await this._getClient();
 
     try {
       await client.query('BEGIN');
 
-      // Ensure tracking table exists
+      // Ensure tracking table exists with current schema
       await client.query(`
         CREATE TABLE IF NOT EXISTS public.sync_tracking (
-          id          SERIAL PRIMARY KEY,
-          restored_at TIMESTAMP NOT NULL DEFAULT NOW(),
-          dump_source TEXT NOT NULL,
-          row_counts  JSONB NOT NULL
+          id            SERIAL PRIMARY KEY,
+          started_at    TIMESTAMP NOT NULL,
+          finished_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+          duration      INTERVAL NOT NULL,
+          dump_source   TEXT NOT NULL,
+          row_counts    JSONB NOT NULL
         );
       `);
 
@@ -191,11 +196,25 @@ class SchemaManager {
         console.log(`  Dropped ${oldSchema}`);
       }
 
-      // Record the swap
+      // Record the swap (excluded tables are not part of the restore, omit from row_counts)
+      const finishedAt = new Date();
+      const durationMs = finishedAt.getTime() - startedAt.getTime();
+      const durationSecs = Math.round(durationMs / 1000);
+
+      const filteredRowCounts = { ...rowCounts };
+      for (const entry of EXCLUDED_TABLES) {
+        const [dumpSchema, table] = entry.split('.');
+        for (const [, live] of Object.entries(STAGING_TO_LIVE)) {
+          if (LIVE_TO_DUMP[live] === dumpSchema) {
+            delete filteredRowCounts[`${live}.${table}`];
+          }
+        }
+      }
+
       await client.query(
-        `INSERT INTO public.sync_tracking (restored_at, dump_source, row_counts)
-         VALUES (NOW(), $1, $2);`,
-        [dumpSource, JSON.stringify(rowCounts)],
+        `INSERT INTO public.sync_tracking (started_at, finished_at, duration, dump_source, row_counts)
+         VALUES ($1, $2, make_interval(secs => $3), $4, $5);`,
+        [startedAt, finishedAt, durationSecs, dumpSource, JSON.stringify(filteredRowCounts)],
       );
 
       await client.query('COMMIT');
