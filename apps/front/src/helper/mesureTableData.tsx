@@ -4,28 +4,30 @@ import { QualificationBadge } from '../components/QualificationBadge';
 
 export function buildPointDeMesure(mesure: MesureDto): string {
   const parts: string[] = [];
-  if (mesure.nomPoint) {
-    parts.push(mesure.nomPoint);
+  if (mesure.libellePointMesure) {
+    parts.push(mesure.libellePointMesure);
   }
-  if (mesure.numPoint) {
-    parts.push(`n°${mesure.numPoint}`);
+  if (mesure.numeroPointMesure) {
+    parts.push(`n°${mesure.numeroPointMesure}`);
   }
-  if (mesure.numPointAgence) {
-    parts.push(`(${mesure.numPointAgence})`);
+  if (mesure.numeroPointAgenceEau) {
+    parts.push(`(${mesure.numeroPointAgenceEau})`);
   }
   return parts.join(' ') || '-';
 }
 
 export function buildMesureTableRows(mesures: MesureDto[]) {
   return mesures.map((mesure) => [
-    formatDate(mesure.date),
+    formatDate(mesure.datePrelevement),
     buildPointDeMesure(mesure),
-    mesure.localisationPoint ?? '-',
-    mesure.parametreNom ?? mesure.parametreCode,
-    mesure.valeur !== null && mesure.valeur !== undefined ? String(mesure.valeur) : '-',
-    mesure.unite ?? '-',
-    <QualificationBadge key="qual" qualification={mesure.qualification} />,
-    mesure.finalite ?? '-',
-    mesure.statut ?? '-',
+    mesure.codeLocalisationPointMesure ?? '-',
+    mesure.nomCourtParametre ?? mesure.codeParametreAnalyse,
+    mesure.valeurResultatAnalyse !== null && mesure.valeurResultatAnalyse !== undefined
+      ? String(mesure.valeurResultatAnalyse)
+      : '-',
+    mesure.symboleUniteMesure ?? '-',
+    <QualificationBadge key="qual" qualification={mesure.qualificationResultatAnalyse} />,
+    mesure.finaliteAnalyse ?? '-',
+    mesure.statutResultatAnalyse ?? '-',
   ]);
 }

@@ -768,10 +768,14 @@ export class ControleMetierV2Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
       if (!cdOuvrageDepollution) continue;
 
-      const comparison = comparisons.find((c) => c.sandreCda === cdOuvrageDepollution);
+      const comparison = comparisons.find((c) => c.codeOuvrageDepollution === cdOuvrageDepollution);
       if (!comparison) continue;
 
-      const { chargeMaxN, chargeMaxNMoins1, trancheLabel } = comparison;
+      const {
+        chargeEntranteMaximaleAnneeN: chargeMaxN,
+        chargeEntranteMaximaleAnneeNMoins1: chargeMaxNMoins1,
+        libelleTrancheObligation: trancheLabel,
+      } = comparison;
 
       const variation = Math.abs((chargeMaxN - chargeMaxNMoins1) / chargeMaxNMoins1);
 
@@ -807,14 +811,14 @@ export class ControleMetierV2Service {
         continue;
       }
 
-      const match = productionsBoueZero.find((p) => p.sandreCda === cdOuvrageDepollution);
+      const match = productionsBoueZero.find((p) => p.codeOuvrageDepollution === cdOuvrageDepollution);
       if (!match) {
         continue;
       }
 
       errors.push({
         code: ErrorCode.E2_055,
-        params: [cdOuvrageDepollution, match.annee.toString(), match.productionBoue.toString()],
+        params: [cdOuvrageDepollution, match.anneeProductionBoue.toString(), match.productionBoueAnnuelle.toString()],
         evenementType: EvenementType.AVERTISSEMENT,
       });
     }
@@ -1081,16 +1085,17 @@ export class ControleMetierV2Service {
 }
 
 function findCmaValue(cmas: CmaBySandreCdaAndParam[], sandreCda: string, paramCode: string): number | undefined {
-  return cmas.find((c) => c.sandreCda === sandreCda && c.paramCode === paramCode)?.value;
+  return cmas.find((c) => c.codeOuvrageDepollution === sandreCda && c.codeParametreAnalyse === paramCode)
+    ?.concentrationMoyenneAnnuelle;
 }
 
 function findMaxDebit(maxDebits: MaxDebitBySandreCda[], sandreCda: string): number | undefined {
-  return maxDebits.find((d) => d.sandreCda === sandreCda)?.maxDebit;
+  return maxDebits.find((d) => d.codeOuvrageDepollution === sandreCda)?.debitMaximalReference;
 }
 
 function findCapaciteNominale(
   capacitesNominales: CapaciteNominaleBySandreCda[],
   sandreCda: string,
 ): number | undefined {
-  return capacitesNominales.find((c) => c.sandreCda === sandreCda)?.capaciteNominale;
+  return capacitesNominales.find((c) => c.codeOuvrageDepollution === sandreCda)?.capaciteNominaleEquivalentHabitants;
 }

@@ -154,9 +154,9 @@ describe('MesuresController (e2e)', () => {
       expect(response.body.total).toBeGreaterThanOrEqual(1);
       expect(response.body.data).toHaveLength(response.body.total);
       expect(response.body.data[0]).toMatchObject({
-        steuSandreCda: STEU_SANDRE_CDA,
-        parametreCode: PAR_RFA,
-        valeur: 42.5,
+        codeOuvrageDepollution: STEU_SANDRE_CDA,
+        codeParametreAnalyse: PAR_RFA,
+        valeurResultatAnalyse: 42.5,
       });
     });
 
@@ -205,7 +205,7 @@ describe('MesuresController (e2e)', () => {
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body).toHaveLength(1);
       expect(response.body[0]).toMatchObject({
-        steuSandreCda: STEU_SANDRE_CDA,
+        codeOuvrageDepollution: STEU_SANDRE_CDA,
       });
     });
   });
@@ -231,10 +231,10 @@ describe('MesuresController (e2e)', () => {
       });
       expect(response.body.total).toBeGreaterThanOrEqual(1);
       expect(response.body.data[0]).toMatchObject({
-        steuSandreCda: STEU_SANDRE_CDA,
-        sclSandreCda: 'SCL_TEST_001',
-        parametreCode: PAR_RFA,
-        valeur: 42.5,
+        codeOuvrageDepollution: STEU_SANDRE_CDA,
+        codeSystemeCollecte: 'SCL_TEST_001',
+        codeParametreAnalyse: PAR_RFA,
+        valeurResultatAnalyse: 42.5,
       });
     });
 

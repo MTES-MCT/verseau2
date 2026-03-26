@@ -24,7 +24,7 @@ export class DroitsUserService {
     }
 
     const ag = await this.masaProvider.findAgByEmail(user.email);
-    return ag ? ag.itvCdn : null;
+    return ag ? ag.identifiantIntervenant : null;
   }
 
   async isExpertNationalVerseau(sub: string): Promise<boolean> {
@@ -37,7 +37,7 @@ export class DroitsUserService {
       if (!ag) {
         return false;
       }
-      return await this.masaProvider.hasRole(ag.prCdn, ROLE.EXPERT_NATIONAL_VERSEAU);
+      return await this.masaProvider.hasRole(ag.identifiantPrincipal, ROLE.EXPERT_NATIONAL_VERSEAU);
     } catch (error) {
       this.logger.warn('Failed to check expert national role for user', sub, error);
       return false;
@@ -54,7 +54,7 @@ export class DroitsUserService {
       if (!ag) {
         return false;
       }
-      return await this.masaProvider.hasRole(ag.prCdn, ROLE.EXPERT_BASSIN_VERSEAU);
+      return await this.masaProvider.hasRole(ag.identifiantPrincipal, ROLE.EXPERT_BASSIN_VERSEAU);
     } catch (error) {
       this.logger.warn('Failed to check expert bassin role for user', sub, error);
       return false;
@@ -75,7 +75,9 @@ export class DroitsUserService {
       const itvCdn = await this.resolveItvCdn(sub);
       if (itvCdn) {
         const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
-        return intervenant ? { itvCdn: intervenant.itvCdn, nom: intervenant.itvNomLb } : { itvCdn };
+        return intervenant
+          ? { itvCdn: intervenant.identifiantIntervenant, nom: intervenant.nomIntervenant }
+          : { itvCdn };
       }
       return null;
     } catch (error) {

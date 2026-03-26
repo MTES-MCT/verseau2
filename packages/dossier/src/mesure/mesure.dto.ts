@@ -2,22 +2,22 @@ import { z } from 'zod';
 import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
 export const MesureDtoSchema = z.object({
-  steuSandreCda: z.string(),
-  steuNom: z.string().nullable(),
-  sclSandreCda: z.string().nullable(),
-  sclNom: z.string().nullable(),
-  localisationPoint: z.string().nullable(),
-  numPointAgence: z.string().nullable(),
-  numPoint: z.string().nullable(),
-  nomPoint: z.string().nullable(),
-  date: z.coerce.date().nullable(),
-  parametreCode: z.string(),
-  parametreNom: z.string().nullable(),
-  valeur: z.number().nullable(),
-  unite: z.string().nullable(),
-  finalite: z.string().nullable(),
-  statut: z.string().nullable(),
-  qualification: z.string().nullable(),
+  codeOuvrageDepollution: z.string(),
+  nomOuvrageDepollution: z.string().nullable(),
+  codeSystemeCollecte: z.string().nullable(),
+  nomSystemeCollecte: z.string().nullable(),
+  codeLocalisationPointMesure: z.string().nullable(),
+  numeroPointAgenceEau: z.string().nullable(),
+  numeroPointMesure: z.string().nullable(),
+  libellePointMesure: z.string().nullable(),
+  datePrelevement: z.coerce.date().nullable(),
+  codeParametreAnalyse: z.string(),
+  nomCourtParametre: z.string().nullable(),
+  valeurResultatAnalyse: z.number().nullable(),
+  symboleUniteMesure: z.string().nullable(),
+  finaliteAnalyse: z.string().nullable(),
+  statutResultatAnalyse: z.string().nullable(),
+  qualificationResultatAnalyse: z.string().nullable(),
 });
 
 export type MesureDto = z.infer<typeof MesureDtoSchema>;

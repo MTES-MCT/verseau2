@@ -48,7 +48,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .createQueryBuilder('itv')
       .where('itv.itv_rfa IN (:...rfas)', { rfas })
       .getMany();
-    return rows.map((itv) => ({ rfa: itv.itvRfa, itvCdn: itv.itvCdn }));
+    return rows.map((itv) => ({ siretIntervenant: itv.itvRfa, identifiantIntervenant: itv.itvCdn }));
   }
 
   async findSupByRfa(supRfa: string): Promise<SupEntity | null> {
@@ -84,6 +84,16 @@ export class LanceleauRepository implements LanceleauGateway {
       .getOne();
   }
 
+  private mapVSteuSclItvEntityToResult(entity: VSteuSclItvEntity): VSteuSclItvResult {
+    return {
+      codeOuvrageDepollution: entity.steuCda,
+      codeSystemeCollecte: entity.sclCda,
+      siretMaitreOuvrage: entity.moItvRfa,
+      siretPrestataireAutosurveillance: entity.satItvRfa,
+      siretAgenceEau: entity.aeItvRfa,
+    };
+  }
+
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
     if (steuCodes.length === 0 && sclCodes.length === 0) {
       return [];
@@ -99,14 +109,16 @@ export class LanceleauRepository implements LanceleauGateway {
       qb.where('v.sclCda IN (:...sclCodes)', { sclCodes });
     }
 
-    return qb.getMany();
+    const entities = await qb.getMany();
+    return entities.map((e) => this.mapVSteuSclItvEntityToResult(e));
   }
 
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
-    return this.vSteuSclItvRepository
+    const entities = await this.vSteuSclItvRepository
       .createQueryBuilder('v')
       .where('v.moItvRfa = :itvRfa OR v.satItvRfa = :itvRfa OR v.aeItvRfa = :itvRfa', { itvRfa })
       .getMany();
+    return entities.map((e) => this.mapVSteuSclItvEntityToResult(e));
   }
 
   async findSiretByEmail(email: string): Promise<string | null> {

@@ -187,7 +187,7 @@ export class ControleV1Service {
         continue;
       }
 
-      if (!expLinkSet.has(`${steu.steuCdn}:${itv.itvCdn}`)) {
+      if (!expLinkSet.has(`${steu.identifiantOuvrageDepollution}:${itv.identifiantIntervenant}`)) {
         errors.push({
           code: ErrorCode.E2_005,
           params: [cdIntervenant, cdOuvrageDepollution],
@@ -921,13 +921,13 @@ export class ControleV1Service {
 }
 
 function steuExists(steus: SteuCdnBySandreCda[], sandreCda: string): boolean {
-  return steus.some((s) => s.sandreCda === sandreCda);
+  return steus.some((s) => s.codeOuvrageDepollution === sandreCda);
 }
 
 function findSteu(steus: SteuCdnBySandreCda[], sandreCda: string): SteuCdnBySandreCda | undefined {
-  return steus.find((s) => s.sandreCda === sandreCda);
+  return steus.find((s) => s.codeOuvrageDepollution === sandreCda);
 }
 
 function findItv(itvs: ItvCdnByRfa[], rfa: string): ItvCdnByRfa | undefined {
-  return itvs.find((i) => i.rfa === rfa);
+  return itvs.find((i) => i.siretIntervenant === rfa);
 }

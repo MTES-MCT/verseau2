@@ -1,6 +1,13 @@
-export const formatOptions = (options: { code: string; label: string | null }[]) => options.map(formatOption);
+export const formatOptions = (
+  options: { codeElementNomenclature: string; libelleElementNomenclature: string | null }[],
+) => options.map(formatOption);
 
-export const formatOption = (option: { code: string; label: string | null }) => ({
-  value: option.code,
-  label: option.label ? `${option.code} - ${option.label}` : option.code,
+export const formatOption = (option: {
+  codeElementNomenclature: string;
+  libelleElementNomenclature: string | null;
+}) => ({
+  value: option.codeElementNomenclature,
+  label: option.libelleElementNomenclature
+    ? `${option.codeElementNomenclature} - ${option.libelleElementNomenclature}`
+    : option.codeElementNomenclature,
 });

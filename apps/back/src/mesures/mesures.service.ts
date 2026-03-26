@@ -40,6 +40,11 @@ export class MesuresService {
       authorizedSclCdas,
       steuSandreCdas: requestedSteus = [],
       sclSandreCdas: requestedScls = [],
+      pmoCdn,
+      parametreCode,
+      qualification,
+      statut,
+      finalite,
       ...rest
     } = options;
 
@@ -53,7 +58,17 @@ export class MesuresService {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
       }
 
-      filters = { ouvrageType: 'scl', steuSandreCdas: [], sclSandreCdas, ...rest };
+      filters = {
+        ouvrageType: 'scl',
+        steuSandreCdas: [],
+        sclSandreCdas,
+        ...(pmoCdn !== undefined ? { identifiantPointMesure: pmoCdn } : {}),
+        ...(parametreCode ? { codeParametreAnalyse: parametreCode } : {}),
+        ...(qualification ? { qualificationResultatAnalyse: qualification } : {}),
+        ...(statut ? { statutResultatAnalyse: statut } : {}),
+        ...(finalite ? { finaliteAnalyse: finalite } : {}),
+        ...rest,
+      };
     } else {
       const steuSandreCdas =
         requestedSteus.length > 0
@@ -64,13 +79,23 @@ export class MesuresService {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
       }
 
-      filters = { ouvrageType: 'steu', steuSandreCdas, sclSandreCdas: [], ...rest };
+      filters = {
+        ouvrageType: 'steu',
+        steuSandreCdas,
+        sclSandreCdas: [],
+        ...(pmoCdn !== undefined ? { identifiantPointMesure: pmoCdn } : {}),
+        ...(parametreCode ? { codeParametreAnalyse: parametreCode } : {}),
+        ...(qualification ? { qualificationResultatAnalyse: qualification } : {}),
+        ...(statut ? { statutResultatAnalyse: statut } : {}),
+        ...(finalite ? { finaliteAnalyse: finalite } : {}),
+        ...rest,
+      };
     }
 
     const { data, total } = await this.masaProvider.findMesures(filters);
 
     return {
-      data: data.map((row) => ({ ...row, date: row.date })),
+      data: data.map((row) => ({ ...row, datePrelevement: row.datePrelevement })),
       total,
       page: rest.page,
       pageSize: rest.pageSize,

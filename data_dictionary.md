@@ -1,12 +1,12 @@
 codeOuvrageDepollution, steu_sandre_cda, Code Sandre identifiant la station de traitement des eaux usees (STEU)
-identifiantInterneOuvrageDepollution, steu_cdn, Identifiant technique interne de la STEU dans Roseau
+identifiantOuvrageDepollution, steu_cdn, Identifiant technique interne de la STEU dans Roseau
 nomOuvrageDepollution, steu_nom_lb, Denomination de la station de traitement des eaux usees
 codeSystemeCollecte, scl_sandre_cda, Code Sandre identifiant le systeme de collecte des eaux usees (SCL)
 nomSystemeCollecte, scl_lb, Denomination du systeme de collecte
-identifiantInterneIntervenant, itv_cdn, Identifiant technique interne de l'intervenant dans Lanceleau
+identifiantIntervenant, itv_cdn, Identifiant technique interne de l'intervenant dans Lanceleau
 siretIntervenant, itv_rfa, Numero SIRET de l'organisme intervenant
 nomIntervenant, itv_nom_lb, Raison sociale ou nom de l'organisme intervenant
-identifiantInternePrincipal, pr_cdn, Identifiant technique interne du principal (agent authentifie) dans Lanceleau
+identifiantPrincipal, pr_cdn, Identifiant technique interne du principal (agent authentifie) dans Lanceleau
 identifiantRoleOrion, role_cdn, Identifiant technique du role Orion attribue au principal (t_orion_role_for_principal)
 emailAuthentification, mail, Adresse email de l'utilisateur pour l'authentification (t_orion_credentials)
 codeOuvrageDepollutionVueDroits, steu_cda, Code de la STEU dans la vue de droits v_steu_scl_itv
@@ -14,7 +14,7 @@ codeSystemeCollecteVueDroits, scl_cda, Code du systeme de collecte dans la vue d
 siretMaitreOuvrage, mo_itv_rfa, Numero SIRET du maitre d'ouvrage de la STEU (vue v_steu_scl_itv)
 siretPrestataireAutosurveillance, sat_itv_rfa, Numero SIRET du prestataire du service d'assistance technique a l'autosurveillance (vue v_steu_scl_itv)
 siretAgenceEau, ae_itv_rfa, Numero SIRET de l'agence de l'eau competente (vue v_steu_scl_itv)
-identifiantInternePointMesure, pmo_cdn, Identifiant technique interne du point de mesure dans Roseau
+identifiantPointMesure, pmo_cdn, Identifiant technique interne du point de mesure dans Roseau
 numeroPointMesure, pmo_no, Numero du point de mesure au sein de l'ouvrage
 libellePointMesure, pmo_lb, Denomination du point de mesure
 numeroPointAgenceEau, pmo_ae_cda, Numero du point de mesure attribue par l'agence de l'eau

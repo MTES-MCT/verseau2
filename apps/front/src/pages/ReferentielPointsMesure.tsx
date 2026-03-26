@@ -22,12 +22,12 @@ function buildSignalerText(point: PointMesureReferentiel): string {
     '',
     'Je souhaite signaler une incohérence concernant le point de mesure suivant :',
     '',
-    `- Ouvrage : ${point.ouvrageSandreCda}${point.ouvrageNom ? ` / ${point.ouvrageNom}` : ''}`,
-    `- Numéro de point : ${point.numeroPoint ?? 'non renseigné'}`,
-    `- Nom du point : ${point.nomPoint ?? 'non renseigné'}`,
-    `- Localisation : ${point.localisationCode ?? 'non renseignée'}${point.localisationGlobale ? ` / ${point.localisationGlobale}` : ''}`,
-    `- Date de début de validité : ${point.dateDebut ?? 'non renseignée'}`,
-    `- Date de fin de validité : ${point.dateFin ?? 'non renseignée'}`,
+    `- Ouvrage : ${point.codeOuvrageDepollution}${point.nomOuvrageDepollution ? ` / ${point.nomOuvrageDepollution}` : ''}`,
+    `- Numéro de point : ${point.numeroPointMesure ?? 'non renseigné'}`,
+    `- Nom du point : ${point.libellePointMesure ?? 'non renseigné'}`,
+    `- Localisation : ${point.codeLocalisationPointMesure ?? 'non renseignée'}${point.libelleLocalisationPointMesure ? ` / ${point.libelleLocalisationPointMesure}` : ''}`,
+    `- Date de début de validité : ${point.dateDebutValiditePointMesure ?? 'non renseignée'}`,
+    `- Date de fin de validité : ${point.dateFinValiditePointMesure ?? 'non renseignée'}`,
     '',
     "Description de l'incohérence : [à compléter par l'utilisateur]",
     '',
@@ -110,12 +110,12 @@ export function ReferentielPointsMesurePage() {
 
   const ouvragesOptions: AutocompleteOption[] = isScl
     ? systemesCollecte.map((s) => ({
-        value: s.sclSandreCda,
-        label: s.sclNom ?? s.sclSandreCda,
+        value: s.codeSystemeCollecte,
+        label: s.nomSystemeCollecte ?? s.codeSystemeCollecte,
       }))
     : ouvrages.map((o) => ({
-        value: o.steuSandreCda,
-        label: o.steuNom ?? o.steuSandreCda,
+        value: o.codeOuvrageDepollution,
+        label: o.nomOuvrageDepollution ?? o.codeOuvrageDepollution,
       }));
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
@@ -134,17 +134,19 @@ export function ReferentielPointsMesurePage() {
   ];
 
   const tableData = (data?.points ?? []).map((point) => [
-    point.ouvrageNom ? `${point.ouvrageSandreCda} - ${point.ouvrageNom}` : point.ouvrageSandreCda,
-    point.identifiantAgence ?? '',
-    point.numeroPoint ?? '',
-    point.nomPoint ?? '',
-    point.localisationCode ?? '',
-    point.localisationGlobale ?? '',
-    ...(isScl ? [point.categorie ?? ''] : []),
-    point.dateDebut ?? '',
-    point.dateFin ?? '',
+    point.nomOuvrageDepollution
+      ? `${point.codeOuvrageDepollution} - ${point.nomOuvrageDepollution}`
+      : point.codeOuvrageDepollution,
+    point.numeroPointAgenceEau ?? '',
+    point.numeroPointMesure ?? '',
+    point.libellePointMesure ?? '',
+    point.codeLocalisationPointMesure ?? '',
+    point.libelleLocalisationPointMesure ?? '',
+    ...(isScl ? [point.categoriePointMesureScl ?? ''] : []),
+    point.dateDebutValiditePointMesure ?? '',
+    point.dateFinValiditePointMesure ?? '',
     <SignalerButton
-      key={`signaler-${point.ouvrageSandreCda}-${point.numeroPoint}`}
+      key={`signaler-${point.codeOuvrageDepollution}-${point.numeroPointMesure}`}
       point={point}
       onClick={(success) => setIsCopiedNoticeVisible(success)}
       onFallback={setFallbackText}

@@ -51,30 +51,36 @@ export function DepotDetailsPage() {
 
   const ouvragesOptions: AutocompleteOption[] = isScl
     ? systemesCollecte.map((s) => ({
-        value: s.sclSandreCda,
-        label: s.sclNom ?? s.sclSandreCda,
+        value: s.codeSystemeCollecte,
+        label: s.nomSystemeCollecte ?? s.codeSystemeCollecte,
       }))
     : ouvrages.map((o) => ({
-        value: o.steuSandreCda,
-        label: o.steuNom ?? o.steuSandreCda,
+        value: o.codeOuvrageDepollution,
+        label: o.nomOuvrageDepollution ?? o.codeOuvrageDepollution,
       }));
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
 
   const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) =>
-    formatOption({ code: String(option.pmoCdn), label: option.pmoLb }),
+    formatOption({
+      codeElementNomenclature: String(option.identifiantPointMesure),
+      libelleElementNomenclature: option.libellePointMesure,
+    }),
   );
 
   const parametresOptions: AutocompleteOption[] = parametres.map((option) =>
-    formatOption({ code: option.parRfa, label: option.parCourtNomLb }),
+    formatOption({
+      codeElementNomenclature: option.codeParametreAnalyse,
+      libelleElementNomenclature: option.nomCourtParametre,
+    }),
   );
 
   const finalitesOptions: AutocompleteOption[] = finalites
     .slice()
     .sort((a, b) => {
       const preferred = ['1', '11', '9', '2'];
-      const aIndex = preferred.indexOf(String(a.code));
-      const bIndex = preferred.indexOf(String(b.code));
+      const aIndex = preferred.indexOf(String(a.codeElementNomenclature));
+      const bIndex = preferred.indexOf(String(b.codeElementNomenclature));
 
       if (aIndex === -1 && bIndex === -1) {
         return 0;

@@ -77,22 +77,22 @@ const emptyParametresResult = {
 };
 
 const makeMesure = (overrides = {}) => ({
-  steuSandreCda: 'STEU001',
-  steuNom: 'Station test',
-  sclSandreCda: 'SCL001',
-  sclNom: 'Collecteur test',
-  localisationPoint: 'A',
-  numPointAgence: 'AE001',
-  numPoint: 'P1',
-  nomPoint: 'Point 1',
-  date: '2024-06-15T00:00:00.000Z',
-  parametreCode: 'MES_CO',
-  parametreNom: 'Matières en suspension',
-  valeur: 12.5,
-  unite: 'mg/L',
-  finalite: null,
-  statut: null,
-  qualification: 'Brut',
+  codeOuvrageDepollution: 'STEU001',
+  nomOuvrageDepollution: 'Station test',
+  codeSystemeCollecte: 'SCL001',
+  nomSystemeCollecte: 'Collecteur test',
+  codeLocalisationPointMesure: 'A',
+  numeroPointAgenceEau: 'AE001',
+  numeroPointMesure: 'P1',
+  libellePointMesure: 'Point 1',
+  datePrelevement: '2024-06-15T00:00:00.000Z',
+  codeParametreAnalyse: 'MES_CO',
+  nomCourtParametre: 'Matières en suspension',
+  valeurResultatAnalyse: 12.5,
+  symboleUniteMesure: 'mg/L',
+  finaliteAnalyse: null,
+  statutResultatAnalyse: null,
+  qualificationResultatAnalyse: 'Brut',
   ...overrides,
 });
 
@@ -150,8 +150,8 @@ describe('DepotDetailsPage', () => {
   it('renders ouvrage dropdown showing options after clicking', () => {
     mockUseOuvrages.mockReturnValue({
       data: [
-        { steuSandreCda: 'STEU001', steuNom: 'Station A' },
-        { steuSandreCda: 'STEU002', steuNom: 'Station B' },
+        { codeOuvrageDepollution: 'STEU001', nomOuvrageDepollution: 'Station A' },
+        { codeOuvrageDepollution: 'STEU002', nomOuvrageDepollution: 'Station B' },
       ],
       isLoading: false,
       error: null,
@@ -226,7 +226,7 @@ describe('DepotDetailsPage', () => {
 
   it('displays qualification badge for "Brut" mesure', () => {
     mockUseMesures.mockReturnValue({
-      data: { data: [makeMesure({ qualification: 'Brut' })], total: 1, page: 1, pageSize: 20 },
+      data: { data: [makeMesure({ qualificationResultatAnalyse: 'Brut' })], total: 1, page: 1, pageSize: 20 },
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
@@ -240,7 +240,7 @@ describe('DepotDetailsPage', () => {
 
   it('displays qualification badge for "Qualifié" mesure', () => {
     mockUseMesures.mockReturnValue({
-      data: { data: [makeMesure({ qualification: 'Qualifié' })], total: 1, page: 1, pageSize: 20 },
+      data: { data: [makeMesure({ qualificationResultatAnalyse: 'Qualifié' })], total: 1, page: 1, pageSize: 20 },
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
@@ -271,7 +271,7 @@ describe('DepotDetailsPage', () => {
   });
 
   it('shows pagination component when total > pageSize', () => {
-    const data = Array.from({ length: 20 }, (_, i) => makeMesure({ alrCdn: i, parametreCode: `PAR_${i}` }));
+    const data = Array.from({ length: 20 }, (_, i) => makeMesure({ alrCdn: i, codeParametreAnalyse: `PAR_${i}` }));
     mockUseMesures.mockReturnValue({
       data: { data, total: 45, page: 1, pageSize: 20 },
       isLoading: false,
@@ -317,8 +317,8 @@ describe('DepotDetailsPage', () => {
   it('renders statut dropdown populated with nomenclature items', () => {
     mockUseStatuts.mockReturnValue({
       data: [
-        { code: 'A', label: 'Donnée brute' },
-        { code: 'B', label: 'Pré-qualification' },
+        { codeElementNomenclature: 'A', libelleElementNomenclature: 'Donnée brute' },
+        { codeElementNomenclature: 'B', libelleElementNomenclature: 'Pré-qualification' },
       ],
       isLoading: false,
     } as unknown as ReturnType<typeof useStatuts>);
@@ -333,8 +333,8 @@ describe('DepotDetailsPage', () => {
   it('renders qualification dropdown populated with nomenclature items', () => {
     mockUseQualifications.mockReturnValue({
       data: [
-        { code: '1', label: 'Correcte' },
-        { code: '2', label: 'Incorrecte' },
+        { codeElementNomenclature: '1', libelleElementNomenclature: 'Correcte' },
+        { codeElementNomenclature: '2', libelleElementNomenclature: 'Incorrecte' },
       ],
       isLoading: false,
     } as unknown as ReturnType<typeof useQualifications>);

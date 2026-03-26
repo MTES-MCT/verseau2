@@ -21,16 +21,16 @@ export const codesToParametres = {
 // --- Points de mesure du référentiel ---
 
 export const PointMesureReferentielSchema = z.object({
-  ouvrageSandreCda: z.string(),
-  ouvrageNom: z.string().nullable(),
-  identifiantAgence: z.string().nullable(),
-  numeroPoint: z.string().nullable(),
-  nomPoint: z.string().nullable(),
-  localisationCode: z.string().nullable(),
-  localisationGlobale: z.string().nullable(),
-  categorie: z.string().nullable(),
-  dateDebut: z.string().nullable(),
-  dateFin: z.string().nullable(),
+  codeOuvrageDepollution: z.string(),
+  nomOuvrageDepollution: z.string().nullable(),
+  numeroPointAgenceEau: z.string().nullable(),
+  numeroPointMesure: z.string().nullable(),
+  libellePointMesure: z.string().nullable(),
+  codeLocalisationPointMesure: z.string().nullable(),
+  libelleLocalisationPointMesure: z.string().nullable(),
+  categoriePointMesureScl: z.string().nullable(),
+  dateDebutValiditePointMesure: z.string().nullable(),
+  dateFinValiditePointMesure: z.string().nullable(),
 });
 
 export type PointMesureReferentiel = z.infer<typeof PointMesureReferentielSchema>;
