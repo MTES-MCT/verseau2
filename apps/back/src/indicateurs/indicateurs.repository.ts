@@ -75,7 +75,7 @@ SELECT
         WHEN stchan.stchan_r_1an_jr_deb_95_perc_val IS NOT NULL THEN 1
         ELSE 0
     END AS nb_annees_max_pc95,
-    scl.scl_sandre_cda                                AS code_sandre_scl,
+    RTRIM(scl.scl_sandre_cda)                         AS code_sandre_scl,
     sclconf.sclconf_eru_eval_tp_val_dt::text          AS date_validation_conformite,
     sclconf.sclconf_eru_eval_vol_5ans_pc              AS volume_deverse_5ans_pc,
     sclconf.sclconf_eru_eval_flux_5ans_pc             AS flux_deverse_5ans_pc,
@@ -98,7 +98,7 @@ JOIN roseau.tlref t64 ON t64.tlref_cdn = aga.tlref_64_cdn
 JOIN roseau.tlref t03 ON t03.tlref_cdn = aga.tlref_03_cdn
 JOIN roseau.tltobl tltobl ON tltobl.tltobl_rfa = aga.tltobl_rfa
 LEFT JOIN roseau.scl scl ON scl.steu_cdn = steu.steu_cdn
-LEFT JOIN roseau.sclconf sclconf ON sclconf.scl_cdn = scl.scl_cdn AND sclconf.sclconf_an = '${previousYear}'
+LEFT JOIN roseau.sclconf sclconf ON sclconf.scl_cdn = scl.scl_cdn AND sclconf.sclconf_an = ${previousYear}
 WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders});
     `;
 
