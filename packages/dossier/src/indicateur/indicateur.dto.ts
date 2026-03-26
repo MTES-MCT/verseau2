@@ -19,6 +19,12 @@ export const IndicateurSteuDtoSchema = z.object({
   pc95Retenu: z.number().nullable(),
   nbAnneesMaxPc95: z.number(),
   annee: z.number(),
+  // Conformité SCL (sclconf) — temps de pluie
+  codeSandreScl: z.string().nullable(),
+  dateValidationConformite: z.string().nullable(),
+  volumeDeverse5ansPc: z.number().nullable(),
+  fluxDeverse5ansPc: z.number().nullable(),
+  joursDeversement5ansMoy: z.number().nullable(),
 });
 
 export type IndicateurSteuDto = z.infer<typeof IndicateurSteuDtoSchema>;
