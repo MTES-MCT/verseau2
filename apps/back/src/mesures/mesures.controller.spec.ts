@@ -5,24 +5,25 @@ import { MesuresService } from './mesures.service';
 import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
+import { PaginatedMesuresResponse } from '../../../../packages/dossier/src/mesure/mesure.dto';
 
-const makeMesureDto = () => ({
-  steuSandreCda: 'STEU001',
-  steuNom: 'Station test',
-  sclSandreCda: null,
-  sclNom: null,
-  localisationPoint: null,
-  numPointAgence: null,
-  numPoint: '1',
-  nomPoint: 'Point 1',
-  date: new Date('2024-01-15'),
-  parametreCode: 'MES_CO',
-  parametreNom: 'Matières en suspension',
-  valeur: 12.5,
-  unite: 'mg/L',
-  finalite: null,
-  statut: null,
-  qualification: 'Brut',
+const makeMesureDto: () => PaginatedMesuresResponse['data'][0] = () => ({
+  ouvrageDepollutionCode: 'STEU001',
+  ouvrageDepollutionNom: 'Station test',
+  systemeCollecteCode: null,
+  systemeCollecteNom: null,
+  pointMesureLocalisationCode: null,
+  pointAgenceEauNumero: null,
+  pointMesureNumero: '1',
+  pointMesureLibelle: 'Point 1',
+  prelevementDate: new Date('2024-01-15'),
+  parametreAnalyseCode: 'MES_CO',
+  parametreNomCourt: 'Matières en suspension',
+  resultatAnalyseValeur: 12.5,
+  uniteMesureSymbole: 'mg/L',
+  analyseFinalite: null,
+  resultatAnalyseStatut: null,
+  resultatAnalyseQualification: 'Brut',
 });
 
 describe('MesuresController', () => {
@@ -67,7 +68,7 @@ describe('MesuresController', () => {
 
   describe('listMesures', () => {
     it('delegates to service with authorized codes from request', async () => {
-      const paginated = { data: [makeMesureDto()], total: 1, page: 1, pageSize: 20 };
+      const paginated: PaginatedMesuresResponse = { data: [makeMesureDto()], total: 1, page: 1, pageSize: 20 };
       mesuresService.listMesures.mockResolvedValue(paginated);
 
       const result = await controller.listMesures(makeRequest(['STEU001'], []), {
@@ -119,7 +120,7 @@ describe('MesuresController', () => {
 
   describe('listOuvrages', () => {
     it('delegates to service with authorized STEU codes from request', async () => {
-      const ouvrages = [{ steuSandreCda: 'STEU001', steuNom: 'Station A' }];
+      const ouvrages = [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }];
       mesuresService.listOuvrages.mockResolvedValue(ouvrages);
 
       const result = await controller.listOuvrages(makeRequest(['STEU001'], []));
