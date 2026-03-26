@@ -36,8 +36,8 @@ export const listOuvrages = {
   path: '/mesures/ouvrages',
   response: z.array(
     z.object({
-      steuSandreCda: z.string(),
-      steuNom: z.string().nullable(),
+      ouvrageDepollutionCode: z.string(),
+      ouvrageDepollutionNom: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
@@ -47,8 +47,8 @@ export const listSystemesCollecte = {
   path: '/mesures/systemes-collecte',
   response: z.array(
     z.object({
-      sclSandreCda: z.string(),
-      sclNom: z.string().nullable(),
+      systemeCollecteCode: z.string(),
+      systemeCollecteNom: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
@@ -62,9 +62,9 @@ export const listPointsMesure = {
   }),
   response: z.array(
     z.object({
-      pmoCdn: z.number(),
-      pmoNo: z.string(),
-      pmoLb: z.string().nullable(),
+      pointMesureIdentifiant: z.number(),
+      pointMesureNumero: z.string(),
+      pointMesureLibelle: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
@@ -79,8 +79,8 @@ export const listParametresMesure = {
   }),
   response: z.array(
     z.object({
-      parRfa: z.string(),
-      parCourtNomLb: z.string().nullable(),
+      parametreAnalyseCode: z.string(),
+      parametreNomCourt: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
@@ -90,8 +90,8 @@ export const listFinalites = {
   path: '/mesures/finalites',
   response: z.array(
     z.object({
-      code: z.string(),
-      label: z.string().nullable(),
+      elementNomenclatureCode: z.string(),
+      elementNomenclatureLibelle: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
@@ -101,8 +101,8 @@ export const listStatuts = {
   path: '/mesures/statuts',
   response: z.array(
     z.object({
-      code: z.string(),
-      label: z.string().nullable(),
+      elementNomenclatureCode: z.string(),
+      elementNomenclatureLibelle: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
@@ -112,8 +112,8 @@ export const listQualifications = {
   path: '/mesures/qualifications',
   response: z.array(
     z.object({
-      code: z.string(),
-      label: z.string().nullable(),
+      elementNomenclatureCode: z.string(),
+      elementNomenclatureLibelle: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;

@@ -2,14 +2,17 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { HasUserAccessToOuvragesGuard } from './hasUserAccessToOuvrages.guard';
 import type { IntervenantAuth, VSteuSclItvResult } from '@masa/masa.dto';
 
-const makeIntervenant = (itvCdn: number, itvRfa: string): IntervenantAuth => ({ itvCdn, itvRfa });
+const makeIntervenant = (itvCdn: number, itvRfa: string): IntervenantAuth => ({
+  intervenantIdentifiant: itvCdn,
+  intervenantSiret: itvRfa,
+});
 
 const makeVSteuSclItv = (steuCda: string, sclCda = 'SCL001'): VSteuSclItvResult => ({
-  steuCda,
-  sclCda,
-  moItvRfa: null,
-  satItvRfa: null,
-  aeItvRfa: null,
+  ouvrageDepollutionCode: steuCda,
+  systemeCollecteCode: sclCda,
+  maitreOuvrageSiret: null,
+  prestataireAutosurveillanceSiret: null,
+  agenceEauSiret: null,
 });
 
 describe('HasUserAccessToOuvragesGuard', () => {
@@ -106,7 +109,13 @@ describe('HasUserAccessToOuvragesGuard', () => {
   it("autorise l'accès si seulement des STEU sont disponibles (sans SCL)", async () => {
     mockMasaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
     mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
-      { steuCda: 'STEU001', sclCda: null, moItvRfa: null, satItvRfa: null, aeItvRfa: null },
+      {
+        ouvrageDepollutionCode: 'STEU001',
+        systemeCollecteCode: null,
+        maitreOuvrageSiret: null,
+        prestataireAutosurveillanceSiret: null,
+        agenceEauSiret: null,
+      },
     ]);
 
     const req: Record<string, unknown> = {};

@@ -189,7 +189,12 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findAgByEmail(email: string): Promise<AgByEmail | null> {
-    return await this.lanceleauGateway.findAgByEmail(email);
+    const ag = await this.lanceleauGateway.findAgByEmail(email);
+    if (!ag) return null;
+    return {
+      intervenantIdentifiant: ag.itvCdn,
+      principalIdentifiant: ag.prCdn,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -218,7 +223,13 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
-    return await this.lanceleauGateway.findByItvCdn(itvCdn);
+    const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
+    if (!itv) return null;
+    return {
+      intervenantIdentifiant: itv.itvCdn,
+      intervenantNom: itv.itvNomLb,
+      intervenantSiret: itv.itvRfa,
+    };
   }
 
   // ---------------------------------------------------------------------------

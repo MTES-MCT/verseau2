@@ -82,7 +82,10 @@ export class RoseauRepository implements RoseauGateway {
       .createQueryBuilder('s')
       .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
-    return rows.map((s) => ({ sandreCda: s.steuSandreCda, steuCdn: s.steuCdn }));
+    return rows.map((s) => ({
+      ouvrageDepollutionCode: s.steuSandreCda,
+      ouvrageDepollutionIdentifiant: s.steuCdn,
+    }));
   }
 
   async findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null> {
@@ -183,8 +186,8 @@ export class RoseauRepository implements RoseauGateway {
     return rows
       .filter((row) => row.capacite_nominale !== null)
       .map((row) => ({
-        sandreCda: row.steu_sandre_cda.trim(),
-        capaciteNominale: row.capacite_nominale!,
+        ouvrageDepollutionCode: row.steu_sandre_cda.trim(),
+        ouvrageDepollutionCapaciteNominaleEH: row.capacite_nominale!,
       }));
   }
 
@@ -209,9 +212,9 @@ export class RoseauRepository implements RoseauGateway {
       .getRawMany<{ steu_sandre_cda: string; par_rfa: string; resa_cma_val: string }>();
 
     return rows.map((row) => ({
-      sandreCda: row.steu_sandre_cda.trim(),
-      paramCode: row.par_rfa.trim(),
-      value: parseFloat(row.resa_cma_val),
+      ouvrageDepollutionCode: row.steu_sandre_cda.trim(),
+      parametreAnalyseCode: row.par_rfa.trim(),
+      resultatAnnuelConcentrationMoyenne: parseFloat(row.resa_cma_val),
     }));
   }
 
@@ -236,9 +239,9 @@ export class RoseauRepository implements RoseauGateway {
     for (const row of rows) {
       const pc95 = row.pc95 ? parseFloat(row.pc95.toString()) : 0;
       const dref = row.dref ? parseFloat(row.dref.toString()) : 0;
-      const maxDebit = Math.max(pc95, dref);
-      if (maxDebit > 0) {
-        result.push({ sandreCda: row.steu_sandre_cda.trim(), maxDebit });
+      const ouvrageDepollutionDebitMaximalReference = Math.max(pc95, dref);
+      if (ouvrageDepollutionDebitMaximalReference > 0) {
+        result.push({ ouvrageDepollutionCode: row.steu_sandre_cda.trim(), ouvrageDepollutionDebitMaximalReference });
       }
     }
     return result;
@@ -278,11 +281,11 @@ export class RoseauRepository implements RoseauGateway {
       }>();
 
     return rows.map((r) => ({
-      sandreCda: r.steu_sandre_cda.trim(),
-      chargeMaxN: parseFloat(r.charge_max_n.toString()),
-      chargeMaxNMoins1: parseFloat(r.charge_max_n1.toString()),
-      trancheLabel: r.tranche_label.trim(),
-      annee: parseInt(r.annee.toString(), 10),
+      ouvrageDepollutionCode: r.steu_sandre_cda.trim(),
+      chargeEntranteMaximaleEHN: parseFloat(r.charge_max_n.toString()),
+      chargeEntranteMaximaleEHNMoins1: parseFloat(r.charge_max_n1.toString()),
+      trancheObligationLibelle: r.tranche_label.trim(),
+      bilanReferenceAnnee: parseInt(r.annee.toString(), 10),
     }));
   }
 
@@ -313,9 +316,9 @@ export class RoseauRepository implements RoseauGateway {
       .getRawMany<{ steu_sandre_cda: string; pab_an: number; production_boue: number }>();
 
     return rows.map((r) => ({
-      sandreCda: r.steu_sandre_cda.trim(),
-      annee: parseInt(r.pab_an.toString(), 10),
-      productionBoue: parseFloat(r.production_boue.toString()),
+      ouvrageDepollutionCode: r.steu_sandre_cda.trim(),
+      boueProductionAnnee: parseInt(r.pab_an.toString(), 10),
+      boueProductionAnnuelle: parseFloat(r.production_boue.toString()),
     }));
   }
 
@@ -324,13 +327,13 @@ export class RoseauRepository implements RoseauGateway {
       ouvrageType,
       steuSandreCdas,
       sclSandreCdas,
-      pmoCdn,
+      pointMesureIdentifiant,
       dateDebut,
       dateFin,
-      parametreCode,
-      qualification,
-      statut,
-      finalite,
+      parametreAnalyseCode,
+      resultatAnalyseQualification,
+      resultatAnalyseStatut,
+      analyseFinalite,
       page,
       pageSize,
     } = filters;
@@ -378,8 +381,8 @@ export class RoseauRepository implements RoseauGateway {
           qb.andWhere('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas });
         }
       }
-      if (pmoCdn !== undefined) {
-        qb.andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+      if (pointMesureIdentifiant !== undefined) {
+        qb.andWhere('pmo.pmo_cdn = :pointMesureIdentifiant', { pointMesureIdentifiant });
       }
       if (dateDebut) {
         qb.andWhere('ple.ple_prelev_dt >= :dateDebut', { dateDebut });
@@ -387,17 +390,17 @@ export class RoseauRepository implements RoseauGateway {
       if (dateFin) {
         qb.andWhere('ple.ple_prelev_dt <= :dateFin', { dateFin });
       }
-      if (parametreCode) {
-        qb.andWhere('par.par_rfa = :parametreCode', { parametreCode });
+      if (parametreAnalyseCode) {
+        qb.andWhere('par.par_rfa = :parametreAnalyseCode', { parametreAnalyseCode });
       }
-      if (qualification) {
-        qb.andWhere('t18.tlref_elt_cda = :qualification', { qualification });
+      if (resultatAnalyseQualification) {
+        qb.andWhere('t18.tlref_elt_cda = :resultatAnalyseQualification', { resultatAnalyseQualification });
       }
-      if (statut) {
-        qb.andWhere('t20.tlref_elt_cda = :statut', { statut });
+      if (resultatAnalyseStatut) {
+        qb.andWhere('t20.tlref_elt_cda = :resultatAnalyseStatut', { resultatAnalyseStatut });
       }
-      if (finalite) {
-        qb.andWhere('t17.tlref_elt_cda = :finalite', { finalite });
+      if (analyseFinalite) {
+        qb.andWhere('t17.tlref_elt_cda = :analyseFinalite', { analyseFinalite });
       }
       return qb;
     };
@@ -479,22 +482,22 @@ export class RoseauRepository implements RoseauGateway {
     }>();
 
     const data: MesureRow[] = rows.map((r) => ({
-      steuSandreCda: r.steu_sandre_cda?.trim() ?? '',
-      steuNom: r.steu_nom?.trim() ?? null,
-      sclSandreCda: r.scl_sandre_cda?.trim() ?? null,
-      sclNom: r.scl_nom?.trim() ?? null,
-      localisationPoint: r.localisation_point?.trim() ?? null,
-      numPointAgence: r.num_point_agence?.trim() ?? null,
-      numPoint: r.num_point?.trim() ?? null,
-      nomPoint: r.nom_point?.trim() ?? null,
-      date: r.date ? new Date(r.date) : null,
-      parametreCode: r.parametre_code?.trim() ?? '',
-      parametreNom: r.parametre_nom?.trim() ?? null,
-      valeur: r.valeur !== null && r.valeur !== undefined ? parseFloat(r.valeur) : null,
-      unite: r.unite?.trim() ?? null,
-      finalite: r.finalite?.trim() ?? null,
-      statut: r.statut?.trim() ?? null,
-      qualification: r.qualification?.trim() ?? null,
+      ouvrageDepollutionCode: r.steu_sandre_cda?.trim() ?? '',
+      ouvrageDepollutionNom: r.steu_nom?.trim() ?? null,
+      systemeCollecteCode: r.scl_sandre_cda?.trim() ?? null,
+      systemeCollecteNom: r.scl_nom?.trim() ?? null,
+      pointMesureLocalisationCode: r.localisation_point?.trim() ?? null,
+      pointAgenceEauNumero: r.num_point_agence?.trim() ?? null,
+      pointMesureNumero: r.num_point?.trim() ?? null,
+      pointMesureLibelle: r.nom_point?.trim() ?? null,
+      prelevementDate: r.date ? new Date(r.date) : null,
+      parametreAnalyseCode: r.parametre_code?.trim() ?? '',
+      parametreNomCourt: r.parametre_nom?.trim() ?? null,
+      resultatAnalyseValeur: r.valeur !== null && r.valeur !== undefined ? parseFloat(r.valeur) : null,
+      uniteMesureSymbole: r.unite?.trim() ?? null,
+      analyseFinalite: r.finalite?.trim() ?? null,
+      resultatAnalyseStatut: r.statut?.trim() ?? null,
+      resultatAnalyseQualification: r.qualification?.trim() ?? null,
     }));
 
     return { data, total };
@@ -507,8 +510,8 @@ export class RoseauRepository implements RoseauGateway {
       .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
     return rows.map((s) => ({
-      steuSandreCda: s.steuSandreCda?.trim() ?? '',
-      steuNom: s.steuNomLb?.trim() ?? null,
+      ouvrageDepollutionCode: s.steuSandreCda?.trim() ?? '',
+      ouvrageDepollutionNom: s.steuNomLb?.trim() ?? null,
     }));
   }
 
@@ -519,8 +522,8 @@ export class RoseauRepository implements RoseauGateway {
       .where('scl.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
     return rows.map((s) => ({
-      sclSandreCda: s.sclSandreCda?.trim() ?? '',
-      sclNom: s.sclLb?.trim() ?? null,
+      systemeCollecteCode: s.sclSandreCda?.trim() ?? '',
+      systemeCollecteNom: s.sclLb?.trim() ?? null,
     }));
   }
 
@@ -547,9 +550,9 @@ export class RoseauRepository implements RoseauGateway {
 
     const rows = await qb.getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
     return rows.map((r) => ({
-      pmoCdn: r.pmo_cdn,
-      pmoNo: r.pmo_no?.trim() ?? '',
-      pmoLb: r.pmo_lb?.trim() ?? null,
+      pointMesureIdentifiant: r.pmo_cdn,
+      pointMesureNumero: r.pmo_no?.trim() ?? '',
+      pointMesureLibelle: r.pmo_lb?.trim() ?? null,
     }));
   }
 
@@ -581,8 +584,8 @@ export class RoseauRepository implements RoseauGateway {
 
     const rows = await qb.getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
     return rows.map((r) => ({
-      parRfa: r.par_rfa?.trim() ?? '',
-      parCourtNomLb: r.par_court_nom_lb?.trim() ?? null,
+      parametreAnalyseCode: r.par_rfa?.trim() ?? '',
+      parametreNomCourt: r.par_court_nom_lb?.trim() ?? null,
     }));
   }
 
@@ -594,8 +597,8 @@ export class RoseauRepository implements RoseauGateway {
       .getMany();
 
     return rows.map((r) => ({
-      code: r.tlrefEltCda?.trim() ?? '',
-      label: r.tlrefMnemoLb?.trim() ?? null,
+      elementNomenclatureCode: r.tlrefEltCda?.trim() ?? '',
+      elementNomenclatureLibelle: r.tlrefMnemoLb?.trim() ?? null,
     }));
   }
 
@@ -655,16 +658,16 @@ export class RoseauRepository implements RoseauGateway {
     }>();
 
     return rows.map((r) => ({
-      ouvrageSandreCda: r.ouvrage_sandre_cda?.trim() ?? '',
-      ouvrageNom: r.ouvrage_nom?.trim() ?? null,
-      identifiantAgence: r.identifiant_agence?.trim() ?? null,
-      numeroPoint: r.numero_point?.trim() ?? null,
-      nomPoint: r.nom_point?.trim() ?? null,
-      localisationCode: r.localisation_code?.trim() ?? null,
-      localisationGlobale: r.localisation_globale?.trim() ?? null,
-      categorie: null,
-      dateDebut: r.date_debut ? new Date(r.date_debut).toISOString().split('T')[0] : null,
-      dateFin: r.date_fin ? new Date(r.date_fin).toISOString().split('T')[0] : null,
+      ouvrageDepollutionCode: r.ouvrage_sandre_cda?.trim() ?? '',
+      ouvrageDepollutionNom: r.ouvrage_nom?.trim() ?? null,
+      pointAgenceEauNumero: r.identifiant_agence?.trim() ?? null,
+      pointMesureNumero: r.numero_point?.trim() ?? null,
+      pointMesureLibelle: r.nom_point?.trim() ?? null,
+      pointMesureLocalisationCode: r.localisation_code?.trim() ?? null,
+      pointMesureLocalisationLibelle: r.localisation_globale?.trim() ?? null,
+      pointMesureSclCategorie: null,
+      pointMesureValiditeDebutDate: r.date_debut ? new Date(r.date_debut).toISOString().split('T')[0] : null,
+      pointMesureValiditeFinDate: r.date_fin ? new Date(r.date_fin).toISOString().split('T')[0] : null,
     }));
   }
 
@@ -710,16 +713,16 @@ export class RoseauRepository implements RoseauGateway {
     }>();
 
     return rows.map((r) => ({
-      ouvrageSandreCda: r.ouvrage_sandre_cda?.trim() ?? '',
-      ouvrageNom: r.ouvrage_nom?.trim() ?? null,
-      identifiantAgence: r.identifiant_agence?.trim() ?? null,
-      numeroPoint: r.numero_point?.trim() ?? null,
-      nomPoint: r.nom_point?.trim() ?? null,
-      localisationCode: r.localisation_code?.trim() ?? null,
-      localisationGlobale: r.localisation_globale?.trim() ?? null,
-      categorie: r.categorie?.trim() ?? null,
-      dateDebut: r.date_debut ? new Date(r.date_debut).toISOString().split('T')[0] : null,
-      dateFin: r.date_fin ? new Date(r.date_fin).toISOString().split('T')[0] : null,
+      ouvrageDepollutionCode: r.ouvrage_sandre_cda?.trim() ?? '',
+      ouvrageDepollutionNom: r.ouvrage_nom?.trim() ?? null,
+      pointAgenceEauNumero: r.identifiant_agence?.trim() ?? null,
+      pointMesureNumero: r.numero_point?.trim() ?? null,
+      pointMesureLibelle: r.nom_point?.trim() ?? null,
+      pointMesureLocalisationCode: r.localisation_code?.trim() ?? null,
+      pointMesureLocalisationLibelle: r.localisation_globale?.trim() ?? null,
+      pointMesureSclCategorie: r.categorie?.trim() ?? null,
+      pointMesureValiditeDebutDate: r.date_debut ? new Date(r.date_debut).toISOString().split('T')[0] : null,
+      pointMesureValiditeFinDate: r.date_fin ? new Date(r.date_fin).toISOString().split('T')[0] : null,
     }));
   }
 

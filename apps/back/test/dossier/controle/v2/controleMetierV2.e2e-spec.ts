@@ -2290,7 +2290,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
   /////
 
-  describe.skip('CTL053 - verifyDebitEntrantVsChargeMax', () => {
+  describe('CTL053 - verifyDebitEntrantVsChargeMax', () => {
     it('should pass when total debit is below threshold (2 * maxDebitRef)', async () => {
       // maxDebitRef = max(pc95=500, dref=400) = 500, threshold = 1000
       await seedSteu(dataSource, 1, 'STEU001', { steuEncoursAn: 2024 });
@@ -2527,7 +2527,7 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  describe.skip('CTL054 - verifyChargeEntranteVsTranche', () => {
+  describe('CTL054 - verifyChargeEntranteVsTranche', () => {
     it('should pass when variation between N and N-1 is within 20%', async () => {
       // N = 9000, N-1 = 8000 => variation = 12.5% => OK
       await seedSteu(dataSource, 1, 'STEU001', { zgcCdn: 100, steuEncoursAn: 2024 });

@@ -1315,8 +1315,16 @@ describe('ControleMetierV2Service', () => {
       } as unknown as FctAssainissement;
 
       const cmas: CmaBySandreCdaAndParam[] = [
-        { sandreCda: 'STEU1', paramCode: CodeParametre.DBO5.toString(), value: 150 },
-        { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DBO5.toString(),
+          resultatAnnuelConcentrationMoyenne: 150,
+        },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DCO.toString(),
+          resultatAnnuelConcentrationMoyenne: 400,
+        },
       ];
 
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
@@ -1355,8 +1363,16 @@ describe('ControleMetierV2Service', () => {
       } as unknown as FctAssainissement;
 
       const cmas: CmaBySandreCdaAndParam[] = [
-        { sandreCda: 'STEU1', paramCode: CodeParametre.DBO5.toString(), value: 150 },
-        { sandreCda: 'STEU1', paramCode: CodeParametre.DCO.toString(), value: 400 },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DBO5.toString(),
+          resultatAnnuelConcentrationMoyenne: 150,
+        },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DCO.toString(),
+          resultatAnnuelConcentrationMoyenne: 400,
+        },
       ];
 
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
@@ -1469,7 +1485,13 @@ describe('ControleMetierV2Service', () => {
     it('should detect variation > 20% between year N and N-1', async () => {
       // N = 10000, N-1 = 5000 => variation = 100% => error
       masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
-        { sandreCda: 'STEU1', chargeMaxN: 10000, chargeMaxNMoins1: 5000, trancheLabel: 'Tranche 2', annee: 2024 },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          chargeEntranteMaximaleEHN: 10000,
+          chargeEntranteMaximaleEHNMoins1: 5000,
+          trancheObligationLibelle: 'Tranche 2',
+          bilanReferenceAnnee: 2024,
+        },
       ]);
 
       const xmlObj: FctAssainissement = {
@@ -1488,7 +1510,13 @@ describe('ControleMetierV2Service', () => {
     it('should not report error when variation <= 20%', async () => {
       // N = 5500, N-1 = 5000 => variation = 10% => OK
       masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
-        { sandreCda: 'STEU1', chargeMaxN: 5500, chargeMaxNMoins1: 5000, trancheLabel: 'Tranche 2', annee: 2024 },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          chargeEntranteMaximaleEHN: 5500,
+          chargeEntranteMaximaleEHNMoins1: 5000,
+          trancheObligationLibelle: 'Tranche 2',
+          bilanReferenceAnnee: 2024,
+        },
       ]);
 
       const xmlObj: FctAssainissement = {
@@ -1504,12 +1532,18 @@ describe('ControleMetierV2Service', () => {
     it('should detect negative variation > 20%', async () => {
       // N = 3000, N-1 = 5000 => variation = -40% => |variation| = 40% => error
       masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
-        { sandreCda: 'STEU1', chargeMaxN: 3000, chargeMaxNMoins1: 5000, trancheLabel: 'Tranche 2', annee: 2024 },
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          chargeEntranteMaximaleEHN: 3000,
+          chargeEntranteMaximaleEHNMoins1: 5000,
+          trancheObligationLibelle: 'Tranche 2',
+          bilanReferenceAnnee: 2024,
+        },
       ]);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },
-        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
+        ouvrages: [{ ouvrageDepollutionCode: 'STEU1' }],
       } as unknown as FctAssainissement;
 
       const result = await service.verifyChargeEntranteVsTranche(xmlObj);
@@ -1527,7 +1561,9 @@ describe('ControleMetierV2Service', () => {
         ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
       } as unknown as FctAssainissement;
 
-      const productionsBoueZero: ProductionBoueZero[] = [{ sandreCda: 'STEU1', annee: 2025, productionBoue: 0 }];
+      const productionsBoueZero: ProductionBoueZero[] = [
+        { ouvrageDepollutionCode: 'STEU1', boueProductionAnnee: 2025, boueProductionAnnuelle: 0 },
+      ];
 
       const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
 
@@ -1560,8 +1596,8 @@ describe('ControleMetierV2Service', () => {
       } as unknown as FctAssainissement;
 
       const productionsBoueZero: ProductionBoueZero[] = [
-        { sandreCda: 'STEU1', annee: 2025, productionBoue: 0 },
-        { sandreCda: 'STEU3', annee: 2025, productionBoue: 0 },
+        { ouvrageDepollutionCode: 'STEU1', boueProductionAnnee: 2025, boueProductionAnnuelle: 0 },
+        { ouvrageDepollutionCode: 'STEU3', boueProductionAnnee: 2025, boueProductionAnnuelle: 0 },
       ];
 
       const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
@@ -1572,13 +1608,15 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors[1].params).toEqual(['STEU3', '2025', '0']);
     });
 
-    it('should skip ouvrages without cdOuvrageDepollution', () => {
+    it('should skip ouvrages without ouvrageDepollutionCode', () => {
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2025-01-01' },
         ouvrages: [{ cdOuvrageDepollution: undefined }, { cdOuvrageDepollution: 'STEU1' }],
       } as unknown as FctAssainissement;
 
-      const productionsBoueZero: ProductionBoueZero[] = [{ sandreCda: 'STEU1', annee: 2025, productionBoue: 0 }];
+      const productionsBoueZero: ProductionBoueZero[] = [
+        { ouvrageDepollutionCode: 'STEU1', boueProductionAnnee: 2025, boueProductionAnnuelle: 0 },
+      ];
 
       const result = service.verifyProductionBoue(xmlObj, productionsBoueZero);
 
@@ -2229,7 +2267,9 @@ describe('ControleMetierV2Service', () => {
 
   describe('verifyChargePollutionVsCapaciteNominale (CTL060)', () => {
     it('should return AVERTISSEMENT when charge > 1.5 * capacite nominale', async () => {
-      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 5000 }]);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionCapaciteNominaleEH: 5000 },
+      ]);
 
       // Volume = 1000 m³/j, DBO5 = 600 mg/L => charge = (1000*600)/60 = 10000 EH > 7500 (1.5*5000)
       const xmlObj: FctAssainissement = {
@@ -2266,7 +2306,9 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should return no error when charge <= 1.5 * capacite nominale', async () => {
-      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 10000 }]);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionCapaciteNominaleEH: 10000 },
+      ]);
 
       // Volume = 500 m³/j, DBO5 = 300 mg/L => charge = (500*300)/60 = 2500 EH <= 15000 (1.5*10000)
       const xmlObj: FctAssainissement = {
@@ -2299,7 +2341,9 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should skip when capacite nominale < 2000 EH', async () => {
-      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 1999 }]);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionCapaciteNominaleEH: 1999 },
+      ]);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },
@@ -2331,7 +2375,9 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should apply when capacite nominale = 2000 EH', async () => {
-      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 2000 }]);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionCapaciteNominaleEH: 2000 },
+      ]);
 
       // Volume = 500 m³/j, DBO5 = 500 mg/L => charge = (500*500)/60 = 4166.67 EH > 3000 (1.5*2000)
       const xmlObj: FctAssainissement = {
@@ -2398,7 +2444,9 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should only check A3 points', async () => {
-      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([{ sandreCda: 'STEU1', capaciteNominale: 5000 }]);
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionCapaciteNominaleEH: 5000 },
+      ]);
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },

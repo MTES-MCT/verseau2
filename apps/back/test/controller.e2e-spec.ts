@@ -481,26 +481,30 @@ describe('ReferentielController (e2e) - points-mesure', () => {
       isExpertNational: false,
     });
     jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
-      itvCdn: 100,
-      itvRfa: 'SIRET001',
+      intervenantIdentifiant: 100,
+      intervenantSiret: 'SIRET001',
     });
-    jest
-      .spyOn(masaProvider, 'findVSteuSclItvByItvRfa')
-      .mockResolvedValue([
-        { steuCda: STEU_CODE, sclCda: null as unknown as string, moItvRfa: null, satItvRfa: null, aeItvRfa: null },
-      ]);
+    jest.spyOn(masaProvider, 'findVSteuSclItvByItvRfa').mockResolvedValue([
+      {
+        ouvrageDepollutionCode: STEU_CODE,
+        systemeCollecteCode: null as unknown as string,
+        maitreOuvrageSiret: null,
+        prestataireAutosurveillanceSiret: null,
+        agenceEauSiret: null,
+      },
+    ]);
     jest.spyOn(masaProvider, 'findPointsMesureReferentiel').mockResolvedValue([
       {
-        ouvrageSandreCda: STEU_CODE,
-        ouvrageNom: 'Station test',
-        identifiantAgence: 'AG001',
-        numeroPoint: 'P1',
-        nomPoint: 'Point entrée',
-        localisationCode: 'ENT',
-        localisationGlobale: 'Entrée',
-        categorie: 'REG',
-        dateDebut: '2020-01-01',
-        dateFin: null,
+        ouvrageDepollutionCode: STEU_CODE,
+        ouvrageDepollutionNom: 'Station test',
+        pointAgenceEauNumero: 'AG001',
+        pointMesureNumero: 'P1',
+        pointMesureLibelle: 'Point entrée',
+        pointMesureLocalisationCode: 'ENT',
+        pointMesureLocalisationLibelle: 'Entrée',
+        pointMesureSclCategorie: 'REG',
+        pointMesureValiditeDebutDate: '2020-01-01',
+        pointMesureValiditeFinDate: null,
       },
     ]);
 
@@ -513,16 +517,16 @@ describe('ReferentielController (e2e) - points-mesure', () => {
     expect(response.body).toEqual({
       points: [
         {
-          ouvrageSandreCda: STEU_CODE,
-          ouvrageNom: 'Station test',
-          identifiantAgence: 'AG001',
-          numeroPoint: 'P1',
-          nomPoint: 'Point entrée',
-          localisationCode: 'ENT',
-          localisationGlobale: 'Entrée',
-          categorie: 'REG',
-          dateDebut: '2020-01-01',
-          dateFin: null,
+          ouvrageDepollutionCode: STEU_CODE,
+          ouvrageDepollutionNom: 'Station test',
+          pointAgenceEauNumero: 'AG001',
+          pointMesureNumero: 'P1',
+          pointMesureLibelle: 'Point entrée',
+          pointMesureLocalisationCode: 'ENT',
+          pointMesureLocalisationLibelle: 'Entrée',
+          pointMesureSclCategorie: 'REG',
+          pointMesureValiditeDebutDate: '2020-01-01',
+          pointMesureValiditeFinDate: null,
         },
       ],
     });
