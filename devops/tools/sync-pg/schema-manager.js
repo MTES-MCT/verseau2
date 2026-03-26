@@ -52,7 +52,7 @@ class SchemaManager {
    * non-excluded table has at least one row.
    *
    * Excluded tables are skipped — they haven't been restored and will be
-   * carried over from the live schema during the swap.
+   * moved from the live schema via ALTER TABLE SET SCHEMA during the swap.
    *
    * @returns {Promise<Record<string, number>>} Map of "liveSchema.table" → row count
    */
@@ -102,10 +102,11 @@ class SchemaManager {
 
   /**
    * Atomic swap: within a single transaction —
-   * 1. Carry over excluded tables from live → staging
-   * 2. Drop live schemas
-   * 3. Rename staging → live
-   * 4. Record swap in public.sync_tracking
+   * 1. Rename live → _old
+   * 2. Rename staging → live
+   * 3. Move excluded tables from _old → live (ALTER TABLE SET SCHEMA — instant, metadata-only)
+   * 4. Drop _old schemas
+   * 5. Record swap in public.sync_tracking
    *
    * @param {string}                  dumpSource - Identifier of the dump file
    * @param {Record<string, number>}  rowCounts  - Row-count snapshot from validation
@@ -127,15 +128,67 @@ class SchemaManager {
         );
       `);
 
-      // Carry over excluded tables from live into staging
-      await this._carryOverExcludedTables(client, rowCounts);
+      const oldSchemas = [];
 
-      // Drop live schemas and rename staging → live
       for (const stagingSchema of STAGING_SCHEMAS) {
         const liveSchema = STAGING_TO_LIVE[stagingSchema];
-        await client.query(`DROP SCHEMA IF EXISTS ${liveSchema} CASCADE;`);
-        await client.query(`ALTER SCHEMA ${stagingSchema} RENAME TO ${liveSchema};`);
-        console.log(`  ${stagingSchema} → ${liveSchema}`);
+        const oldSchema = `${liveSchema}_old`;
+        const dumpSchema = LIVE_TO_DUMP[liveSchema];
+        const excluded = excludedTablesForDumpSchema(dumpSchema);
+
+        // Check if the live schema exists (first run it won't)
+        const liveExists = await client.query(
+          `SELECT EXISTS (SELECT FROM information_schema.schemata WHERE schema_name = $1);`,
+          [liveSchema],
+        );
+
+        if (liveExists.rows[0].exists) {
+          // Park the current live schema
+          await client.query(`DROP SCHEMA IF EXISTS ${oldSchema} CASCADE;`);
+          await client.query(`ALTER SCHEMA ${liveSchema} RENAME TO ${oldSchema};`);
+          console.log(`  ${liveSchema} → ${oldSchema}`);
+
+          // Promote staging to live
+          await client.query(`ALTER SCHEMA ${stagingSchema} RENAME TO ${liveSchema};`);
+          console.log(`  ${stagingSchema} → ${liveSchema}`);
+
+          // Move excluded tables from _old into the new live schema (instant metadata operation)
+          for (const table of excluded) {
+            const tableExists = await client.query(
+              `SELECT EXISTS (
+                 SELECT FROM information_schema.tables
+                 WHERE table_schema = $1 AND table_name = $2
+               );`,
+              [oldSchema, table],
+            );
+
+            if (tableExists.rows[0].exists) {
+              // Drop the empty shell left by pre-data restore in the new live schema
+              await client.query(`DROP TABLE IF EXISTS ${liveSchema}.${table} CASCADE;`);
+              // Move the real table (instant, metadata-only)
+              await client.query(`ALTER TABLE ${oldSchema}.${table} SET SCHEMA ${liveSchema};`);
+
+              const countResult = await client.query(`SELECT COUNT(*) AS count FROM ${liveSchema}.${table};`);
+              const count = parseInt(countResult.rows[0].count, 10);
+              rowCounts[`${liveSchema}.${table}`] = count;
+              console.log(`  ${oldSchema}.${table} → ${liveSchema}.${table}: ${count} rows (SET SCHEMA, instant)`);
+            } else {
+              console.log(`  ${oldSchema}.${table}: not found, skipping.`);
+            }
+          }
+
+          oldSchemas.push(oldSchema);
+        } else {
+          // First run: no live schema to park, just rename staging
+          await client.query(`ALTER SCHEMA ${stagingSchema} RENAME TO ${liveSchema};`);
+          console.log(`  ${stagingSchema} → ${liveSchema} (first run, no carry-over needed)`);
+        }
+      }
+
+      // Drop _old schemas (excluded tables have already been moved out)
+      for (const oldSchema of oldSchemas) {
+        await client.query(`DROP SCHEMA ${oldSchema} CASCADE;`);
+        console.log(`  Dropped ${oldSchema}`);
       }
 
       // Record the swap
@@ -157,69 +210,6 @@ class SchemaManager {
   }
 
   /**
-   * For each excluded table, copy it from the current live schema into the
-   * staging schema (CREATE TABLE ... AS SELECT * ...), so it survives the
-   * DROP SCHEMA live CASCADE.
-   *
-   * Also records their row counts in the rowCounts map for auditing.
-   *
-   * @param {Client} client   - Already-connected client inside a transaction
-   * @param {Record<string, number>} rowCounts - Mutable map to append to
-   */
-  async _carryOverExcludedTables(client, rowCounts) {
-    if (EXCLUDED_TABLES.length === 0) return;
-
-    console.log('Carrying over excluded tables from live to staging...');
-
-    for (const entry of EXCLUDED_TABLES) {
-      const [dumpSchema, table] = entry.split('.');
-
-      // Find the matching staging/live schemas for this dump schema
-      let stagingSchema = null;
-      let liveSchema = null;
-
-      for (const [staging, live] of Object.entries(STAGING_TO_LIVE)) {
-        if (LIVE_TO_DUMP[live] === dumpSchema) {
-          stagingSchema = staging;
-          liveSchema = live;
-          break;
-        }
-      }
-
-      if (!stagingSchema) {
-        console.log(`  ⚠️ No matching staging schema for ${entry}, skipping.`);
-        continue;
-      }
-
-      // Check if the table exists in the live schema (first run it won't)
-      const exists = await client.query(
-        `SELECT EXISTS (
-           SELECT FROM information_schema.tables
-           WHERE table_schema = $1 AND table_name = $2
-         );`,
-        [liveSchema, table],
-      );
-
-      if (!exists.rows[0].exists) {
-        console.log(`  ${liveSchema}.${table}: not found in live schema, skipping carry-over.`);
-        continue;
-      }
-
-      // Copy table structure + data into staging
-      await client.query(`CREATE TABLE ${stagingSchema}.${table} (LIKE ${liveSchema}.${table} INCLUDING ALL);`);
-      await client.query(`INSERT INTO ${stagingSchema}.${table} SELECT * FROM ${liveSchema}.${table};`);
-
-      // Record row count
-      const countResult = await client.query(`SELECT COUNT(*) AS count FROM ${stagingSchema}.${table};`);
-      const count = parseInt(countResult.rows[0].count, 10);
-      const key = `${liveSchema}.${table}`;
-      rowCounts[key] = count;
-
-      console.log(`  ${liveSchema}.${table} → ${stagingSchema}.${table}: ${count} rows carried over`);
-    }
-  }
-
-  /**
    * @param {Client} client
    * @param {string} schemaName
    * @returns {Promise<string[]>}
@@ -229,7 +219,7 @@ class SchemaManager {
       `SELECT table_name
        FROM information_schema.tables
        WHERE table_schema = $1
-         AND table_type = 'BASE TABLE'
+         AND table_type IN ('BASE TABLE', 'VIEW')
        ORDER BY table_name;`,
       [schemaName],
     );
