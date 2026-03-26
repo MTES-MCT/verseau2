@@ -10,6 +10,8 @@ require('./server');
 async function main() {
   let tempFilePath = null;
 
+  const startedAt = new Date();
+
   try {
     if (!config.aws.bucket) {
       throw new Error('Missing S3 configuration. Please check .env file.');
@@ -44,7 +46,7 @@ async function main() {
     // Step 4: Atomic swap staging → live
     console.log('\n=== Step 4/4: Atomic swap ===');
     const dumpSource = path.basename(tempFilePath);
-    await schemaManager.swapStagingToLive(dumpSource, rowCounts);
+    await schemaManager.swapStagingToLive(dumpSource, rowCounts, startedAt);
 
     // Cleanup temp file
     console.log('\nCleaning up temporary file...');
