@@ -49,7 +49,7 @@ export class DroitsDepotService {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
-    const roles = await this.masaProvider.findRolesByPrCdn(ag.identifiantPrincipal);
+    const roles = await this.masaProvider.findRolesByPrCdn(ag.principalIdentifiant);
     const roleCdns = new Set(roles?.map((r) => r.roleCdn));
     const hasRoleDeposantOrExpertBassin = roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU);
     this.logger.log('hasRoleDeposantOrExpertBassin', hasRoleDeposantOrExpertBassin);
@@ -57,15 +57,15 @@ export class DroitsDepotService {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
-    const intervenant = await this.masaProvider.findIntervenantById(ag.identifiantIntervenant);
+    const intervenant = await this.masaProvider.findIntervenantById(ag.intervenantIdentifiant);
     this.logger.log('Intervenant found', {
-      identifiantIntervenant: intervenant?.identifiantIntervenant,
-      siret: intervenant?.siretIntervenant,
+      intervenantIdentifiant: intervenant?.intervenantIdentifiant,
+      siret: intervenant?.intervenantSiret,
     });
-    if (!intervenant?.siretIntervenant) {
+    if (!intervenant?.intervenantSiret) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
-    const userSiret = intervenant.siretIntervenant;
+    const userSiret = intervenant.intervenantSiret;
 
     this.logger.log(
       'Validating droits de depot for cdOuvrageDepollutionList',
@@ -76,7 +76,7 @@ export class DroitsDepotService {
     this.logger.log('VSteuSclItv entities found', matches);
 
     for (const code of cdOuvrageDepollutionList) {
-      const matchesForCode = matches.filter((m) => m.codeOuvrageDepollution === code);
+      const matchesForCode = matches.filter((m) => m.ouvrageDepollutionCode === code);
 
       if (matchesForCode.length === 0) {
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
@@ -84,9 +84,9 @@ export class DroitsDepotService {
 
       const hasRights = matchesForCode.some(
         (m) =>
-          m.siretMaitreOuvrage === userSiret ||
-          m.siretPrestataireAutosurveillance === userSiret ||
-          m.siretAgenceEau === userSiret,
+          m.maitreOuvrageSiret === userSiret ||
+          m.prestataireAutosurveillanceSiret === userSiret ||
+          m.agenceEauSiret === userSiret,
       );
       if (!hasRights) {
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
@@ -94,7 +94,7 @@ export class DroitsDepotService {
     }
 
     for (const code of cdSystemeCollecteList) {
-      const matchesForCode = matches.filter((m) => m.codeSystemeCollecte === code);
+      const matchesForCode = matches.filter((m) => m.systemeCollecteCode === code);
 
       if (matchesForCode.length === 0) {
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
@@ -102,9 +102,9 @@ export class DroitsDepotService {
 
       const hasRights = matchesForCode.some(
         (m) =>
-          m.siretMaitreOuvrage === userSiret ||
-          m.siretPrestataireAutosurveillance === userSiret ||
-          m.siretAgenceEau === userSiret,
+          m.maitreOuvrageSiret === userSiret ||
+          m.prestataireAutosurveillanceSiret === userSiret ||
+          m.agenceEauSiret === userSiret,
       );
       if (!hasRights) {
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);

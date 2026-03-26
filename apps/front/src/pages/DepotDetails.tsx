@@ -51,27 +51,27 @@ export function DepotDetailsPage() {
 
   const ouvragesOptions: AutocompleteOption[] = isScl
     ? systemesCollecte.map((s) => ({
-        value: s.codeSystemeCollecte,
-        label: s.nomSystemeCollecte ?? s.codeSystemeCollecte,
+        value: s.systemeCollecteCode,
+        label: s.systemeCollecteNom ?? s.systemeCollecteCode,
       }))
     : ouvrages.map((o) => ({
-        value: o.codeOuvrageDepollution,
-        label: o.nomOuvrageDepollution ?? o.codeOuvrageDepollution,
+        value: o.ouvrageDepollutionCode,
+        label: o.ouvrageDepollutionNom ?? o.ouvrageDepollutionCode,
       }));
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
 
   const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) =>
     formatOption({
-      codeElementNomenclature: String(option.identifiantPointMesure),
-      libelleElementNomenclature: option.libellePointMesure,
+      elementNomenclatureCode: String(option.pointMesureIdentifiant),
+      elementNomenclatureLibelle: option.pointMesureLibelle,
     }),
   );
 
   const parametresOptions: AutocompleteOption[] = parametres.map((option) =>
     formatOption({
-      codeElementNomenclature: option.codeParametreAnalyse,
-      libelleElementNomenclature: option.nomCourtParametre,
+      elementNomenclatureCode: option.parametreAnalyseCode,
+      elementNomenclatureLibelle: option.parametreNomCourt,
     }),
   );
 
@@ -79,8 +79,8 @@ export function DepotDetailsPage() {
     .slice()
     .sort((a, b) => {
       const preferred = ['1', '11', '9', '2'];
-      const aIndex = preferred.indexOf(String(a.codeElementNomenclature));
-      const bIndex = preferred.indexOf(String(b.codeElementNomenclature));
+      const aIndex = preferred.indexOf(String(a.elementNomenclatureCode));
+      const bIndex = preferred.indexOf(String(b.elementNomenclatureCode));
 
       if (aIndex === -1 && bIndex === -1) {
         return 0;

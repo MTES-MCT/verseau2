@@ -33,7 +33,7 @@ export class IndicateursService {
 
     // Récupérer les codes SANDRE autorisés pour cet intervenant (données live verseau)
     const authorizedSteus = await this.masaProvider.findVSteuSclItvByItvRfa(siret);
-    const steuCodes = authorizedSteus.map((s) => s.codeOuvrageDepollution).filter((code) => !!code);
+    const steuCodes = authorizedSteus.map((s) => s.ouvrageDepollutionCode).filter((code) => !!code);
 
     if (steuCodes.length === 0) {
       return [];

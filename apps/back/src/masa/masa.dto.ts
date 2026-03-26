@@ -2,117 +2,117 @@
 import { PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 
 export interface CmaBySandreCdaAndParam {
-  codeOuvrageDepollution: string;
-  codeParametreAnalyse: string;
-  concentrationMoyenneAnnuelle: number;
+  ouvrageDepollutionCode: string;
+  parametreAnalyseCode: string;
+  resultatAnnuelConcentrationMoyenne: number;
 }
 
 /** CTL051 / CTL060 — Capacité nominale en EH pour un STEU donné et une année */
 export interface CapaciteNominaleBySandreCda {
-  codeOuvrageDepollution: string;
-  capaciteNominaleEquivalentHabitants: number;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionCapaciteNominaleEH: number;
 }
 
 /** CTL053 — Débit max de référence (max(PC95, Dref)) pour un STEU donné */
 export interface MaxDebitBySandreCda {
-  codeOuvrageDepollution: string;
-  debitMaximalReference: number;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionDebitMaximalReference: number;
 }
 
 /** CTL055 — Production de boue nulle ou absente pour un STEU donné */
 export interface ProductionBoueZero {
-  codeOuvrageDepollution: string;
-  anneeProductionBoue: number;
-  productionBoueAnnuelle: number;
+  ouvrageDepollutionCode: string;
+  boueProductionAnnee: number;
+  boueProductionAnnuelle: number;
 }
 
 /** CTL054 — Comparaison charge entrante max année N vs N-1 pour un STEU donné */
 export interface ChargeEntranteMaxComparison {
-  codeOuvrageDepollution: string;
-  chargeEntranteMaximaleAnneeN: number;
-  chargeEntranteMaximaleAnneeNMoins1: number;
-  libelleTrancheObligation: string;
-  anneeReferenceBilan: number;
+  ouvrageDepollutionCode: string;
+  chargeEntranteMaximaleEHN: number;
+  chargeEntranteMaximaleEHNMoins1: number;
+  trancheObligationLibelle: string;
+  bilanReferenceAnnee: number;
 }
 
 /** Résultat STEU retourné par un fetch batch MASA */
 export interface SteuCdnBySandreCda {
-  codeOuvrageDepollution: string;
-  identifiantOuvrageDepollution: number;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionIdentifiant: number;
 }
 
 /** STEU avec nom — utilisé pour les dropdowns et listes d'ouvrages */
 export interface SteuWithName {
-  codeOuvrageDepollution: string;
-  nomOuvrageDepollution: string | null;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionNom: string | null;
 }
 
 /** SCL avec nom — utilisé pour le dropdown système de collecte */
 export interface SclWithName {
-  codeSystemeCollecte: string;
-  nomSystemeCollecte: string | null;
+  systemeCollecteCode: string;
+  systemeCollecteNom: string | null;
 }
 
 /** Résultat ITV retourné par un fetch batch MASA */
 
 export interface ItvCdnByRfa {
-  siretIntervenant: string;
-  identifiantIntervenant: number;
+  intervenantSiret: string;
+  intervenantIdentifiant: number;
 }
 
 /** Résultat de résolution AG (agent) par email — utilisé pour l'authentification */
 export interface AgByEmail {
-  identifiantIntervenant: number;
-  identifiantPrincipal: number;
+  intervenantIdentifiant: number;
+  principalIdentifiant: number;
 }
 
 /** Intervenant résolu pour l'authentification et les droits de dépôt */
 export interface IntervenantAuth {
-  identifiantIntervenant: number;
-  nomIntervenant?: string;
-  siretIntervenant?: string; // siret
+  intervenantIdentifiant: number;
+  intervenantNom?: string;
+  intervenantSiret?: string; // siret
 }
 
 /** Droits STEU/SCL par SIRET intervenant — utilisé pour la validation des droits de dépôt */
 export interface VSteuSclItvResult {
-  codeOuvrageDepollution: string;
-  codeSystemeCollecte: string;
-  siretMaitreOuvrage: string | null;
-  siretPrestataireAutosurveillance: string | null;
-  siretAgenceEau: string | null;
+  ouvrageDepollutionCode: string;
+  systemeCollecteCode: string;
+  maitreOuvrageSiret: string | null;
+  prestataireAutosurveillanceSiret: string | null;
+  agenceEauSiret: string | null;
 }
 
 /** Point de mesure (PMO) — utilisé pour le dropdown de sélection */
 export interface PointMesure {
-  identifiantPointMesure: number;
-  numeroPointMesure: string;
-  libellePointMesure: string | null;
+  pointMesureIdentifiant: number;
+  pointMesureNumero: string;
+  pointMesureLibelle: string | null;
 }
 
 /** Paramètre — utilisé pour le dropdown de sélection */
 export interface ParametreMesure {
-  codeParametreAnalyse: string;
-  nomCourtParametre: string | null;
+  parametreAnalyseCode: string;
+  parametreNomCourt: string | null;
 }
 
 /** Élément de nomenclature (ex: finalité, statut) — utilisé pour les dropdowns de sélection */
 export interface NomenclatureItem {
-  codeElementNomenclature: string;
-  libelleElementNomenclature: string | null;
+  elementNomenclatureCode: string;
+  elementNomenclatureLibelle: string | null;
 }
 
 /** Point de mesure du référentiel — utilisé pour la page référentiel */
 export interface PointMesureReferentielRow {
-  codeOuvrageDepollution: string;
-  nomOuvrageDepollution: string | null;
-  numeroPointAgenceEau: string | null;
-  numeroPointMesure: string | null;
-  libellePointMesure: string | null;
-  codeLocalisationPointMesure: string | null;
-  libelleLocalisationPointMesure: string | null;
-  categoriePointMesureScl: string | null;
-  dateDebutValiditePointMesure: string | null;
-  dateFinValiditePointMesure: string | null;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionNom: string | null;
+  pointAgenceEauNumero: string | null;
+  pointMesureNumero: string | null;
+  pointMesureLibelle: string | null;
+  pointMesureLocalisationCode: string | null;
+  pointMesureLocalisationLibelle: string | null;
+  pointMesureSclCategorie: string | null;
+  pointMesureValiditeDebutDate: string | null;
+  pointMesureValiditeFinDate: string | null;
 }
 
 /** Filtres pour la recherche de mesures */
@@ -120,32 +120,32 @@ export interface MesureFilters extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
   steuSandreCdas: string[];
   sclSandreCdas: string[];
-  identifiantPointMesure?: number;
+  pointMesureIdentifiant?: number;
   dateDebut?: string;
   dateFin?: string;
-  codeParametreAnalyse?: string;
-  qualificationResultatAnalyse?: string;
-  statutResultatAnalyse?: string;
-  finaliteAnalyse?: string;
+  parametreAnalyseCode?: string;
+  resultatAnalyseQualification?: string;
+  resultatAnalyseStatut?: string;
+  analyseFinalite?: string;
   sortBy?: MesuresSortByValue;
 }
 
 /** Une mesure avec tous ses champs joints */
 export interface MesureRow {
-  codeOuvrageDepollution: string;
-  nomOuvrageDepollution: string | null;
-  codeSystemeCollecte: string | null;
-  nomSystemeCollecte: string | null;
-  codeLocalisationPointMesure: string | null;
-  numeroPointAgenceEau: string | null;
-  numeroPointMesure: string | null;
-  libellePointMesure: string | null;
-  datePrelevement: Date | null;
-  codeParametreAnalyse: string;
-  nomCourtParametre: string | null;
-  valeurResultatAnalyse: number | null;
-  symboleUniteMesure: string | null;
-  finaliteAnalyse: string | null;
-  statutResultatAnalyse: string | null;
-  qualificationResultatAnalyse: string | null;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionNom: string | null;
+  systemeCollecteCode: string | null;
+  systemeCollecteNom: string | null;
+  pointMesureLocalisationCode: string | null;
+  pointAgenceEauNumero: string | null;
+  pointMesureNumero: string | null;
+  pointMesureLibelle: string | null;
+  prelevementDate: Date | null;
+  parametreAnalyseCode: string;
+  parametreNomCourt: string | null;
+  resultatAnalyseValeur: number | null;
+  uniteMesureSymbole: string | null;
+  analyseFinalite: string | null;
+  resultatAnalyseStatut: string | null;
+  resultatAnalyseQualification: string | null;
 }

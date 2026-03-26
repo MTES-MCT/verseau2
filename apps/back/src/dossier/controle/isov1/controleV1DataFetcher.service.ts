@@ -80,10 +80,10 @@ export class ControleV1DataFetcherService {
     itvs: ItvCdnByRfa[],
   ): { steuCdn: number; itvCdn: number }[] {
     return fctAssainissement.ouvrages.flatMap((ouvrage) => {
-      const steu = steus.find((s) => s.codeOuvrageDepollution === ouvrage.cdOuvrageDepollution);
-      const itv = itvs.find((i) => i.siretIntervenant === ouvrage.exploitant?.cdIntervenant);
+      const steu = steus.find((s) => s.ouvrageDepollutionCode === ouvrage.cdOuvrageDepollution);
+      const itv = itvs.find((i) => i.intervenantSiret === ouvrage.exploitant?.cdIntervenant);
       if (!steu || !itv) return [];
-      return [{ steuCdn: steu.identifiantOuvrageDepollution, itvCdn: itv.identifiantIntervenant }];
+      return [{ steuCdn: steu.ouvrageDepollutionIdentifiant, itvCdn: itv.intervenantIdentifiant }];
     });
   }
 }

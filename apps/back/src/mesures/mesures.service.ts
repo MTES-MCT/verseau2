@@ -62,11 +62,11 @@ export class MesuresService {
         ouvrageType: 'scl',
         steuSandreCdas: [],
         sclSandreCdas,
-        ...(pmoCdn !== undefined ? { identifiantPointMesure: pmoCdn } : {}),
-        ...(parametreCode ? { codeParametreAnalyse: parametreCode } : {}),
-        ...(qualification ? { qualificationResultatAnalyse: qualification } : {}),
-        ...(statut ? { statutResultatAnalyse: statut } : {}),
-        ...(finalite ? { finaliteAnalyse: finalite } : {}),
+        ...(pmoCdn !== undefined ? { pointMesureIdentifiant: pmoCdn } : {}),
+        ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
+        ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
+        ...(statut ? { resultatAnalyseStatut: statut } : {}),
+        ...(finalite ? { analyseFinalite: finalite } : {}),
         ...rest,
       };
     } else {
@@ -83,11 +83,11 @@ export class MesuresService {
         ouvrageType: 'steu',
         steuSandreCdas,
         sclSandreCdas: [],
-        ...(pmoCdn !== undefined ? { identifiantPointMesure: pmoCdn } : {}),
-        ...(parametreCode ? { codeParametreAnalyse: parametreCode } : {}),
-        ...(qualification ? { qualificationResultatAnalyse: qualification } : {}),
-        ...(statut ? { statutResultatAnalyse: statut } : {}),
-        ...(finalite ? { finaliteAnalyse: finalite } : {}),
+        ...(pmoCdn !== undefined ? { pointMesureIdentifiant: pmoCdn } : {}),
+        ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
+        ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
+        ...(statut ? { resultatAnalyseStatut: statut } : {}),
+        ...(finalite ? { analyseFinalite: finalite } : {}),
         ...rest,
       };
     }
@@ -95,7 +95,7 @@ export class MesuresService {
     const { data, total } = await this.masaProvider.findMesures(filters);
 
     return {
-      data: data.map((row) => ({ ...row, datePrelevement: row.datePrelevement })),
+      data: data.map((row) => ({ ...row, prelevementDate: row.prelevementDate })),
       total,
       page: rest.page,
       pageSize: rest.pageSize,

@@ -316,11 +316,11 @@ describe('Dossier E2E - Real Queue Processing', () => {
         [QueueName.controle_metier, QueueName.controle_sandre_upload, depotId],
       );
 
-      // At least one control job should exist (both should be dispatched if rights check passes)
-      expect(controlJobs.length).toBeGreaterThanOrEqual(0);
+      // Control jobs should exist when rights check passes
+      expect(controlJobs.length).toBeGreaterThan(0);
 
-      // Wait for control jobs to complete
-      const [metierResult, sandreResult] = await Promise.all([
+      // Wait for mandatory control jobs to complete
+      const [metierResult, sandreUploadResult] = await Promise.all([
         waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
           timeoutMs: 10000,
           pollIntervalMs: 200,
@@ -329,11 +329,17 @@ describe('Dossier E2E - Real Queue Processing', () => {
           timeoutMs: 10000,
           pollIntervalMs: 200,
         }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+      ]);
+
+      // Wait for poll job only if it has been dispatched
+      let sandrePollResult: { status: string } = { status: 'timeout' };
+      const sandrePollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
+      if (sandrePollJobs.length > 0) {
+        sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
           timeoutMs: 10000,
           pollIntervalMs: 200,
-        }),
-      ]);
+        });
+      }
 
       // Check that controls were processed
       const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
@@ -341,7 +347,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
       });
 
       // After controls complete, depot should have control statuses set
-      if (metierResult.status !== 'timeout' || sandreResult.status !== 'timeout') {
+      const sandreCompleted = sandreUploadResult.status !== 'timeout' || sandrePollResult.status !== 'timeout';
+      if (metierResult.status !== 'timeout' && sandreCompleted) {
         expect(finalDepot.controleStatus).toContain(ControleStatus.FAILED);
         expect(finalDepot.controleSandreStatus).toContain(ControleSandreStatus.SUCCESS);
       }

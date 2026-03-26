@@ -77,22 +77,22 @@ const emptyParametresResult = {
 };
 
 const makeMesure = (overrides = {}) => ({
-  codeOuvrageDepollution: 'STEU001',
-  nomOuvrageDepollution: 'Station test',
-  codeSystemeCollecte: 'SCL001',
-  nomSystemeCollecte: 'Collecteur test',
-  codeLocalisationPointMesure: 'A',
-  numeroPointAgenceEau: 'AE001',
-  numeroPointMesure: 'P1',
-  libellePointMesure: 'Point 1',
-  datePrelevement: '2024-06-15T00:00:00.000Z',
-  codeParametreAnalyse: 'MES_CO',
-  nomCourtParametre: 'Matières en suspension',
-  valeurResultatAnalyse: 12.5,
-  symboleUniteMesure: 'mg/L',
-  finaliteAnalyse: null,
-  statutResultatAnalyse: null,
-  qualificationResultatAnalyse: 'Brut',
+  ouvrageDepollutionCode: 'STEU001',
+  ouvrageDepollutionNom: 'Station test',
+  systemeCollecteCode: 'SCL001',
+  systemeCollecteNom: 'Collecteur test',
+  pointMesureLocalisationCode: 'A',
+  pointAgenceEauNumero: 'AE001',
+  pointMesureNumero: 'P1',
+  pointMesureLibelle: 'Point 1',
+  prelevementDate: '2024-06-15T00:00:00.000Z',
+  parametreAnalyseCode: 'MES_CO',
+  parametreNomCourt: 'Matières en suspension',
+  resultatAnalyseValeur: 12.5,
+  uniteMesureSymbole: 'mg/L',
+  analyseFinalite: null,
+  resultatAnalyseStatut: null,
+  resultatAnalyseQualification: 'Brut',
   ...overrides,
 });
 
@@ -150,8 +150,8 @@ describe('DepotDetailsPage', () => {
   it('renders ouvrage dropdown showing options after clicking', () => {
     mockUseOuvrages.mockReturnValue({
       data: [
-        { codeOuvrageDepollution: 'STEU001', nomOuvrageDepollution: 'Station A' },
-        { codeOuvrageDepollution: 'STEU002', nomOuvrageDepollution: 'Station B' },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' },
+        { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionNom: 'Station B' },
       ],
       isLoading: false,
       error: null,
@@ -226,7 +226,7 @@ describe('DepotDetailsPage', () => {
 
   it('displays qualification badge for "Brut" mesure', () => {
     mockUseMesures.mockReturnValue({
-      data: { data: [makeMesure({ qualificationResultatAnalyse: 'Brut' })], total: 1, page: 1, pageSize: 20 },
+      data: { data: [makeMesure({ resultatAnalyseQualification: 'Brut' })], total: 1, page: 1, pageSize: 20 },
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
@@ -240,7 +240,7 @@ describe('DepotDetailsPage', () => {
 
   it('displays qualification badge for "Qualifié" mesure', () => {
     mockUseMesures.mockReturnValue({
-      data: { data: [makeMesure({ qualificationResultatAnalyse: 'Qualifié' })], total: 1, page: 1, pageSize: 20 },
+      data: { data: [makeMesure({ resultatAnalyseQualification: 'Qualifié' })], total: 1, page: 1, pageSize: 20 },
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useMesures>);
@@ -271,7 +271,7 @@ describe('DepotDetailsPage', () => {
   });
 
   it('shows pagination component when total > pageSize', () => {
-    const data = Array.from({ length: 20 }, (_, i) => makeMesure({ alrCdn: i, codeParametreAnalyse: `PAR_${i}` }));
+    const data = Array.from({ length: 20 }, (_, i) => makeMesure({ alrCdn: i, parametreAnalyseCode: `PAR_${i}` }));
     mockUseMesures.mockReturnValue({
       data: { data, total: 45, page: 1, pageSize: 20 },
       isLoading: false,
@@ -317,8 +317,8 @@ describe('DepotDetailsPage', () => {
   it('renders statut dropdown populated with nomenclature items', () => {
     mockUseStatuts.mockReturnValue({
       data: [
-        { codeElementNomenclature: 'A', libelleElementNomenclature: 'Donnée brute' },
-        { codeElementNomenclature: 'B', libelleElementNomenclature: 'Pré-qualification' },
+        { elementNomenclatureCode: 'A', elementNomenclatureLibelle: 'Donnée brute' },
+        { elementNomenclatureCode: 'B', elementNomenclatureLibelle: 'Pré-qualification' },
       ],
       isLoading: false,
     } as unknown as ReturnType<typeof useStatuts>);
@@ -333,8 +333,8 @@ describe('DepotDetailsPage', () => {
   it('renders qualification dropdown populated with nomenclature items', () => {
     mockUseQualifications.mockReturnValue({
       data: [
-        { codeElementNomenclature: '1', libelleElementNomenclature: 'Correcte' },
-        { codeElementNomenclature: '2', libelleElementNomenclature: 'Incorrecte' },
+        { elementNomenclatureCode: '1', elementNomenclatureLibelle: 'Correcte' },
+        { elementNomenclatureCode: '2', elementNomenclatureLibelle: 'Incorrecte' },
       ],
       isLoading: false,
     } as unknown as ReturnType<typeof useQualifications>);

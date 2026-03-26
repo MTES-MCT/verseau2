@@ -23,18 +23,18 @@ export class HasUserAccessToOuvragesGuard implements CanActivate {
 
     const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
 
-    if (!intervenant?.siretIntervenant) {
-      this.logger.warn('No intervenant or siretIntervenant found for user', { itvCdn });
+    if (!intervenant?.intervenantSiret) {
+      this.logger.warn('No intervenant or intervenantSiret found for user', { itvCdn });
       throw new ForbiddenException('User intervenant not found');
     }
 
-    const entries = await this.masaProvider.findVSteuSclItvByItvRfa(intervenant.siretIntervenant);
+    const entries = await this.masaProvider.findVSteuSclItvByItvRfa(intervenant.intervenantSiret);
 
-    const authorizedSteuCdas = [...new Set(entries.map((e) => e.codeOuvrageDepollution).filter(Boolean))];
-    const authorizedSclCdas = [...new Set(entries.map((e) => e.codeSystemeCollecte).filter(Boolean))];
+    const authorizedSteuCdas = [...new Set(entries.map((e) => e.ouvrageDepollutionCode).filter(Boolean))];
+    const authorizedSclCdas = [...new Set(entries.map((e) => e.systemeCollecteCode).filter(Boolean))];
 
     if (authorizedSteuCdas.length === 0 && authorizedSclCdas.length === 0) {
-      this.logger.warn('User has no authorized ouvrages', { itvCdn, siretIntervenant: intervenant.siretIntervenant });
+      this.logger.warn('User has no authorized ouvrages', { itvCdn, intervenantSiret: intervenant.intervenantSiret });
       throw new ForbiddenException('User has no authorized ouvrages');
     }
 

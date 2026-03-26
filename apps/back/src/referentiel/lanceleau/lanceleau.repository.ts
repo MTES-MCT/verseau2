@@ -48,7 +48,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .createQueryBuilder('itv')
       .where('itv.itv_rfa IN (:...rfas)', { rfas })
       .getMany();
-    return rows.map((itv) => ({ siretIntervenant: itv.itvRfa, identifiantIntervenant: itv.itvCdn }));
+    return rows.map((itv) => ({ intervenantSiret: itv.itvRfa, intervenantIdentifiant: itv.itvCdn }));
   }
 
   async findSupByRfa(supRfa: string): Promise<SupEntity | null> {
@@ -86,11 +86,11 @@ export class LanceleauRepository implements LanceleauGateway {
 
   private mapVSteuSclItvEntityToResult(entity: VSteuSclItvEntity): VSteuSclItvResult {
     return {
-      codeOuvrageDepollution: entity.steuCda,
-      codeSystemeCollecte: entity.sclCda,
-      siretMaitreOuvrage: entity.moItvRfa,
-      siretPrestataireAutosurveillance: entity.satItvRfa,
-      siretAgenceEau: entity.aeItvRfa,
+      ouvrageDepollutionCode: entity.steuCda,
+      systemeCollecteCode: entity.sclCda,
+      maitreOuvrageSiret: entity.moItvRfa,
+      prestataireAutosurveillanceSiret: entity.satItvRfa,
+      agenceEauSiret: entity.aeItvRfa,
     };
   }
 

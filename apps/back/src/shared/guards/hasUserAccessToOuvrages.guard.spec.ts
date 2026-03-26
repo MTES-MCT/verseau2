@@ -3,16 +3,16 @@ import { HasUserAccessToOuvragesGuard } from './hasUserAccessToOuvrages.guard';
 import type { IntervenantAuth, VSteuSclItvResult } from '@masa/masa.dto';
 
 const makeIntervenant = (itvCdn: number, itvRfa: string): IntervenantAuth => ({
-  identifiantIntervenant: itvCdn,
-  siretIntervenant: itvRfa,
+  intervenantIdentifiant: itvCdn,
+  intervenantSiret: itvRfa,
 });
 
 const makeVSteuSclItv = (steuCda: string, sclCda = 'SCL001'): VSteuSclItvResult => ({
-  codeOuvrageDepollution: steuCda,
-  codeSystemeCollecte: sclCda,
-  siretMaitreOuvrage: null,
-  siretPrestataireAutosurveillance: null,
-  siretAgenceEau: null,
+  ouvrageDepollutionCode: steuCda,
+  systemeCollecteCode: sclCda,
+  maitreOuvrageSiret: null,
+  prestataireAutosurveillanceSiret: null,
+  agenceEauSiret: null,
 });
 
 describe('HasUserAccessToOuvragesGuard', () => {
@@ -110,11 +110,11 @@ describe('HasUserAccessToOuvragesGuard', () => {
     mockMasaProvider.findIntervenantById.mockResolvedValue(makeIntervenant(42, 'SIRET001'));
     mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
       {
-        codeOuvrageDepollution: 'STEU001',
-        codeSystemeCollecte: null,
-        siretMaitreOuvrage: null,
-        siretPrestataireAutosurveillance: null,
-        siretAgenceEau: null,
+        ouvrageDepollutionCode: 'STEU001',
+        systemeCollecteCode: null,
+        maitreOuvrageSiret: null,
+        prestataireAutosurveillanceSiret: null,
+        agenceEauSiret: null,
       },
     ]);
 

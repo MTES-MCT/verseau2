@@ -4,30 +4,30 @@ import { QualificationBadge } from '../components/QualificationBadge';
 
 export function buildPointDeMesure(mesure: MesureDto): string {
   const parts: string[] = [];
-  if (mesure.libellePointMesure) {
-    parts.push(mesure.libellePointMesure);
+  if (mesure.pointMesureLibelle) {
+    parts.push(mesure.pointMesureLibelle);
   }
-  if (mesure.numeroPointMesure) {
-    parts.push(`n°${mesure.numeroPointMesure}`);
+  if (mesure.pointMesureNumero) {
+    parts.push(`n°${mesure.pointMesureNumero}`);
   }
-  if (mesure.numeroPointAgenceEau) {
-    parts.push(`(${mesure.numeroPointAgenceEau})`);
+  if (mesure.pointAgenceEauNumero) {
+    parts.push(`(${mesure.pointAgenceEauNumero})`);
   }
   return parts.join(' ') || '-';
 }
 
 export function buildMesureTableRows(mesures: MesureDto[]) {
   return mesures.map((mesure) => [
-    formatDate(mesure.datePrelevement),
+    formatDate(mesure.prelevementDate),
     buildPointDeMesure(mesure),
-    mesure.codeLocalisationPointMesure ?? '-',
-    mesure.nomCourtParametre ?? mesure.codeParametreAnalyse,
-    mesure.valeurResultatAnalyse !== null && mesure.valeurResultatAnalyse !== undefined
-      ? String(mesure.valeurResultatAnalyse)
+    mesure.pointMesureLocalisationCode ?? '-',
+    mesure.parametreNomCourt ?? mesure.parametreAnalyseCode,
+    mesure.resultatAnalyseValeur !== null && mesure.resultatAnalyseValeur !== undefined
+      ? String(mesure.resultatAnalyseValeur)
       : '-',
-    mesure.symboleUniteMesure ?? '-',
-    <QualificationBadge key="qual" qualification={mesure.qualificationResultatAnalyse} />,
-    mesure.finaliteAnalyse ?? '-',
-    mesure.statutResultatAnalyse ?? '-',
+    mesure.uniteMesureSymbole ?? '-',
+    <QualificationBadge key="qual" qualification={mesure.resultatAnalyseQualification} />,
+    mesure.analyseFinalite ?? '-',
+    mesure.resultatAnalyseStatut ?? '-',
   ]);
 }

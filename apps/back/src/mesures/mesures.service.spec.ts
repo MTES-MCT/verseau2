@@ -5,27 +5,27 @@ import { MasaProvider } from '@masa/masa.provider';
 import type { MesureRow } from '@masa/masa.dto';
 
 const makeMesureRow = (): MesureRow => ({
-  codeOuvrageDepollution: 'STEU001',
-  nomOuvrageDepollution: 'Station test',
-  codeSystemeCollecte: null,
-  nomSystemeCollecte: null,
-  codeLocalisationPointMesure: null,
-  numeroPointAgenceEau: null,
-  numeroPointMesure: '1',
-  libellePointMesure: 'Point 1',
-  datePrelevement: new Date('2024-01-15'),
-  codeParametreAnalyse: 'MES_CO',
-  nomCourtParametre: 'Matières en suspension',
-  valeurResultatAnalyse: 12.5,
-  symboleUniteMesure: 'mg/L',
-  finaliteAnalyse: null,
-  statutResultatAnalyse: null,
-  qualificationResultatAnalyse: 'Brut',
+  ouvrageDepollutionCode: 'STEU001',
+  ouvrageDepollutionNom: 'Station test',
+  systemeCollecteCode: null,
+  systemeCollecteNom: null,
+  pointMesureLocalisationCode: null,
+  pointAgenceEauNumero: null,
+  pointMesureNumero: '1',
+  pointMesureLibelle: 'Point 1',
+  prelevementDate: new Date('2024-01-15'),
+  parametreAnalyseCode: 'MES_CO',
+  parametreNomCourt: 'Matières en suspension',
+  resultatAnalyseValeur: 12.5,
+  uniteMesureSymbole: 'mg/L',
+  analyseFinalite: null,
+  resultatAnalyseStatut: null,
+  resultatAnalyseQualification: 'Brut',
 });
 
 const makeNomenclatureItem = (code: string, label: string) => ({
-  codeElementNomenclature: code,
-  libelleElementNomenclature: label,
+  elementNomenclatureCode: code,
+  elementNomenclatureLibelle: label,
 });
 
 describe('MesuresService', () => {
@@ -143,9 +143,9 @@ describe('MesuresService', () => {
         expect.objectContaining({
           dateDebut: '2024-01-01',
           dateFin: '2024-12-31',
-          codeParametreAnalyse: 'MES_CO',
-          qualificationResultatAnalyse: 'Brut',
-          finaliteAnalyse: 'AUT',
+          parametreAnalyseCode: 'MES_CO',
+          resultatAnalyseQualification: 'Brut',
+          analyseFinalite: 'AUT',
           page: 2,
           pageSize: 10,
         }),
@@ -210,7 +210,7 @@ describe('MesuresService', () => {
         pageSize: 20,
       });
 
-      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ statutResultatAnalyse: 'A' }));
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ resultatAnalyseStatut: 'A' }));
     });
 
     it('passes qualification filter to masaProvider.findMesures when provided', async () => {
@@ -226,7 +226,7 @@ describe('MesuresService', () => {
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ qualificationResultatAnalyse: '1' }),
+        expect.objectContaining({ resultatAnalyseQualification: '1' }),
       );
     });
   });
@@ -241,15 +241,15 @@ describe('MesuresService', () => {
 
     it('returns STEU list with names when authorized STEUs found', async () => {
       masaProvider.findSteuWithNamesBySandreCdas.mockResolvedValue([
-        { codeOuvrageDepollution: 'STEU001', nomOuvrageDepollution: 'Station A' },
-        { codeOuvrageDepollution: 'STEU002', nomOuvrageDepollution: 'Station B' },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' },
+        { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionNom: 'Station B' },
       ]);
 
       const result = await service.listOuvrages(['STEU001', 'STEU002']);
 
       expect(masaProvider.findSteuWithNamesBySandreCdas).toHaveBeenCalledWith(['STEU001', 'STEU002']);
       expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ codeOuvrageDepollution: 'STEU001', nomOuvrageDepollution: 'Station A' });
+      expect(result[0]).toEqual({ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' });
     });
   });
 
@@ -263,15 +263,15 @@ describe('MesuresService', () => {
 
     it('returns SCL list with names when authorized SCLs found', async () => {
       masaProvider.findSclWithNamesBySandreCdas.mockResolvedValue([
-        { codeSystemeCollecte: 'SCL001', nomSystemeCollecte: 'Réseau A' },
-        { codeSystemeCollecte: 'SCL002', nomSystemeCollecte: 'Réseau B' },
+        { systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' },
+        { systemeCollecteCode: 'SCL002', systemeCollecteNom: 'Réseau B' },
       ]);
 
       const result = await service.listSystemesCollecte(['SCL001', 'SCL002']);
 
       expect(masaProvider.findSclWithNamesBySandreCdas).toHaveBeenCalledWith(['SCL001', 'SCL002']);
       expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ codeSystemeCollecte: 'SCL001', nomSystemeCollecte: 'Réseau A' });
+      expect(result[0]).toEqual({ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' });
     });
   });
 

@@ -192,8 +192,8 @@ export class MasaProvider {
     const ag = await this.lanceleauGateway.findAgByEmail(email);
     if (!ag) return null;
     return {
-      identifiantIntervenant: ag.itvCdn,
-      identifiantPrincipal: ag.prCdn,
+      intervenantIdentifiant: ag.itvCdn,
+      principalIdentifiant: ag.prCdn,
     };
   }
 
@@ -226,9 +226,9 @@ export class MasaProvider {
     const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
     if (!itv) return null;
     return {
-      identifiantIntervenant: itv.itvCdn,
-      nomIntervenant: itv.itvNomLb,
-      siretIntervenant: itv.itvRfa,
+      intervenantIdentifiant: itv.itvCdn,
+      intervenantNom: itv.itvNomLb,
+      intervenantSiret: itv.itvRfa,
     };
   }
 

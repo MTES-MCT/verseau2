@@ -22,12 +22,12 @@ function buildSignalerText(point: PointMesureReferentiel): string {
     '',
     'Je souhaite signaler une incohérence concernant le point de mesure suivant :',
     '',
-    `- Ouvrage : ${point.codeOuvrageDepollution}${point.nomOuvrageDepollution ? ` / ${point.nomOuvrageDepollution}` : ''}`,
-    `- Numéro de point : ${point.numeroPointMesure ?? 'non renseigné'}`,
-    `- Nom du point : ${point.libellePointMesure ?? 'non renseigné'}`,
-    `- Localisation : ${point.codeLocalisationPointMesure ?? 'non renseignée'}${point.libelleLocalisationPointMesure ? ` / ${point.libelleLocalisationPointMesure}` : ''}`,
-    `- Date de début de validité : ${point.dateDebutValiditePointMesure ?? 'non renseignée'}`,
-    `- Date de fin de validité : ${point.dateFinValiditePointMesure ?? 'non renseignée'}`,
+    `- Ouvrage : ${point.ouvrageDepollutionCode}${point.ouvrageDepollutionNom ? ` / ${point.ouvrageDepollutionNom}` : ''}`,
+    `- Numéro de point : ${point.pointMesureNumero ?? 'non renseigné'}`,
+    `- Nom du point : ${point.pointMesureLibelle ?? 'non renseigné'}`,
+    `- Localisation : ${point.pointMesureLocalisationCode ?? 'non renseignée'}${point.pointMesureLocalisationLibelle ? ` / ${point.pointMesureLocalisationLibelle}` : ''}`,
+    `- Date de début de validité : ${point.pointMesureValiditeDebutDate ?? 'non renseignée'}`,
+    `- Date de fin de validité : ${point.pointMesureValiditeFinDate ?? 'non renseignée'}`,
     '',
     "Description de l'incohérence : [à compléter par l'utilisateur]",
     '',
@@ -110,12 +110,12 @@ export function ReferentielPointsMesurePage() {
 
   const ouvragesOptions: AutocompleteOption[] = isScl
     ? systemesCollecte.map((s) => ({
-        value: s.codeSystemeCollecte,
-        label: s.nomSystemeCollecte ?? s.codeSystemeCollecte,
+        value: s.systemeCollecteCode,
+        label: s.systemeCollecteNom ?? s.systemeCollecteCode,
       }))
     : ouvrages.map((o) => ({
-        value: o.codeOuvrageDepollution,
-        label: o.nomOuvrageDepollution ?? o.codeOuvrageDepollution,
+        value: o.ouvrageDepollutionCode,
+        label: o.ouvrageDepollutionNom ?? o.ouvrageDepollutionCode,
       }));
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
@@ -134,19 +134,19 @@ export function ReferentielPointsMesurePage() {
   ];
 
   const tableData = (data?.points ?? []).map((point) => [
-    point.nomOuvrageDepollution
-      ? `${point.codeOuvrageDepollution} - ${point.nomOuvrageDepollution}`
-      : point.codeOuvrageDepollution,
-    point.numeroPointAgenceEau ?? '',
-    point.numeroPointMesure ?? '',
-    point.libellePointMesure ?? '',
-    point.codeLocalisationPointMesure ?? '',
-    point.libelleLocalisationPointMesure ?? '',
-    ...(isScl ? [point.categoriePointMesureScl ?? ''] : []),
-    point.dateDebutValiditePointMesure ?? '',
-    point.dateFinValiditePointMesure ?? '',
+    point.ouvrageDepollutionNom
+      ? `${point.ouvrageDepollutionCode} - ${point.ouvrageDepollutionNom}`
+      : point.ouvrageDepollutionCode,
+    point.pointAgenceEauNumero ?? '',
+    point.pointMesureNumero ?? '',
+    point.pointMesureLibelle ?? '',
+    point.pointMesureLocalisationCode ?? '',
+    point.pointMesureLocalisationLibelle ?? '',
+    ...(isScl ? [point.pointMesureSclCategorie ?? ''] : []),
+    point.pointMesureValiditeDebutDate ?? '',
+    point.pointMesureValiditeFinDate ?? '',
     <SignalerButton
-      key={`signaler-${point.codeOuvrageDepollution}-${point.numeroPointMesure}`}
+      key={`signaler-${point.ouvrageDepollutionCode}-${point.pointMesureNumero}`}
       point={point}
       onClick={(success) => setIsCopiedNoticeVisible(success)}
       onFallback={setFallbackText}

@@ -48,8 +48,8 @@ describe('DroitsUserService', () => {
     it('retourne true si le rôle 305 est présent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
-        identifiantPrincipal: prCdn,
-        identifiantIntervenant: 100,
+        principalIdentifiant: prCdn,
+        intervenantIdentifiant: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(true);
 
@@ -62,8 +62,8 @@ describe('DroitsUserService', () => {
     it('retourne false si le rôle 305 est absent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
-        identifiantPrincipal: prCdn,
-        identifiantIntervenant: 100,
+        principalIdentifiant: prCdn,
+        intervenantIdentifiant: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(false);
 
@@ -110,8 +110,8 @@ describe('DroitsUserService', () => {
     it('retourne false si une erreur est levée par hasRole', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
-        identifiantPrincipal: prCdn,
-        identifiantIntervenant: 100,
+        principalIdentifiant: prCdn,
+        intervenantIdentifiant: 100,
       });
       mockMasaProvider.hasRole.mockRejectedValue(new Error('provider error'));
 
@@ -129,8 +129,8 @@ describe('DroitsUserService', () => {
     it('retourne true si le rôle expert bassin est présent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
-        identifiantPrincipal: prCdn,
-        identifiantIntervenant: 100,
+        principalIdentifiant: prCdn,
+        intervenantIdentifiant: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(true);
 
@@ -143,8 +143,8 @@ describe('DroitsUserService', () => {
     it('retourne false si le rôle expert bassin est absent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
-        identifiantPrincipal: prCdn,
-        identifiantIntervenant: 100,
+        principalIdentifiant: prCdn,
+        intervenantIdentifiant: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(false);
 
@@ -191,8 +191,8 @@ describe('DroitsUserService', () => {
     it('retourne false si une erreur est levée par hasRole', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
-        identifiantPrincipal: prCdn,
-        identifiantIntervenant: 100,
+        principalIdentifiant: prCdn,
+        intervenantIdentifiant: 100,
       });
       mockMasaProvider.hasRole.mockRejectedValue(new Error('provider error'));
 
