@@ -131,6 +131,10 @@ describe('DepotDetailsPage', () => {
     expect(screen.getByLabelText(/date début/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date fin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
+
+    // Advanced filters are collapsed by default - need to expand them
+    fireEvent.click(screen.getByRole('button', { name: /filtres avancés/i }));
+
     expect(screen.getByLabelText(/finalité/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/statut/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/qualification/i)).toBeInTheDocument();
@@ -324,6 +328,9 @@ describe('DepotDetailsPage', () => {
     } as unknown as ReturnType<typeof useStatuts>);
 
     renderWithQueryClient(<DepotDetailsPage />);
+
+    // Open advanced filters first
+    fireEvent.click(screen.getByRole('button', { name: /filtres avancés/i }));
     fireEvent.click(screen.getByLabelText(/statut/i));
 
     expect(screen.getByRole('option', { name: /donnée brute/i })).toBeInTheDocument();
@@ -340,6 +347,9 @@ describe('DepotDetailsPage', () => {
     } as unknown as ReturnType<typeof useQualifications>);
 
     renderWithQueryClient(<DepotDetailsPage />);
+
+    // Open advanced filters first
+    fireEvent.click(screen.getByRole('button', { name: /filtres avancés/i }));
     fireEvent.click(screen.getByLabelText(/qualification/i));
 
     expect(screen.getByRole('option', { name: /1 - Correcte/i })).toBeInTheDocument();
@@ -354,16 +364,31 @@ describe('DepotDetailsPage', () => {
 
     renderWithQueryClient(<DepotDetailsPage />);
 
+    // Open advanced filters to see the loading placeholders
+    fireEvent.click(screen.getByRole('button', { name: /filtres avancés/i }));
+
     expect(screen.getAllByPlaceholderText(/chargement/i).length).toBeGreaterThanOrEqual(2);
   });
 
-  it('renders advanced filters inside an accordion labelled "Filtres avancés"', () => {
+  it('renders advanced filters toggle button labelled "Filtres avancés"', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    const accordion = screen.getByRole('button', { name: /filtres avancés/i });
-    expect(accordion).toBeInTheDocument();
+    const toggleButton = screen.getByRole('button', { name: /filtres avancés/i });
+    expect(toggleButton).toBeInTheDocument();
 
-    // Advanced filter fields are in the DOM (accordion renders children regardless of expanded state)
+    // Advanced filter fields are NOT in the DOM initially (collapsed)
+    expect(screen.queryByLabelText(/finalité/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/statut/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/qualification/i)).not.toBeInTheDocument();
+  });
+
+  it('shows advanced filters when toggle button is clicked', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    const toggleButton = screen.getByRole('button', { name: /filtres avancés/i });
+    fireEvent.click(toggleButton);
+
+    // Advanced filter fields should now be visible
     expect(screen.getByLabelText(/finalité/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/statut/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/qualification/i)).toBeInTheDocument();
@@ -372,40 +397,42 @@ describe('DepotDetailsPage', () => {
   it('does not show active filter badge when no advanced filters are set', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    const accordion = screen.getByRole('button', { name: /filtres avancés/i });
-    // The badge should not be present inside the accordion trigger
-    expect(accordion.querySelector('.fr-badge')).not.toBeInTheDocument();
+    const toggleButton = screen.getByRole('button', { name: /filtres avancés/i });
+    // The badge should not be present next to the toggle button
+    const filterSection = toggleButton.closest('div');
+    expect(filterSection?.querySelector('.fr-badge')).not.toBeInTheDocument();
   });
 
   it('shows active filter count badge when advanced filters are set', async () => {
     mockUseStatuts.mockReturnValue({
-      data: [{ code: 'A', label: 'Donnée brute' }],
+      data: [{ elementNomenclatureCode: 'A', elementNomenclatureLibelle: 'Donnée brute' }],
       isLoading: false,
     } as unknown as ReturnType<typeof useStatuts>);
     mockUseQualifications.mockReturnValue({
-      data: [{ code: '1', label: 'Correcte' }],
+      data: [{ elementNomenclatureCode: '1', elementNomenclatureLibelle: 'Correcte' }],
       isLoading: false,
     } as unknown as ReturnType<typeof useQualifications>);
 
     renderWithQueryClient(<DepotDetailsPage />);
 
-    // Open the accordion and select statut
+    // Open the advanced filters and select statut
     fireEvent.click(screen.getByRole('button', { name: /filtres avancés/i }));
     fireEvent.click(screen.getByLabelText(/statut/i));
     fireEvent.click(screen.getByRole('option', { name: /donnée brute/i }));
 
-    // Badge should now show "1" inside the accordion trigger
-    const accordion = screen.getByRole('button', { name: /filtres avancés/i });
-    expect(accordion.querySelector('.fr-badge')).toBeInTheDocument();
-    expect(accordion.querySelector('.fr-badge')).toHaveTextContent('1');
+    // Badge should now show "1" next to the toggle button
+    const toggleButton = screen.getByRole('button', { name: /filtres avancés/i });
+    const filterSection = toggleButton.closest('div');
+    expect(filterSection?.querySelector('.fr-badge')).toBeInTheDocument();
+    expect(filterSection?.querySelector('.fr-badge')).toHaveTextContent('1');
   });
 
-  it('renders primary filters (ouvrage fieldset) outside the accordion', () => {
+  it('renders primary filters (ouvrage fieldset) separate from advanced filters', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     const fieldset = document.querySelector('fieldset');
     expect(fieldset).toBeInTheDocument();
-    // Station combobox is inside the fieldset, not inside the accordion
+    // Station combobox is inside the fieldset, not inside the advanced filters section
     expect(fieldset).toContainElement(screen.getByRole('combobox', { name: 'Station' }));
   });
 });
