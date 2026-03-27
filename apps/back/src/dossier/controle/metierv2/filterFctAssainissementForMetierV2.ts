@@ -1,10 +1,18 @@
 import type { FctAssainissement, PointMesure } from '@lib/parser';
 
-export interface FilterFctAssainissementForMetierVOptions {
-  allowedLocGlobalePointMesure?: string[];
-  allowedLocGlobalePointMesurePrefixes?: string[];
+interface FilterByExactLocGlobale {
+  allowedLocGlobalePointMesure: string[];
+  allowedLocGlobalePointMesurePrefixes?: never;
   allowedCdSupport: string | string[];
 }
+
+interface FilterByLocGlobalePrefixes {
+  allowedLocGlobalePointMesure?: never;
+  allowedLocGlobalePointMesurePrefixes: string[];
+  allowedCdSupport: string | string[];
+}
+
+export type FilterFctAssainissementForMetierVOptions = FilterByExactLocGlobale | FilterByLocGlobalePrefixes;
 export function filterFctAssainissementForMetierV2(
   xmlObj: FctAssainissement,
   options: FilterFctAssainissementForMetierVOptions,
