@@ -1,24 +1,40 @@
 import type { FctAssainissement, PointMesure } from '@lib/parser';
 
-export interface FilterFctAssainissementForMetierVOptions {
+interface FilterByExactLocGlobale {
   allowedLocGlobalePointMesure: string[];
-  allowedCdSupport: string;
+  allowedLocGlobalePointMesurePrefixes?: never;
+  allowedCdSupport: string | string[];
 }
+
+interface FilterByLocGlobalePrefixes {
+  allowedLocGlobalePointMesure?: never;
+  allowedLocGlobalePointMesurePrefixes: string[];
+  allowedCdSupport: string | string[];
+}
+
+export type FilterFctAssainissementForMetierVOptions = FilterByExactLocGlobale | FilterByLocGlobalePrefixes;
 export function filterFctAssainissementForMetierV2(
   xmlObj: FctAssainissement,
   options: FilterFctAssainissementForMetierVOptions,
 ): FctAssainissement {
-  const allowedLocGlobalePointMesure = new Set(options.allowedLocGlobalePointMesure);
-  const allowedCdSupport = options.allowedCdSupport;
+  const allowedLocSet = options.allowedLocGlobalePointMesure
+    ? new Set(options.allowedLocGlobalePointMesure)
+    : undefined;
+  const allowedCdSupportSet = new Set(
+    Array.isArray(options.allowedCdSupport) ? options.allowedCdSupport : [options.allowedCdSupport],
+  );
 
   const filterPointMesure = (pointMesure: PointMesure) => {
     const loc = pointMesure.locGlobalePointMesure ?? '';
-    if (!allowedLocGlobalePointMesure.has(loc)) {
+    const locAllowed = allowedLocSet
+      ? allowedLocSet.has(loc)
+      : options.allowedLocGlobalePointMesurePrefixes!.some((p) => loc.startsWith(p));
+    if (!locAllowed) {
       return undefined;
     }
 
     const prelevement = (pointMesure.prelevement ?? []).filter((prelevement) => {
-      return (prelevement.cdSupport ?? '') === allowedCdSupport;
+      return allowedCdSupportSet.has(prelevement.cdSupport ?? '');
     });
 
     if (prelevement.length === 0) {

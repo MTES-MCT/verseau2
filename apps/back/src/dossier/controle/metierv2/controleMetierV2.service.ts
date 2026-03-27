@@ -52,6 +52,11 @@ export class ControleMetierV2Service {
       },
     );
 
+    const dataWithLocGlobalePointMesureSAAndCdSupprt345 = filterFctAssainissementForMetierV2(xmlObj, {
+      allowedLocGlobalePointMesurePrefixes: ['S', 'A'],
+      allowedCdSupport: ['3', '4', '5'],
+    });
+
     const { cmas, maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
     const tousControles = await Promise.all([
@@ -76,7 +81,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
       Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
       Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
-      Promise.resolve(this.verifyConcentrationsNegativesOuNulles(xmlObj)),
+      Promise.resolve(this.verifyConcentrationsNegativesOuNulles(dataWithLocGlobalePointMesureSAAndCdSupprt345)),
       this.verifyChargePollutionVsCapaciteNominale(xmlObj),
     ]);
     // Filtrer les contrôles nuls (certains contrôles ne sont pas applicables et renvoient null), afin qu'ils ne soient pas enregistrés ni affichés en SUCCESS
@@ -963,7 +968,6 @@ export class ControleMetierV2Service {
       { code: CodeParametre.NO2, label: 'NO2' },
       { code: CodeParametre.NO3, label: 'NO3' },
       { code: CodeParametre.Ptot, label: 'P total' },
-      { code: CodeParametre.MS105, label: 'MS105' },
       { code: CodeParametre.NGL, label: 'NGL' },
     ];
 
@@ -1001,10 +1005,6 @@ export class ControleMetierV2Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       checkPrelevements(ouvrage.cdOuvrageDepollution || '', ouvrage.pointMesure);
-    }
-
-    for (const systemeCollecte of fctAssainissement.systemesCollecte ?? []) {
-      checkPrelevements(systemeCollecte.cdSystemeCollecte || '', systemeCollecte.pointMesure);
     }
 
     return { name: ControleName.CTL059, errors };
