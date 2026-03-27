@@ -134,6 +134,90 @@ describe('filterFctAssainissementForMetierV2', () => {
     expect(output.systemesCollecte).toEqual([]);
   });
 
+  it('filters with allowedCdSupport as array: keeps prélèvements with cdSupport 3, 4, or 5 and drops others', () => {
+    const options: FilterFctAssainissementForMetierVOptions = {
+      allowedLocGlobalePointMesure: ['A3'],
+      allowedCdSupport: ['3', '4', '5'],
+    };
+
+    const input = createFctAssainissement({
+      ouvrages: [
+        {
+          cdOuvrageDepollution: 'STEU_1',
+          typeOuvrageDepollution: '',
+          pointMesure: [
+            {
+              numeroPointMesure: 'PM_A3',
+              locGlobalePointMesure: 'A3',
+              prelevement: [
+                { cdSupport: '3', datePrlvt: '2024-01-01', analyse: [] },
+                { cdSupport: '4', datePrlvt: '2024-01-02', analyse: [] },
+                { cdSupport: '5', datePrlvt: '2024-01-03', analyse: [] },
+                { cdSupport: '1', datePrlvt: '2024-01-04', analyse: [] },
+                { cdSupport: '2', datePrlvt: '2024-01-05', analyse: [] },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const output = filterFctAssainissementForMetierV2(input, options);
+
+    expect(output.ouvrages).toHaveLength(1);
+    expect(output.ouvrages[0].pointMesure[0].prelevement).toHaveLength(3);
+    expect(output.ouvrages[0].pointMesure[0].prelevement.map((p) => p.cdSupport)).toEqual(['3', '4', '5']);
+  });
+
+  it('filters with allowedLocGlobalePointMesurePrefixes: keeps S1, A3, A4, drops M1, R1', () => {
+    const options: FilterFctAssainissementForMetierVOptions = {
+      allowedLocGlobalePointMesurePrefixes: ['S', 'A'],
+      allowedCdSupport: '3',
+    };
+
+    const input = createFctAssainissement({
+      ouvrages: [
+        {
+          cdOuvrageDepollution: 'STEU_1',
+          typeOuvrageDepollution: '',
+          pointMesure: [
+            {
+              numeroPointMesure: 'PM_S1',
+              locGlobalePointMesure: 'S1',
+              prelevement: [{ cdSupport: '3', datePrlvt: '2024-01-01', analyse: [] }],
+            },
+            {
+              numeroPointMesure: 'PM_A3',
+              locGlobalePointMesure: 'A3',
+              prelevement: [{ cdSupport: '3', datePrlvt: '2024-01-02', analyse: [] }],
+            },
+            {
+              numeroPointMesure: 'PM_A4',
+              locGlobalePointMesure: 'A4',
+              prelevement: [{ cdSupport: '3', datePrlvt: '2024-01-03', analyse: [] }],
+            },
+            {
+              numeroPointMesure: 'PM_M1',
+              locGlobalePointMesure: 'M1',
+              prelevement: [{ cdSupport: '3', datePrlvt: '2024-01-04', analyse: [] }],
+            },
+            {
+              numeroPointMesure: 'PM_R1',
+              locGlobalePointMesure: 'R1',
+              prelevement: [{ cdSupport: '3', datePrlvt: '2024-01-05', analyse: [] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const output = filterFctAssainissementForMetierV2(input, options);
+
+    expect(output.ouvrages).toHaveLength(1);
+    expect(output.ouvrages[0].pointMesure).toHaveLength(3);
+    expect(output.ouvrages[0].pointMesure.map((pm) => pm.locGlobalePointMesure)).toEqual(['S1', 'A3', 'A4']);
+  });
+
   it('filters with custom options: locGlobalePointMesure A1/R1 and cdSupport=A3', () => {
     const customOptions: FilterFctAssainissementForMetierVOptions = {
       allowedLocGlobalePointMesure: ['A1', 'R1'],
