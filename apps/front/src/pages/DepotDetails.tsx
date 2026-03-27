@@ -1,5 +1,4 @@
 import { fr } from '@codegouvfr/react-dsfr';
-import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Button } from '@codegouvfr/react-dsfr/Button';
@@ -15,8 +14,11 @@ import { buildMesureTableRows } from '../helper/mesureTableData';
 import { formatOption } from '../helper/optionsFormatter';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
+import { useState } from 'react';
 
 export function DepotDetailsPage() {
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const {
     form,
     updateForm,
@@ -268,51 +270,57 @@ export function DepotDetailsPage() {
           </div>
         </div>
 
-        {/* Zone C — Filtres avancés (accordion) */}
-        <Accordion
-          label={
-            <>
+        {/* Zone C — Filtres avancés */}
+        <div className={fr.cx('fr-mb-3w')}>
+          <div className={fr.cx('fr-text--bold', 'fr-mb-2w')} style={{ display: 'flex', alignItems: 'center' }}>
+            <Button
+              type="button"
+              priority="tertiary"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              iconId={showAdvancedFilters ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line'}
+            >
               Filtres avancés
-              {advancedFilterCount > 0 && (
-                <Badge severity="info" small className={fr.cx('fr-ml-1w')}>
-                  {advancedFilterCount}
-                </Badge>
-              )}
-            </>
-          }
-        >
-          <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
-            <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
-              <SelectAutocomplete
-                label="Finalité"
-                placeholder={finalitesLoading ? 'Chargement…' : 'Toutes les finalités'}
-                options={finalitesOptions}
-                value={form.finalite || null}
-                onChange={(v) => updateForm('finalite', v ?? '')}
-              />
-            </div>
-
-            <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
-              <SelectAutocomplete
-                label="Statut"
-                placeholder={statutsLoading ? 'Chargement…' : 'Indifférent'}
-                options={statutsOptions}
-                value={form.statut || null}
-                onChange={(v) => updateForm('statut', v ?? '')}
-              />
-            </div>
-
-            <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
-              <SelectAutocomplete
-                label="Qualification"
-                placeholder={qualificationsLoading ? 'Chargement…' : 'Indifférent'}
-                options={qualificationsOptions}
-                value={form.qualification || null}
-                onChange={(v) => updateForm('qualification', v ?? '')}
-              />
-            </div>
+            </Button>
+            {advancedFilterCount > 0 && (
+              <Badge severity="info" small className={fr.cx('fr-ml-1w')}>
+                {advancedFilterCount}
+              </Badge>
+            )}
           </div>
-        </Accordion>
+          {showAdvancedFilters && (
+            <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mt-2w')}>
+              <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+                <SelectAutocomplete
+                  label="Finalité"
+                  placeholder={finalitesLoading ? 'Chargement…' : 'Toutes les finalités'}
+                  options={finalitesOptions}
+                  value={form.finalite || null}
+                  onChange={(v) => updateForm('finalite', v ?? '')}
+                />
+              </div>
+
+              <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+                <SelectAutocomplete
+                  label="Statut"
+                  placeholder={statutsLoading ? 'Chargement…' : 'Indifférent'}
+                  options={statutsOptions}
+                  value={form.statut || null}
+                  onChange={(v) => updateForm('statut', v ?? '')}
+                />
+              </div>
+
+              <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+                <SelectAutocomplete
+                  label="Qualification"
+                  placeholder={qualificationsLoading ? 'Chargement…' : 'Indifférent'}
+                  options={qualificationsOptions}
+                  value={form.qualification || null}
+                  onChange={(v) => updateForm('qualification', v ?? '')}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Initial loading (no data yet) */}
