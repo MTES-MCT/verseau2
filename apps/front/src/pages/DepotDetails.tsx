@@ -1,5 +1,6 @@
 import { fr } from '@codegouvfr/react-dsfr';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -13,8 +14,11 @@ import { buildMesureTableRows } from '../helper/mesureTableData';
 import { formatOption } from '../helper/optionsFormatter';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
+import { useState } from 'react';
 
 export function DepotDetailsPage() {
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const {
     form,
     updateForm,
@@ -45,6 +49,7 @@ export function DepotDetailsPage() {
     setPage,
     totalPages,
     PAGE_SIZE,
+    advancedFilterCount,
   } = useMesureFilters();
 
   const isScl = form.ouvrageType === 'scl';
@@ -155,8 +160,10 @@ export function DepotDetailsPage() {
 
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>
-        {/* Sélection du type d'ouvrage */}
-        <div className={fr.cx('fr-mb-3w')}>
+        {/* Zone A — Ouvrage (fieldset) */}
+        <fieldset style={{ border: 'none', padding: 0, margin: 0 }} className={fr.cx('fr-mb-3w')}>
+          <legend className={fr.cx('fr-text--bold', 'fr-mb-2w')}>Ouvrage</legend>
+
           <RadioButtons
             legend="Type d'ouvrage"
             name="ouvrageType"
@@ -180,91 +187,60 @@ export function DepotDetailsPage() {
               },
             ]}
           />
-        </div>
 
-        {/* Row 1: Ouvrage, Point de mesure, Paramètre, Finalité */}
-        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
-          <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
-            <SelectAutocomplete
-              label={isScl ? 'Système de collecte' : 'Station'}
-              placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
-              options={ouvragesOptions}
-              value={form.selectedOuvrageCode || null}
-              onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
-              state={ouvrageError ? 'error' : 'default'}
-              stateRelatedMessage={ouvrageError || undefined}
-            />
+          <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters')}>
+            <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
+              <SelectAutocomplete
+                label={isScl ? 'Système de collecte' : 'Station'}
+                placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
+                options={ouvragesOptions}
+                value={form.selectedOuvrageCode || null}
+                onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
+                state={ouvrageError ? 'error' : 'default'}
+                stateRelatedMessage={ouvrageError || undefined}
+              />
+            </div>
+
+            <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+              <SelectAutocomplete
+                label="Point de mesure"
+                placeholder={
+                  !form.selectedOuvrageCode
+                    ? isScl
+                      ? 'Sélectionnez un système'
+                      : 'Sélectionnez une station'
+                    : pointsMesureLoading
+                      ? 'Chargement…'
+                      : 'Tous les points'
+                }
+                options={pointsMesureOptions}
+                value={form.selectedPmoCdn !== null ? String(form.selectedPmoCdn) : null}
+                onChange={(v) => updateSelectedPmo(v ? Number(v) : null)}
+                disabled={!form.selectedOuvrageCode || pointsMesureLoading || pointsMesure.length === 0}
+              />
+            </div>
+
+            <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
+              <SelectAutocomplete
+                label="Paramètre"
+                placeholder={
+                  form.selectedPmoCdn === null
+                    ? 'Sélectionnez un point'
+                    : parametresLoading
+                      ? 'Chargement…'
+                      : 'Tous les paramètres'
+                }
+                options={parametresOptions}
+                value={form.selectedParametre || null}
+                onChange={(v) => updateForm('selectedParametre', v ?? '')}
+                disabled={!form.selectedOuvrageCode || pointsMesureLoading || pointsMesure.length === 0}
+              />
+            </div>
           </div>
+        </fieldset>
 
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
-            <SelectAutocomplete
-              label="Point de mesure"
-              placeholder={
-                !form.selectedOuvrageCode
-                  ? isScl
-                    ? 'Sélectionnez un système'
-                    : 'Sélectionnez une station'
-                  : pointsMesureLoading
-                    ? 'Chargement…'
-                    : 'Tous les points'
-              }
-              options={pointsMesureOptions}
-              value={form.selectedPmoCdn !== null ? String(form.selectedPmoCdn) : null}
-              onChange={(v) => updateSelectedPmo(v ? Number(v) : null)}
-              disabled={!form.selectedOuvrageCode || pointsMesureLoading || pointsMesure.length === 0}
-            />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
-            <SelectAutocomplete
-              label="Paramètre"
-              placeholder={
-                form.selectedPmoCdn === null
-                  ? 'Sélectionnez un point'
-                  : parametresLoading
-                    ? 'Chargement…'
-                    : 'Tous les paramètres'
-              }
-              options={parametresOptions}
-              value={form.selectedParametre || null}
-              onChange={(v) => updateForm('selectedParametre', v ?? '')}
-              disabled={!form.selectedOuvrageCode || pointsMesureLoading || pointsMesure.length === 0}
-            />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
-            <SelectAutocomplete
-              label="Finalité"
-              placeholder={finalitesLoading ? 'Chargement…' : 'Toutes les finalités'}
-              options={finalitesOptions}
-              value={form.finalite || null}
-              onChange={(v) => updateForm('finalite', v ?? '')}
-            />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
-            <SelectAutocomplete
-              label="Statut"
-              placeholder={statutsLoading ? 'Chargement…' : 'Indifférent'}
-              options={statutsOptions}
-              value={form.statut || null}
-              onChange={(v) => updateForm('statut', v ?? '')}
-            />
-          </div>
-
-          <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
-            <SelectAutocomplete
-              label="Qualification"
-              placeholder={qualificationsLoading ? 'Chargement…' : 'Indifférent'}
-              options={qualificationsOptions}
-              value={form.qualification || null}
-              onChange={(v) => updateForm('qualification', v ?? '')}
-            />
-          </div>
-        </div>
-
-        {/* Row 2: Date début, Date fin, Rechercher */}
-        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom', 'fr-mt-2w')}>
+        {/* Zone B — Période + Rechercher */}
+        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom', 'fr-mb-3w')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')}>
             <Input
               label="Date début"
@@ -292,6 +268,58 @@ export function DepotDetailsPage() {
               Rechercher
             </Button>
           </div>
+        </div>
+
+        {/* Zone C — Filtres avancés */}
+        <div className={fr.cx('fr-mb-3w')}>
+          <div className={fr.cx('fr-text--bold', 'fr-mb-2w')} style={{ display: 'flex', alignItems: 'center' }}>
+            <Button
+              type="button"
+              priority="tertiary"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              iconId={showAdvancedFilters ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line'}
+            >
+              Filtres avancés
+            </Button>
+            {advancedFilterCount > 0 && (
+              <Badge severity="info" small className={fr.cx('fr-ml-1w')}>
+                {advancedFilterCount}
+              </Badge>
+            )}
+          </div>
+          {showAdvancedFilters && (
+            <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mt-2w')}>
+              <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+                <SelectAutocomplete
+                  label="Finalité"
+                  placeholder={finalitesLoading ? 'Chargement…' : 'Toutes les finalités'}
+                  options={finalitesOptions}
+                  value={form.finalite || null}
+                  onChange={(v) => updateForm('finalite', v ?? '')}
+                />
+              </div>
+
+              <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+                <SelectAutocomplete
+                  label="Statut"
+                  placeholder={statutsLoading ? 'Chargement…' : 'Indifférent'}
+                  options={statutsOptions}
+                  value={form.statut || null}
+                  onChange={(v) => updateForm('statut', v ?? '')}
+                />
+              </div>
+
+              <div className={fr.cx('fr-col-12', 'fr-col-md-4')}>
+                <SelectAutocomplete
+                  label="Qualification"
+                  placeholder={qualificationsLoading ? 'Chargement…' : 'Indifférent'}
+                  options={qualificationsOptions}
+                  value={form.qualification || null}
+                  onChange={(v) => updateForm('qualification', v ?? '')}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

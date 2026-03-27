@@ -88,6 +88,8 @@ export function useMesureFilters() {
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
+  const advancedFilterCount = [form.finalite, form.statut, form.qualification].filter(Boolean).length;
+
   function handleSearch() {
     if (!form.selectedOuvrageCode) {
       setOuvrageError(
@@ -165,5 +167,6 @@ export function useMesureFilters() {
     setPage,
     totalPages,
     PAGE_SIZE,
+    advancedFilterCount,
   };
 }
