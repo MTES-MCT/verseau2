@@ -86,7 +86,7 @@ export const ControleMessageCell = memo(function ControleMessageCell({ row, acti
             <li key={`${index}`} className="fr-flex fr-align-items-start fr-p-1w">
               <span className={`${icon} fr-mr-1w`} style={{ color }} aria-hidden="true" />
               <span>
-                {item.message} {item.count > 1 ? <Badge small>{item.count}</Badge> : null}
+                {item.message} {item.count > 1 ? <Badge small>Remonté {item.count} fois</Badge> : null}
               </span>
             </li>
           );

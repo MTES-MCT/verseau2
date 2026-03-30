@@ -150,8 +150,8 @@ describe('ControleGroup', () => {
 
     expect(screen.getByText('Error message')).toBeInTheDocument();
 
-    // Check for the count badge - there's now 3 occurrences: StatCard + Result column badge + accordion
-    expect(screen.getAllByText('2')).toHaveLength(3);
+    // Check for the count badge - there's now 2 occurrences: StatCard + Result column badge
+    expect(screen.getAllByText('2')).toHaveLength(2);
   });
 
   it('groups identical controls with success, avertissements and errors and shows accordion for groups', () => {
