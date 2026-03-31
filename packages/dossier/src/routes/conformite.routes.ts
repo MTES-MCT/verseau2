@@ -43,9 +43,9 @@ const ConformiteYearValueSchema = z.coerce
     const currentYear = getCurrentConformiteYear();
     if (year > currentYear) {
       ctx.addIssue({
-        code: z.ZodIssueCode.too_big,
+        code: 'too_big',
         maximum: currentYear,
-        type: 'number',
+        origin: 'number',
         inclusive: true,
         message: `Number must be less than or equal to ${currentYear}`,
       });
