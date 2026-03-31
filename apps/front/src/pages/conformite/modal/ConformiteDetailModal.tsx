@@ -4,8 +4,10 @@ import { useIsModalOpen } from '@codegouvfr/react-dsfr/Modal/useIsModalOpen';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useEffect } from 'react';
 import type { ConformiteSclDetailDto, ConformiteSteuDetailDto } from '@lib/dossier';
-import { useDetailBilanScl, useDetailBilanSteu } from '../../hooks/useConformite';
+import { useDetailBilanScl, useDetailBilanSteu } from '../../../hooks/useConformite';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './ConformiteDetailModal.shared';
+import { LoadingState } from '../ConformiteDetailSkeleton';
+import './ConformiteDetailModal.css';
 
 type ConformiteDetailModalProps = {
   detail: ConformiteDetailEntry | null;
@@ -21,6 +23,13 @@ type DetailLine = {
   number: number | null;
   libelle?: string | null;
   hideWhenLibelleMissing?: boolean;
+};
+
+const DETAIL_TABLE_ID = 'conformite-detail-modal-table';
+const DETAIL_TABLE_HEADERS = ['Métrique', 'Nombre', 'Libellés'];
+const DETAIL_TABLE_STYLE = {
+  tableLayout: 'fixed' as const,
+  width: '100%',
 };
 
 function formatNumber(value: number | null, suffix = '') {
@@ -83,12 +92,14 @@ function createDetailRow(
 ) {
   const hasLinkedLabels = values.periodLabel !== undefined || values.yearLabel !== undefined;
   const lines: DetailLine[] = [
+    /*
     {
       key: 'period',
       number: values.periodNumber,
       libelle: values.periodLabel,
       hideWhenLibelleMissing: hasLinkedLabels,
     },
+    */
     {
       key: 'year',
       number: values.yearNumber,
@@ -100,11 +111,17 @@ function createDetailRow(
   return [indicator, renderNumberValues(lines, suffix), renderLabelValues(lines)];
 }
 
-function LoadingState() {
+function renderDetailTable(data: React.ReactNode[][]) {
   return (
-    <div className={fr.cx('fr-py-2w')}>
-      <p className={fr.cx('fr-text--sm', 'fr-mb-1w')}>Chargement...</p>
-      <span className="fr-icon-loader-5-line fr-icon--lg" aria-hidden="true" />
+    <div className="conformite-detail-table-container">
+      <Table
+        id={DETAIL_TABLE_ID}
+        headers={DETAIL_TABLE_HEADERS}
+        data={data}
+        noCaption
+        fixed
+        style={DETAIL_TABLE_STYLE}
+      />
     </div>
   );
 }
@@ -118,18 +135,17 @@ function ErrorState() {
 }
 
 function SteuDetailTable({ detail }: { detail: ConformiteSteuDetailDto }) {
-  const headers = ['Métrique', 'Nombre', 'Libellés'];
   const data = [
     createDetailRow('Paramètres conformes (local)', {
-      periodNumber: detail.conformiteLocaleParametresConformesPeriodeNb,
+      periodNumber: null,
       yearNumber: detail.conformiteLocaleParametresConformesAnneeNb,
-      periodLabel: detail.conformiteLocaleParametresConformesPeriodeLb,
+      periodLabel: null,
       yearLabel: detail.conformiteLocaleParametresConformesAnneeLb,
     }),
     createDetailRow('Paramètres conformes (national)', {
-      periodNumber: detail.conformiteNationaleParametresConformesPeriodeNb,
+      periodNumber: null,
       yearNumber: detail.conformiteNationaleParametresConformesAnneeNb,
-      periodLabel: detail.conformiteNationaleParametresConformesPeriodeLb,
+      periodLabel: null,
       yearLabel: detail.conformiteNationaleParametresConformesAnneeLb,
     }),
     createDetailRow('Paramètres non conformes (local)', {
@@ -174,11 +190,10 @@ function SteuDetailTable({ detail }: { detail: ConformiteSteuDetailDto }) {
     }),
   ];
 
-  return <Table headers={headers} data={data} noCaption />;
+  return renderDetailTable(data);
 }
 
 function SclDetailTable({ detail }: { detail: ConformiteSclDetailDto }) {
-  const headers = ['Métrique', 'Nombre', 'Libellés'];
   const data = [
     createDetailRow(
       '% volume déversé (m3) sur 5 ans',
@@ -208,7 +223,7 @@ function SclDetailTable({ detail }: { detail: ConformiteSclDetailDto }) {
     }),
   ];
 
-  return <Table headers={headers} data={data} noCaption />;
+  return renderDetailTable(data);
 }
 
 export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
@@ -259,35 +274,27 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
       return <EmptyState />;
     }
 
-    if (mode === 'steu') {
-      if (steuQuery.isLoading) {
-        return <LoadingState />;
-      }
+    const isLoading = mode === 'steu' ? steuQuery.isLoading : sclQuery.isLoading;
+    const isError = mode === 'steu' ? steuQuery.isError : sclQuery.isError;
+    const data = mode === 'steu' ? steuQuery.data : sclQuery.data;
 
-      if (steuQuery.isError) {
-        return <ErrorState />;
-      }
-
-      if (steuQuery.data === null || steuQuery.data === undefined) {
-        return <EmptyState />;
-      }
-
-      return <SteuDetailTable detail={steuQuery.data} />;
+    if (isLoading) {
+      return <LoadingState mode={mode} renderDetailTable={renderDetailTable} />;
     }
 
-    if (sclQuery.isLoading) {
-      return <LoadingState />;
-    }
-
-    if (sclQuery.isError) {
+    if (isError) {
       return <ErrorState />;
     }
 
-    if (sclQuery.data === null || sclQuery.data === undefined) {
+    if (data === null || data === undefined) {
       return <EmptyState />;
     }
 
-    return <SclDetailTable detail={sclQuery.data} />;
+    return mode === 'steu' ? (
+      <SteuDetailTable detail={data as ConformiteSteuDetailDto} />
+    ) : (
+      <SclDetailTable detail={data as ConformiteSclDetailDto} />
+    );
   })();
 
   return (
