@@ -9,7 +9,7 @@ import {
 import { formatDate } from '@lib/shared';
 import type { ReactNode } from 'react';
 
-const conformiteProvisiontSeverityMap: Record<ConformiteProvisoire, AlertProps.Severity | undefined> = {
+const conformiteProvisoireSeverityMap: Record<ConformiteProvisoire, AlertProps.Severity | undefined> = {
   [ConformiteProvisoire.Conforme]: 'success',
   [ConformiteProvisoire.NonConforme]: 'error',
   [ConformiteProvisoire.Inconnue]: undefined,
@@ -30,7 +30,7 @@ export function renderConformiteBadge(value: string | null): ReactNode {
   }
 
   return (
-    <Badge severity={conformiteProvisiontSeverityMap[enumValue]} small>
+    <Badge severity={conformiteProvisoireSeverityMap[enumValue]} small>
       {conformiteProvisoireLabel[enumValue]}
     </Badge>
   );
