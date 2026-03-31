@@ -5,7 +5,6 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { CURRENT_CONFORMITE_YEAR } from '@lib/dossier';
 import type {
   ConformiteSclDto,
   ConformiteSclSortByValue,
@@ -14,7 +13,11 @@ import type {
 } from '@lib/dossier';
 import { formatDate } from '@lib/shared';
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { ConformiteDetailAccordion } from '../components/conformite/ConformiteDetailAccordion';
+import { ConformiteDetailModal } from '../components/conformite/ConformiteDetailModal';
+import {
+  conformiteDetailModal,
+  type ConformiteDetailEntry,
+} from '../components/conformite/ConformiteDetailModal.shared';
 import {
   buildConformiteSclTableHeaders,
   buildConformiteSclTableRows,
@@ -28,6 +31,10 @@ type ConformiteMode = 'steu' | 'scl';
 type ConformiteSteuRow = ConformiteSteuDto;
 
 type ConformiteSclRow = ConformiteSclDto;
+
+type ConformiteDashboardDetailEntry = ConformiteDetailEntry & {
+  key: string;
+};
 
 type ColumnConfig<TSortBy extends string> = {
   label: string;
@@ -62,6 +69,14 @@ const SCL_COLUMNS: ColumnConfig<ConformiteSclSortByValue>[] = [
 
 const STEU_HEADER_LABELS = buildConformiteSteuTableHeaders();
 const SCL_HEADER_LABELS = buildConformiteSclTableHeaders();
+
+function getSteuDetailKey(steuCdn: number) {
+  return `steu-${steuCdn}`;
+}
+
+function getSclDetailKey(sclCdn: number) {
+  return `scl-${sclCdn}`;
+}
 
 function renderSortableHeader<TSortBy extends string>(
   column: ColumnConfig<TSortBy>,
@@ -141,7 +156,6 @@ export function ConformiteDashboard() {
     appliedYear,
     updateForm,
     updateMode,
-    handleSearch,
     setSort,
     data,
     isLoading,
@@ -154,6 +168,7 @@ export function ConformiteDashboard() {
     yearOptions,
   } = useConformiteFilters();
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [selectedDetailKey, setSelectedDetailKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (copyStatus !== 'success') {
@@ -166,7 +181,7 @@ export function ConformiteDashboard() {
   }, [copyStatus]);
 
   const mode = form.mode;
-  const selectedYear = appliedYear || CURRENT_CONFORMITE_YEAR;
+  const selectedYear = appliedYear;
   const steuRows = useMemo(
     () => ((mode === 'steu' ? data?.data : []) ?? []) as ConformiteSteuRow[],
     [data?.data, mode],
@@ -214,6 +229,37 @@ export function ConformiteDashboard() {
     ];
   }, [form.sortBy, form.sortOrder, mode, setSort]);
 
+  const detailEntries = useMemo<ConformiteDashboardDetailEntry[]>(() => {
+    if (mode === 'steu') {
+      return steuRows
+        .filter((steu) => steu.steuCdn)
+        .map((steu) => ({
+          key: getSteuDetailKey(steu.steuCdn),
+          mode: 'steu' as const,
+          year: selectedYear,
+          steuCdn: steu.steuCdn,
+          entityCode: steu.ouvrageDepollutionCode,
+          entityName: steu.ouvrageDepollutionNom ?? 'Nom non renseigné',
+        }));
+    }
+
+    return sclRows
+      .filter((scl) => scl.sclCdn)
+      .map((scl) => ({
+        key: getSclDetailKey(scl.sclCdn),
+        mode: 'scl' as const,
+        year: selectedYear,
+        sclCdn: scl.sclCdn,
+        entityCode: scl.systemeCollecteCode,
+        entityName: scl.systemeCollecteNom ?? 'Nom non renseigné',
+      }));
+  }, [mode, sclRows, selectedYear, steuRows]);
+
+  const selectedDetailIndex = selectedDetailKey
+    ? detailEntries.findIndex((entry) => entry.key === selectedDetailKey)
+    : -1;
+  const selectedDetail = selectedDetailIndex >= 0 ? detailEntries[selectedDetailIndex] : null;
+
   const tableData = useMemo(() => {
     if (mode === 'steu') {
       const baseRows = buildConformiteSteuTableRows(steuRows);
@@ -224,12 +270,18 @@ export function ConformiteDashboard() {
         return [
           ...row,
           steu.steuCdn ? (
-            <ConformiteDetailAccordion
+            <Button
               key={`detail-steu-${steu.ouvrageDepollutionCode}`}
-              mode="steu"
-              year={selectedYear}
-              steuCdn={steu.steuCdn}
-            />
+              type="button"
+              priority="tertiary no outline"
+              size="small"
+              onClick={() => {
+                setSelectedDetailKey(getSteuDetailKey(steu.steuCdn));
+                conformiteDetailModal.open();
+              }}
+            >
+              Voir le détail
+            </Button>
           ) : (
             <p key={`detail-missing-steu-${steu.ouvrageDepollutionCode}`} className={fr.cx('fr-text--sm', 'fr-mb-0')}>
               Détail indisponible
@@ -247,12 +299,18 @@ export function ConformiteDashboard() {
       return [
         ...row,
         scl.sclCdn ? (
-          <ConformiteDetailAccordion
+          <Button
             key={`detail-scl-${scl.systemeCollecteCode}`}
-            mode="scl"
-            year={selectedYear}
-            sclCdn={scl.sclCdn}
-          />
+            type="button"
+            priority="tertiary no outline"
+            size="small"
+            onClick={() => {
+              setSelectedDetailKey(getSclDetailKey(scl.sclCdn));
+              conformiteDetailModal.open();
+            }}
+          >
+            Voir le détail
+          </Button>
         ) : (
           <p key={`detail-missing-scl-${scl.systemeCollecteCode}`} className={fr.cx('fr-text--sm', 'fr-mb-0')}>
             Détail indisponible
@@ -260,7 +318,7 @@ export function ConformiteDashboard() {
         ),
       ];
     });
-  }, [mode, sclRows, selectedYear, steuRows]);
+  }, [mode, sclRows, steuRows]);
 
   const total = data?.total ?? 0;
   const firstResult = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -383,15 +441,6 @@ export function ConformiteDashboard() {
               <option value="sans">Sans impact</option>
             </Select>
           </div>
-
-          <div
-            className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-2')}
-            style={{ display: 'flex', alignItems: 'flex-end' }}
-          >
-            <Button type="button" onClick={handleSearch} iconId="fr-icon-search-line" iconPosition="right">
-              Rechercher
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -413,6 +462,23 @@ export function ConformiteDashboard() {
       {!isLoading && !error && total > 0 && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <Table headers={headers} data={tableData} noCaption bordered noScroll={false} className={fr.cx('fr-mb-2w')} />
+
+          <ConformiteDetailModal
+            detail={selectedDetail}
+            isPreviousDisabled={selectedDetailIndex <= 0}
+            isNextDisabled={selectedDetailIndex === detailEntries.length - 1}
+            onPrevious={() => {
+              if (selectedDetailIndex > 0) {
+                setSelectedDetailKey(detailEntries[selectedDetailIndex - 1]?.key ?? null);
+              }
+            }}
+            onNext={() => {
+              if (selectedDetailIndex < detailEntries.length - 1) {
+                setSelectedDetailKey(detailEntries[selectedDetailIndex + 1]?.key ?? null);
+              }
+            }}
+            onClose={() => setSelectedDetailKey(null)}
+          />
 
           <p className={fr.cx('fr-text--sm', 'fr-mb-2w')}>
             Affichage de {firstResult} à {lastResult} sur {total} résultats

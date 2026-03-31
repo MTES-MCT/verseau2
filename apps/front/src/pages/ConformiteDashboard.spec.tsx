@@ -125,6 +125,22 @@ describe('ConformiteDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    Object.defineProperty(window, 'dsfr', {
+      configurable: true,
+      value: (element: HTMLElement) => ({
+        modal: {
+          disclose: () => {
+            element.setAttribute('open', 'true');
+            element.dispatchEvent(new Event('dsfr.disclose'));
+          },
+          conceal: () => {
+            element.removeAttribute('open');
+            element.dispatchEvent(new Event('dsfr.conceal'));
+          },
+        },
+      }),
+    });
+
     mockUseConformiteSteu.mockReturnValue(emptySteuResult as unknown as ReturnType<typeof useConformiteSteu>);
     mockUseConformiteScl.mockReturnValue(emptySclResult as unknown as ReturnType<typeof useConformiteScl>);
     mockUseDetailBilanSteu.mockReturnValue(emptySteuDetailResult as unknown as ReturnType<typeof useDetailBilanSteu>);
@@ -208,29 +224,52 @@ describe('ConformiteDashboard', () => {
     });
   });
 
-  it('ouvre l’accordion et affiche le détail STEU', async () => {
+  it('ouvre le détail STEU dans une modale et navigue au suivant', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
-      data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 20 },
+      data: {
+        data: [
+          makeSteuRow({ steuCdn: 101, ouvrageDepollutionCode: 'STEU001' }),
+          makeSteuRow({ steuCdn: 102, ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionNom: 'Station Beta' }),
+        ],
+        total: 2,
+        page: 1,
+        pageSize: 20,
+      },
       isLoading: false,
       isFetching: false,
       error: null,
     } as unknown as ReturnType<typeof useConformiteSteu>);
-    mockUseDetailBilanSteu.mockReturnValue({
-      data: makeSteuDetail(),
-      isLoading: false,
-      isError: false,
-      error: null,
-    } as unknown as ReturnType<typeof useDetailBilanSteu>);
+    mockUseDetailBilanSteu.mockImplementation(
+      (steuCdn) =>
+        ({
+          data:
+            steuCdn === 101
+              ? makeSteuDetail({ conformiteLocaleParametresConformesPeriodeLb: '2 paramètres A' })
+              : makeSteuDetail({ conformiteLocaleParametresConformesPeriodeLb: '2 paramètres B' }),
+          isLoading: false,
+          isError: false,
+          error: null,
+        }) as unknown as ReturnType<typeof useDetailBilanSteu>,
+    );
     renderPage();
 
     // Act
-    fireEvent.click(screen.getByRole('button', { name: /état des bilans depuis le dernier suivi effectué/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /voir le détail/i })[0]);
 
     // Assert
+    await waitFor(() => {
+      expect(screen.getByText(/détail conformité steu/i)).toBeInTheDocument();
+    });
     expect(screen.getByText(/paramètres conformes \(local\)/i)).toBeInTheDocument();
-    expect(screen.getAllByText('2 paramètres').length).toBeGreaterThan(0);
+    expect(screen.getByText('2 paramètres A')).toBeInTheDocument();
     expect(screen.getByText('Bilans avec événements')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /afficher le détail suivant/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('2 paramètres B')).toBeInTheDocument();
+    });
   });
 
   it('copie la synthèse avec les données avec impact', async () => {

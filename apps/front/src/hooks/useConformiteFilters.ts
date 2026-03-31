@@ -4,6 +4,7 @@ import { CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR, listConformiteScl, list
 import { useConformiteScl, useConformiteSteu } from './useConformite';
 
 const PAGE_SIZE = 20;
+const DEFAULT_CONFORMITE_YEAR = CURRENT_CONFORMITE_YEAR - 1;
 
 type SortByValue = ConformiteSteuSortByValue | ConformiteSclSortByValue;
 
@@ -18,7 +19,7 @@ export interface FilterState {
 
 const INITIAL_FILTERS: FilterState = {
   mode: 'steu',
-  year: CURRENT_CONFORMITE_YEAR.toString(),
+  year: DEFAULT_CONFORMITE_YEAR.toString(),
   trancheObligationLibelle: '',
   impact: '',
   sortBy: undefined,
@@ -51,7 +52,6 @@ function buildSclQuery(submitted: FilterState, page: number): RouteQuery<typeof 
 
 export function useConformiteFilters() {
   const [form, setForm] = useState<FilterState>(INITIAL_FILTERS);
-  const [submitted, setSubmitted] = useState<FilterState>(INITIAL_FILTERS);
   const [page, setPage] = useState(1);
   const yearOptions = useMemo(
     () =>
@@ -61,8 +61,8 @@ export function useConformiteFilters() {
     [],
   );
 
-  const steuQuery = buildSteuQuery(submitted, page);
-  const sclQuery = buildSclQuery(submitted, page);
+  const steuQuery = buildSteuQuery(form, page);
+  const sclQuery = buildSclQuery(form, page);
 
   const steuResult = useConformiteSteu(steuQuery, form.mode === 'steu');
   const sclResult = useConformiteScl(sclQuery, form.mode === 'scl');
@@ -77,36 +77,24 @@ export function useConformiteFilters() {
       sortBy: undefined,
       sortOrder: undefined,
     }));
-    setSubmitted((current) => ({
-      ...current,
-      mode,
-      sortBy: undefined,
-      sortOrder: undefined,
-    }));
     setPage(1);
   }
 
   function updateForm(field: Exclude<keyof FilterState, 'mode' | 'sortBy' | 'sortOrder'>, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function handleSearch() {
-    setSubmitted(form);
     setPage(1);
   }
 
   function setSort(sortBy: SortByValue, sortOrder: 'ASC' | 'DESC') {
     setForm((current) => ({ ...current, sortBy, sortOrder }));
-    setSubmitted((current) => ({ ...current, sortBy, sortOrder }));
     setPage(1);
   }
 
   return {
     form,
-    appliedYear: Number(submitted.year),
+    appliedYear: Number(form.year),
     updateForm,
     updateMode,
-    handleSearch,
     setSort,
     yearOptions,
     data: activeResult.data,
