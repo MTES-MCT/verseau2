@@ -22,12 +22,6 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
-  ConformiteSteuFilters,
-  ConformiteSclFilters,
-  ConformiteSteuRow,
-  ConformiteSclRow,
-  ConformiteSteuDetailRow,
-  ConformiteSclDetailRow,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
@@ -44,42 +38,6 @@ export class MasaProvider {
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
-
-  // ---------------------------------------------------------------------------
-  // Conformité STEU — Tableau de bord conformité des stations d'épuration
-  // TODO: Remplacer par appel à l'API MASA quand disponible
-  // ---------------------------------------------------------------------------
-
-  async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    return this.roseauGateway.findConformiteSteu(filters);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Conformité SCL — Tableau de bord conformité des systèmes de collecte
-  // TODO: Remplacer par appel à l'API MASA quand disponible
-  // ---------------------------------------------------------------------------
-
-  async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    return this.roseauGateway.findConformiteScl(filters);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Conformité STEU Détail — Détail performance pour une STEU donnée
-  // TODO: Remplacer par appel à l'API MASA quand disponible
-  // ---------------------------------------------------------------------------
-
-  async findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null> {
-    return this.roseauGateway.findConformiteSteuDetail(steuCdn, annee);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Conformité SCL Détail — Détail performance pour un SCL donné
-  // TODO: Remplacer par appel à l'API MASA quand disponible
-  // ---------------------------------------------------------------------------
-
-  async findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null> {
-    return this.roseauGateway.findConformiteSclDetail(sclCdn, annee);
-  }
 
   // ---------------------------------------------------------------------------
   // CTL002 / CTL004 — Existence des STEU (ouvrages de dépollution)

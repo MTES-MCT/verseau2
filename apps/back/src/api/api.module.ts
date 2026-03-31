@@ -12,7 +12,6 @@ import { AuthenticationModule } from '@authentication/authentication.module';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { IndicateursModule } from '../indicateurs/indicateurs.module';
 import { MesuresModule } from '../mesures/mesures.module';
-import { ConformiteModule } from '../conformite/conformite.module';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { ConformiteModule } from '../conformite/conformite.module';
     ReferentielModule,
     IndicateursModule,
     MesuresModule,
-    ConformiteModule,
   ],
   controllers: [VersionController],
   providers: [

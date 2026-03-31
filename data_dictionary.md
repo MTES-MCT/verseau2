@@ -42,16 +42,3 @@ uniteMesureSymbole, urf_symb_lb, Symbole de l'unite de mesure du resultat (ex: m
 analyseFinalite, tlref_mnemo_lb (LREF_17), Finalite de l'analyse (autosurveillance, police, etc.)
 resultatAnalyseStatut, tlref_elt_cda || tlref_mnemo_lb (LREF_20), Statut de validation du resultat d'analyse
 resultatAnalyseQualification, tlref_mnemo_lb (LREF_18), Qualification de la donnee d'analyse (correcte, incertaine, etc.)
-capaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement en equivalent-habitants
-suiviDebutDate, steureg_suiv_deb_dt, Date de debut des bilans non suivis
-suiviFinDate, steureg_suiv_fin_dt, Date de fin des bilans non suivis
-conformiteNationaleProvisoire, cfprf_r_glob_perf_eru_conf_in, Conformite nationale provisoire en performance ERU
-conformiteLocaleProvisoire, cfprf_r_glob_perf_loc_conf_in, Conformite locale provisoire en performance
-impactConformite, (computed), Indique si les conformites provisoires different du suivi regulier
-suiviRegulierEffectue, steureg_suivi_reg_on / sclreg_suivi_reg_on, Suivi regulier effectue (boolean)
-suiviRegulierDate, steureg_suivi_reg_dt / sclreg_suivi_reg_dt, Date du dernier suivi regulier effectue
-typeScl, tlref_mnemo_lb (LREF_05), Type de systeme de collecte
-conformiteLocaleTempsPluieProvisoire, bilanscl_conf_tp_eru_in, Conformite locale temps pluie provisoire
-conformiteNationaleTempsPluieProvisoire, bilanscl_conf_nat_tp_eru_in, Conformite nationale temps pluie provisoire
-conformiteLocaleParametresConformesPeriodeNb, steureg_conf_loc_per_nb, Nombre de parametres conformes sur la periode (local)
-volumeDeversePeriodePc, sclreg_per_vol_dev_pc, Pourcentage volume deverse sur 5 ans calcule
