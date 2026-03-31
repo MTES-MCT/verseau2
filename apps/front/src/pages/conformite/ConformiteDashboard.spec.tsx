@@ -2,17 +2,16 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR } from '@lib/dossier';
 import type { ConformiteSclDto, ConformiteSteuDetailDto, ConformiteSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ConformiteDashboard } from './ConformiteDashboard';
-import { renderWithQueryClient } from '../test.helper';
+import { renderWithQueryClient } from '../../test.helper';
+import { useConformiteScl, useConformiteSteu, useDetailBilanScl, useDetailBilanSteu } from '../../hooks/useConformite';
+import ConformiteDashboard from './ConformiteDashboard';
 
-vi.mock('../hooks/useConformite', () => ({
+vi.mock('../../hooks/useConformite', () => ({
   useConformiteSteu: vi.fn(),
   useConformiteScl: vi.fn(),
   useDetailBilanSteu: vi.fn(),
   useDetailBilanScl: vi.fn(),
 }));
-
-import { useConformiteScl, useConformiteSteu, useDetailBilanScl, useDetailBilanSteu } from '../hooks/useConformite';
 
 const mockUseConformiteSteu = vi.mocked(useConformiteSteu);
 const mockUseConformiteScl = vi.mocked(useConformiteScl);
@@ -213,7 +212,6 @@ describe('ConformiteDashboard', () => {
     renderPage();
     const yearSelect = screen.getByLabelText(/année/i);
     fireEvent.change(yearSelect, { target: { value: '2018' } });
-    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
     // Assert
     expect(screen.getByRole('option', { name: String(CURRENT_CONFORMITE_YEAR) })).toBeInTheDocument();
@@ -245,8 +243,8 @@ describe('ConformiteDashboard', () => {
         ({
           data:
             steuCdn === 101
-              ? makeSteuDetail({ conformiteLocaleParametresConformesPeriodeLb: '2 paramètres A' })
-              : makeSteuDetail({ conformiteLocaleParametresConformesPeriodeLb: '2 paramètres B' }),
+              ? makeSteuDetail({ conformiteLocaleParametresConformesAnneeLb: '2 paramètres A' })
+              : makeSteuDetail({ conformiteLocaleParametresConformesAnneeLb: '2 paramètres B' }),
           isLoading: false,
           isError: false,
           error: null,
@@ -265,7 +263,7 @@ describe('ConformiteDashboard', () => {
     expect(screen.getByText('2 paramètres A')).toBeInTheDocument();
     expect(screen.getByText('Bilans avec événements')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /afficher le détail suivant/i }));
+    fireEvent.click(screen.getByRole('button', { name: /suivant/i }));
 
     await waitFor(() => {
       expect(screen.getByText('2 paramètres B')).toBeInTheDocument();

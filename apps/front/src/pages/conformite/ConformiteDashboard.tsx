@@ -13,18 +13,15 @@ import type {
 } from '@lib/dossier';
 import { formatDate } from '@lib/shared';
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { ConformiteDetailModal } from '../components/conformite/ConformiteDetailModal';
-import {
-  conformiteDetailModal,
-  type ConformiteDetailEntry,
-} from '../components/conformite/ConformiteDetailModal.shared';
+import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
+import { conformiteDetailModal, type ConformiteDetailEntry } from './modal/ConformiteDetailModal.shared';
 import {
   buildConformiteSclTableHeaders,
   buildConformiteSclTableRows,
   buildConformiteSteuTableHeaders,
   buildConformiteSteuTableRows,
-} from '../helper/conformiteTableData';
-import { useConformiteFilters } from '../hooks/useConformiteFilters';
+} from '../../helper/conformiteTableData';
+import { useConformiteFilters } from '../../hooks/useConformiteFilters';
 
 type ConformiteMode = 'steu' | 'scl';
 
