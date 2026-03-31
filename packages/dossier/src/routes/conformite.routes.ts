@@ -39,8 +39,17 @@ const ConformiteYearValueSchema = z.coerce
   .number()
   .int()
   .min(FIRST_CONFORMITE_YEAR)
-  .refine((year) => year <= getCurrentConformiteYear(), {
-    message: `Number must be less than or equal to ${getCurrentConformiteYear()}`,
+  .superRefine((year, ctx) => {
+    const currentYear = getCurrentConformiteYear();
+    if (year > currentYear) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.too_big,
+        maximum: currentYear,
+        type: 'number',
+        inclusive: true,
+        message: `Number must be less than or equal to ${currentYear}`,
+      });
+    }
   });
 
 const ConformiteYearQuerySchema = z.object({
