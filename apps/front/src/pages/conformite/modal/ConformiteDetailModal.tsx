@@ -1,8 +1,9 @@
 import { fr } from '@codegouvfr/react-dsfr';
 import { Button } from '@codegouvfr/react-dsfr/Button';
+import Notice from '@codegouvfr/react-dsfr/Notice';
 import { useIsModalOpen } from '@codegouvfr/react-dsfr/Modal/useIsModalOpen';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ConformiteSclDetailDto, ConformiteSteuDetailDto } from '@lib/dossier';
 import { useDetailBilanScl, useDetailBilanSteu } from '../../../hooks/useConformite';
 import { renderConformiteBadge } from '../../../helper/conformiteTableData';
@@ -23,6 +24,14 @@ type DetailLine = {
   key: 'period' | 'year';
   number: number | null;
   libelle?: string | null;
+};
+
+type DetailRow = {
+  indicator: string;
+  numberContent: React.ReactNode;
+  labelContent: React.ReactNode;
+  numberText: string;
+  labelText: string;
 };
 
 const DETAIL_TABLE_ID = 'conformite-detail-modal-table';
@@ -80,6 +89,26 @@ function renderLabelValues(lines: DetailLine[]) {
   );
 }
 
+function getNumberValuesText(lines: DetailLine[], suffix = '') {
+  const visibleLines = getVisibleLines(lines);
+
+  if (visibleLines.length === 0) {
+    return '-';
+  }
+
+  return visibleLines.map((line) => formatNumber(line.number, suffix)).join(' / ');
+}
+
+function getLabelValuesText(lines: DetailLine[]) {
+  const visibleLines = getVisibleLines(lines);
+
+  if (visibleLines.length === 0) {
+    return '-';
+  }
+
+  return visibleLines.map((line) => (hasDisplayableLabel(line.libelle) ? line.libelle : '-')).join(' / ');
+}
+
 function createDetailRow(
   indicator: string,
   values: {
@@ -89,7 +118,7 @@ function createDetailRow(
     yearLabel?: string | null;
   },
   suffix = '',
-) {
+): DetailRow {
   // TODO : voir si on a besoin d'afficher le libellés période
   const lines: DetailLine[] = [
     // {
@@ -104,7 +133,13 @@ function createDetailRow(
     },
   ];
 
-  return [indicator, renderNumberValues(lines, suffix), renderLabelValues(lines)];
+  return {
+    indicator,
+    numberContent: renderNumberValues(lines, suffix),
+    labelContent: renderLabelValues(lines),
+    numberText: getNumberValuesText(lines, suffix),
+    labelText: getLabelValuesText(lines),
+  };
 }
 
 function renderDetailTable(data: React.ReactNode[][]) {
@@ -122,6 +157,20 @@ function renderDetailTable(data: React.ReactNode[][]) {
   );
 }
 
+function renderDetailRows(rows: DetailRow[]) {
+  return renderDetailTable(rows.map((row) => [row.indicator, row.numberContent, row.labelContent]));
+}
+
+function buildDetailCopyText(title: string, entityCode: string, entityName: string, rows: DetailRow[]) {
+  return [
+    title,
+    entityName ? `${entityCode} - ${entityName}` : entityCode,
+    '',
+    DETAIL_TABLE_HEADERS.join('\t'),
+    ...rows.map((row) => [row.indicator, row.numberText, row.labelText].join('\t')),
+  ].join('\n');
+}
+
 function EmptyState() {
   return <p className={fr.cx('fr-mb-0')}>Aucune donnée</p>;
 }
@@ -130,8 +179,8 @@ function ErrorState() {
   return <p className={fr.cx('fr-mb-0')}>Impossible de charger les données.</p>;
 }
 
-function SteuDetailTable({ detail }: { detail: ConformiteSteuDetailDto }) {
-  const data = [
+function getSteuDetailRows(detail: ConformiteSteuDetailDto) {
+  return [
     createDetailRow('Paramètres conformes (local)', {
       periodNumber: null,
       yearNumber: detail.conformiteLocaleParametresConformesAnneeNb,
@@ -185,12 +234,10 @@ function SteuDetailTable({ detail }: { detail: ConformiteSteuDetailDto }) {
       yearNumber: detail.evenementsAnneeNb,
     }),
   ];
-
-  return renderDetailTable(data);
 }
 
-function SclDetailTable({ detail }: { detail: ConformiteSclDetailDto }) {
-  const data = [
+function getSclDetailRows(detail: ConformiteSclDetailDto) {
+  return [
     createDetailRow(
       '% volume déversé (m3) sur 5 ans',
       {
@@ -218,13 +265,13 @@ function SclDetailTable({ detail }: { detail: ConformiteSclDetailDto }) {
       yearLabel: detail.conformiteJoursDeversementAnnee,
     }),
   ];
-
-  return renderDetailTable(data);
 }
 
 export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
   const isModalOpen = useIsModalOpen(conformiteDetailModal, { onConceal: props.onClose });
   const { detail, isPreviousDisabled, isNextDisabled, onPrevious, onNext } = props;
+  const [copied, setCopied] = useState(false);
+  const [isCopiedNoticeVisible, setIsCopiedNoticeVisible] = useState(false);
   const mode = detail?.mode ?? 'steu';
   const year = detail?.year ?? new Date().getFullYear();
   const entityCode = detail?.entityCode ?? '';
@@ -287,14 +334,50 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
     };
   }, [isModalOpen, isNextDisabled, isPreviousDisabled, onNext, onPrevious]);
 
+  useEffect(() => {
+    setCopied(false);
+    setIsCopiedNoticeVisible(false);
+  }, [detail?.mode, detail?.entityCode, detail?.year]);
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setCopied(false), 2000);
+
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
+
+  const isLoading = detail ? (mode === 'steu' ? steuQuery.isLoading : sclQuery.isLoading) : false;
+  const isError = detail ? (mode === 'steu' ? steuQuery.isError : sclQuery.isError) : false;
+  const data = detail ? (mode === 'steu' ? steuQuery.data : sclQuery.data) : undefined;
+  const detailRows =
+    data === null || data === undefined
+      ? null
+      : mode === 'steu'
+        ? getSteuDetailRows(data as ConformiteSteuDetailDto)
+        : getSclDetailRows(data as ConformiteSclDetailDto);
+  const copyText = detailRows ? buildDetailCopyText(title, entityCode, entityName, detailRows) : '';
+
+  async function handleCopyTable() {
+    if (!copyText || !navigator.clipboard?.writeText) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      setIsCopiedNoticeVisible(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   const content = (() => {
     if (!detail) {
       return <EmptyState />;
     }
-
-    const isLoading = mode === 'steu' ? steuQuery.isLoading : sclQuery.isLoading;
-    const isError = mode === 'steu' ? steuQuery.isError : sclQuery.isError;
-    const data = mode === 'steu' ? steuQuery.data : sclQuery.data;
 
     if (isLoading) {
       return <LoadingState mode={mode} renderDetailTable={renderDetailTable} />;
@@ -308,11 +391,7 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
       return <EmptyState />;
     }
 
-    return mode === 'steu' ? (
-      <SteuDetailTable detail={data as ConformiteSteuDetailDto} />
-    ) : (
-      <SclDetailTable detail={data as ConformiteSclDetailDto} />
-    );
+    return renderDetailRows(detailRows ?? []);
   })();
 
   return (
@@ -328,7 +407,15 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
         </div>
 
         <div className="fr-col-12">
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '1rem',
+              width: '100%',
+            }}
+          >
             <div>
               <Button
                 type="button"
@@ -340,6 +427,18 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
                 nativeButtonProps={{ 'aria-label': 'Afficher le détail précédent' }}
               >
                 Précédent
+              </Button>
+            </div>
+            <div>
+              <Button
+                type="button"
+                priority="secondary"
+                iconId={copied ? 'fr-icon-check-line' : 'fr-icon-clipboard-line'}
+                onClick={handleCopyTable}
+                disabled={!copyText}
+                title="Copier les informations du tableau"
+              >
+                {copied ? 'Copié !' : 'Copier le tableau'}
               </Button>
             </div>
             <div>
@@ -359,6 +458,17 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
           </div>
         </div>
       </div>
+
+      {isCopiedNoticeVisible && (
+        <Notice
+          title="Détail copié"
+          description="- Les informations du tableau ont été copiées dans le presse-papiers."
+          severity="info"
+          className={fr.cx('fr-mb-2w')}
+          isClosable
+          onClose={() => setIsCopiedNoticeVisible(false)}
+        />
+      )}
 
       {content}
     </conformiteDetailModal.Component>

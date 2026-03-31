@@ -270,7 +270,7 @@ describe('ConformiteDashboard', () => {
     });
   });
 
-  it('copie la synthèse avec les données avec impact', async () => {
+  it('copie les informations du tableau depuis la modale de détail', async () => {
     // Arrange
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
@@ -283,16 +283,33 @@ describe('ConformiteDashboard', () => {
       isFetching: false,
       error: null,
     } as unknown as ReturnType<typeof useConformiteSteu>);
+    mockUseDetailBilanSteu.mockReturnValue({
+      data: makeSteuDetail({ conformiteLocaleParametresConformesAnneeLb: '2 paramètres A' }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDetailBilanSteu>);
     renderPage();
 
     // Act
-    fireEvent.click(screen.getByRole('button', { name: /copier la synthèse/i }));
+    fireEvent.click(screen.getByRole('button', { name: /voir le détail/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/détail conformité steu/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /copier le tableau/i }));
 
     // Assert
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('avec impact'));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Métrique\tNombre\tLibellés'));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Paramètres conformes (local)'));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('STEU777'));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('2 paramètres A'));
     });
+
+    expect(screen.getByText(/détail copié/i)).toBeInTheDocument();
+    expect(screen.getByText(/les informations du tableau ont été copiées dans le presse-papiers/i)).toBeInTheDocument();
   });
 
   it('affiche l’état de chargement', () => {

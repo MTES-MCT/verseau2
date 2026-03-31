@@ -11,8 +11,7 @@ import type {
   ConformiteSteuDto,
   ConformiteSteuSortByValue,
 } from '@lib/dossier';
-import { formatDate } from '@lib/shared';
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './modal/ConformiteDetailModal.shared';
 import {
@@ -22,8 +21,6 @@ import {
   buildConformiteSteuTableRows,
 } from '../../helper/conformiteTableData';
 import { useConformiteFilters } from '../../hooks/useConformiteFilters';
-
-type ConformiteMode = 'steu' | 'scl';
 
 type ConformiteSteuRow = ConformiteSteuDto;
 
@@ -111,42 +108,6 @@ function renderSortableHeader<TSortBy extends string>(
   );
 }
 
-function buildSyntheseText(mode: ConformiteMode, rows: Array<ConformiteSteuRow | ConformiteSclRow>) {
-  const impactedRows = rows.filter((row) => row.impactConformite);
-
-  if (impactedRows.length === 0) {
-    return '';
-  }
-
-  const lines = impactedRows.map((row) => {
-    if (mode === 'steu') {
-      const steu = row as ConformiteSteuRow;
-
-      return [
-        `- ${steu.ouvrageDepollutionCode}`,
-        steu.ouvrageDepollutionNom ?? 'Nom non renseigné',
-        steu.trancheObligationLibelle ?? 'Tranche non renseignée',
-        `Période ${formatDate(steu.suiviDebutDate)} → ${formatDate(steu.suiviFinDate)}`,
-        `Nationale: ${steu.conformiteNationaleProvisoire ?? '-'}`,
-        `Locale: ${steu.conformiteLocaleProvisoire ?? '-'}`,
-      ].join(' — ');
-    }
-
-    const scl = row as ConformiteSclRow;
-
-    return [
-      `- ${scl.systemeCollecteCode}`,
-      scl.systemeCollecteNom ?? 'Nom non renseigné',
-      scl.trancheObligationLibelle ?? 'Tranche non renseignée',
-      `Période ${formatDate(scl.suiviDebutDate)} → ${formatDate(scl.suiviFinDate)}`,
-      `Locale pluie: ${scl.conformiteLocaleTempsPluieProvisoire ?? '-'}`,
-      `Nationale pluie: ${scl.conformiteNationaleTempsPluieProvisoire ?? '-'}`,
-    ].join(' — ');
-  });
-
-  return [`Synthèse conformité ${mode.toUpperCase()} — éléments avec impact`, '', ...lines].join('\n');
-}
-
 export function ConformiteDashboard() {
   const {
     form,
@@ -164,18 +125,7 @@ export function ConformiteDashboard() {
     PAGE_SIZE,
     yearOptions,
   } = useConformiteFilters();
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [selectedDetailKey, setSelectedDetailKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (copyStatus !== 'success') {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => setCopyStatus('idle'), 2000);
-
-    return () => window.clearTimeout(timeout);
-  }, [copyStatus]);
 
   const mode = form.mode;
   const selectedYear = appliedYear;
@@ -324,21 +274,6 @@ export function ConformiteDashboard() {
   const total = data?.total ?? 0;
   const firstResult = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const lastResult = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
-  const syntheseText = useMemo(() => buildSyntheseText(mode, currentRows), [currentRows, mode]);
-
-  async function handleCopySynthese() {
-    if (!syntheseText || !navigator.clipboard?.writeText) {
-      setCopyStatus('error');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(syntheseText);
-      setCopyStatus('success');
-    } catch {
-      setCopyStatus('error');
-    }
-  }
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -346,27 +281,7 @@ export function ConformiteDashboard() {
         <div className={fr.cx('fr-col-12', 'fr-col-md')}>
           <h1 className={fr.cx('fr-mb-0')}>Tableau de bord conformité</h1>
         </div>
-        <div className="fr-col-12 fr-col-md-auto">
-          <Button
-            type="button"
-            priority="secondary"
-            iconId={copyStatus === 'success' ? 'fr-icon-check-line' : 'fr-icon-clipboard-line'}
-            onClick={handleCopySynthese}
-            disabled={!syntheseText}
-          >
-            {copyStatus === 'success' ? 'Copié !' : 'Copier la synthèse'}
-          </Button>
-        </div>
       </div>
-
-      {copyStatus === 'error' && (
-        <Alert
-          severity="error"
-          title="Copie impossible"
-          description="La synthèse n'a pas pu être copiée dans le presse-papiers."
-          className={fr.cx('fr-mb-2w')}
-        />
-      )}
 
       <div className={fr.cx('fr-mb-3w')}>
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom')}>
