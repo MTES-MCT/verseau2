@@ -149,6 +149,6 @@ export class ConformiteService {
 
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
 
-    return [...new Set(scls.map((scl) => scl.sclCdn))];
+    return [...new Set(scls.map((scl) => scl.systemeCollecteIdentifiant))];
   }
 }

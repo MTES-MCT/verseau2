@@ -237,6 +237,8 @@ export function ConformiteDashboard() {
           steuCdn: steu.steuCdn,
           entityCode: steu.ouvrageDepollutionCode,
           entityName: steu.ouvrageDepollutionNom ?? 'Nom non renseigné',
+          conformiteNationaleProvisoire: steu.conformiteNationaleProvisoire,
+          conformiteLocaleProvisoire: steu.conformiteLocaleProvisoire,
         }));
     }
 
@@ -249,6 +251,8 @@ export function ConformiteDashboard() {
         sclCdn: scl.sclCdn,
         entityCode: scl.systemeCollecteCode,
         entityName: scl.systemeCollecteNom ?? 'Nom non renseigné',
+        conformiteNationaleTempsPluieProvisoire: scl.conformiteNationaleTempsPluieProvisoire,
+        conformiteLocaleTempsPluieProvisoire: scl.conformiteLocaleTempsPluieProvisoire,
       }));
   }, [mode, sclRows, selectedYear, steuRows]);
 

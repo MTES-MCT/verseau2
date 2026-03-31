@@ -172,7 +172,7 @@ export class RoseauRepository implements RoseauGateway {
 
     return rows.map((scl) => ({
       systemeCollecteCode: scl.sclSandreCda,
-      sclCdn: scl.sclCdn,
+      systemeCollecteIdentifiant: scl.sclCdn,
     }));
   }
 

@@ -1,6 +1,20 @@
 import { z } from 'zod';
 import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
+export enum ConformiteProvisoire {
+  Inconnue = '0',
+  Conforme = '1',
+  NonConforme = '2',
+  SansObjet = 'X',
+}
+
+export const conformiteProvisoireLabel: Record<ConformiteProvisoire, string> = {
+  [ConformiteProvisoire.Inconnue]: 'Inconnue',
+  [ConformiteProvisoire.Conforme]: 'Conforme',
+  [ConformiteProvisoire.NonConforme]: 'Non conforme',
+  [ConformiteProvisoire.SansObjet]: 'Sans objet',
+};
+
 export const ConformiteSteuDtoSchema = z.object({
   steuCdn: z.number(),
   ouvrageDepollutionCode: z.string(),

@@ -1,25 +1,37 @@
 import type { AlertProps } from '@codegouvfr/react-dsfr/Alert';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
-import type { ConformiteSclDto, ConformiteSteuDto } from '@lib/dossier';
+import {
+  ConformiteProvisoire,
+  conformiteProvisoireLabel,
+  type ConformiteSclDto,
+  type ConformiteSteuDto,
+} from '@lib/dossier';
 import { formatDate } from '@lib/shared';
 import type { ReactNode } from 'react';
 
-function renderConformiteBadge(value: string | null): ReactNode {
+const conformiteProvisiontSeverityMap: Record<ConformiteProvisoire, AlertProps.Severity | undefined> = {
+  [ConformiteProvisoire.Conforme]: 'success',
+  [ConformiteProvisoire.NonConforme]: 'error',
+  [ConformiteProvisoire.Inconnue]: undefined,
+  [ConformiteProvisoire.SansObjet]: 'info',
+};
+
+export function renderConformiteBadge(value: string | null): ReactNode {
   if (!value) {
     return <Badge small>-</Badge>;
   }
 
-  let severity: AlertProps.Severity | undefined;
+  const enumValue = Object.values(ConformiteProvisoire).includes(value as ConformiteProvisoire)
+    ? (value as ConformiteProvisoire)
+    : null;
 
-  if (value === 'C') {
-    severity = 'success';
-  } else if (value === 'NC') {
-    severity = 'error';
+  if (!enumValue) {
+    return <Badge small>{value}</Badge>;
   }
 
   return (
-    <Badge severity={severity} small>
-      {value}
+    <Badge severity={conformiteProvisiontSeverityMap[enumValue]} small>
+      {conformiteProvisoireLabel[enumValue]}
     </Badge>
   );
 }

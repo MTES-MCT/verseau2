@@ -5,6 +5,7 @@ import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useEffect } from 'react';
 import type { ConformiteSclDetailDto, ConformiteSteuDetailDto } from '@lib/dossier';
 import { useDetailBilanScl, useDetailBilanSteu } from '../../../hooks/useConformite';
+import { renderConformiteBadge } from '../../../helper/conformiteTableData';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './ConformiteDetailModal.shared';
 import { LoadingState } from '../ConformiteDetailSkeleton';
 import './ConformiteDetailModal.css';
@@ -240,6 +241,28 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
       ? 'État des bilans depuis le dernier suivi effectué'
       : 'Détail sur la conformité locale temps pluie depuis le dernier suivi effectué';
 
+  const conformiteBadges = (() => {
+    if (!detail) {
+      return null;
+    }
+
+    if (detail.mode === 'steu') {
+      return (
+        <div className={fr.cx('fr-badges-group')}>
+          <span>Nationale : {renderConformiteBadge(detail.conformiteNationaleProvisoire)}</span>
+          <span>Locale : {renderConformiteBadge(detail.conformiteLocaleProvisoire)}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className={fr.cx('fr-badges-group')}>
+        <span>Nationale temps pluie : {renderConformiteBadge(detail.conformiteNationaleTempsPluieProvisoire)}</span>
+        <span>Locale temps pluie : {renderConformiteBadge(detail.conformiteLocaleTempsPluieProvisoire)}</span>
+      </div>
+    );
+  })();
+
   useEffect(() => {
     if (!isModalOpen) {
       return;
@@ -297,7 +320,10 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
       <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mb-2w')}>
         <div className="fr-col-12">
           <p className={fr.cx('fr-text--sm', 'fr-text--bold', 'fr-mb-1v')}>{entityCode}</p>
-          <p className="fr-text--sm fr-text--disabled-grey fr-mb-0">{entityName}</p>
+          <div className={fr.cx('fr-grid-row', 'fr-grid-row--center')}>
+            <p className={`${fr.cx('fr-text--sm', 'fr-mb-0', 'fr-mr-1w')} fr-text--disabled-grey`}>{entityName}</p>
+            <span>{conformiteBadges}</span>
+          </div>
           <p className={fr.cx('fr-text--sm', 'fr-mt-1w', 'fr-mb-0')}>{subtitle}</p>
         </div>
 

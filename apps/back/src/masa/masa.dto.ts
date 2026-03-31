@@ -66,7 +66,7 @@ export interface SclWithName {
 /** Résultat SCL retourné par un fetch batch MASA */
 export interface SclCdnBySandreCda {
   systemeCollecteCode: string;
-  sclCdn: number;
+  systemeCollecteIdentifiant: number;
 }
 
 /** Résultat ITV retourné par un fetch batch MASA */

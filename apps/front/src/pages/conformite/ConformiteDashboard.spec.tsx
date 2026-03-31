@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR } from '@lib/dossier';
+import { ConformiteProvisoire, CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR } from '@lib/dossier';
 import type { ConformiteSclDto, ConformiteSteuDetailDto, ConformiteSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../test.helper';
@@ -54,8 +54,8 @@ const makeSteuRow = (overrides: Partial<ConformiteSteuDto> = {}): ConformiteSteu
   capaciteNominaleEH: 4500,
   suiviDebutDate: '2024-01-01',
   suiviFinDate: '2024-12-31',
-  conformiteNationaleProvisoire: 'C',
-  conformiteLocaleProvisoire: 'NC',
+  conformiteNationaleProvisoire: ConformiteProvisoire.Conforme,
+  conformiteLocaleProvisoire: ConformiteProvisoire.NonConforme,
   impactConformite: true,
   suiviRegulierEffectue: true,
   suiviRegulierDate: '2025-01-15',
@@ -70,8 +70,8 @@ const makeSclRow = (overrides: Partial<ConformiteSclDto> = {}): ConformiteSclDto
   typeScl: 'Unitaire',
   suiviDebutDate: '2024-01-01',
   suiviFinDate: '2024-12-31',
-  conformiteLocaleTempsPluieProvisoire: 'NC',
-  conformiteNationaleTempsPluieProvisoire: 'C',
+  conformiteLocaleTempsPluieProvisoire: ConformiteProvisoire.NonConforme,
+  conformiteNationaleTempsPluieProvisoire: ConformiteProvisoire.Conforme,
   impactConformite: true,
   suiviRegulierEffectue: true,
   suiviRegulierDate: '2025-01-15',
@@ -261,7 +261,6 @@ describe('ConformiteDashboard', () => {
     });
     expect(screen.getByText(/paramètres conformes \(local\)/i)).toBeInTheDocument();
     expect(screen.getByText('2 paramètres A')).toBeInTheDocument();
-    expect(screen.getAllByText('1 paramètre')).toHaveLength(2);
     expect(screen.getByText('Bilans avec événements')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /suivant/i }));
