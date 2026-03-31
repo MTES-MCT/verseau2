@@ -1,5 +1,15 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
-import { PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
+import {
+  ConformiteSclDetailDto,
+  ConformiteSclDto,
+  ConformiteSclSortByValue,
+  ConformiteSteuDetailDto,
+  ConformiteSteuDto,
+  ConformiteSteuSortByValue,
+  MesuresSortByValue,
+  OuvrageTypeValue,
+  PaginationQuery,
+} from '@lib/dossier';
 
 export interface CmaBySandreCdaAndParam {
   ouvrageDepollutionCode: string;
@@ -114,6 +124,34 @@ export interface PointMesureReferentielRow {
   pointMesureValiditeDebutDate: string | null;
   pointMesureValiditeFinDate: string | null;
 }
+
+/** Filtres pour la recherche de conformité STEU */
+export interface ConformiteSteuFilters extends PaginationQuery {
+  steuCdns: number[];
+  trancheObligationLibelle?: string;
+  impact?: 'avec' | 'sans';
+  sortBy?: ConformiteSteuSortByValue;
+}
+
+/** Filtres pour la recherche de conformité SCL */
+export interface ConformiteSclFilters extends PaginationQuery {
+  steuCdns: number[];
+  trancheObligationLibelle?: string;
+  impact?: 'avec' | 'sans';
+  sortBy?: ConformiteSclSortByValue;
+}
+
+/** Une ligne brute de conformité STEU */
+export interface ConformiteSteuRow extends ConformiteSteuDto {}
+
+/** Une ligne brute de conformité SCL */
+export interface ConformiteSclRow extends ConformiteSclDto {}
+
+/** Le détail brut de conformité STEU */
+export interface ConformiteSteuDetailRow extends ConformiteSteuDetailDto {}
+
+/** Le détail brut de conformité SCL */
+export interface ConformiteSclDetailRow extends ConformiteSclDetailDto {}
 
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters extends PaginationQuery {

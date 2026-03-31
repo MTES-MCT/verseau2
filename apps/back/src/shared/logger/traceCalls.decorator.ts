@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return*/
+
 import { Logger, LogLevel } from '@nestjs/common';
 import { performance } from 'perf_hooks';
 import { ulid } from 'ulid';
@@ -44,7 +46,7 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
           if (typeof value === 'function' && prop !== propertyKey) {
             return (...subArgs: unknown[]) => {
               const subStart = performance.now();
-              const result = (value as (...args: unknown[]) => unknown).apply(this, subArgs);
+              const result = (value as (...args: unknown[]) => unknown).apply(receiver as object, subArgs);
 
               if (result instanceof Promise) {
                 return result.finally(() => {
