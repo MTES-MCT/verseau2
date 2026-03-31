@@ -37,12 +37,13 @@
       "@referentiel/*": ["src/referentiel/*"],
       "@authentication/*": ["src/authentication/*"],
       "@user/*": ["src/user/*"],
-      "@masa/*": ["src/masa/*"]
+      "@masa/*": ["src/masa/*"],
+      "@conformite/*": ["src/conformite/*"]
     }
   },
   "references": [
-  { "path": "../../packages/parser" },
-  { "path": "../../packages/dossier" },
-  { "path": "../../packages/shared" }
-]
+    { "path": "../../packages/parser" },
+    { "path": "../../packages/dossier" },
+    { "path": "../../packages/shared" }
+  ]
 }

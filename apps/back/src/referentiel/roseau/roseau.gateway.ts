@@ -16,6 +16,12 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
+  ConformiteSteuFilters,
+  ConformiteSclFilters,
+  ConformiteSteuRow,
+  ConformiteSclRow,
+  ConformiteSteuDetailRow,
+  ConformiteSclDetailRow,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
@@ -40,6 +46,10 @@ export interface RoseauGateway {
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
+  findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }>;
+  findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }>;
+  findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null>;
+  findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
   findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;

@@ -119,6 +119,7 @@
       "^@masa/(.*)$": "<rootDir>/masa/$1",
       "^@user/(.*)$": "<rootDir>/user/$1",
       "^@authentication/(.*)$": "<rootDir>/authentication/$1",
+      "^@conformite/(.*)$": "<rootDir>/conformite/$1",
       "^@lib/dossier$": "<rootDir>/../../../packages/dossier/src/index.ts",
       "^@lib/parser$": "<rootDir>/../../../packages/parser/src/index.ts",
       "^@lib/shared$": "<rootDir>/../../../packages/shared/src/index.ts"

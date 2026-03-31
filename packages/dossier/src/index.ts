@@ -1,3 +1,5 @@
+export * from './conformite/conformite.dto';
+export * from './routes/conformite.routes';
 export * from './controle/evenement';
 export * from './controle/controleResult';
 export * from './controle/messages';

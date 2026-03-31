@@ -24,6 +24,7 @@
     "^@authentication/(.*)$": "<rootDir>/src/authentication/$1",
     "^@user/(.*)$": "<rootDir>/src/user/$1",
     "^@masa/(.*)$": "<rootDir>/src/masa/$1",
+    "^@conformite/(.*)$": "<rootDir>/src/conformite/$1",
     "^@lib/dossier$": "<rootDir>/../../packages/dossier/src/index.ts",
     "^@lib/parser$": "<rootDir>/../../packages/parser/src/index.ts"
   }
