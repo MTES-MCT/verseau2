@@ -56,6 +56,7 @@ describe('ConformiteController', () => {
     conformiteService.listConformiteSteu.mockResolvedValue(response);
 
     const result = await controller.listConformiteSteu(makeRequest(['STEU001']), {
+      year: 2024,
       trancheObligationLibelle: '2000 EH ≤ capacité < 10000 EH',
       impact: 'avec',
       page: 1,
@@ -66,6 +67,7 @@ describe('ConformiteController', () => {
 
     expect(conformiteService.listConformiteSteu).toHaveBeenCalledWith({
       authorizedSteuCdas: ['STEU001'],
+      year: 2024,
       trancheObligationLibelle: '2000 EH ≤ capacité < 10000 EH',
       impact: 'avec',
       page: 1,
@@ -81,6 +83,7 @@ describe('ConformiteController', () => {
     conformiteService.listConformiteScl.mockResolvedValue(response);
 
     const result = await controller.listConformiteScl(makeRequest(['STEU002'], ['SCL001']), {
+      year: 2023,
       trancheObligationLibelle: 'capacité ≥ 10000 EH',
       impact: 'sans',
       page: 2,
@@ -91,6 +94,7 @@ describe('ConformiteController', () => {
 
     expect(conformiteService.listConformiteScl).toHaveBeenCalledWith({
       authorizedSteuCdas: ['STEU002'],
+      year: 2023,
       trancheObligationLibelle: 'capacité ≥ 10000 EH',
       impact: 'sans',
       page: 2,
@@ -140,18 +144,22 @@ describe('ConformiteController', () => {
     };
     conformiteService.getConformiteSteuDetail.mockResolvedValue(response);
 
-    const result = await controller.getConformiteSteuDetail(makeRequest(['STEU003']), { steuCdn: 321 });
+    const result = await controller.getConformiteSteuDetail(makeRequest(['STEU003']), { steuCdn: 321 }, { year: 2022 });
 
-    expect(conformiteService.getConformiteSteuDetail).toHaveBeenCalledWith(321, ['STEU003']);
+    expect(conformiteService.getConformiteSteuDetail).toHaveBeenCalledWith(321, 2022, ['STEU003']);
     expect(result).toEqual(response);
   });
 
   it('delegates getConformiteSclDetail with route param and authorized SCL codes', async () => {
     conformiteService.getConformiteSclDetail.mockResolvedValue(null);
 
-    const result = await controller.getConformiteSclDetail(makeRequest(['STEU003'], ['SCL009']), { sclCdn: 987 });
+    const result = await controller.getConformiteSclDetail(
+      makeRequest(['STEU003'], ['SCL009']),
+      { sclCdn: 987 },
+      { year: 2021 },
+    );
 
-    expect(conformiteService.getConformiteSclDetail).toHaveBeenCalledWith(987, ['SCL009']);
+    expect(conformiteService.getConformiteSclDetail).toHaveBeenCalledWith(987, 2021, ['SCL009']);
     expect(result).toBeNull();
   });
 });

@@ -44,6 +44,7 @@ import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
 import { UrfEntity } from '@referentiel/lanceleau/entities/urf.entity';
 
 interface ConformiteSteuRawRow {
+  steu_cdn: number | string;
   ouvrage_depollution_code: string;
   ouvrage_depollution_nom: string | null;
   tranche_obligation_libelle: string | null;
@@ -58,6 +59,7 @@ interface ConformiteSteuRawRow {
 }
 
 interface ConformiteSclRawRow {
+  scl_cdn: number | string;
   systeme_collecte_code: string;
   systeme_collecte_nom: string | null;
   tranche_obligation_libelle: string | null;
@@ -410,13 +412,13 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    const { steuCdns, trancheObligationLibelle, impact, page, pageSize } = filters;
+    const { steuCdns, year, trancheObligationLibelle, impact, page, pageSize } = filters;
 
     if (steuCdns.length === 0) {
       return { data: [], total: 0 };
     }
 
-    const annee = new Date().getFullYear();
+    const annee = year;
     const sortBy = filters.sortBy ?? 'ouvrageDepollutionCode';
     const sortOrder = filters.sortOrder ?? 'ASC';
 
@@ -455,6 +457,7 @@ export class RoseauRepository implements RoseauGateway {
       WITH params AS (SELECT ${anneePlaceholder}::int AS annee),
       base_data AS (
         SELECT
+          steu.steu_cdn AS steu_cdn,
           RTRIM(steu.steu_sandre_cda) AS ouvrage_depollution_code,
           steu.steu_nom_lb AS ouvrage_depollution_nom,
           tltobl.tltobl_lb AS tranche_obligation_libelle,
@@ -517,6 +520,7 @@ export class RoseauRepository implements RoseauGateway {
     const rows = await this.dataSource.query<ConformiteSteuRawRow[]>(
       `${baseQuery}
        SELECT
+         steu_cdn,
          ouvrage_depollution_code,
          ouvrage_depollution_nom,
          tranche_obligation_libelle,
@@ -545,6 +549,7 @@ export class RoseauRepository implements RoseauGateway {
 
     return {
       data: rows.map((row) => ({
+        steuCdn: Number(row.steu_cdn),
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
         trancheObligationLibelle: row.tranche_obligation_libelle?.trim() ?? null,
@@ -565,13 +570,12 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    const { steuCdns, trancheObligationLibelle, impact, page, pageSize } = filters;
+    const { steuCdns, year, trancheObligationLibelle, impact, page, pageSize } = filters;
 
     if (steuCdns.length === 0) {
       return { data: [], total: 0 };
     }
 
-    const annee = new Date().getFullYear();
     const sortBy = filters.sortBy ?? 'systemeCollecteCode';
     const sortOrder = filters.sortOrder ?? 'ASC';
 
@@ -596,7 +600,7 @@ export class RoseauRepository implements RoseauGateway {
       return `$${queryParams.length}`;
     };
 
-    const anneePlaceholder = addParam(annee);
+    const anneePlaceholder = addParam(year);
     const steuPlaceholders = steuCdns.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
 
@@ -610,6 +614,7 @@ export class RoseauRepository implements RoseauGateway {
       WITH params AS (SELECT ${anneePlaceholder}::int AS annee),
       base_data AS (
         SELECT
+          scl.scl_cdn AS scl_cdn,
           RTRIM(scl.scl_sandre_cda) AS systeme_collecte_code,
           scl.scl_lb AS systeme_collecte_nom,
           tltobl.tltobl_lb AS tranche_obligation_libelle,
@@ -667,6 +672,7 @@ export class RoseauRepository implements RoseauGateway {
     const rows = await this.dataSource.query<ConformiteSclRawRow[]>(
       `${baseQuery}
        SELECT
+         scl_cdn,
          systeme_collecte_code,
          systeme_collecte_nom,
          tranche_obligation_libelle,
@@ -687,6 +693,7 @@ export class RoseauRepository implements RoseauGateway {
 
     return {
       data: rows.map((row) => ({
+        sclCdn: Number(row.scl_cdn),
         systemeCollecteCode: row.systeme_collecte_code?.trim() ?? '',
         systemeCollecteNom: row.systeme_collecte_nom?.trim() ?? null,
         trancheObligationLibelle: row.tranche_obligation_libelle?.trim() ?? null,

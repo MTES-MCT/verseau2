@@ -1,0 +1,441 @@
+import { fr } from '@codegouvfr/react-dsfr';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
+import { Button } from '@codegouvfr/react-dsfr/Button';
+import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
+import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
+import { Select } from '@codegouvfr/react-dsfr/Select';
+import { Table } from '@codegouvfr/react-dsfr/Table';
+import { CURRENT_CONFORMITE_YEAR } from '@lib/dossier';
+import type {
+  ConformiteSclDto,
+  ConformiteSclSortByValue,
+  ConformiteSteuDto,
+  ConformiteSteuSortByValue,
+} from '@lib/dossier';
+import { formatDate } from '@lib/shared';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { ConformiteDetailAccordion } from '../components/conformite/ConformiteDetailAccordion';
+import {
+  buildConformiteSclTableHeaders,
+  buildConformiteSclTableRows,
+  buildConformiteSteuTableHeaders,
+  buildConformiteSteuTableRows,
+} from '../helper/conformiteTableData';
+import { useConformiteFilters } from '../hooks/useConformiteFilters';
+
+type ConformiteMode = 'steu' | 'scl';
+
+type ConformiteSteuRow = ConformiteSteuDto;
+
+type ConformiteSclRow = ConformiteSclDto;
+
+type ColumnConfig<TSortBy extends string> = {
+  label: string;
+  field: TSortBy | null;
+};
+
+const KNOWN_TRANCHE_OPTIONS = ['2000 à 9999 EH', '2000 EH ≤ capacité < 10000 EH', 'capacité ≥ 10000 EH'];
+
+const STEU_COLUMNS: ColumnConfig<ConformiteSteuSortByValue>[] = [
+  { label: 'Code Sandre', field: 'ouvrageDepollutionCode' },
+  { label: 'Nom', field: 'ouvrageDepollutionNom' },
+  { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
+  { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
+  { label: 'Début période', field: null },
+  { label: 'Fin période', field: null },
+  { label: 'Conformité nationale', field: 'conformiteNationaleProvisoire' },
+  { label: 'Conformité locale', field: 'conformiteLocaleProvisoire' },
+  { label: 'Synthèse des changements', field: null },
+];
+
+const SCL_COLUMNS: ColumnConfig<ConformiteSclSortByValue>[] = [
+  { label: 'Code Sandre', field: 'systemeCollecteCode' },
+  { label: 'Nom', field: 'systemeCollecteNom' },
+  { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
+  { label: 'Type', field: 'typeScl' },
+  { label: 'Début période', field: null },
+  { label: 'Fin période', field: null },
+  { label: 'Conformité locale temps pluie', field: 'conformiteLocaleTempsPluieProvisoire' },
+  { label: 'Conformité nationale temps pluie', field: 'conformiteNationaleTempsPluieProvisoire' },
+  { label: 'Synthèse des changements', field: null },
+];
+
+const STEU_HEADER_LABELS = buildConformiteSteuTableHeaders();
+const SCL_HEADER_LABELS = buildConformiteSclTableHeaders();
+
+function renderSortableHeader<TSortBy extends string>(
+  column: ColumnConfig<TSortBy>,
+  sortBy: TSortBy | undefined,
+  sortOrder: 'ASC' | 'DESC' | undefined,
+  setSort: (nextSortBy: TSortBy, nextSortOrder: 'ASC' | 'DESC') => void,
+) {
+  if (!column.field) {
+    return column.label;
+  }
+
+  const field = column.field;
+  const isSorted = sortBy === field;
+  const nextOrder: 'ASC' | 'DESC' = isSorted && sortOrder === 'ASC' ? 'DESC' : 'ASC';
+
+  return (
+    <button
+      type="button"
+      onClick={() => setSort(field, nextOrder)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+      }}
+    >
+      {column.label}
+      {isSorted && (
+        <span className={fr.cx(sortOrder === 'ASC' ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line')} />
+      )}
+    </button>
+  );
+}
+
+function buildSyntheseText(mode: ConformiteMode, rows: Array<ConformiteSteuRow | ConformiteSclRow>) {
+  const impactedRows = rows.filter((row) => row.impactConformite);
+
+  if (impactedRows.length === 0) {
+    return '';
+  }
+
+  const lines = impactedRows.map((row) => {
+    if (mode === 'steu') {
+      const steu = row as ConformiteSteuRow;
+
+      return [
+        `- ${steu.ouvrageDepollutionCode}`,
+        steu.ouvrageDepollutionNom ?? 'Nom non renseigné',
+        steu.trancheObligationLibelle ?? 'Tranche non renseignée',
+        `Période ${formatDate(steu.suiviDebutDate)} → ${formatDate(steu.suiviFinDate)}`,
+        `Nationale: ${steu.conformiteNationaleProvisoire ?? '-'}`,
+        `Locale: ${steu.conformiteLocaleProvisoire ?? '-'}`,
+      ].join(' — ');
+    }
+
+    const scl = row as ConformiteSclRow;
+
+    return [
+      `- ${scl.systemeCollecteCode}`,
+      scl.systemeCollecteNom ?? 'Nom non renseigné',
+      scl.trancheObligationLibelle ?? 'Tranche non renseignée',
+      `Période ${formatDate(scl.suiviDebutDate)} → ${formatDate(scl.suiviFinDate)}`,
+      `Locale pluie: ${scl.conformiteLocaleTempsPluieProvisoire ?? '-'}`,
+      `Nationale pluie: ${scl.conformiteNationaleTempsPluieProvisoire ?? '-'}`,
+    ].join(' — ');
+  });
+
+  return [`Synthèse conformité ${mode.toUpperCase()} — éléments avec impact`, '', ...lines].join('\n');
+}
+
+export function ConformiteDashboard() {
+  const {
+    form,
+    appliedYear,
+    updateForm,
+    updateMode,
+    handleSearch,
+    setSort,
+    data,
+    isLoading,
+    isFetching,
+    error,
+    page,
+    setPage,
+    totalPages,
+    PAGE_SIZE,
+    yearOptions,
+  } = useConformiteFilters();
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  useEffect(() => {
+    if (copyStatus !== 'success') {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setCopyStatus('idle'), 2000);
+
+    return () => window.clearTimeout(timeout);
+  }, [copyStatus]);
+
+  const mode = form.mode;
+  const selectedYear = appliedYear || CURRENT_CONFORMITE_YEAR;
+  const steuRows = useMemo(
+    () => ((mode === 'steu' ? data?.data : []) ?? []) as ConformiteSteuRow[],
+    [data?.data, mode],
+  );
+  const sclRows = useMemo(() => ((mode === 'scl' ? data?.data : []) ?? []) as ConformiteSclRow[], [data?.data, mode]);
+  const currentRows = (mode === 'steu' ? steuRows : sclRows) as Array<ConformiteSteuRow | ConformiteSclRow>;
+
+  const trancheOptions = useMemo(() => {
+    const values = new Set(KNOWN_TRANCHE_OPTIONS);
+
+    currentRows.forEach((row) => {
+      if (row.trancheObligationLibelle) {
+        values.add(row.trancheObligationLibelle);
+      }
+    });
+
+    return Array.from(values);
+  }, [currentRows]);
+
+  const headers = useMemo(() => {
+    if (mode === 'steu') {
+      return [
+        ...STEU_COLUMNS.map((column, index) =>
+          renderSortableHeader(
+            { ...column, label: STEU_HEADER_LABELS[index] ?? column.label },
+            form.sortBy as ConformiteSteuSortByValue | undefined,
+            form.sortOrder,
+            setSort,
+          ),
+        ),
+        'Détail',
+      ];
+    }
+
+    return [
+      ...SCL_COLUMNS.map((column, index) =>
+        renderSortableHeader(
+          { ...column, label: SCL_HEADER_LABELS[index] ?? column.label },
+          form.sortBy as ConformiteSclSortByValue | undefined,
+          form.sortOrder,
+          setSort,
+        ),
+      ),
+      'Détail',
+    ];
+  }, [form.sortBy, form.sortOrder, mode, setSort]);
+
+  const tableData = useMemo(() => {
+    if (mode === 'steu') {
+      const baseRows = buildConformiteSteuTableRows(steuRows);
+
+      return baseRows.map((row, index) => {
+        const steu = steuRows[index];
+
+        return [
+          ...row,
+          steu.steuCdn ? (
+            <ConformiteDetailAccordion
+              key={`detail-steu-${steu.ouvrageDepollutionCode}`}
+              mode="steu"
+              year={selectedYear}
+              steuCdn={steu.steuCdn}
+            />
+          ) : (
+            <p key={`detail-missing-steu-${steu.ouvrageDepollutionCode}`} className={fr.cx('fr-text--sm', 'fr-mb-0')}>
+              Détail indisponible
+            </p>
+          ),
+        ];
+      });
+    }
+
+    const baseRows = buildConformiteSclTableRows(sclRows);
+
+    return baseRows.map((row, index) => {
+      const scl = sclRows[index];
+
+      return [
+        ...row,
+        scl.sclCdn ? (
+          <ConformiteDetailAccordion
+            key={`detail-scl-${scl.systemeCollecteCode}`}
+            mode="scl"
+            year={selectedYear}
+            sclCdn={scl.sclCdn}
+          />
+        ) : (
+          <p key={`detail-missing-scl-${scl.systemeCollecteCode}`} className={fr.cx('fr-text--sm', 'fr-mb-0')}>
+            Détail indisponible
+          </p>
+        ),
+      ];
+    });
+  }, [mode, sclRows, selectedYear, steuRows]);
+
+  const total = data?.total ?? 0;
+  const firstResult = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const lastResult = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
+  const syntheseText = useMemo(() => buildSyntheseText(mode, currentRows), [currentRows, mode]);
+
+  async function handleCopySynthese() {
+    if (!syntheseText || !navigator.clipboard?.writeText) {
+      setCopyStatus('error');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(syntheseText);
+      setCopyStatus('success');
+    } catch {
+      setCopyStatus('error');
+    }
+  }
+
+  return (
+    <div className={fr.cx('fr-container', 'fr-py-2w')}>
+      <div className={fr.cx('fr-grid-row', 'fr-grid-row--middle', 'fr-grid-row--gutters', 'fr-mb-2w')}>
+        <div className={fr.cx('fr-col-12', 'fr-col-md')}>
+          <h1 className={fr.cx('fr-mb-0')}>Tableau de bord conformité</h1>
+        </div>
+        <div className="fr-col-12 fr-col-md-auto">
+          <Button
+            type="button"
+            priority="secondary"
+            iconId={copyStatus === 'success' ? 'fr-icon-check-line' : 'fr-icon-clipboard-line'}
+            onClick={handleCopySynthese}
+            disabled={!syntheseText}
+          >
+            {copyStatus === 'success' ? 'Copié !' : 'Copier la synthèse'}
+          </Button>
+        </div>
+      </div>
+
+      {copyStatus === 'error' && (
+        <Alert
+          severity="error"
+          title="Copie impossible"
+          description="La synthèse n'a pas pu être copiée dans le presse-papiers."
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
+
+      <div className={fr.cx('fr-mb-3w')}>
+        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-lg-4')}>
+            <RadioButtons
+              legend="Type de tableau"
+              name="conformite-mode"
+              orientation="horizontal"
+              options={[
+                {
+                  label: 'STEU',
+                  nativeInputProps: {
+                    value: 'steu',
+                    checked: mode === 'steu',
+                    onChange: () => updateMode('steu'),
+                  },
+                },
+                {
+                  label: 'SCL',
+                  nativeInputProps: {
+                    value: 'scl',
+                    checked: mode === 'scl',
+                    onChange: () => updateMode('scl'),
+                  },
+                },
+              ]}
+            />
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-2')}>
+            <Select
+              label="Année"
+              nativeSelectProps={{
+                value: form.year,
+                onChange: (event) => updateForm('year', event.target.value),
+              }}
+            >
+              {yearOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-3')}>
+            <Select
+              label="Tranche d'obligation"
+              nativeSelectProps={{
+                value: form.trancheObligationLibelle,
+                onChange: (event) => updateForm('trancheObligationLibelle', event.target.value),
+              }}
+            >
+              <option value="">Toutes les tranches</option>
+              {trancheOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-3')}>
+            <Select
+              label="Impact"
+              nativeSelectProps={{
+                value: form.impact,
+                onChange: (event) => updateForm('impact', event.target.value),
+              }}
+            >
+              <option value="">Tous les résultats</option>
+              <option value="avec">Avec impact</option>
+              <option value="sans">Sans impact</option>
+            </Select>
+          </div>
+
+          <div
+            className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-2')}
+            style={{ display: 'flex', alignItems: 'flex-end' }}
+          >
+            <Button type="button" onClick={handleSearch} iconId="fr-icon-search-line" iconPosition="right">
+              Rechercher
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {isLoading && <p>Chargement des données...</p>}
+
+      {!isLoading && error && (
+        <Alert
+          severity="error"
+          title="Erreur"
+          description={
+            error instanceof Error ? error.message : 'Une erreur est survenue lors du chargement des données.'
+          }
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
+
+      {!isLoading && !error && total === 0 && <p>Aucun résultat trouvé</p>}
+
+      {!isLoading && !error && total > 0 && (
+        <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
+          <Table headers={headers} data={tableData} noCaption bordered noScroll={false} className={fr.cx('fr-mb-2w')} />
+
+          <p className={fr.cx('fr-text--sm', 'fr-mb-2w')}>
+            Affichage de {firstResult} à {lastResult} sur {total} résultats
+          </p>
+
+          {totalPages > 1 && (
+            <Pagination
+              count={totalPages}
+              defaultPage={page}
+              getPageLinkProps={(pageNumber) => ({
+                href: `#page-${pageNumber}`,
+                onClick: (event: MouseEvent<HTMLAnchorElement>) => {
+                  event.preventDefault();
+                  setPage(pageNumber);
+                },
+              })}
+              showFirstLast={true}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ConformiteDashboard;

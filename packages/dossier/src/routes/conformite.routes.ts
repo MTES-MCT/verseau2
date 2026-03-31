@@ -28,11 +28,24 @@ export const ConformiteSclSortBy = z.enum([
 ]);
 export type ConformiteSclSortByValue = z.infer<typeof ConformiteSclSortBy>;
 
+export const FIRST_CONFORMITE_YEAR = 2006;
+export const CURRENT_CONFORMITE_YEAR = new Date().getFullYear();
+
+const ConformiteYearQuerySchema = z.object({
+  year: z.coerce
+    .number()
+    .int()
+    .min(FIRST_CONFORMITE_YEAR)
+    .max(CURRENT_CONFORMITE_YEAR)
+    .default(CURRENT_CONFORMITE_YEAR),
+});
+
 export const listConformiteSteu = {
   method: 'GET',
   path: '/conformite/steu',
   query: z
     .object({
+      year: ConformiteYearQuerySchema.shape.year,
       trancheObligationLibelle: z.string().optional(),
       impact: z.enum(['avec', 'sans']).optional(),
     })
@@ -45,6 +58,7 @@ export const listConformiteScl = {
   path: '/conformite/scl',
   query: z
     .object({
+      year: ConformiteYearQuerySchema.shape.year,
       trancheObligationLibelle: z.string().optional(),
       impact: z.enum(['avec', 'sans']).optional(),
     })
@@ -58,6 +72,7 @@ export const getConformiteSteuDetail = {
   params: z.object({
     steuCdn: z.coerce.number(),
   }),
+  query: ConformiteYearQuerySchema,
   response: ConformiteSteuDetailDtoSchema.nullable(),
 } as const satisfies RouteDefinition;
 
@@ -67,5 +82,6 @@ export const getConformiteSclDetail = {
   params: z.object({
     sclCdn: z.coerce.number(),
   }),
+  query: ConformiteYearQuerySchema,
   response: ConformiteSclDetailDtoSchema.nullable(),
 } as const satisfies RouteDefinition;

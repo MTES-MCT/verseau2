@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { Dashboard } from './pages/Dashboard';
+import { ConformiteDashboard } from './pages/ConformiteDashboard';
 import { ControlePage } from './pages/Controle';
 import { DepotUploadPage } from './pages/DepotUpload';
 import { DepotUploadRecapPage } from './pages/DepotUploadRecap';
@@ -55,6 +56,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.CONFORMITE_DASHBOARD}
+              element={
+                <ProtectedRoute>
+                  <ConformiteDashboard />
                 </ProtectedRoute>
               }
             />

@@ -20,6 +20,7 @@ import { SclEntity } from '@referentiel/roseau/entities/scl.entity';
 import { LoggerService } from '@shared/logger/logger.service';
 
 const makeConformiteSteuRow = (): ConformiteSteuRow => ({
+  steuCdn: 101,
   ouvrageDepollutionCode: 'STEU001',
   ouvrageDepollutionNom: 'Station test',
   trancheObligationLibelle: '2000 à 9999 EH',
@@ -34,6 +35,7 @@ const makeConformiteSteuRow = (): ConformiteSteuRow => ({
 });
 
 const makeConformiteSclRow = (): ConformiteSclRow => ({
+  sclCdn: 201,
   systemeCollecteCode: 'SCL001',
   systemeCollecteNom: 'Réseau test',
   trancheObligationLibelle: '2000 à 9999 EH',
@@ -153,13 +155,14 @@ describe('ConformiteService', () => {
 
       const result = await service.listConformiteSteu({
         authorizedSteuCdas: ['STEU001', 'STEU002'],
+        year: 2024,
         page: 1,
         pageSize: 20,
       });
 
       expect(masaProvider.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU001', 'STEU002']);
       expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
-        expect.objectContaining({ steuCdns: [101, 202], page: 1, pageSize: 20 }),
+        expect.objectContaining({ steuCdns: [101, 202], year: 2024, page: 1, pageSize: 20 }),
       );
       expect(result).toEqual({ data: [makeConformiteSteuRow()], total: 1, page: 1, pageSize: 20 });
     });
@@ -167,6 +170,7 @@ describe('ConformiteService', () => {
     it('returns empty result when authorizedSteuCdas is empty', async () => {
       const result = await service.listConformiteSteu({
         authorizedSteuCdas: [],
+        year: 2024,
         page: 1,
         pageSize: 20,
       });
@@ -181,6 +185,7 @@ describe('ConformiteService', () => {
 
       const result = await service.listConformiteSteu({
         authorizedSteuCdas: ['STEU001'],
+        year: 2024,
         page: 2,
         pageSize: 10,
       });
@@ -197,6 +202,7 @@ describe('ConformiteService', () => {
 
       await service.listConformiteSteu({
         authorizedSteuCdas: ['STEU001'],
+        year: 2023,
         trancheObligationLibelle: '2000 à 9999 EH',
         impact: 'avec',
         sortBy: 'ouvrageDepollutionCode',
@@ -208,6 +214,7 @@ describe('ConformiteService', () => {
       expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
         expect.objectContaining({
           steuCdns: [101],
+          year: 2023,
           trancheObligationLibelle: '2000 à 9999 EH',
           impact: 'avec',
           sortBy: 'ouvrageDepollutionCode',
@@ -226,6 +233,7 @@ describe('ConformiteService', () => {
 
       const result = await service.listConformiteSteu({
         authorizedSteuCdas: ['STEU001'],
+        year: 2022,
         page: 4,
         pageSize: 15,
       });
@@ -245,13 +253,14 @@ describe('ConformiteService', () => {
 
       const result = await service.listConformiteScl({
         authorizedSteuCdas: ['STEU001'],
+        year: 2024,
         page: 1,
         pageSize: 20,
       });
 
       expect(masaProvider.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU001']);
       expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
-        expect.objectContaining({ steuCdns: [101], page: 1, pageSize: 20 }),
+        expect.objectContaining({ steuCdns: [101], year: 2024, page: 1, pageSize: 20 }),
       );
       expect(result).toEqual({ data: [makeConformiteSclRow()], total: 1, page: 1, pageSize: 20 });
     });
@@ -259,6 +268,7 @@ describe('ConformiteService', () => {
     it('returns empty result when no ouvrage is authorized', async () => {
       const result = await service.listConformiteScl({
         authorizedSteuCdas: [],
+        year: 2024,
         page: 1,
         pageSize: 20,
       });
@@ -273,6 +283,7 @@ describe('ConformiteService', () => {
 
       const result = await service.listConformiteScl({
         authorizedSteuCdas: ['STEU001'],
+        year: 2024,
         page: 2,
         pageSize: 25,
       });
@@ -289,6 +300,7 @@ describe('ConformiteService', () => {
 
       await service.listConformiteScl({
         authorizedSteuCdas: ['STEU001'],
+        year: 2021,
         trancheObligationLibelle: '2000 à 9999 EH',
         impact: 'sans',
         sortBy: 'systemeCollecteCode',
@@ -300,6 +312,7 @@ describe('ConformiteService', () => {
       expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
         expect.objectContaining({
           steuCdns: [101],
+          year: 2021,
           trancheObligationLibelle: '2000 à 9999 EH',
           impact: 'sans',
           sortBy: 'systemeCollecteCode',
@@ -312,8 +325,7 @@ describe('ConformiteService', () => {
   });
 
   describe('getConformiteSteuDetail', () => {
-    it('delegates to masaProvider.findConformiteSteuDetail with current year when authorized', async () => {
-      const currentYear = new Date().getFullYear();
+    it('delegates to masaProvider.findConformiteSteuDetail with requested year when authorized', async () => {
       const detail = makeConformiteSteuDetailRow();
 
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
@@ -321,9 +333,9 @@ describe('ConformiteService', () => {
       ]);
       masaProvider.findConformiteSteuDetail.mockResolvedValue(detail);
 
-      const result = await service.getConformiteSteuDetail(101, ['STEU001']);
+      const result = await service.getConformiteSteuDetail(101, 2020, ['STEU001']);
 
-      expect(masaProvider.findConformiteSteuDetail).toHaveBeenCalledWith(101, currentYear);
+      expect(masaProvider.findConformiteSteuDetail).toHaveBeenCalledWith(101, 2020);
       expect(result).toEqual(detail);
     });
 
@@ -332,7 +344,7 @@ describe('ConformiteService', () => {
         { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
       ]);
 
-      const result = await service.getConformiteSteuDetail(999, ['STEU001']);
+      const result = await service.getConformiteSteuDetail(999, 2020, ['STEU001']);
 
       expect(result).toBeNull();
       expect(logger.warn).toHaveBeenCalledWith('Accès refusé au détail conformité STEU 999');
@@ -345,7 +357,7 @@ describe('ConformiteService', () => {
       ]);
       masaProvider.findConformiteSteuDetail.mockResolvedValue(null);
 
-      const result = await service.getConformiteSteuDetail(101, ['STEU001']);
+      const result = await service.getConformiteSteuDetail(101, 2020, ['STEU001']);
 
       expect(result).toBeNull();
       expect(masaProvider.findConformiteSteuDetail).toHaveBeenCalledTimes(1);
@@ -353,24 +365,23 @@ describe('ConformiteService', () => {
   });
 
   describe('getConformiteSclDetail', () => {
-    it('delegates to masaProvider.findConformiteSclDetail with current year when authorized', async () => {
-      const currentYear = new Date().getFullYear();
+    it('delegates to masaProvider.findConformiteSclDetail with requested year when authorized', async () => {
       const detail = makeConformiteSclDetailRow();
 
       masaProvider.findSclBySandreCda.mockResolvedValue(makeSclEntity(201));
       masaProvider.findConformiteSclDetail.mockResolvedValue(detail);
 
-      const result = await service.getConformiteSclDetail(201, ['SCL001']);
+      const result = await service.getConformiteSclDetail(201, 2019, ['SCL001']);
 
       expect(masaProvider.findSclBySandreCda).toHaveBeenCalledWith('SCL001');
-      expect(masaProvider.findConformiteSclDetail).toHaveBeenCalledWith(201, currentYear);
+      expect(masaProvider.findConformiteSclDetail).toHaveBeenCalledWith(201, 2019);
       expect(result).toEqual(detail);
     });
 
     it('returns null when sclCdn is not authorized', async () => {
       masaProvider.findSclBySandreCda.mockResolvedValue(makeSclEntity(201));
 
-      const result = await service.getConformiteSclDetail(999, ['SCL001']);
+      const result = await service.getConformiteSclDetail(999, 2019, ['SCL001']);
 
       expect(result).toBeNull();
       expect(logger.warn).toHaveBeenCalledWith('Accès refusé au détail conformité SCL 999');
@@ -380,7 +391,7 @@ describe('ConformiteService', () => {
     it('returns null when no authorized SCL code resolves to a CDN', async () => {
       masaProvider.findSclBySandreCda.mockResolvedValue(null);
 
-      const result = await service.getConformiteSclDetail(201, ['SCL001']);
+      const result = await service.getConformiteSclDetail(201, 2019, ['SCL001']);
 
       expect(result).toBeNull();
       expect(logger.warn).toHaveBeenCalledWith('Accès refusé au détail conformité SCL 201');

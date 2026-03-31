@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
 export const ConformiteSteuDtoSchema = z.object({
+  steuCdn: z.number(),
   ouvrageDepollutionCode: z.string(),
   ouvrageDepollutionNom: z.string().nullable(),
   trancheObligationLibelle: z.string().nullable(),
@@ -18,6 +19,7 @@ export const ConformiteSteuDtoSchema = z.object({
 export type ConformiteSteuDto = z.infer<typeof ConformiteSteuDtoSchema>;
 
 export const ConformiteSclDtoSchema = z.object({
+  sclCdn: z.number(),
   systemeCollecteCode: z.string(),
   systemeCollecteNom: z.string().nullable(),
   trancheObligationLibelle: z.string().nullable(),

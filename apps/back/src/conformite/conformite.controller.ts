@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import {
+  CURRENT_CONFORMITE_YEAR,
   getConformiteSclDetail as getConformiteSclDetailRoute,
   getConformiteSteuDetail as getConformiteSteuDetailRoute,
   listConformiteScl as listConformiteSclRoute,
@@ -25,6 +26,7 @@ export class ConformiteController {
   ): Promise<RouteResponse<typeof listConformiteSteuRoute>> {
     return this.conformiteService.listConformiteSteu({
       authorizedSteuCdas: req.authorizedSteuCdas!,
+      year: query.year,
       trancheObligationLibelle: query.trancheObligationLibelle,
       impact: query.impact,
       page: query.page,
@@ -42,6 +44,7 @@ export class ConformiteController {
   ): Promise<RouteResponse<typeof listConformiteSclRoute>> {
     return this.conformiteService.listConformiteScl({
       authorizedSteuCdas: req.authorizedSteuCdas!,
+      year: query.year,
       trancheObligationLibelle: query.trancheObligationLibelle,
       impact: query.impact,
       page: query.page,
@@ -57,8 +60,14 @@ export class ConformiteController {
     @Req() req: CustomRequest,
     @Param(new ZodValidationPipe(getConformiteSteuDetailRoute['params']))
     params: RouteParams<typeof getConformiteSteuDetailRoute>,
+    @Query(new ZodValidationPipe(getConformiteSteuDetailRoute['query']))
+    query: RouteQuery<typeof getConformiteSteuDetailRoute>,
   ): Promise<RouteResponse<typeof getConformiteSteuDetailRoute>> {
-    return this.conformiteService.getConformiteSteuDetail(params.steuCdn, req.authorizedSteuCdas!);
+    return this.conformiteService.getConformiteSteuDetail(
+      params.steuCdn,
+      query.year ?? CURRENT_CONFORMITE_YEAR,
+      req.authorizedSteuCdas!,
+    );
   }
 
   @Get('scl/:sclCdn/detail')
@@ -67,7 +76,13 @@ export class ConformiteController {
     @Req() req: CustomRequest,
     @Param(new ZodValidationPipe(getConformiteSclDetailRoute['params']))
     params: RouteParams<typeof getConformiteSclDetailRoute>,
+    @Query(new ZodValidationPipe(getConformiteSclDetailRoute['query']))
+    query: RouteQuery<typeof getConformiteSclDetailRoute>,
   ): Promise<RouteResponse<typeof getConformiteSclDetailRoute>> {
-    return this.conformiteService.getConformiteSclDetail(params.sclCdn, req.authorizedSclCdas!);
+    return this.conformiteService.getConformiteSclDetail(
+      params.sclCdn,
+      query.year ?? CURRENT_CONFORMITE_YEAR,
+      req.authorizedSclCdas!,
+    );
   }
 }

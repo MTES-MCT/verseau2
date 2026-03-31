@@ -15,6 +15,7 @@ import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
+  year: number;
   trancheObligationLibelle?: string;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSteuSortByValue;
@@ -22,6 +23,7 @@ export interface ListConformiteSteuOptions extends PaginationQuery {
 
 export interface ListConformiteSclOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
+  year: number;
   trancheObligationLibelle?: string;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSclSortByValue;
@@ -38,7 +40,7 @@ export class ConformiteService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteSteu(options: ListConformiteSteuOptions): Promise<PaginatedConformiteSteuResponse> {
-    const { authorizedSteuCdas, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
+    const { authorizedSteuCdas, year, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
@@ -51,6 +53,7 @@ export class ConformiteService {
 
     const filters: ConformiteSteuFilters = {
       steuCdns,
+      year,
       page,
       pageSize,
       ...(trancheObligationLibelle ? { trancheObligationLibelle } : {}),
@@ -66,7 +69,7 @@ export class ConformiteService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclResponse> {
-    const { authorizedSteuCdas, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
+    const { authorizedSteuCdas, year, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
@@ -79,6 +82,7 @@ export class ConformiteService {
 
     const filters: ConformiteSclFilters = {
       steuCdns,
+      year,
       page,
       pageSize,
       ...(trancheObligationLibelle ? { trancheObligationLibelle } : {}),
@@ -95,6 +99,7 @@ export class ConformiteService {
   @TraceCalls(LOG_LEVELS[2])
   async getConformiteSteuDetail(
     steuCdn: number,
+    year: number,
     authorizedSteuCdas: string[],
   ): Promise<ConformiteSteuDetailDto | null> {
     const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
@@ -104,11 +109,15 @@ export class ConformiteService {
       return null;
     }
 
-    return this.masaProvider.findConformiteSteuDetail(steuCdn, this.getCurrentYear());
+    return this.masaProvider.findConformiteSteuDetail(steuCdn, year);
   }
 
   @TraceCalls(LOG_LEVELS[2])
-  async getConformiteSclDetail(sclCdn: number, authorizedSclCdas: string[]): Promise<ConformiteSclDetailDto | null> {
+  async getConformiteSclDetail(
+    sclCdn: number,
+    year: number,
+    authorizedSclCdas: string[],
+  ): Promise<ConformiteSclDetailDto | null> {
     const sclCdns = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
 
     if (!sclCdns.includes(sclCdn)) {
@@ -116,15 +125,11 @@ export class ConformiteService {
       return null;
     }
 
-    return this.masaProvider.findConformiteSclDetail(sclCdn, this.getCurrentYear());
+    return this.masaProvider.findConformiteSclDetail(sclCdn, year);
   }
 
   private buildEmptyPaginatedResponse(page: number, pageSize: number) {
     return { data: [], total: 0, page, pageSize };
-  }
-
-  private getCurrentYear(): number {
-    return new Date().getFullYear();
   }
 
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
