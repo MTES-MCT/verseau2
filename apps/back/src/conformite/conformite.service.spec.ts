@@ -101,8 +101,6 @@ const makeConformiteSclDetailRow = (): ConformiteSclDetailRow => ({
   conformiteJoursDeversementAnnee: 'Non conforme',
 });
 
-const makeSclEntity = (sclCdn: number): SclEntity => ({ sclCdn }) as SclEntity;
-
 describe('ConformiteService', () => {
   let service: ConformiteService;
   let masaProvider: jest.Mocked<MasaProvider>;
@@ -116,6 +114,7 @@ describe('ConformiteService', () => {
       findConformiteSteuDetail: jest.fn(),
       findConformiteSclDetail: jest.fn(),
       findSclBySandreCda: jest.fn(),
+      findSclBatchBySandreCdas: jest.fn(),
     };
 
     logger = {
@@ -368,18 +367,18 @@ describe('ConformiteService', () => {
     it('delegates to masaProvider.findConformiteSclDetail with requested year when authorized', async () => {
       const detail = makeConformiteSclDetailRow();
 
-      masaProvider.findSclBySandreCda.mockResolvedValue(makeSclEntity(201));
+      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([{ systemeCollecteCode: 'SCL001', sclCdn: 201 }]);
       masaProvider.findConformiteSclDetail.mockResolvedValue(detail);
 
       const result = await service.getConformiteSclDetail(201, 2019, ['SCL001']);
 
-      expect(masaProvider.findSclBySandreCda).toHaveBeenCalledWith('SCL001');
+      expect(masaProvider.findSclBatchBySandreCdas).toHaveBeenCalledWith(['SCL001']);
       expect(masaProvider.findConformiteSclDetail).toHaveBeenCalledWith(201, 2019);
       expect(result).toEqual(detail);
     });
 
     it('returns null when sclCdn is not authorized', async () => {
-      masaProvider.findSclBySandreCda.mockResolvedValue(makeSclEntity(201));
+      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([{ systemeCollecteCode: 'SCL001', sclCdn: 201 }]);
 
       const result = await service.getConformiteSclDetail(999, 2019, ['SCL001']);
 
@@ -389,7 +388,7 @@ describe('ConformiteService', () => {
     });
 
     it('returns null when no authorized SCL code resolves to a CDN', async () => {
-      masaProvider.findSclBySandreCda.mockResolvedValue(null);
+      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([]);
 
       const result = await service.getConformiteSclDetail(201, 2019, ['SCL001']);
 

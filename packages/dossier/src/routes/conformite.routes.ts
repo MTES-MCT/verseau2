@@ -31,13 +31,20 @@ export type ConformiteSclSortByValue = z.infer<typeof ConformiteSclSortBy>;
 export const FIRST_CONFORMITE_YEAR = 2006;
 export const CURRENT_CONFORMITE_YEAR = new Date().getFullYear();
 
+export function getCurrentConformiteYear() {
+  return new Date().getFullYear();
+}
+
+const ConformiteYearValueSchema = z.coerce
+  .number()
+  .int()
+  .min(FIRST_CONFORMITE_YEAR)
+  .refine((year) => year <= getCurrentConformiteYear(), {
+    message: `Number must be less than or equal to ${getCurrentConformiteYear()}`,
+  });
+
 const ConformiteYearQuerySchema = z.object({
-  year: z.coerce
-    .number()
-    .int()
-    .min(FIRST_CONFORMITE_YEAR)
-    .max(CURRENT_CONFORMITE_YEAR)
-    .default(CURRENT_CONFORMITE_YEAR),
+  year: ConformiteYearValueSchema,
 });
 
 export const listConformiteSteu = {

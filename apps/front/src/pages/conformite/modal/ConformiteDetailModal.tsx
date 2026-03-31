@@ -22,7 +22,6 @@ type DetailLine = {
   key: 'period' | 'year';
   number: number | null;
   libelle?: string | null;
-  hideWhenLibelleMissing?: boolean;
 };
 
 const DETAIL_TABLE_ID = 'conformite-detail-modal-table';
@@ -45,7 +44,7 @@ function hasDisplayableLabel(value: string | null | undefined) {
 }
 
 function getVisibleLines(lines: DetailLine[]) {
-  return lines.filter((line) => !line.hideWhenLibelleMissing || hasDisplayableLabel(line.libelle));
+  return lines.filter((line) => line.number !== null || hasDisplayableLabel(line.libelle));
 }
 
 function renderNumberValues(lines: DetailLine[], suffix = '') {
@@ -90,21 +89,17 @@ function createDetailRow(
   },
   suffix = '',
 ) {
-  const hasLinkedLabels = values.periodLabel !== undefined || values.yearLabel !== undefined;
+  // TODO : voir si on a besoin d'afficher le libellés période
   const lines: DetailLine[] = [
-    /*
-    {
-      key: 'period',
-      number: values.periodNumber,
-      libelle: values.periodLabel,
-      hideWhenLibelleMissing: hasLinkedLabels,
-    },
-    */
+    // {
+    //   key: 'period',
+    //   number: values.periodNumber,
+    //   libelle: values.periodLabel,
+    // },
     {
       key: 'year',
       number: values.yearNumber,
       libelle: values.yearLabel,
-      hideWhenLibelleMissing: hasLinkedLabels,
     },
   ];
 

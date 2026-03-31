@@ -63,6 +63,12 @@ export interface SclWithName {
   systemeCollecteNom: string | null;
 }
 
+/** Résultat SCL retourné par un fetch batch MASA */
+export interface SclCdnBySandreCda {
+  systemeCollecteCode: string;
+  sclCdn: number;
+}
+
 /** Résultat ITV retourné par un fetch batch MASA */
 
 export interface ItvCdnByRfa {

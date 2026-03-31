@@ -261,6 +261,7 @@ describe('ConformiteDashboard', () => {
     });
     expect(screen.getByText(/paramètres conformes \(local\)/i)).toBeInTheDocument();
     expect(screen.getByText('2 paramètres A')).toBeInTheDocument();
+    expect(screen.getAllByText('1 paramètre')).toHaveLength(2);
     expect(screen.getByText('Bilans avec événements')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /suivant/i }));

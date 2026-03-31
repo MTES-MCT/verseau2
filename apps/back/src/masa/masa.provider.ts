@@ -11,6 +11,7 @@ import {
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
   SteuCdnBySandreCda,
+  SclCdnBySandreCda,
   ItvCdnByRfa,
   AgByEmail,
   IntervenantAuth,
@@ -57,6 +58,10 @@ export class MasaProvider {
 
   async findSclBySandreCda(cda: string): Promise<SclEntity | null> {
     return this.roseauGateway.findSclBySandreCda(cda);
+  }
+
+  async findSclBatchBySandreCdas(cdas: string[]): Promise<SclCdnBySandreCda[]> {
+    return this.roseauGateway.findSclBatchBySandreCdas(cdas);
   }
 
   // ---------------------------------------------------------------------------

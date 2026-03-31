@@ -38,6 +38,7 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
+  SclCdnBySandreCda,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
@@ -159,6 +160,20 @@ export class RoseauRepository implements RoseauGateway {
 
   async findSclBySandreCda(sandreCda: string): Promise<SclEntity | null> {
     return this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
+  }
+
+  async findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]> {
+    if (sandreCdas.length === 0) return [];
+
+    const rows = await this.sclRepository
+      .createQueryBuilder('s')
+      .where('s.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .getMany();
+
+    return rows.map((scl) => ({
+      systemeCollecteCode: scl.sclSandreCda,
+      sclCdn: scl.sclCdn,
+    }));
   }
 
   async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {

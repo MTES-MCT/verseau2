@@ -1,6 +1,5 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import {
-  CURRENT_CONFORMITE_YEAR,
   getConformiteSclDetail as getConformiteSclDetailRoute,
   getConformiteSteuDetail as getConformiteSteuDetailRoute,
   listConformiteScl as listConformiteSclRoute,
@@ -63,11 +62,7 @@ export class ConformiteController {
     @Query(new ZodValidationPipe(getConformiteSteuDetailRoute['query']))
     query: RouteQuery<typeof getConformiteSteuDetailRoute>,
   ): Promise<RouteResponse<typeof getConformiteSteuDetailRoute>> {
-    return this.conformiteService.getConformiteSteuDetail(
-      params.steuCdn,
-      query.year ?? CURRENT_CONFORMITE_YEAR,
-      req.authorizedSteuCdas!,
-    );
+    return this.conformiteService.getConformiteSteuDetail(params.steuCdn, query.year, req.authorizedSteuCdas!);
   }
 
   @Get('scl/:sclCdn/detail')
@@ -79,10 +74,6 @@ export class ConformiteController {
     @Query(new ZodValidationPipe(getConformiteSclDetailRoute['query']))
     query: RouteQuery<typeof getConformiteSclDetailRoute>,
   ): Promise<RouteResponse<typeof getConformiteSclDetailRoute>> {
-    return this.conformiteService.getConformiteSclDetail(
-      params.sclCdn,
-      query.year ?? CURRENT_CONFORMITE_YEAR,
-      req.authorizedSclCdas!,
-    );
+    return this.conformiteService.getConformiteSclDetail(params.sclCdn, query.year, req.authorizedSclCdas!);
   }
 }

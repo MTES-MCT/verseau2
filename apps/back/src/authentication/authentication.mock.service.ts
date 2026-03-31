@@ -87,7 +87,7 @@ export class AuthenticationMockService implements Authentication {
     return {
       cerbereId: 'test-user-id',
       mel: 'dev@example.com',
-      itvCdn: null,
+      itvCdn: 900995,
       isExpertNational: false,
     };
   }

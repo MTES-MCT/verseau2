@@ -4,7 +4,7 @@ import { CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR, listConformiteScl, list
 import { useConformiteScl, useConformiteSteu } from './useConformite';
 
 const PAGE_SIZE = 20;
-const DEFAULT_CONFORMITE_YEAR = CURRENT_CONFORMITE_YEAR - 1;
+const DEFAULT_CONFORMITE_YEAR = Math.max(FIRST_CONFORMITE_YEAR, CURRENT_CONFORMITE_YEAR - 1);
 
 type SortByValue = ConformiteSteuSortByValue | ConformiteSclSortByValue;
 

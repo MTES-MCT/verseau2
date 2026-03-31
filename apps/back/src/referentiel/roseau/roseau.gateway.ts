@@ -22,12 +22,14 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
+  SclCdnBySandreCda,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
   findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
+  findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
   findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;

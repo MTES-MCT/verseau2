@@ -147,14 +147,8 @@ export class ConformiteService {
       return [];
     }
 
-    const scls = await Promise.all(
-      authorizedSclCdas.map((authorizedSclCda) => this.masaProvider.findSclBySandreCda(authorizedSclCda)),
-    );
+    const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
 
-    return [
-      ...new Set(
-        scls.map((scl) => scl?.sclCdn).filter((sclCdn): sclCdn is number => sclCdn !== null && sclCdn !== undefined),
-      ),
-    ];
+    return [...new Set(scls.map((scl) => scl.sclCdn))];
   }
 }
