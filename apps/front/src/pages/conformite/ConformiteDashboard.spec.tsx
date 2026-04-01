@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { ConformiteProvisoire, CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR } from '@lib/dossier';
+import { ConformiteProvisoire, CURRENT_CONFORMITE_YEAR } from '@lib/dossier';
 import type { ConformiteSclDto, ConformiteSteuDetailDto, ConformiteSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../test.helper';
@@ -54,7 +54,6 @@ const makeSteuRow = (overrides: Partial<ConformiteSteuDto> = {}): ConformiteSteu
   capaciteNominaleEH: 4500,
   suiviDebutDate: '2024-01-01',
   suiviFinDate: '2024-12-31',
-  conformiteNationaleProvisoire: ConformiteProvisoire.Conforme,
   conformiteLocaleProvisoire: ConformiteProvisoire.NonConforme,
   impactConformite: true,
   suiviRegulierEffectue: true,
@@ -71,7 +70,6 @@ const makeSclRow = (overrides: Partial<ConformiteSclDto> = {}): ConformiteSclDto
   suiviDebutDate: '2024-01-01',
   suiviFinDate: '2024-12-31',
   conformiteLocaleTempsPluieProvisoire: ConformiteProvisoire.NonConforme,
-  conformiteNationaleTempsPluieProvisoire: ConformiteProvisoire.Conforme,
   impactConformite: true,
   suiviRegulierEffectue: true,
   suiviRegulierDate: '2025-01-15',
@@ -91,18 +89,6 @@ const makeSteuDetail = (overrides: Partial<ConformiteSteuDetailDto> = {}): Confo
   conformiteLocaleParametresNonConformesAnneeLb: '2 paramètres',
   conformiteLocaleRedhibitoiresPeriodeLb: 'Aucun',
   conformiteLocaleRedhibitoiresAnneeLb: '1 bilan',
-  conformiteNationaleParametresConformesPeriodeNb: 3,
-  conformiteNationaleParametresConformesAnneeNb: 6,
-  conformiteNationaleParametresNonConformesPeriodeNb: 1,
-  conformiteNationaleParametresNonConformesAnneeNb: 2,
-  conformiteNationaleRedhibitoiresPeriodeNb: 0,
-  conformiteNationaleRedhibitoiresAnneeNb: 1,
-  conformiteNationaleParametresConformesPeriodeLb: '3 paramètres',
-  conformiteNationaleParametresConformesAnneeLb: '6 paramètres',
-  conformiteNationaleParametresNonConformesPeriodeLb: '1 paramètre',
-  conformiteNationaleParametresNonConformesAnneeLb: '2 paramètres',
-  conformiteNationaleRedhibitoiresPeriodeLb: 'Aucun',
-  conformiteNationaleRedhibitoiresAnneeLb: '1 bilan',
   hcnfPeriodeNb: 1,
   hcnfAnneeNb: 3,
   hctsPeriodeNb: 0,
@@ -169,8 +155,8 @@ describe('ConformiteDashboard', () => {
     expect(screen.getByRole('columnheader', { name: /code sandre/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /^nom$/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /capacité nominale/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /conformité nationale/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /conformité locale/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /conformité réglementaire/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /conformité nationale/i })).not.toBeInTheDocument();
   });
 
   it('change les colonnes quand on bascule vers SCL', async () => {
@@ -194,12 +180,12 @@ describe('ConformiteDashboard', () => {
 
     // Assert
     expect(screen.getByRole('columnheader', { name: /type/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /conformité locale temps pluie/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /conformité nationale temps pluie/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /conformité réglementaire temps pluie/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /conformité nationale temps pluie/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: /capacité nominale/i })).not.toBeInTheDocument();
   });
 
-  it('affiche le filtre année de 2006 à l’année courante et déclenche la recherche avec cette année', async () => {
+  it('affiche uniquement N et N-1 dans le filtre année et déclenche la recherche avec cette année', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 20 },
@@ -211,14 +197,18 @@ describe('ConformiteDashboard', () => {
     // Act
     renderPage();
     const yearSelect = screen.getByLabelText(/année/i);
-    fireEvent.change(yearSelect, { target: { value: '2018' } });
+    fireEvent.change(yearSelect, { target: { value: String(CURRENT_CONFORMITE_YEAR) } });
 
     // Assert
     expect(screen.getByRole('option', { name: String(CURRENT_CONFORMITE_YEAR) })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: String(FIRST_CONFORMITE_YEAR) })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: String(CURRENT_CONFORMITE_YEAR - 1) })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: String(CURRENT_CONFORMITE_YEAR - 2) })).not.toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mockUseConformiteSteu).toHaveBeenLastCalledWith(expect.objectContaining({ year: 2018 }), true);
+      expect(mockUseConformiteSteu).toHaveBeenLastCalledWith(
+        expect.objectContaining({ year: CURRENT_CONFORMITE_YEAR }),
+        true,
+      );
     });
   });
 
@@ -259,9 +249,12 @@ describe('ConformiteDashboard', () => {
     await waitFor(() => {
       expect(screen.getByText(/détail conformité steu/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/paramètres conformes \(local\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/paramètres conformes \(réglementaire\)/i)).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /actuel/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /avant/i })).toBeInTheDocument();
     expect(screen.getByText('2 paramètres A')).toBeInTheDocument();
     expect(screen.getByText('Bilans avec événements')).toBeInTheDocument();
+    expect(screen.queryByText(/national/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /suivant/i }));
 
@@ -302,8 +295,8 @@ describe('ConformiteDashboard', () => {
 
     // Assert
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Métrique\tNombre\tLibellés'));
-      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Paramètres conformes (local)'));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Métrique\tActuel\tAvant'));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Paramètres conformes (réglementaire)'));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('STEU777'));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('2 paramètres A'));
     });

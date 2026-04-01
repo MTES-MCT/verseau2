@@ -13,8 +13,14 @@ export function LoadingState({
   const metrics = mode === 'steu' ? STEU_METRICS : SCL_METRICS;
   const data = metrics.map((metric, index) => [
     metric,
-    <SkeletonLine key={`number-${index}`} width="100%" />,
-    <SkeletonLine key={`label-${index}`} width={index % 2 === 0 ? '80%' : '65%'} />,
+    <div key={`current-${index}`} className="conformite-detail-value-cell">
+      <SkeletonLine width="45%" />
+      <SkeletonLine width={index % 2 === 0 ? '80%' : '65%'} />
+    </div>,
+    <div key={`previous-${index}`} className="conformite-detail-value-cell">
+      <SkeletonLine width="45%" />
+      <SkeletonLine width={index % 2 === 0 ? '75%' : '60%'} />
+    </div>,
   ]);
 
   return (

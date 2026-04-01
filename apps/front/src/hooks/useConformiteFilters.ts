@@ -55,9 +55,9 @@ export function useConformiteFilters() {
   const [page, setPage] = useState(1);
   const yearOptions = useMemo(
     () =>
-      Array.from({ length: CURRENT_CONFORMITE_YEAR - FIRST_CONFORMITE_YEAR + 1 }, (_, index) =>
-        (CURRENT_CONFORMITE_YEAR - index).toString(),
-      ),
+      [CURRENT_CONFORMITE_YEAR, CURRENT_CONFORMITE_YEAR - 1]
+        .filter((year, index, years) => year >= FIRST_CONFORMITE_YEAR && years.indexOf(year) === index)
+        .map((year) => year.toString()),
     [],
   );
 

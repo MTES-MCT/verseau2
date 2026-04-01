@@ -1,8 +1,17 @@
-#conformite-detail-modal-table table th:nth-child(2),
-#conformite-detail-modal-table table td:nth-child(2) {
-  width: 15%;
-}
 #conformite-detail-modal-table table th:nth-child(1),
 #conformite-detail-modal-table table td:nth-child(1) {
-  width: 40%;
+  width: 34%;
+}
+
+#conformite-detail-modal-table table th:nth-child(2),
+#conformite-detail-modal-table table td:nth-child(2),
+#conformite-detail-modal-table table th:nth-child(3),
+#conformite-detail-modal-table table td:nth-child(3) {
+  width: 33%;
+}
+
+.conformite-detail-value-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }

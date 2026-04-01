@@ -8,7 +8,6 @@ export type ConformiteDetailEntry =
       sclCdn?: never;
       entityCode: string;
       entityName: string;
-      conformiteNationaleProvisoire: string | null;
       conformiteLocaleProvisoire: string | null;
     }
   | {
@@ -18,7 +17,6 @@ export type ConformiteDetailEntry =
       steuCdn?: never;
       entityCode: string;
       entityName: string;
-      conformiteNationaleTempsPluieProvisoire: string | null;
       conformiteLocaleTempsPluieProvisoire: string | null;
     };
 
