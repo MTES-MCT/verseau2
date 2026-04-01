@@ -11,6 +11,9 @@ import {
   PaginationQuery,
 } from '@lib/dossier';
 
+export type MasaConformiteSteuSortByValue = ConformiteSteuSortByValue | 'conformiteNationaleProvisoire';
+export type MasaConformiteSclSortByValue = ConformiteSclSortByValue | 'conformiteNationaleTempsPluieProvisoire';
+
 export interface CmaBySandreCdaAndParam {
   ouvrageDepollutionCode: string;
   parametreAnalyseCode: string;
@@ -137,7 +140,7 @@ export interface ConformiteSteuFilters extends PaginationQuery {
   year: number;
   trancheObligationLibelle?: string;
   impact?: 'avec' | 'sans';
-  sortBy?: ConformiteSteuSortByValue;
+  sortBy?: MasaConformiteSteuSortByValue;
 }
 
 /** Filtres pour la recherche de conformité SCL */
@@ -146,17 +149,34 @@ export interface ConformiteSclFilters extends PaginationQuery {
   year: number;
   trancheObligationLibelle?: string;
   impact?: 'avec' | 'sans';
-  sortBy?: ConformiteSclSortByValue;
+  sortBy?: MasaConformiteSclSortByValue;
 }
 
 /** Une ligne brute de conformité STEU */
-export type ConformiteSteuRow = ConformiteSteuDto;
+export interface ConformiteSteuRow extends ConformiteSteuDto {
+  conformiteNationaleProvisoire: string | null;
+}
 
 /** Une ligne brute de conformité SCL */
-export type ConformiteSclRow = ConformiteSclDto;
+export interface ConformiteSclRow extends ConformiteSclDto {
+  conformiteNationaleTempsPluieProvisoire: string | null;
+}
 
 /** Le détail brut de conformité STEU */
-export type ConformiteSteuDetailRow = ConformiteSteuDetailDto;
+export interface ConformiteSteuDetailRow extends ConformiteSteuDetailDto {
+  conformiteNationaleParametresConformesPeriodeNb: number | null;
+  conformiteNationaleParametresConformesAnneeNb: number | null;
+  conformiteNationaleParametresNonConformesPeriodeNb: number | null;
+  conformiteNationaleParametresNonConformesAnneeNb: number | null;
+  conformiteNationaleRedhibitoiresPeriodeNb: number | null;
+  conformiteNationaleRedhibitoiresAnneeNb: number | null;
+  conformiteNationaleParametresConformesPeriodeLb: string | null;
+  conformiteNationaleParametresConformesAnneeLb: string | null;
+  conformiteNationaleParametresNonConformesPeriodeLb: string | null;
+  conformiteNationaleParametresNonConformesAnneeLb: string | null;
+  conformiteNationaleRedhibitoiresPeriodeLb: string | null;
+  conformiteNationaleRedhibitoiresAnneeLb: string | null;
+}
 
 /** Le détail brut de conformité SCL */
 export type ConformiteSclDetailRow = ConformiteSclDetailDto;

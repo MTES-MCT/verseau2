@@ -13,7 +13,6 @@ export const ConformiteSteuSortBy = z.enum([
   'ouvrageDepollutionNom',
   'trancheObligationLibelle',
   'capaciteNominaleEH',
-  'conformiteNationaleProvisoire',
   'conformiteLocaleProvisoire',
 ]);
 export type ConformiteSteuSortByValue = z.infer<typeof ConformiteSteuSortBy>;
@@ -24,12 +23,11 @@ export const ConformiteSclSortBy = z.enum([
   'trancheObligationLibelle',
   'typeScl',
   'conformiteLocaleTempsPluieProvisoire',
-  'conformiteNationaleTempsPluieProvisoire',
 ]);
 export type ConformiteSclSortByValue = z.infer<typeof ConformiteSclSortBy>;
 
-export const FIRST_CONFORMITE_YEAR = 2006;
 export const CURRENT_CONFORMITE_YEAR = new Date().getFullYear();
+export const FIRST_CONFORMITE_YEAR = CURRENT_CONFORMITE_YEAR - 1;
 
 export function getCurrentConformiteYear() {
   return new Date().getFullYear();

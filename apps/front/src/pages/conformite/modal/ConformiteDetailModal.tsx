@@ -3,7 +3,7 @@ import { Button } from '@codegouvfr/react-dsfr/Button';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { useIsModalOpen } from '@codegouvfr/react-dsfr/Modal/useIsModalOpen';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { ConformiteSclDetailDto, ConformiteSteuDetailDto } from '@lib/dossier';
 import { useDetailBilanScl, useDetailBilanSteu } from '../../../hooks/useConformite';
 import { renderConformiteBadge } from '../../../helper/conformiteTableData';
@@ -20,22 +20,21 @@ type ConformiteDetailModalProps = {
   onClose: () => void;
 };
 
-type DetailLine = {
-  key: 'period' | 'year';
+type DetailValue = {
   number: number | null;
   libelle?: string | null;
 };
 
 type DetailRow = {
   indicator: string;
-  numberContent: React.ReactNode;
-  labelContent: React.ReactNode;
-  numberText: string;
-  labelText: string;
+  currentContent: ReactNode;
+  previousContent: ReactNode;
+  currentText: string;
+  previousText: string;
 };
 
 const DETAIL_TABLE_ID = 'conformite-detail-modal-table';
-const DETAIL_TABLE_HEADERS = ['Métrique', 'Nombre', 'Libellés'];
+const DETAIL_TABLE_HEADERS = ['Métrique', 'Actuel', 'Avant'];
 const DETAIL_TABLE_STYLE = {
   tableLayout: 'fixed' as const,
   width: '100%',
@@ -53,60 +52,33 @@ function hasDisplayableLabel(value: string | null | undefined) {
   return value !== null && value !== undefined && value !== '';
 }
 
-function getVisibleLines(lines: DetailLine[]) {
-  return lines.filter((line) => line.number !== null || hasDisplayableLabel(line.libelle));
+function isDetailValueEmpty(value: DetailValue) {
+  return value.number === null && !hasDisplayableLabel(value.libelle);
 }
 
-function renderNumberValues(lines: DetailLine[], suffix = '') {
-  const visibleLines = getVisibleLines(lines);
-
-  if (visibleLines.length === 0) {
+function renderDetailValue(value: DetailValue, suffix = '') {
+  if (isDetailValueEmpty(value)) {
     return '-';
   }
 
   return (
-    <div>
-      {visibleLines.map((line) => (
-        <div key={line.key}>{formatNumber(line.number, suffix)}</div>
-      ))}
+    <div className="conformite-detail-value-cell">
+      <span className={fr.cx('fr-text--bold')}>{formatNumber(value.number, suffix)}</span>
+      <span className={fr.cx('fr-text--sm')} style={{ color: 'var(--text-mention-grey)' }}>
+        {hasDisplayableLabel(value.libelle) ? value.libelle : '-'}
+      </span>
     </div>
   );
 }
 
-function renderLabelValues(lines: DetailLine[]) {
-  const visibleLines = getVisibleLines(lines);
-
-  if (visibleLines.length === 0) {
+function getDetailValueText(value: DetailValue, suffix = '') {
+  if (isDetailValueEmpty(value)) {
     return '-';
   }
 
-  return (
-    <div>
-      {visibleLines.map((line) => (
-        <div key={line.key}>{hasDisplayableLabel(line.libelle) ? line.libelle : '-'}</div>
-      ))}
-    </div>
-  );
-}
+  const formattedNumber = formatNumber(value.number, suffix);
 
-function getNumberValuesText(lines: DetailLine[], suffix = '') {
-  const visibleLines = getVisibleLines(lines);
-
-  if (visibleLines.length === 0) {
-    return '-';
-  }
-
-  return visibleLines.map((line) => formatNumber(line.number, suffix)).join(' / ');
-}
-
-function getLabelValuesText(lines: DetailLine[]) {
-  const visibleLines = getVisibleLines(lines);
-
-  if (visibleLines.length === 0) {
-    return '-';
-  }
-
-  return visibleLines.map((line) => (hasDisplayableLabel(line.libelle) ? line.libelle : '-')).join(' / ');
+  return hasDisplayableLabel(value.libelle) ? `${formattedNumber} - ${value.libelle}` : formattedNumber;
 }
 
 function createDetailRow(
@@ -119,26 +91,21 @@ function createDetailRow(
   },
   suffix = '',
 ): DetailRow {
-  // TODO : voir si on a besoin d'afficher le libellés période
-  const lines: DetailLine[] = [
-    // {
-    //   key: 'period',
-    //   number: values.periodNumber,
-    //   libelle: values.periodLabel,
-    // },
-    {
-      key: 'year',
-      number: values.yearNumber,
-      libelle: values.yearLabel,
-    },
-  ];
+  const currentValue: DetailValue = {
+    number: values.periodNumber,
+    libelle: values.periodLabel,
+  };
+  const previousValue: DetailValue = {
+    number: values.yearNumber,
+    libelle: values.yearLabel,
+  };
 
   return {
     indicator,
-    numberContent: renderNumberValues(lines, suffix),
-    labelContent: renderLabelValues(lines),
-    numberText: getNumberValuesText(lines, suffix),
-    labelText: getLabelValuesText(lines),
+    currentContent: renderDetailValue(currentValue, suffix),
+    previousContent: renderDetailValue(previousValue, suffix),
+    currentText: getDetailValueText(currentValue, suffix),
+    previousText: getDetailValueText(previousValue, suffix),
   };
 }
 
@@ -158,7 +125,7 @@ function renderDetailTable(data: React.ReactNode[][]) {
 }
 
 function renderDetailRows(rows: DetailRow[]) {
-  return renderDetailTable(rows.map((row) => [row.indicator, row.numberContent, row.labelContent]));
+  return renderDetailTable(rows.map((row) => [row.indicator, row.currentContent, row.previousContent]));
 }
 
 function buildDetailCopyText(title: string, entityCode: string, entityName: string, rows: DetailRow[]) {
@@ -167,7 +134,7 @@ function buildDetailCopyText(title: string, entityCode: string, entityName: stri
     entityName ? `${entityCode} - ${entityName}` : entityCode,
     '',
     DETAIL_TABLE_HEADERS.join('\t'),
-    ...rows.map((row) => [row.indicator, row.numberText, row.labelText].join('\t')),
+    ...rows.map((row) => [row.indicator, row.currentText, row.previousText].join('\t')),
   ].join('\n');
 }
 
@@ -181,41 +148,23 @@ function ErrorState() {
 
 function getSteuDetailRows(detail: ConformiteSteuDetailDto) {
   return [
-    createDetailRow('Paramètres conformes (local)', {
-      periodNumber: null,
+    createDetailRow('Paramètres conformes (réglementaire)', {
+      periodNumber: detail.conformiteLocaleParametresConformesPeriodeNb,
       yearNumber: detail.conformiteLocaleParametresConformesAnneeNb,
-      periodLabel: null,
+      periodLabel: detail.conformiteLocaleParametresConformesPeriodeLb,
       yearLabel: detail.conformiteLocaleParametresConformesAnneeLb,
     }),
-    createDetailRow('Paramètres conformes (national)', {
-      periodNumber: null,
-      yearNumber: detail.conformiteNationaleParametresConformesAnneeNb,
-      periodLabel: null,
-      yearLabel: detail.conformiteNationaleParametresConformesAnneeLb,
-    }),
-    createDetailRow('Paramètres non conformes (local)', {
+    createDetailRow('Paramètres non conformes (réglementaire)', {
       periodNumber: detail.conformiteLocaleParametresNonConformesPeriodeNb,
       yearNumber: detail.conformiteLocaleParametresNonConformesAnneeNb,
       periodLabel: detail.conformiteLocaleParametresNonConformesPeriodeLb,
       yearLabel: detail.conformiteLocaleParametresNonConformesAnneeLb,
     }),
-    createDetailRow('Paramètres non conformes (national)', {
-      periodNumber: detail.conformiteNationaleParametresNonConformesPeriodeNb,
-      yearNumber: detail.conformiteNationaleParametresNonConformesAnneeNb,
-      periodLabel: detail.conformiteNationaleParametresNonConformesPeriodeLb,
-      yearLabel: detail.conformiteNationaleParametresNonConformesAnneeLb,
-    }),
-    createDetailRow('Bilans avec données rédhibitoires (local)', {
+    createDetailRow('Bilans avec données rédhibitoires (réglementaire)', {
       periodNumber: detail.conformiteLocaleRedhibitoiresPeriodeNb,
       yearNumber: detail.conformiteLocaleRedhibitoiresAnneeNb,
       periodLabel: detail.conformiteLocaleRedhibitoiresPeriodeLb,
       yearLabel: detail.conformiteLocaleRedhibitoiresAnneeLb,
-    }),
-    createDetailRow('Bilans avec données rédhibitoires (national)', {
-      periodNumber: detail.conformiteNationaleRedhibitoiresPeriodeNb,
-      yearNumber: detail.conformiteNationaleRedhibitoiresAnneeNb,
-      periodLabel: detail.conformiteNationaleRedhibitoiresPeriodeLb,
-      yearLabel: detail.conformiteNationaleRedhibitoiresAnneeLb,
     }),
     createDetailRow('Nombre de bilans HCNF', {
       periodNumber: detail.hcnfPeriodeNb,
@@ -286,7 +235,7 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
   const subtitle =
     mode === 'steu'
       ? 'État des bilans depuis le dernier suivi effectué'
-      : 'Détail sur la conformité locale temps pluie depuis le dernier suivi effectué';
+      : 'Détail sur la conformité réglementaire temps pluie depuis le dernier suivi effectué';
 
   const conformiteBadges = (() => {
     if (!detail) {
@@ -296,16 +245,14 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
     if (detail.mode === 'steu') {
       return (
         <div className={fr.cx('fr-badges-group')}>
-          <span>Nationale : {renderConformiteBadge(detail.conformiteNationaleProvisoire)}</span>
-          <span>Locale : {renderConformiteBadge(detail.conformiteLocaleProvisoire)}</span>
+          <span>Réglementaire : {renderConformiteBadge(detail.conformiteLocaleProvisoire)}</span>
         </div>
       );
     }
 
     return (
       <div className={fr.cx('fr-badges-group')}>
-        <span>Nationale temps pluie : {renderConformiteBadge(detail.conformiteNationaleTempsPluieProvisoire)}</span>
-        <span>Locale temps pluie : {renderConformiteBadge(detail.conformiteLocaleTempsPluieProvisoire)}</span>
+        <span>Réglementaire temps pluie : {renderConformiteBadge(detail.conformiteLocaleTempsPluieProvisoire)}</span>
       </div>
     );
   })();

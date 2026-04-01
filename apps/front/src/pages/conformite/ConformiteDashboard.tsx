@@ -46,8 +46,7 @@ const STEU_COLUMNS: ColumnConfig<ConformiteSteuSortByValue>[] = [
   { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
   { label: 'Début période', field: null },
   { label: 'Fin période', field: null },
-  { label: 'Conformité nationale', field: 'conformiteNationaleProvisoire' },
-  { label: 'Conformité locale', field: 'conformiteLocaleProvisoire' },
+  { label: 'Conformité réglementaire', field: 'conformiteLocaleProvisoire' },
   { label: 'Synthèse des changements', field: null },
 ];
 
@@ -58,8 +57,7 @@ const SCL_COLUMNS: ColumnConfig<ConformiteSclSortByValue>[] = [
   { label: 'Type', field: 'typeScl' },
   { label: 'Début période', field: null },
   { label: 'Fin période', field: null },
-  { label: 'Conformité locale temps pluie', field: 'conformiteLocaleTempsPluieProvisoire' },
-  { label: 'Conformité nationale temps pluie', field: 'conformiteNationaleTempsPluieProvisoire' },
+  { label: 'Conformité réglementaire temps pluie', field: 'conformiteLocaleTempsPluieProvisoire' },
   { label: 'Synthèse des changements', field: null },
 ];
 
@@ -189,7 +187,6 @@ export function ConformiteDashboard() {
           steuCdn: steu.steuCdn,
           entityCode: steu.ouvrageDepollutionCode,
           entityName: steu.ouvrageDepollutionNom ?? 'Nom non renseigné',
-          conformiteNationaleProvisoire: steu.conformiteNationaleProvisoire,
           conformiteLocaleProvisoire: steu.conformiteLocaleProvisoire,
         }));
     }
@@ -203,7 +200,6 @@ export function ConformiteDashboard() {
         sclCdn: scl.sclCdn,
         entityCode: scl.systemeCollecteCode,
         entityName: scl.systemeCollecteNom ?? 'Nom non renseigné',
-        conformiteNationaleTempsPluieProvisoire: scl.conformiteNationaleTempsPluieProvisoire,
         conformiteLocaleTempsPluieProvisoire: scl.conformiteLocaleTempsPluieProvisoire,
       }));
   }, [mode, sclRows, selectedYear, steuRows]);

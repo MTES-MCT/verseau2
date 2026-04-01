@@ -1,10 +1,7 @@
 export const STEU_METRICS = [
-  'Paramètres conformes (local)',
-  'Paramètres conformes (national)',
-  'Paramètres non conformes (local)',
-  'Paramètres non conformes (national)',
-  'Bilans avec données rédhibitoires (local)',
-  'Bilans avec données rédhibitoires (national)',
+  'Paramètres conformes (réglementaire)',
+  'Paramètres non conformes (réglementaire)',
+  'Bilans avec données rédhibitoires (réglementaire)',
   'Nombre de bilans HCNF',
   'Nombre de bilans HCTS',
   'Bilans avec événements',

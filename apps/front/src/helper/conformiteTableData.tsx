@@ -52,8 +52,7 @@ export function buildConformiteSteuTableHeaders(): string[] {
     'Capacité nominale (EH)',
     'Début période',
     'Fin période',
-    'Conformité nationale',
-    'Conformité locale',
+    'Conformité réglementaire',
     'Synthèse des changements',
   ];
 }
@@ -66,7 +65,6 @@ export function buildConformiteSteuTableRows(steuList: ConformiteSteuDto[]): Rea
     steu.capaciteNominaleEH !== null ? String(steu.capaciteNominaleEH) : '-',
     formatDate(steu.suiviDebutDate),
     formatDate(steu.suiviFinDate),
-    renderConformiteBadge(steu.conformiteNationaleProvisoire),
     renderConformiteBadge(steu.conformiteLocaleProvisoire),
     renderImpactBadge(steu.impactConformite),
   ]);
@@ -80,8 +78,7 @@ export function buildConformiteSclTableHeaders(): string[] {
     'Type',
     'Début période',
     'Fin période',
-    'Conformité locale temps pluie',
-    'Conformité nationale temps pluie',
+    'Conformité réglementaire temps pluie',
     'Synthèse des changements',
   ];
 }
@@ -95,7 +92,6 @@ export function buildConformiteSclTableRows(sclList: ConformiteSclDto[]): ReactN
     formatDate(scl.suiviDebutDate),
     formatDate(scl.suiviFinDate),
     renderConformiteBadge(scl.conformiteLocaleTempsPluieProvisoire),
-    renderConformiteBadge(scl.conformiteNationaleTempsPluieProvisoire),
     renderImpactBadge(scl.impactConformite),
   ]);
 }

@@ -52,7 +52,27 @@ describe('ConformiteController', () => {
     }) as unknown as CustomRequest;
 
   it('delegates listConformiteSteu with authorized STEU codes and query filters', async () => {
-    const response = { data: [], total: 0, page: 1, pageSize: 20 };
+    const response = {
+      data: [
+        {
+          steuCdn: 101,
+          ouvrageDepollutionCode: 'STEU001',
+          ouvrageDepollutionNom: 'Station test',
+          trancheObligationLibelle: '2000 à 9999 EH',
+          capaciteNominaleEH: 5000,
+          suiviDebutDate: '2024-01-01',
+          suiviFinDate: '2024-12-31',
+          conformiteLocaleProvisoire: 'Conforme',
+          conformiteNationaleProvisoire: 'Non conforme',
+          impactConformite: true,
+          suiviRegulierEffectue: true,
+          suiviRegulierDate: '2024-06-15',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    };
     conformiteService.listConformiteSteu.mockResolvedValue(response);
 
     const result = await controller.listConformiteSteu(makeRequest(['STEU001']), {
@@ -75,11 +95,50 @@ describe('ConformiteController', () => {
       sortBy: 'ouvrageDepollutionCode',
       sortOrder: 'ASC',
     });
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      data: [
+        {
+          steuCdn: 101,
+          ouvrageDepollutionCode: 'STEU001',
+          ouvrageDepollutionNom: 'Station test',
+          trancheObligationLibelle: '2000 à 9999 EH',
+          capaciteNominaleEH: 5000,
+          suiviDebutDate: '2024-01-01',
+          suiviFinDate: '2024-12-31',
+          conformiteLocaleProvisoire: 'Conforme',
+          impactConformite: true,
+          suiviRegulierEffectue: true,
+          suiviRegulierDate: '2024-06-15',
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
   });
 
   it('delegates listConformiteScl with authorized STEU codes and query filters', async () => {
-    const response = { data: [], total: 0, page: 2, pageSize: 10 };
+    const response = {
+      data: [
+        {
+          sclCdn: 201,
+          systemeCollecteCode: 'SCL001',
+          systemeCollecteNom: 'Réseau test',
+          trancheObligationLibelle: 'capacité ≥ 10000 EH',
+          typeScl: 'Unitaire',
+          suiviDebutDate: '2024-01-01',
+          suiviFinDate: '2024-12-31',
+          conformiteLocaleTempsPluieProvisoire: 'Conforme',
+          conformiteNationaleTempsPluieProvisoire: 'Non conforme',
+          impactConformite: false,
+          suiviRegulierEffectue: true,
+          suiviRegulierDate: '2024-07-01',
+        },
+      ],
+      total: 1,
+      page: 2,
+      pageSize: 10,
+    };
     conformiteService.listConformiteScl.mockResolvedValue(response);
 
     const result = await controller.listConformiteScl(makeRequest(['STEU002'], ['SCL001']), {
@@ -102,7 +161,26 @@ describe('ConformiteController', () => {
       sortBy: 'systemeCollecteCode',
       sortOrder: 'DESC',
     });
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      data: [
+        {
+          sclCdn: 201,
+          systemeCollecteCode: 'SCL001',
+          systemeCollecteNom: 'Réseau test',
+          trancheObligationLibelle: 'capacité ≥ 10000 EH',
+          typeScl: 'Unitaire',
+          suiviDebutDate: '2024-01-01',
+          suiviFinDate: '2024-12-31',
+          conformiteLocaleTempsPluieProvisoire: 'Conforme',
+          impactConformite: false,
+          suiviRegulierEffectue: true,
+          suiviRegulierDate: '2024-07-01',
+        },
+      ],
+      total: 1,
+      page: 2,
+      pageSize: 10,
+    });
   });
 
   it('delegates getConformiteSteuDetail with route param and authorized STEU codes', async () => {
@@ -119,18 +197,18 @@ describe('ConformiteController', () => {
       conformiteLocaleParametresNonConformesAnneeLb: 'ko',
       conformiteLocaleRedhibitoiresPeriodeLb: 'ko',
       conformiteLocaleRedhibitoiresAnneeLb: 'ko',
-      conformiteNationaleParametresConformesPeriodeNb: 1,
-      conformiteNationaleParametresConformesAnneeNb: 2,
-      conformiteNationaleParametresNonConformesPeriodeNb: 3,
-      conformiteNationaleParametresNonConformesAnneeNb: 4,
-      conformiteNationaleRedhibitoiresPeriodeNb: 5,
-      conformiteNationaleRedhibitoiresAnneeNb: 6,
-      conformiteNationaleParametresConformesPeriodeLb: 'ok',
-      conformiteNationaleParametresConformesAnneeLb: 'ok',
-      conformiteNationaleParametresNonConformesPeriodeLb: 'ko',
-      conformiteNationaleParametresNonConformesAnneeLb: 'ko',
-      conformiteNationaleRedhibitoiresPeriodeLb: 'ko',
-      conformiteNationaleRedhibitoiresAnneeLb: 'ko',
+      conformiteNationaleParametresConformesPeriodeNb: 9,
+      conformiteNationaleParametresConformesAnneeNb: 10,
+      conformiteNationaleParametresNonConformesPeriodeNb: 11,
+      conformiteNationaleParametresNonConformesAnneeNb: 12,
+      conformiteNationaleRedhibitoiresPeriodeNb: 13,
+      conformiteNationaleRedhibitoiresAnneeNb: 14,
+      conformiteNationaleParametresConformesPeriodeLb: 'nat ok',
+      conformiteNationaleParametresConformesAnneeLb: 'nat ok',
+      conformiteNationaleParametresNonConformesPeriodeLb: 'nat ko',
+      conformiteNationaleParametresNonConformesAnneeLb: 'nat ko',
+      conformiteNationaleRedhibitoiresPeriodeLb: 'nat ko',
+      conformiteNationaleRedhibitoiresAnneeLb: 'nat ko',
       hcnfPeriodeNb: 1,
       hcnfAnneeNb: 2,
       hctsPeriodeNb: 3,
@@ -147,7 +225,30 @@ describe('ConformiteController', () => {
     const result = await controller.getConformiteSteuDetail(makeRequest(['STEU003']), { steuCdn: 321 }, { year: 2022 });
 
     expect(conformiteService.getConformiteSteuDetail).toHaveBeenCalledWith(321, 2022, ['STEU003']);
-    expect(result).toEqual(response);
+    expect(result).toEqual({
+      conformiteLocaleParametresConformesPeriodeNb: 1,
+      conformiteLocaleParametresConformesAnneeNb: 2,
+      conformiteLocaleParametresNonConformesPeriodeNb: 3,
+      conformiteLocaleParametresNonConformesAnneeNb: 4,
+      conformiteLocaleRedhibitoiresPeriodeNb: 5,
+      conformiteLocaleRedhibitoiresAnneeNb: 6,
+      conformiteLocaleParametresConformesPeriodeLb: 'ok',
+      conformiteLocaleParametresConformesAnneeLb: 'ok',
+      conformiteLocaleParametresNonConformesPeriodeLb: 'ko',
+      conformiteLocaleParametresNonConformesAnneeLb: 'ko',
+      conformiteLocaleRedhibitoiresPeriodeLb: 'ko',
+      conformiteLocaleRedhibitoiresAnneeLb: 'ko',
+      hcnfPeriodeNb: 1,
+      hcnfAnneeNb: 2,
+      hctsPeriodeNb: 3,
+      hctsAnneeNb: 4,
+      hcnfPeriodeLb: 'a',
+      hcnfAnneeLb: 'b',
+      hctsPeriodeLb: 'c',
+      hctsAnneeLb: 'd',
+      evenementsPeriodeNb: 7,
+      evenementsAnneeNb: 8,
+    });
   });
 
   it('delegates getConformiteSclDetail with route param and authorized SCL codes', async () => {

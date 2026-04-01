@@ -1,17 +1,30 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
-import {
-  ConformiteSclDetailDto,
-  ConformiteSclSortByValue,
-  ConformiteSteuDetailDto,
-  ConformiteSteuSortByValue,
-  PaginatedConformiteSclResponse,
-  PaginatedConformiteSteuResponse,
-  PaginationQuery,
-} from '@lib/dossier';
+import { ConformiteSclSortByValue, ConformiteSteuSortByValue, PaginationQuery } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
-import type { ConformiteSclFilters, ConformiteSteuFilters } from '@masa/masa.dto';
+import type {
+  ConformiteSclDetailRow,
+  ConformiteSclFilters,
+  ConformiteSclRow,
+  ConformiteSteuDetailRow,
+  ConformiteSteuFilters,
+  ConformiteSteuRow,
+} from '@masa/masa.dto';
 import { LoggerService } from '@shared/logger/logger.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+
+type PaginatedConformiteSteuRows = {
+  data: ConformiteSteuRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type PaginatedConformiteSclRows = {
+  data: ConformiteSclRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -39,7 +52,7 @@ export class ConformiteService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
-  async listConformiteSteu(options: ListConformiteSteuOptions): Promise<PaginatedConformiteSteuResponse> {
+  async listConformiteSteu(options: ListConformiteSteuOptions): Promise<PaginatedConformiteSteuRows> {
     const { authorizedSteuCdas, year, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
 
     if (authorizedSteuCdas.length === 0) {
@@ -68,7 +81,7 @@ export class ConformiteService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
-  async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclResponse> {
+  async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
     const { authorizedSteuCdas, year, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
 
     if (authorizedSteuCdas.length === 0) {
@@ -101,7 +114,7 @@ export class ConformiteService {
     steuCdn: number,
     year: number,
     authorizedSteuCdas: string[],
-  ): Promise<ConformiteSteuDetailDto | null> {
+  ): Promise<ConformiteSteuDetailRow | null> {
     const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
 
     if (!steuCdns.includes(steuCdn)) {
@@ -117,7 +130,7 @@ export class ConformiteService {
     sclCdn: number,
     year: number,
     authorizedSclCdas: string[],
-  ): Promise<ConformiteSclDetailDto | null> {
+  ): Promise<ConformiteSclDetailRow | null> {
     const sclCdns = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
 
     if (!sclCdns.includes(sclCdn)) {

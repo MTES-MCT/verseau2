@@ -10,6 +10,12 @@ import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
+import {
+  toConformiteSclDetailDto,
+  toPaginatedConformiteSclResponse,
+  toPaginatedConformiteSteuResponse,
+  toConformiteSteuDetailDto,
+} from './conformite.mapper';
 import { ConformiteService } from './conformite.service';
 
 @Controller('conformite')
@@ -23,7 +29,7 @@ export class ConformiteController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listConformiteSteuRoute['query'])) query: RouteQuery<typeof listConformiteSteuRoute>,
   ): Promise<RouteResponse<typeof listConformiteSteuRoute>> {
-    return this.conformiteService.listConformiteSteu({
+    const response = await this.conformiteService.listConformiteSteu({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       year: query.year,
       trancheObligationLibelle: query.trancheObligationLibelle,
@@ -33,6 +39,8 @@ export class ConformiteController {
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     });
+
+    return toPaginatedConformiteSteuResponse(response);
   }
 
   @Get('scl')
@@ -41,7 +49,7 @@ export class ConformiteController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listConformiteSclRoute['query'])) query: RouteQuery<typeof listConformiteSclRoute>,
   ): Promise<RouteResponse<typeof listConformiteSclRoute>> {
-    return this.conformiteService.listConformiteScl({
+    const response = await this.conformiteService.listConformiteScl({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       year: query.year,
       trancheObligationLibelle: query.trancheObligationLibelle,
@@ -51,6 +59,8 @@ export class ConformiteController {
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     });
+
+    return toPaginatedConformiteSclResponse(response);
   }
 
   @Get('steu/:steuCdn/detail')
@@ -62,7 +72,13 @@ export class ConformiteController {
     @Query(new ZodValidationPipe(getConformiteSteuDetailRoute['query']))
     query: RouteQuery<typeof getConformiteSteuDetailRoute>,
   ): Promise<RouteResponse<typeof getConformiteSteuDetailRoute>> {
-    return this.conformiteService.getConformiteSteuDetail(params.steuCdn, query.year, req.authorizedSteuCdas!);
+    const detail = await this.conformiteService.getConformiteSteuDetail(
+      params.steuCdn,
+      query.year,
+      req.authorizedSteuCdas!,
+    );
+
+    return detail ? toConformiteSteuDetailDto(detail) : null;
   }
 
   @Get('scl/:sclCdn/detail')
@@ -74,6 +90,12 @@ export class ConformiteController {
     @Query(new ZodValidationPipe(getConformiteSclDetailRoute['query']))
     query: RouteQuery<typeof getConformiteSclDetailRoute>,
   ): Promise<RouteResponse<typeof getConformiteSclDetailRoute>> {
-    return this.conformiteService.getConformiteSclDetail(params.sclCdn, query.year, req.authorizedSclCdas!);
+    const detail = await this.conformiteService.getConformiteSclDetail(
+      params.sclCdn,
+      query.year,
+      req.authorizedSclCdas!,
+    );
+
+    return detail ? toConformiteSclDetailDto(detail) : null;
   }
 }
