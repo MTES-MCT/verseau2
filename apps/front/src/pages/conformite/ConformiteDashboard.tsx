@@ -1,6 +1,7 @@
 import { fr } from '@codegouvfr/react-dsfr';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Button } from '@codegouvfr/react-dsfr/Button';
+import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
@@ -11,6 +12,7 @@ import type {
   ConformiteSteuDto,
   ConformiteSteuSortByValue,
 } from '@lib/dossier';
+import { getPreviousSunday } from '@lib/shared';
 import { useMemo, useState, type MouseEvent } from 'react';
 import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './modal/ConformiteDetailModal.shared';
@@ -277,6 +279,13 @@ export function ConformiteDashboard() {
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
+      <Notice
+        title="Les données ne sont pas en temps réel"
+        description={` - Données mises à jour le ${getPreviousSunday()}`}
+        severity="info"
+        className={fr.cx('fr-mb-2w')}
+      />
+
       <div className={fr.cx('fr-grid-row', 'fr-grid-row--middle', 'fr-grid-row--gutters', 'fr-mb-2w')}>
         <div className={fr.cx('fr-col-12', 'fr-col-md')}>
           <h1 className={fr.cx('fr-mb-0')}>Tableau de bord conformité</h1>
