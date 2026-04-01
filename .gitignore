@@ -80,6 +80,7 @@ script/
 .npmrc
 
 .codex/
+.opencode/
 
 # Dolt database files (added by bd init)
 .dolt/
