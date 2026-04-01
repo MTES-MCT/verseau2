@@ -1,5 +1,15 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
-import { PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
+import {
+  ConformiteSclDetailDto,
+  ConformiteSclDto,
+  ConformiteSclSortByValue,
+  ConformiteSteuDetailDto,
+  ConformiteSteuDto,
+  ConformiteSteuSortByValue,
+  MesuresSortByValue,
+  OuvrageTypeValue,
+  PaginationQuery,
+} from '@lib/dossier';
 
 export interface CmaBySandreCdaAndParam {
   ouvrageDepollutionCode: string;
@@ -51,6 +61,12 @@ export interface SteuWithName {
 export interface SclWithName {
   systemeCollecteCode: string;
   systemeCollecteNom: string | null;
+}
+
+/** Résultat SCL retourné par un fetch batch MASA */
+export interface SclCdnBySandreCda {
+  systemeCollecteCode: string;
+  systemeCollecteIdentifiant: number;
 }
 
 /** Résultat ITV retourné par un fetch batch MASA */
@@ -114,6 +130,36 @@ export interface PointMesureReferentielRow {
   pointMesureValiditeDebutDate: string | null;
   pointMesureValiditeFinDate: string | null;
 }
+
+/** Filtres pour la recherche de conformité STEU */
+export interface ConformiteSteuFilters extends PaginationQuery {
+  steuCdns: number[];
+  year: number;
+  trancheObligationLibelle?: string;
+  impact?: 'avec' | 'sans';
+  sortBy?: ConformiteSteuSortByValue;
+}
+
+/** Filtres pour la recherche de conformité SCL */
+export interface ConformiteSclFilters extends PaginationQuery {
+  steuCdns: number[];
+  year: number;
+  trancheObligationLibelle?: string;
+  impact?: 'avec' | 'sans';
+  sortBy?: ConformiteSclSortByValue;
+}
+
+/** Une ligne brute de conformité STEU */
+export type ConformiteSteuRow = ConformiteSteuDto;
+
+/** Une ligne brute de conformité SCL */
+export type ConformiteSclRow = ConformiteSclDto;
+
+/** Le détail brut de conformité STEU */
+export type ConformiteSteuDetailRow = ConformiteSteuDetailDto;
+
+/** Le détail brut de conformité SCL */
+export type ConformiteSclDetailRow = ConformiteSclDetailDto;
 
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters extends PaginationQuery {

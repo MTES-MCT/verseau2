@@ -10,6 +10,7 @@ import { LoggerRequestMiddleware } from './middleware/loggerRequest.middleware';
 import { VersionController } from './version.controller';
 import { AuthenticationModule } from '@authentication/authentication.module';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
+import { ConformiteModule } from '../conformite/conformite.module';
 import { IndicateursModule } from '../indicateurs/indicateurs.module';
 import { MesuresModule } from '../mesures/mesures.module';
 
@@ -21,6 +22,7 @@ import { MesuresModule } from '../mesures/mesures.module';
     InfraModule,
     ReferentielModule,
     IndicateursModule,
+    ConformiteModule,
     MesuresModule,
   ],
   controllers: [VersionController],

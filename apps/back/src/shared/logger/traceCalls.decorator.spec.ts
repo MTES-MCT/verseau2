@@ -57,6 +57,9 @@ describe('TraceCalls Decorator', () => {
 
   class Example {
     private readonly subService = new SubService();
+    private readonly dependency = {
+      greet: (value: string) => `hello-${value}`,
+    };
 
     @TraceCalls('log')
     async mainMethod(input: string) {
@@ -73,6 +76,15 @@ describe('TraceCalls Decorator', () => {
 
     async internalMethod(val: string) {
       return Promise.resolve(`internal-${val}`);
+    }
+
+    @TraceCalls('log')
+    async usesDependencyThroughInternalMethod(input: string) {
+      return this.internalMethodUsingDependency(input);
+    }
+
+    async internalMethodUsingDependency(val: string) {
+      return this.dependency.greet(val);
     }
 
     @TraceCalls('log')
@@ -123,6 +135,21 @@ describe('TraceCalls Decorator', () => {
 
     expect(mockLogger.error).toHaveBeenCalledWith(
       expect.stringMatching(/\[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/),
+    );
+  });
+
+  it('should preserve proxied this when an internal method uses an injected-like dependency', async () => {
+    const example = new Example();
+
+    await expect(example.usesDependencyThroughInternalMethod('world')).resolves.toBe('hello-world');
+
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /\[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethodUsingDependency\(\) - \d+\.\d+ms/,
+      ),
+    );
+    expect(mockLogger.log).toHaveBeenCalledWith(
+      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] dependency.greet\(\) - \d+\.\d+ms/),
     );
   });
 

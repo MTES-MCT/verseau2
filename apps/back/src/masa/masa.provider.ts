@@ -3,6 +3,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { SclEntity } from '@referentiel/roseau/entities/scl.entity';
 import {
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
@@ -10,10 +11,17 @@ import {
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
   SteuCdnBySandreCda,
+  SclCdnBySandreCda,
   ItvCdnByRfa,
   AgByEmail,
   IntervenantAuth,
   VSteuSclItvResult,
+  ConformiteSteuFilters,
+  ConformiteSclFilters,
+  ConformiteSteuRow,
+  ConformiteSclRow,
+  ConformiteSteuDetailRow,
+  ConformiteSclDetailRow,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -46,6 +54,14 @@ export class MasaProvider {
 
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
     return this.roseauGateway.findSteuBatchBySandreCdas(cdas);
+  }
+
+  async findSclBySandreCda(cda: string): Promise<SclEntity | null> {
+    return this.roseauGateway.findSclBySandreCda(cda);
+  }
+
+  async findSclBatchBySandreCdas(cdas: string[]): Promise<SclCdnBySandreCda[]> {
+    return this.roseauGateway.findSclBatchBySandreCdas(cdas);
   }
 
   // ---------------------------------------------------------------------------
@@ -239,6 +255,42 @@ export class MasaProvider {
 
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
     return this.roseauGateway.findMesures(filters);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Conformité STEU — Tableau de bord conformité des stations d'épuration
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
+    return this.roseauGateway.findConformiteSteu(filters);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Conformité SCL — Tableau de bord conformité des systèmes de collecte
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
+    return this.roseauGateway.findConformiteScl(filters);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Conformité STEU Détail — Détail performance pour une STEU donnée
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null> {
+    return this.roseauGateway.findConformiteSteuDetail(steuCdn, annee);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Conformité SCL Détail — Détail performance pour un SCL donné
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null> {
+    return this.roseauGateway.findConformiteSclDetail(sclCdn, annee);
   }
 
   // ---------------------------------------------------------------------------

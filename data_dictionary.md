@@ -33,6 +33,63 @@ ouvrageDepollutionDebitMaximalReference, max(stchan_pc95_val; cpy_ref_debit_mt),
 chargeEntranteMaximaleEHN, stchan_r_eh_max_chg_val (annee N), Charge entrante maximale en equivalent-habitants pour l'annee courante
 chargeEntranteMaximaleEHNMoins1, stchan_r_eh_max_chg_val (annee N-1), Charge entrante maximale en equivalent-habitants pour l'annee precedente
 trancheObligationLibelle, tltobl_lb, Libelle de la tranche de taille d'agglomeration (obligation reglementaire)
+capaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants dans le tableau conformite
+suiviDebutDate, steureg_suiv_deb_dt / sclreg_suiv_deb_dt, Date de debut de la periode de suivi du bilan conformite
+suiviFinDate, steureg_suiv_fin_dt / sclreg_suiv_fin_dt, Date de fin de la periode de suivi du bilan conformite
+conformiteNationaleProvisoire, cfprf_r_glob_perf_eru_conf_in, Conformite nationale provisoire en performance ERU de la STEU
+conformiteLocaleProvisoire, cfprf_r_glob_perf_loc_conf_in, Conformite locale provisoire en performance de la STEU
+impactConformite, computed (cfprf/steureg ou bilanscl/sclreg), Indique si les conformites provisoires different du suivi regulier
+suiviRegulierEffectue, steureg_suivi_reg_on / sclreg_suivi_reg_on, Indique si un suivi regulier a ete effectue
+suiviRegulierDate, steureg_suivi_reg_dt / sclreg_suivi_reg_dt, Date du dernier suivi regulier effectue
+typeScl, tlref_mnemo_lb (LREF_05), Type du systeme de collecte
+conformiteLocaleTempsPluieProvisoire, bilanscl_conf_tp_eru_in, Conformite locale provisoire du systeme de collecte en temps de pluie
+conformiteNationaleTempsPluieProvisoire, bilanscl_conf_nat_tp_eru_in, Conformite nationale provisoire du systeme de collecte en temps de pluie
+conformiteLocaleParametresConformesPeriodeNb, steureg_conf_loc_per_nb, Nombre de parametres conformes sur la periode (local)
+conformiteLocaleParametresConformesAnneeNb, steureg_conf_loc_an_nb, Nombre de parametres conformes sur l'annee (local)
+conformiteLocaleParametresNonConformesPeriodeNb, steureg_non_conf_loc_per_nb, Nombre de parametres non conformes sur la periode (local)
+conformiteLocaleParametresNonConformesAnneeNb, steureg_non_conf_loc_an_nb, Nombre de parametres non conformes sur l'annee (local)
+conformiteLocaleRedhibitoiresPeriodeNb, steureg_redh_loc_per_nb, Nombre de parametres redhibitoires sur la periode (local)
+conformiteLocaleRedhibitoiresAnneeNb, steureg_redh_loc_an_nb, Nombre de parametres redhibitoires sur l'annee (local)
+conformiteLocaleParametresConformesPeriodeLb, steureg_conf_loc_per_lb, Libelle des parametres conformes sur la periode (local)
+conformiteLocaleParametresConformesAnneeLb, steureg_conf_loc_an_lb, Libelle des parametres conformes sur l'annee (local)
+conformiteLocaleParametresNonConformesPeriodeLb, steureg_non_conf_loc_per_lb, Libelle des parametres non conformes sur la periode (local)
+conformiteLocaleParametresNonConformesAnneeLb, steureg_non_conf_loc_an_lb, Libelle des parametres non conformes sur l'annee (local)
+conformiteLocaleRedhibitoiresPeriodeLb, steureg_redh_loc_per_lb, Libelle des parametres redhibitoires sur la periode (local)
+conformiteLocaleRedhibitoiresAnneeLb, steureg_redh_loc_an_lb, Libelle des parametres redhibitoires sur l'annee (local)
+conformiteNationaleParametresConformesPeriodeNb, steureg_conf_nat_per_nb, Nombre de parametres conformes sur la periode (national)
+conformiteNationaleParametresConformesAnneeNb, steureg_conf_nat_an_nb, Nombre de parametres conformes sur l'annee (national)
+conformiteNationaleParametresNonConformesPeriodeNb, steureg_non_conf_nat_per_nb, Nombre de parametres non conformes sur la periode (national)
+conformiteNationaleParametresNonConformesAnneeNb, steureg_non_conf_nat_an_nb, Nombre de parametres non conformes sur l'annee (national)
+conformiteNationaleRedhibitoiresPeriodeNb, steureg_redh_nat_per_nb, Nombre de parametres redhibitoires sur la periode (national)
+conformiteNationaleRedhibitoiresAnneeNb, steureg_redh_nat_an_nb, Nombre de parametres redhibitoires sur l'annee (national)
+conformiteNationaleParametresConformesPeriodeLb, steureg_conf_nat_per_lb, Libelle des parametres conformes sur la periode (national)
+conformiteNationaleParametresConformesAnneeLb, steureg_conf_nat_an_lb, Libelle des parametres conformes sur l'annee (national)
+conformiteNationaleParametresNonConformesPeriodeLb, steureg_non_conf_nat_per_lb, Libelle des parametres non conformes sur la periode (national)
+conformiteNationaleParametresNonConformesAnneeLb, steureg_non_conf_nat_an_lb, Libelle des parametres non conformes sur l'annee (national)
+conformiteNationaleRedhibitoiresPeriodeLb, steureg_redh_nat_per_lb, Libelle des parametres redhibitoires sur la periode (national)
+conformiteNationaleRedhibitoiresAnneeLb, steureg_redh_nat_an_lb, Libelle des parametres redhibitoires sur l'annee (national)
+hcnfPeriodeNb, steureg_hcnf_per_nb, Nombre de HCNF sur la periode
+hcnfAnneeNb, steureg_hcnf_an_nb, Nombre de HCNF sur l'annee
+hctsPeriodeNb, steureg_hcts_per_nb, Nombre de HCTS sur la periode
+hctsAnneeNb, steureg_hcts_an_nb, Nombre de HCTS sur l'annee
+hcnfPeriodeLb, steureg_hcnf_per_lb, Libelle HCNF sur la periode
+hcnfAnneeLb, steureg_hcnf_an_lb, Libelle HCNF sur l'annee
+hctsPeriodeLb, steureg_hcts_per_lb, Libelle HCTS sur la periode
+hctsAnneeLb, steureg_hcts_an_lb, Libelle HCTS sur l'annee
+evenementsPeriodeNb, steureg_evt_per_nb, Nombre d'evenements sur la periode
+evenementsAnneeNb, steureg_evt_an_nb, Nombre d'evenements sur l'annee
+volumeDeversePeriodePc, sclreg_per_vol_dev_pc, Pourcentage du volume deverse sur la periode
+volumeDeverseAnneePc, sclreg_an_vol_dev_pc, Pourcentage du volume deverse sur l'annee
+conformiteVolumePeriode, sclreg_per_conf_vol_dev_in, Conformite du volume deverse sur la periode
+conformiteVolumeAnnee, sclreg_an_conf_vol_dev_in, Conformite du volume deverse sur l'annee
+fluxDeversePeriodePc, sclreg_per_flux_dev_pc, Pourcentage du flux deverse sur la periode
+fluxDeverseAnneePc, sclreg_an_flux_dev_pc, Pourcentage du flux deverse sur l'annee
+conformiteFluxPeriode, sclreg_per_conf_flux_dev_in, Conformite du flux deverse sur la periode
+conformiteFluxAnnee, sclreg_an_conf_flux_dev_in, Conformite du flux deverse sur l'annee
+joursDeversementPeriodeNb, sclreg_per_jour_dev_nb, Nombre de jours deversement sur la periode
+joursDeversementAnneeNb, sclreg_an_jour_dev_nb, Nombre de jours deversement sur l'annee
+conformiteJoursDeversementPeriode, sclreg_per_conf_jour_dev_in, Conformite du nombre de jours deversement sur la periode
+conformiteJoursDeversementAnnee, sclreg_an_conf_jour_dev_in, Conformite du nombre de jours deversement sur l'annee
 bilanReferenceAnnee, stchan_an, Annee de reference des charges annuelles du bilan
 boueProductionAnnuelle, pab_an_reac_hors_prod_r_val, Production annuelle de boue hors reactifs (table pab)
 boueProductionAnnee, pab_an, Annee de reference de la production de boue

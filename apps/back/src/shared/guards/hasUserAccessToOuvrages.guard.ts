@@ -3,6 +3,7 @@ import { MasaProvider } from '@masa/masa.provider';
 import { LoggerService } from '@shared/logger/logger.service';
 import { CustomRequest } from '@shared/constants/customRequest';
 
+// TODO : refactor en un guard et un middleware (AttachOuvragesInterceptor)
 @Injectable()
 export class HasUserAccessToOuvragesGuard implements CanActivate {
   constructor(

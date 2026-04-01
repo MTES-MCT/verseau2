@@ -76,6 +76,11 @@ export function AppHeader() {
             isActive: isNavItemActive(AppRoutes.DASHBOARD),
           },
           {
+            text: 'Conformité',
+            linkProps: { href: AppRoutes.CONFORMITE_DASHBOARD },
+            isActive: isNavItemActive(AppRoutes.CONFORMITE_DASHBOARD),
+          },
+          {
             text: "Gestion des données d'autosurveillance",
             isActive: isNavItemActive('/depot'),
             menuLinks: [

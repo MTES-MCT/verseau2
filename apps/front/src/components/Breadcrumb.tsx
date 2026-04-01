@@ -33,6 +33,13 @@ export const Breadcrumb = () => {
       });
     }
 
+    if (pathname === AppRoutes.CONFORMITE_DASHBOARD) {
+      segments.push({
+        label: 'Tableau de bord',
+        href: AppRoutes.DASHBOARD,
+      });
+    }
+
     return segments.length > 0 ? segments : [];
   };
 
@@ -49,6 +56,8 @@ export const Breadcrumb = () => {
     currentPageLabel = 'Récapitulatif';
   } else if (location.pathname === AppRoutes.DASHBOARD) {
     currentPageLabel = 'Tableau de bord';
+  } else if (location.pathname === AppRoutes.CONFORMITE_DASHBOARD) {
+    currentPageLabel = 'Tableau de bord conformité';
   } else if (location.pathname.startsWith(AppRoutes.CONTROLE.split(':')[0])) {
     currentPageLabel = 'Détails du contrôle';
     segments.push({

@@ -7,6 +7,12 @@ import {
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
+  ConformiteSclDetailRow,
+  ConformiteSclFilters,
+  ConformiteSclRow,
+  ConformiteSteuDetailRow,
+  ConformiteSteuFilters,
+  ConformiteSteuRow,
   ProductionBoueZero,
   MesureFilters,
   MesureRow,
@@ -16,12 +22,14 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
+  SclCdnBySandreCda,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
   findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
+  findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
   findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
@@ -39,6 +47,10 @@ export interface RoseauGateway {
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
+  findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }>;
+  findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }>;
+  findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null>;
+  findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
