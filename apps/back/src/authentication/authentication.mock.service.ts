@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Authentication, AuthenticatedUser, OIDCTokens, OIDCConfiguration } from './authentication';
+import {
+  Authentication,
+  AuthenticatedUser,
+  OIDCTokens,
+  OIDCConfiguration,
+  AuthenticatedUserAndNomPrenom,
+} from './authentication';
 import type { Response } from 'express';
 
 @Injectable()
@@ -28,7 +34,7 @@ export class AuthenticationMockService implements Authentication {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUser }> {
+  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     const fakeToken = 'mock-token';
     return {
       accessToken: fakeToken,
@@ -83,12 +89,14 @@ export class AuthenticationMockService implements Authentication {
     res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 
-  private getMockUser(): AuthenticatedUser {
+  private getMockUser(): AuthenticatedUserAndNomPrenom {
     return {
       cerbereId: 'test-user-id',
       mel: 'dev@example.com',
       itvCdn: 900995,
       isExpertNational: false,
+      nom: 'Test',
+      prenom: 'User',
     };
   }
 }

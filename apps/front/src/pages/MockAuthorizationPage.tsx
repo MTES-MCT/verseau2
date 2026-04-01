@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { authService } from '../services/auth.service';
+import { useAuth } from '../hooks/useAuth';
 import { AppRoutes } from '../routes';
 
 /**
@@ -9,6 +10,7 @@ import { AppRoutes } from '../routes';
  */
 export default function MockAuthorizationPage() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +30,7 @@ export default function MockAuthorizationPage() {
 
       // Simule le callback OIDC
       await authService.handleCallback(mockCode, mockState);
+      await refreshUser();
 
       // Redirige vers le dashboard après succès
       navigate(AppRoutes.DASHBOARD, { replace: true });
