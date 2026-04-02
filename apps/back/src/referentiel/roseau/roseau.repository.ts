@@ -1196,7 +1196,7 @@ export class RoseauRepository implements RoseauGateway {
         FROM roseau.evo evo
         JOIN roseau.steu steu ON steu.steu_cdn = evo.steu_cdn
         JOIN roseau.tlref t46 ON t46.tlref_cdn = evo.tlref_46_cdn
-        JOIN roseau.tlref t17 ON t17.tlref_cdn = evo.tlref_17_cdn
+        LEFT JOIN roseau.tlref t17 ON t17.tlref_cdn = evo.tlref_17_cdn
         WHERE ${whereClauses.join(' AND ')}
       )
     `;
@@ -1309,7 +1309,7 @@ export class RoseauRepository implements RoseauGateway {
         JOIN roseau.scl scl ON scl.scl_cdn = pmo.scl_cdn
         JOIN roseau.steu steu ON steu.steu_cdn = scl.steu_cdn
         JOIN roseau.tlref t46 ON t46.tlref_cdn = evo.tlref_46_cdn
-        JOIN roseau.tlref t17 ON t17.tlref_cdn = evo.tlref_17_cdn
+        LEFT JOIN roseau.tlref t17 ON t17.tlref_cdn = evo.tlref_17_cdn
         WHERE ${whereClauses.join(' AND ')}
       )
     `;

@@ -1,5 +1,6 @@
-import { useState, type ChangeEvent } from 'react';
+import { useMemo, type ChangeEvent } from 'react';
 import type { EvenementSteuDto, EvenementSclDto } from '@lib/dossier';
+import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
@@ -7,22 +8,29 @@ import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useEvenementSteu, useEvenementScl, useEvenementTypes, useEvenementPmo } from '../../../hooks/useEvenement';
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
-import { renderPrisEnCompteBadge, formatDate } from '../../../helper/evenementTableData';
+import { renderPrisEnCompteBadge } from '../../../helper/evenementTableData';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
 import { useOuvrages } from '../../../hooks/useOuvrages';
 import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
-import { getPreviousSunday } from '../../../../../../packages/shared/src/date.service';
+import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 
 export const EvenementDashboard = () => {
-  const { filters, updateFilter } = useEvenementFilters();
-  const [page, setPage] = useState(1);
+  const { filters, updateFilter, page, setPage } = useEvenementFilters();
   const pageSize = 10;
 
   const { data: types } = useEvenementTypes();
   const { data: pmos } = useEvenementPmo(filters.mode === 'scl');
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+
+  const yearOptions = useMemo(
+    () =>
+      [CURRENT_EVENEMENT_YEAR, CURRENT_EVENEMENT_YEAR - 1]
+        .filter((year, index, years) => year >= FIRST_EVENEMENT_YEAR && years.indexOf(year) === index)
+        .map((year) => year.toString()),
+    [],
+  );
 
   const isScl = filters.mode === 'scl';
 
@@ -64,7 +72,7 @@ export const EvenementDashboard = () => {
 
     if (filters.mode === 'scl') {
       const sclRow = row as EvenementSclDto;
-      return [...baseRow, `${sclRow.pointMesureNumero} - ${sclRow.pointMesureLibelle}`];
+      return [...baseRow, `${sclRow.pointMesureNumero} - ${sclRow.pointMesureLibelle ?? '-'}`];
     }
     return baseRow;
   };
@@ -110,8 +118,11 @@ export const EvenementDashboard = () => {
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
             }}
           >
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
           </Select>
         </div>
         <div className="fr-col-12 fr-col-md-3">
@@ -171,17 +182,19 @@ export const EvenementDashboard = () => {
           ...(filters.mode === 'scl' ? ['Point de mesures'] : []),
         ]}
       />
-      <Pagination
-        count={Math.ceil((data?.total || 0) / pageSize)}
-        defaultPage={page}
-        getPageLinkProps={(pageNumber: number) => ({
-          href: `#page-${pageNumber}`,
-          onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-            e.preventDefault();
-            setPage(pageNumber);
-          },
-        })}
-      />
+      {Math.ceil((data?.total || 0) / pageSize) > 1 && (
+        <Pagination
+          count={Math.ceil((data?.total || 0) / pageSize)}
+          defaultPage={page}
+          getPageLinkProps={(pageNumber: number) => ({
+            href: `#page-${pageNumber}`,
+            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+              e.preventDefault();
+              setPage(pageNumber);
+            },
+          })}
+        />
+      )}
     </div>
   );
 };

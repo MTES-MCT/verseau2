@@ -8,7 +8,3 @@ export function renderPrisEnCompteBadge(value: boolean): ReactNode {
     </Badge>
   );
 }
-
-export const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('fr-FR');
-};

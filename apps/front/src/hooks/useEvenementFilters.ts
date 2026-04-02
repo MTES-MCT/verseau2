@@ -22,6 +22,8 @@ export const useEvenementFilters = () => {
     systemeCollecteCode: '',
   });
 
+  const [page, setPage] = useState(1);
+
   const updateFilter = (newFilters: Partial<FilterState>) => {
     setFilters((prev) => {
       const updated = { ...prev, ...newFilters };
@@ -33,7 +35,8 @@ export const useEvenementFilters = () => {
       }
       return updated;
     });
+    setPage(1);
   };
 
-  return { filters, updateFilter };
+  return { filters, updateFilter, page, setPage };
 };

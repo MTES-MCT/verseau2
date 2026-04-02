@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchEvenementSteu, fetchEvenementScl, fetchEvenementTypes, fetchEvenementPmo } from '../api/evenement';
 
 export const useEvenementSteu = (query: Record<string, unknown>, enabled: boolean) =>
@@ -6,7 +6,7 @@ export const useEvenementSteu = (query: Record<string, unknown>, enabled: boolea
     queryKey: ['evenement', 'steu', query],
     queryFn: () => fetchEvenementSteu(query),
     enabled,
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 
 export const useEvenementScl = (query: Record<string, unknown>, enabled: boolean) =>
@@ -14,7 +14,7 @@ export const useEvenementScl = (query: Record<string, unknown>, enabled: boolean
     queryKey: ['evenement', 'scl', query],
     queryFn: () => fetchEvenementScl(query),
     enabled,
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 
 export const useEvenementTypes = () =>

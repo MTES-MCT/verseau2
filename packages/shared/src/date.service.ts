@@ -2,7 +2,7 @@ export const formatDate = (date: Date | string | null): string => {
   if (!date) {
     return '-';
   }
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === 'string' ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00` : date) : date;
   return d.toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: '2-digit',
