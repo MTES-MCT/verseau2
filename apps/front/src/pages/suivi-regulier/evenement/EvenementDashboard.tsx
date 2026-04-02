@@ -56,8 +56,29 @@ export const EvenementDashboard = () => {
     }
   };
 
-  const { data: steuData } = useEvenementSteu({ ...filters, page, pageSize }, filters.mode === 'steu');
-  const { data: sclData } = useEvenementScl({ ...filters, page, pageSize }, filters.mode === 'scl');
+  const steuQuery = {
+    page,
+    pageSize,
+    year: filters.year,
+    ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
+    ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
+    ...(filters.sortBy ? { sortBy: filters.sortBy as any } : {}),
+    ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
+  };
+
+  const sclQuery = {
+    page,
+    pageSize,
+    year: filters.year,
+    ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
+    ...(filters.systemeCollecteCode ? { systemeCollecteCode: filters.systemeCollecteCode } : {}),
+    ...(filters.pointMesureIdentifiant ? { pointMesureIdentifiant: Number(filters.pointMesureIdentifiant) } : {}),
+    ...(filters.sortBy ? { sortBy: filters.sortBy as any } : {}),
+    ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
+  };
+
+  const { data: steuData } = useEvenementSteu(steuQuery, filters.mode === 'steu');
+  const { data: sclData } = useEvenementScl(sclQuery, filters.mode === 'scl');
 
   const data = filters.mode === 'steu' ? steuData : sclData;
 
