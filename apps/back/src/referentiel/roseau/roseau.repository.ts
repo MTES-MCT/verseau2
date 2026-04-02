@@ -39,6 +39,10 @@ import {
   NomenclatureItem,
   PointMesureReferentielRow,
   SclCdnBySandreCda,
+  EvenementSteuFilters,
+  EvenementSteuRow,
+  EvenementSclFilters,
+  EvenementSclRow,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
@@ -1137,6 +1141,261 @@ export class RoseauRepository implements RoseauGateway {
     return rows.map((r) => ({
       parametreAnalyseCode: r.par_rfa?.trim() ?? '',
       parametreNomCourt: r.par_court_nom_lb?.trim() ?? null,
+    }));
+  }
+
+  async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
+    const { steuCdns, year, page, pageSize } = filters;
+
+    if (steuCdns.length === 0) {
+      return { data: [], total: 0 };
+    }
+
+    const sortBy = filters.sortBy ?? 'date';
+    const sortOrder = filters.sortOrder ?? 'ASC';
+
+    const sortMap: Record<NonNullable<EvenementSteuFilters['sortBy']>, string> = {
+      date: 'date',
+      typeEvenementCode: 'type_evenement_code',
+      prisEnCompte: 'pris_en_compte',
+      finalite: 'finalite',
+    };
+
+    const sortColumn = sortMap[sortBy];
+    if (!sortColumn) {
+      throw new Error(`Invalid sortBy value: "${sortBy}"`);
+    }
+
+    const queryParams: Array<number | string | boolean> = [];
+    const addParam = (value: number | string | boolean) => {
+      queryParams.push(value);
+      return `$${queryParams.length}`;
+    };
+
+    const yearPlaceholder = addParam(year);
+    const steuPlaceholders = steuCdns.map((cdn) => addParam(cdn)).join(', ');
+    const whereClauses = [
+      `steu.steu_cdn IN (${steuPlaceholders})`,
+      `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
+      `t46.tlref_elt_cda IN ('1','2','3','4')`,
+    ];
+
+    if (filters.typeEvenementCode) {
+      whereClauses.push(`t46.tlref_elt_cda = ${addParam(filters.typeEvenementCode)}`);
+    }
+
+    const baseQuery = `
+      WITH base_data AS (
+        SELECT
+          evo.evo_inactif_on AS pris_en_compte,
+          evo.evo_evt_dt AS date,
+          t46.tlref_elt_cda AS type_evenement_code,
+          t46.tlref_mnemo_lb AS type_evenement_libelle,
+          t17.tlref_mnemo_lb AS finalite,
+          evo.evo_desc_txt AS commentaire
+        FROM roseau.evo evo
+        JOIN roseau.steu steu ON steu.steu_cdn = evo.steu_cdn
+        JOIN roseau.tlref t46 ON t46.tlref_cdn = evo.tlref_46_cdn
+        JOIN roseau.tlref t17 ON t17.tlref_cdn = evo.tlref_17_cdn
+        WHERE ${whereClauses.join(' AND ')}
+      )
+    `;
+
+    const countRows = await this.dataSource.query<{ total: number | string }[]>(
+      `${baseQuery} SELECT COUNT(*)::int AS total FROM base_data`,
+      queryParams,
+    );
+
+    const dataQueryParams = [...queryParams];
+    dataQueryParams.push(pageSize);
+    const limitPlaceholder = `$${dataQueryParams.length}`;
+    dataQueryParams.push((page - 1) * pageSize);
+    const offsetPlaceholder = `$${dataQueryParams.length}`;
+
+    const rows = await this.dataSource.query<
+      {
+        pris_en_compte: boolean;
+        date: Date | string;
+        type_evenement_code: string;
+        type_evenement_libelle: string;
+        finalite: string | null;
+        commentaire: string | null;
+      }[]
+    >(
+      `${baseQuery}
+       SELECT * FROM base_data
+       ORDER BY ${sortColumn} ${sortOrder}, date ASC
+       LIMIT ${limitPlaceholder}
+       OFFSET ${offsetPlaceholder}`,
+      dataQueryParams,
+    );
+
+    const formatDate = (value: Date | string | null) => {
+      if (!value) return null;
+      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
+    };
+
+    return {
+      data: rows.map((row) => ({
+        prisEnCompte: row.pris_en_compte,
+        date: formatDate(row.date) ?? '',
+        typeEvenementCode: row.type_evenement_code?.trim() ?? '',
+        typeEvenementLibelle: row.type_evenement_libelle?.trim() ?? '',
+        finalite: row.finalite?.trim() ?? null,
+        commentaire: row.commentaire?.trim() ?? null,
+      })),
+      total: Number(countRows[0]?.total ?? 0),
+    };
+  }
+
+  async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
+    const { sclCdns, year, page, pageSize } = filters;
+
+    if (sclCdns.length === 0) {
+      return { data: [], total: 0 };
+    }
+
+    const sortBy = filters.sortBy ?? 'date';
+    const sortOrder = filters.sortOrder ?? 'ASC';
+
+    const sortMap: Record<NonNullable<EvenementSclFilters['sortBy']>, string> = {
+      date: 'date',
+      typeEvenementCode: 'type_evenement_code',
+      prisEnCompte: 'pris_en_compte',
+      finalite: 'finalite',
+      pointMesureNumero: 'point_mesure_numero',
+    };
+
+    const sortColumn = sortMap[sortBy];
+    if (!sortColumn) {
+      throw new Error(`Invalid sortBy value: "${sortBy}"`);
+    }
+
+    const queryParams: Array<number | string | boolean> = [];
+    const addParam = (value: number | string | boolean) => {
+      queryParams.push(value);
+      return `$${queryParams.length}`;
+    };
+
+    const yearPlaceholder = addParam(year);
+    const sclPlaceholders = sclCdns.map((cdn) => addParam(cdn)).join(', ');
+    const whereClauses = [
+      `scl.scl_cdn IN (${sclPlaceholders})`,
+      `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
+      `t46.tlref_elt_cda IN ('1','2','3','4')`,
+    ];
+
+    if (filters.typeEvenementCode) {
+      whereClauses.push(`t46.tlref_elt_cda = ${addParam(filters.typeEvenementCode)}`);
+    }
+
+    if (filters.pointMesureIdentifiant) {
+      whereClauses.push(`pmo.pmo_cdn = ${addParam(filters.pointMesureIdentifiant)}`);
+    }
+
+    const baseQuery = `
+      WITH base_data AS (
+        SELECT
+          evo.evo_inactif_on AS pris_en_compte,
+          evo.evo_evt_dt AS date,
+          t46.tlref_elt_cda AS type_evenement_code,
+          t46.tlref_mnemo_lb AS type_evenement_libelle,
+          t17.tlref_mnemo_lb AS finalite,
+          evo.evo_desc_txt AS commentaire,
+          pmo.pmo_no AS point_mesure_numero,
+          pmo.pmo_lb AS point_mesure_libelle
+        FROM roseau.evo evo
+        JOIN roseau.pmo pmo ON pmo.pmo_cdn = evo.pmo_cdn
+        JOIN roseau.scl scl ON scl.scl_cdn = pmo.scl_cdn
+        JOIN roseau.steu steu ON steu.steu_cdn = scl.steu_cdn
+        JOIN roseau.tlref t46 ON t46.tlref_cdn = evo.tlref_46_cdn
+        JOIN roseau.tlref t17 ON t17.tlref_cdn = evo.tlref_17_cdn
+        WHERE ${whereClauses.join(' AND ')}
+      )
+    `;
+
+    const countRows = await this.dataSource.query<{ total: number | string }[]>(
+      `${baseQuery} SELECT COUNT(*)::int AS total FROM base_data`,
+      queryParams,
+    );
+
+    const dataQueryParams = [...queryParams];
+    dataQueryParams.push(pageSize);
+    const limitPlaceholder = `$${dataQueryParams.length}`;
+    dataQueryParams.push((page - 1) * pageSize);
+    const offsetPlaceholder = `$${dataQueryParams.length}`;
+
+    const rows = await this.dataSource.query<
+      {
+        pris_en_compte: boolean;
+        date: Date | string;
+        type_evenement_code: string;
+        type_evenement_libelle: string;
+        finalite: string | null;
+        commentaire: string | null;
+        point_mesure_numero: string;
+        point_mesure_libelle: string | null;
+      }[]
+    >(
+      `${baseQuery}
+       SELECT * FROM base_data
+       ORDER BY ${sortColumn} ${sortOrder}, date ASC
+       LIMIT ${limitPlaceholder}
+       OFFSET ${offsetPlaceholder}`,
+      dataQueryParams,
+    );
+
+    const formatDate = (value: Date | string | null) => {
+      if (!value) return null;
+      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
+    };
+
+    return {
+      data: rows.map((row) => ({
+        prisEnCompte: row.pris_en_compte,
+        date: formatDate(row.date) ?? '',
+        typeEvenementCode: row.type_evenement_code?.trim() ?? '',
+        typeEvenementLibelle: row.type_evenement_libelle?.trim() ?? '',
+        finalite: row.finalite?.trim() ?? null,
+        commentaire: row.commentaire?.trim() ?? null,
+        pointMesureNumero: row.point_mesure_numero?.trim() ?? '',
+        pointMesureLibelle: row.point_mesure_libelle?.trim() ?? null,
+      })),
+      total: Number(countRows[0]?.total ?? 0),
+    };
+  }
+
+  async findEvenementTypes(): Promise<NomenclatureItem[]> {
+    const rows = await this.tlrefRepository
+      .createQueryBuilder('tlref')
+      .where('tlref.trl_rfa = :trlRfa', { trlRfa: 'LREF_46' })
+      .andWhere('tlref.tlref_elt_cda IN (:...codes)', { codes: ['1', '2', '3', '4'] })
+      .orderBy('tlref.tlref_elt_cda', 'ASC')
+      .getMany();
+
+    return rows.map((r) => ({
+      elementNomenclatureCode: r.tlrefEltCda?.trim() ?? '',
+      elementNomenclatureLibelle: r.tlrefMnemoLb?.trim() ?? null,
+    }));
+  }
+
+  async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {
+    if (sclCdns.length === 0) return [];
+
+    const rows = await this.pmoRepository
+      .createQueryBuilder('pmo')
+      .select('pmo.pmo_cdn', 'pmo_cdn')
+      .addSelect('pmo.pmo_no', 'pmo_no')
+      .addSelect('pmo.pmo_lb', 'pmo_lb')
+      .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+      .where('scl.scl_cdn IN (:...sclCdns)', { sclCdns })
+      .orderBy('pmo.pmo_no', 'ASC')
+      .getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+
+    return rows.map((r) => ({
+      pointMesureIdentifiant: r.pmo_cdn,
+      pointMesureNumero: r.pmo_no?.trim() ?? '',
+      pointMesureLibelle: r.pmo_lb?.trim() ?? null,
     }));
   }
 

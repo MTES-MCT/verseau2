@@ -22,6 +22,10 @@ import {
   ConformiteSclRow,
   ConformiteSteuDetailRow,
   ConformiteSclDetailRow,
+  EvenementSclFilters,
+  EvenementSteuFilters,
+  EvenementSclRow,
+  EvenementSteuRow,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -258,9 +262,25 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Conformité STEU — Tableau de bord conformité des stations d'épuration
+  // Événements — Tableau de bord des événements 1, 2, 3, 4
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
+
+  async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
+    return this.roseauGateway.findEvenementSteu(filters);
+  }
+
+  async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
+    return this.roseauGateway.findEvenementScl(filters);
+  }
+
+  async findEvenementTypes(): Promise<NomenclatureItem[]> {
+    return this.roseauGateway.findEvenementTypes();
+  }
+
+  async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureBySclCdns(sclCdns);
+  }
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
     return this.roseauGateway.findConformiteSteu(filters);

@@ -11,6 +11,7 @@ export const AppRoutes = {
   REFERENTIEL: '/referentiel',
   REFERENTIEL_POINTS_DE_MESURE: '/referentiel/points-de-mesure',
   MOCK_AUTHORIZATION: '/mock_authorization',
+  EVENEMENT_DASHBOARD: '/suivi-regulier/evenement',
   DESIGN_SYSTEM: '/design-system',
 } as const;
 

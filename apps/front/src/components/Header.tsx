@@ -81,6 +81,11 @@ export function AppHeader() {
             isActive: isNavItemActive(AppRoutes.CONFORMITE_DASHBOARD),
           },
           {
+            text: 'Événements',
+            linkProps: { href: AppRoutes.EVENEMENT_DASHBOARD },
+            isActive: isNavItemActive(AppRoutes.EVENEMENT_DASHBOARD),
+          },
+          {
             text: "Gestion des données d'autosurveillance",
             isActive: isNavItemActive('/depot'),
             menuLinks: [
