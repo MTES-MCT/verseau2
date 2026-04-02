@@ -85,8 +85,10 @@ describe('EvenementController (e2e)', () => {
   });
 
   describe('GET /suivi-regulier/evenement/steu', () => {
+    const currentYear = new Date().getFullYear();
+
     it('returns 401 when no access token is provided', () => {
-      return request(app.getHttpServer()).get('/suivi-regulier/evenement/steu?year=2025').expect(401);
+      return request(app.getHttpServer()).get(`/suivi-regulier/evenement/steu?year=${currentYear}`).expect(401);
     });
 
     it('returns paginated evenement STEU', async () => {
@@ -116,7 +118,7 @@ describe('EvenementController (e2e)', () => {
             typeEvenementCode: 'TYPE_1',
             typeEvenementLibelle: 'Type 1',
             prisEnCompte: true,
-            date: '2025-01-01',
+            date: `${currentYear}-01-01`,
             finalite: null,
             commentaire: null,
           },
@@ -125,7 +127,7 @@ describe('EvenementController (e2e)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get('/suivi-regulier/evenement/steu?year=2025&page=1&pageSize=20')
+        .get(`/suivi-regulier/evenement/steu?year=${currentYear}&page=1&pageSize=20`)
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -142,7 +144,7 @@ describe('EvenementController (e2e)', () => {
 
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
         steuCdns: [10],
-        year: 2025,
+        year: currentYear,
         page: 1,
         pageSize: 20,
       });
@@ -166,7 +168,7 @@ describe('EvenementController (e2e)', () => {
       ]);
       // If user asks for a specific STEU they don't have access to
       const response = await request(app.getHttpServer())
-        .get('/suivi-regulier/evenement/steu?year=2025&ouvrageDepollutionCode=STEU_TEST_001')
+        .get(`/suivi-regulier/evenement/steu?year=${currentYear}&ouvrageDepollutionCode=STEU_TEST_001`)
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -182,8 +184,10 @@ describe('EvenementController (e2e)', () => {
   });
 
   describe('GET /suivi-regulier/evenement/scl', () => {
+    const currentYear = new Date().getFullYear();
+
     it('returns 401 when no access token is provided', () => {
-      return request(app.getHttpServer()).get('/suivi-regulier/evenement/scl?year=2025').expect(401);
+      return request(app.getHttpServer()).get(`/suivi-regulier/evenement/scl?year=${currentYear}`).expect(401);
     });
 
     it('returns paginated evenement SCL', async () => {
@@ -213,7 +217,7 @@ describe('EvenementController (e2e)', () => {
             typeEvenementCode: 'TYPE_2',
             typeEvenementLibelle: 'Type 2',
             prisEnCompte: true,
-            date: '2025-01-01',
+            date: `${currentYear}-01-01`,
             finalite: null,
             commentaire: null,
             pointMesureNumero: 'PM_1',
@@ -224,7 +228,7 @@ describe('EvenementController (e2e)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get('/suivi-regulier/evenement/scl?year=2025&page=1&pageSize=20')
+        .get(`/suivi-regulier/evenement/scl?year=${currentYear}&page=1&pageSize=20`)
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -241,7 +245,7 @@ describe('EvenementController (e2e)', () => {
 
       expect(mockMasaProvider.findEvenementScl).toHaveBeenCalledWith({
         sclCdns: [20],
-        year: 2025,
+        year: currentYear,
         page: 1,
         pageSize: 20,
       });
