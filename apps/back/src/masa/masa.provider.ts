@@ -282,6 +282,11 @@ export class MasaProvider {
     return this.roseauGateway.findPointsMesureBySclCdns(sclCdns);
   }
 
+  // ---------------------------------------------------------------------------
+  // Conformité STEU — Tableau de bord conformité des stations d'épuration
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
     return this.roseauGateway.findConformiteSteu(filters);
   }

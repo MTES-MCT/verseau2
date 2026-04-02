@@ -76,14 +76,20 @@ export function AppHeader() {
             isActive: isNavItemActive(AppRoutes.DASHBOARD),
           },
           {
-            text: 'Conformité',
-            linkProps: { href: AppRoutes.CONFORMITE_DASHBOARD },
-            isActive: isNavItemActive(AppRoutes.CONFORMITE_DASHBOARD),
-          },
-          {
-            text: 'Événements',
-            linkProps: { href: AppRoutes.EVENEMENT_DASHBOARD },
-            isActive: isNavItemActive(AppRoutes.EVENEMENT_DASHBOARD),
+            text: 'Suivi régulier',
+            isActive: isNavItemActive('/suivi-regulier'),
+            menuLinks: [
+              {
+                text: 'Conformité',
+                linkProps: { href: AppRoutes.CONFORMITE_DASHBOARD },
+                isActive: isNavItemActive(AppRoutes.CONFORMITE_DASHBOARD),
+              },
+              {
+                text: 'Événements',
+                linkProps: { href: AppRoutes.EVENEMENT_DASHBOARD },
+                isActive: isNavItemActive(AppRoutes.EVENEMENT_DASHBOARD),
+              },
+            ],
           },
           {
             text: "Gestion des données d'autosurveillance",

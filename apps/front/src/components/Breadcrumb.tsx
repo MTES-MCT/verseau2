@@ -42,7 +42,7 @@ export const Breadcrumb = () => {
 
     if (pathname === AppRoutes.EVENEMENT_DASHBOARD) {
       segments.push({
-        label: 'Suivi régulier',
+        label: 'Tableau de bord',
         href: AppRoutes.DASHBOARD,
       });
     }

@@ -2,7 +2,7 @@ export const AppRoutes = {
   HOME: '/',
   CALLBACK: '/callback',
   DASHBOARD: '/dashboard',
-  CONFORMITE_DASHBOARD: '/conformite',
+  CONFORMITE_DASHBOARD: '/suivi-regulier/conformite',
   CONTROLE: '/controle/:depotId',
   DEPOT_UPLOAD: '/depot/upload',
   DEPOT_UPLOAD_RECAP: '/depot/upload/recap',

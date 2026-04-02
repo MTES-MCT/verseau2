@@ -15,10 +15,6 @@ import {
   PaginationQuery,
 } from '@lib/dossier';
 
-// ... (keep the rest of the file)
-
-// ... (existing code)
-
 /** Filtres pour la recherche d'événements STEU */
 export interface EvenementSteuFilters extends PaginationQuery {
   steuCdns: number[];
