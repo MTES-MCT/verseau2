@@ -9,7 +9,7 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "transformIgnorePatterns": ["node_modules/(?!(openid-client|oauth4webapi|jose|pg-boss|serialize-error)/)"],
+  "transformIgnorePatterns": ["node_modules/(?!.pnpm|openid-client|oauth4webapi|jose|pg-boss|serialize-error)"],
   "moduleNameMapper": {
     "^@queue/(.*)$": "<rootDir>/src/infra/queue/$1",
     "^@database/(.*)$": "<rootDir>/src/infra/database/$1",
