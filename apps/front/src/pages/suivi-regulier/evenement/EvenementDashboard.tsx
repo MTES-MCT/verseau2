@@ -1,5 +1,5 @@
 import { useMemo, type ChangeEvent } from 'react';
-import type { EvenementSteuDto, EvenementSclDto } from '@lib/dossier';
+import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -62,7 +62,7 @@ export const EvenementDashboard = () => {
     year: filters.year,
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
-    ...(filters.sortBy ? { sortBy: filters.sortBy as any } : {}),
+    ...(filters.sortBy ? { sortBy: filters.sortBy as EvenementSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 
@@ -73,7 +73,7 @@ export const EvenementDashboard = () => {
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.systemeCollecteCode ? { systemeCollecteCode: filters.systemeCollecteCode } : {}),
     ...(filters.pointMesureIdentifiant ? { pointMesureIdentifiant: Number(filters.pointMesureIdentifiant) } : {}),
-    ...(filters.sortBy ? { sortBy: filters.sortBy as any } : {}),
+    ...(filters.sortBy ? { sortBy: filters.sortBy } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 

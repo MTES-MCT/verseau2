@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { CURRENT_EVENEMENT_YEAR } from '@lib/dossier';
+import { CURRENT_EVENEMENT_YEAR, type EvenementSteuSortByValue, type EvenementSclSortByValue } from '@lib/dossier';
+
+export type SortByValue = EvenementSteuSortByValue | EvenementSclSortByValue;
 
 export interface FilterState {
   mode: 'steu' | 'scl';
@@ -8,7 +10,7 @@ export interface FilterState {
   pointMesureIdentifiant: string;
   ouvrageDepollutionCode: string;
   systemeCollecteCode: string;
-  sortBy?: string;
+  sortBy?: SortByValue;
   sortOrder?: 'ASC' | 'DESC';
 }
 
@@ -27,6 +29,10 @@ export const useEvenementFilters = () => {
   const updateFilter = (newFilters: Partial<FilterState>) => {
     setFilters((prev) => {
       const updated = { ...prev, ...newFilters };
+      if (newFilters.mode && newFilters.mode !== prev.mode) {
+        updated.sortBy = undefined;
+        updated.sortOrder = undefined;
+      }
       if (newFilters.mode === 'steu') {
         updated.pointMesureIdentifiant = '';
         updated.systemeCollecteCode = '';
