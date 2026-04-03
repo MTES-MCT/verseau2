@@ -14,36 +14,7 @@ import { useOuvrages } from '../../../hooks/useOuvrages';
 import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
-
-function renderSortableDateHeader(
-  sortBy: EvenementSteuSortByValue | undefined,
-  sortOrder: 'ASC' | 'DESC' | undefined,
-  setSort: (nextSortBy: EvenementSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void,
-) {
-  const isSorted = sortBy === 'date';
-  const nextOrder: 'ASC' | 'DESC' = isSorted && sortOrder === 'ASC' ? 'DESC' : 'ASC';
-
-  return (
-    <button
-      type="button"
-      onClick={() => setSort('date', nextOrder)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: 0,
-      }}
-    >
-      Date
-      {isSorted && (
-        <span className={fr.cx(sortOrder === 'ASC' ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line')} />
-      )}
-    </button>
-  );
-}
+import { SortableHeader } from '../../../components/SortableHeader';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
@@ -238,11 +209,14 @@ export const EvenementDashboard = () => {
           'Pris en compte',
           'Code Sandre',
           'Nom',
-          renderSortableDateHeader(
-            filters.sortBy as EvenementSteuSortByValue | undefined,
-            filters.sortOrder,
-            handleDateSort,
-          ),
+          <SortableHeader
+            key="date"
+            label="Date"
+            field="date"
+            sortBy={filters.sortBy as EvenementSteuSortByValue | undefined}
+            sortOrder={filters.sortOrder}
+            onSort={handleDateSort}
+          />,
           "Type d'événement",
           'Finalité',
           'Commentaire',

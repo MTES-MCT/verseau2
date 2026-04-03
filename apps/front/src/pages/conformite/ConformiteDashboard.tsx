@@ -16,6 +16,7 @@ import { getPreviousSunday } from '@lib/shared';
 import { useMemo, useState, type MouseEvent } from 'react';
 import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './modal/ConformiteDetailModal.shared';
+import { SortableHeader } from '../../components/SortableHeader';
 import {
   buildConformiteSclTableHeaders,
   buildConformiteSclTableRows,
@@ -72,42 +73,6 @@ function getSclDetailKey(sclCdn: number) {
   return `scl-${sclCdn}`;
 }
 
-function renderSortableHeader<TSortBy extends string>(
-  column: ColumnConfig<TSortBy>,
-  sortBy: TSortBy | undefined,
-  sortOrder: 'ASC' | 'DESC' | undefined,
-  setSort: (nextSortBy: TSortBy, nextSortOrder: 'ASC' | 'DESC') => void,
-) {
-  if (!column.field) {
-    return column.label;
-  }
-
-  const field = column.field;
-  const isSorted = sortBy === field;
-  const nextOrder: 'ASC' | 'DESC' = isSorted && sortOrder === 'ASC' ? 'DESC' : 'ASC';
-
-  return (
-    <button
-      type="button"
-      onClick={() => setSort(field, nextOrder)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: 0,
-      }}
-    >
-      {column.label}
-      {isSorted && (
-        <span className={fr.cx(sortOrder === 'ASC' ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line')} />
-      )}
-    </button>
-  );
-}
-
 export function ConformiteDashboard() {
   const {
     form,
@@ -151,27 +116,45 @@ export function ConformiteDashboard() {
   const headers = useMemo(() => {
     if (mode === 'steu') {
       return [
-        ...STEU_COLUMNS.map((column, index) =>
-          renderSortableHeader(
-            { ...column, label: STEU_HEADER_LABELS[index] ?? column.label },
-            form.sortBy as ConformiteSteuSortByValue | undefined,
-            form.sortOrder,
-            setSort,
-          ),
-        ),
+        ...STEU_COLUMNS.map((column, index) => {
+          const label = STEU_HEADER_LABELS[index] ?? column.label;
+          if (!column.field) {
+            return label;
+          }
+
+          return (
+            <SortableHeader
+              key={column.field}
+              label={label}
+              field={column.field}
+              sortBy={form.sortBy as ConformiteSteuSortByValue | undefined}
+              sortOrder={form.sortOrder}
+              onSort={setSort as (nextSortBy: ConformiteSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+            />
+          );
+        }),
         'Détail',
       ];
     }
 
     return [
-      ...SCL_COLUMNS.map((column, index) =>
-        renderSortableHeader(
-          { ...column, label: SCL_HEADER_LABELS[index] ?? column.label },
-          form.sortBy as ConformiteSclSortByValue | undefined,
-          form.sortOrder,
-          setSort,
-        ),
-      ),
+      ...SCL_COLUMNS.map((column, index) => {
+        const label = SCL_HEADER_LABELS[index] ?? column.label;
+        if (!column.field) {
+          return label;
+        }
+
+        return (
+          <SortableHeader
+            key={column.field}
+            label={label}
+            field={column.field}
+            sortBy={form.sortBy as ConformiteSclSortByValue | undefined}
+            sortOrder={form.sortOrder}
+            onSort={setSort as (nextSortBy: ConformiteSclSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+          />
+        );
+      }),
       'Détail',
     ];
   }, [form.sortBy, form.sortOrder, mode, setSort]);
