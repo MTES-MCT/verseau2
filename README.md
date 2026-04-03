@@ -46,7 +46,6 @@ Le projet est organisé en monorepo avec les composants suivants :
     - `authentication` : Authentification OIDC
     - `notification` : Système de notifications (email)
     - `infra` : Infrastructure (DB, S3, Queue, SFTP)
-  
 - **Frontend (apps/front)** : Application React avec Vite
   - Interface utilisateur basée sur le Design System de l'État (DSFR)
   - Communication avec l'API backend
@@ -57,8 +56,8 @@ Le projet est organisé en monorepo avec les composants suivants :
 
 ## Prérequis
 
-- Node.js (version 22+)
-- npm
+- Node.js (version 24+)
+- pnpm (version 10+)
 - Docker et Docker Compose (pour l'environnement local)
 - PostgreSQL (via Docker)
 - Stockage S3 compatible (AWS S3, Outscale, ou mock local)
@@ -75,7 +74,7 @@ cd verseau2
 2. Installer les dépendances :
 
 ```bash
-npm install
+pnpm install
 ```
 
 Cela installera automatiquement les dépendances pour tous les workspaces (backend et frontend).
@@ -129,7 +128,6 @@ Créer un fichier `.env` dans `apps/front/` basé sur `src/example.env` :
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-
 ### Infrastructure locale
 
 Démarrer les services avec Docker Compose :
@@ -140,6 +138,7 @@ docker-compose up -d
 ```
 
 Cela démarre :
+
 - PostgreSQL (base de données)
 - S3Mock (Adobe S3Mock pour stockage S3)
 - App (application complète - optionnel)
@@ -152,17 +151,17 @@ Cela démarre :
 Démarrer l'ensemble de l'application (backend + frontend) :
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Ou démarrer les services individuellement :
 
 ```bash
 # Backend uniquement
-npm run dev:back
+pnpm dev:back
 
 # Frontend uniquement
-npm run dev:front
+pnpm dev:front
 ```
 
 ### Production
@@ -170,56 +169,26 @@ npm run dev:front
 1. Builder l'ensemble du projet :
 
 ```bash
-npm run build
+pnpm build
 ```
 
 2. Démarrer le backend en production (serveur + worker) :
 
 ```bash
-npm run start
+pnpm start
 ```
 
 Le frontend compilé est servi automatiquement par le backend via le module `FrontendStaticModule`.
 
-## Scripts disponibles
+## Scripts principaux
 
-### Root
-
-- `npm run dev` : Démarre backend et frontend en mode développement
-- `npm run dev:back` : Démarre uniquement le backend
-- `npm run dev:front` : Démarre uniquement le frontend
-- `npm run build` : Compile frontend et backend
-- `npm run start` : Démarre le backend en production
-- `npm run test` : Lance les tests du backend et du parser
-- `npm run clean` : Nettoie tous les workspaces
-
-### Backend (apps/back)
-
-- `npm run dev` : Démarre serveur et worker en mode watch
-- `npm run start:server:dev` : Démarre uniquement le serveur HTTP
-- `npm run start:worker:dev` : Démarre uniquement le worker
-- `npm run build` : Compile le projet
-- `npm run start` : Démarre en production (serveur + worker)
-- `npm run test` : Lance tous les tests (unitaires + e2e)
-- `npm run test:cov` : Lance les tests avec coverage
-- `npm run test:watch` : Lance les tests en mode watch
-- `npm run test:e2e` : Lance uniquement les tests end-to-end
-- `npm run lint` : Lint et corrige le code
-- `npm run clean` : Nettoie les dossiers dist et node_modules
-
-### Frontend (apps/front)
-
-- `npm run dev` : Démarre le serveur de développement Vite
-- `npm run build` : Compile pour la production
-- `npm run preview` : Prévisualise le build de production
-- `npm run lint` : Lint le code
-- `npm run format` : Formate le code avec Prettier
-- `npm run clean` : Nettoie les dossiers dist et node_modules
-
-### Packages
-
-- `npm run clean` : Nettoie tous les packages
-- `npm run test` : Lance les tests du backend et du parser
+```bash
+pnpm dev          # Démarre backend + frontend
+pnpm build        # Compile le projet
+pnpm test         # Lance les tests (back + parser)
+pnpm clean        # Nettoie tous les workspaces
+pnpm knip         # Analyse du code inutilisé
+```
 
 ## Technologies
 
@@ -311,10 +280,9 @@ Le backend suit une architecture hexagonale avec :
 
 #### Backend
 
-- **Fichiers** : 
+- **Fichiers** :
   - `camelCase` pour les fichiers TypeScript : `depot.service.ts`, `depot.controller.ts`
   - Suffixes selon le type : `.entity.ts`, `.service.ts`, `.controller.ts`, `.repository.ts`, `.gateway.ts`, `.module.ts`, `.dto.ts`, `.guard.ts`, `.decorator.ts`
-  
 - **Classes et Interfaces** :
   - `PascalCase` pour les classes : `DepotEntity`, `DepotService`, `DepotController`
   - `PascalCase` pour les interfaces/gateways : `DepotGateway`, `RoseauGateway`
@@ -372,15 +340,14 @@ Le projet supporte plusieurs environnements de mock pour faciliter le développe
 cd apps/back
 
 # Tests unitaires
-npm run test
+pnpm test
 
 # Tests avec coverage
-npm run test:cov
+pnpm test:cov
 
 # Tests e2e
-npm run test:e2e
+pnpm test:e2e
 
 # Tests en mode watch
-npm run test:watch
+pnpm test:watch
 ```
-
