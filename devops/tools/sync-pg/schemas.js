@@ -31,7 +31,7 @@ const LIVE_TO_DUMP = Object.fromEntries(LIVE_SCHEMAS.map((s, i) => [s, DUMP_SCHE
  * These tables are NOT restored from the dump. Instead they are carried over
  * from the current live schema into the staging schema before the atomic swap.
  */
-const EXCLUDED_TABLES = ['custom_ingestion_roseau.alr', 'custom_ingestion_roseau.ple'];
+const EXCLUDED_TABLES = ['custom_ingestion_roseau.alr', 'custom_ingestion_roseau.ple', 'custom_ingestion_roseau.resj'];
 
 module.exports = {
   DUMP_SCHEMAS,
