@@ -13,15 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        workspace: [apps/front, apps/back, packages/parser, packages/dossier]
+        workspace: [front, back, parser, dossier]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
+          cache: pnpm
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -31,19 +35,19 @@ jobs:
             node_modules
             apps/*/node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build ${{ matrix.workspace }}
-        run: npm run build --workspace=${{ matrix.workspace }} --if-present
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present build
 
       - name: Run tests
-        run: npm run test --workspace=${{ matrix.workspace }} --if-present
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present test
 
       - name: Run E2E tests API and Worker
-        run: npm run test:e2e:api-worker --workspace=${{ matrix.workspace }} --if-present
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present test:e2e:api-worker

@@ -2,6 +2,9 @@
 
 FROM node:24-alpine
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Create app directory
 WORKDIR /usr/src/app
 
@@ -16,20 +19,17 @@ COPY packages/shared ./packages/shared
 # Copy backend app (excluding dist and node_modules via .dockerignore)
 COPY apps/back ./apps/back
 
-# Install root dependencies first (including husky for prepare script)
-RUN npm install --include=dev
-
-# Install workspace dependencies 
-RUN npm install --workspace=apps/back --workspace=packages/dossier --workspace=packages/parser --workspace=packages/shared
+# Install dependencies
+RUN pnpm install
 
 # Build shared packages first
-RUN npm run build --workspace=packages/dossier
-RUN npm run build --workspace=packages/parser
-RUN npm run build --workspace=packages/shared
+RUN pnpm --filter dossier build
+RUN pnpm --filter parser build
+RUN pnpm --filter shared build
 
 # Build backend (use nest build directly to skip tsc --build project references check)
 WORKDIR /usr/src/app/apps/back
-RUN npx nest build
+RUN pnpm exec nest build
 
 # Change to backend directory for runtime
 WORKDIR /usr/src/app/apps/back

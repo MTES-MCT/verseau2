@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "@codegouvfr/react-dsfr": "^1.29.0",
-    "@lib/dossier": "*",
-    "@lib/parser": "*",
-    "@lib/shared": "*",
+    "@lib/dossier": "workspace:*",
+    "@lib/parser": "workspace:*",
+    "@lib/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.12",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",

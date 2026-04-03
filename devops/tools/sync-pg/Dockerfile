@@ -2,11 +2,14 @@ FROM node:20-alpine
 
 RUN apk add --no-cache postgresql-client
 
+# Install pnpm
+RUN npm install -g pnpm
+
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN pnpm install
 
 COPY . .
 
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "start"]

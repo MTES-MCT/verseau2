@@ -7,12 +7,12 @@ Application de depots de fichiers d'autosurveillance des eaux usees. Monorepo Ty
 ## Commands
 
 ```bash
-npm test              # Run backend + parser unit tests
-npm run test:e2e --workspace=apps/back     # E2E tests (testcontainers)
-npm run build         # Production build (front + back)
-npm run lint --workspace=apps/back         # Lint backend
-npm run lint --workspace=apps/front        # Lint frontend
-npm run test --workspace=apps/front -- <file>  # Run a single frontend test file (e.g. SelectAutocomplete.spec.tsx)
+pnpm test                            # Run backend + parser unit tests
+pnpm --filter back test:e2e          # E2E tests (testcontainers)
+pnpm build                           # Production build (front + back)
+pnpm --filter back lint              # Lint backend
+pnpm --filter front lint             # Lint frontend
+pnpm --filter front test -- <file>   # Run a single frontend test file (e.g. SelectAutocomplete.spec.tsx)
 ```
 
 ## Memory System
@@ -52,7 +52,7 @@ _Grows over time. Capture insights._
 - All controllers must use `@UseGuards` (enforced by architecture tests)
 - Gateway pattern: interface + Symbol export with same name
 - Run tests before considering your task finished
-- Use npm, not yarn or pnpm
+- Use pnpm, not npm or yarn
 - Mock providers exist for S3, SANDRE, Auth, Email, SFTP -- toggled via env vars
 - Shared packages (`packages/*`) must be built before backend/frontend can use them
 
