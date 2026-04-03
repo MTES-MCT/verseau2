@@ -109,7 +109,7 @@ export const EvenementDashboard = () => {
       <h1>Tableau de bord événements</h1>
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
-        <div className="fr-col-12 fr-col-lg-4">
+        <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
@@ -131,7 +131,7 @@ export const EvenementDashboard = () => {
             ]}
           />
         </div>
-        <div className="fr-col-12 fr-col-md-3">
+        <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
             nativeSelectProps={{
@@ -146,7 +146,7 @@ export const EvenementDashboard = () => {
             ))}
           </Select>
         </div>
-        <div className="fr-col-12 fr-col-md-3">
+        <div className={`fr-col-12 fr-col-lg-7 ${filters.mode === 'steu' ? 'fr-col-xl-6' : 'fr-col-xl-4'}`}>
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
             placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
@@ -155,7 +155,7 @@ export const EvenementDashboard = () => {
             onChange={handleOuvrageChange}
           />
         </div>
-        <div className="fr-col-12 fr-col-md-3">
+        <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
           <Select
             label="Type d'événement"
             nativeSelectProps={{
@@ -172,7 +172,7 @@ export const EvenementDashboard = () => {
           </Select>
         </div>
         {filters.mode === 'scl' && (
-          <div className="fr-col-12 fr-col-md-3">
+          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
             <Select
               label="Point de mesures"
               nativeSelectProps={{
