@@ -115,6 +115,8 @@ describe('EvenementController (e2e)', () => {
       mockMasaProvider.findEvenementSteu.mockResolvedValue({
         data: [
           {
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            ouvrageDepollutionNom: 'Station test 1',
             typeEvenementCode: 'TYPE_1',
             typeEvenementLibelle: 'Type 1',
             prisEnCompte: true,
@@ -137,7 +139,10 @@ describe('EvenementController (e2e)', () => {
         total: 1,
         data: [
           {
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            ouvrageDepollutionNom: 'Station test 1',
             typeEvenementCode: 'TYPE_1',
+            prisEnCompte: true,
           },
         ],
       });
@@ -147,6 +152,70 @@ describe('EvenementController (e2e)', () => {
         year: currentYear,
         page: 1,
         pageSize: 20,
+      });
+    });
+
+    it('passes date sorting and returns non pris en compte events', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      mockMasaProvider.findIntervenantById.mockResolvedValue({
+        intervenantIdentifiant: 1,
+        intervenantSiret: 'SIRET_TEST',
+      });
+      mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU_TEST_001',
+          systemeCollecteCode: 'SCL_TEST_001',
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+
+      mockMasaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionIdentifiant: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
+      ]);
+
+      mockMasaProvider.findEvenementSteu.mockResolvedValue({
+        data: [
+          {
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            ouvrageDepollutionNom: 'Station test 1',
+            typeEvenementCode: 'TYPE_3',
+            typeEvenementLibelle: 'Type 3',
+            prisEnCompte: false,
+            date: `${currentYear}-02-01`,
+            finalite: 'Diagnostic',
+            commentaire: 'Evenement non pris en compte',
+          },
+        ],
+        total: 1,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/suivi-regulier/evenement/steu?year=${currentYear}&sortBy=date&sortOrder=DESC`)
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        total: 1,
+        data: [
+          {
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            ouvrageDepollutionNom: 'Station test 1',
+            typeEvenementCode: 'TYPE_3',
+            prisEnCompte: false,
+          },
+        ],
+      });
+
+      expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
+        steuCdns: [10],
+        year: currentYear,
+        page: 1,
+        pageSize: 20,
+        sortBy: 'date',
+        sortOrder: 'DESC',
       });
     });
 
@@ -214,6 +283,10 @@ describe('EvenementController (e2e)', () => {
       mockMasaProvider.findEvenementScl.mockResolvedValue({
         data: [
           {
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            ouvrageDepollutionNom: 'Station test 1',
+            systemeCollecteCode: 'SCL_TEST_001',
+            systemeCollecteNom: 'Systeme collecte 1',
             typeEvenementCode: 'TYPE_2',
             typeEvenementLibelle: 'Type 2',
             prisEnCompte: true,
@@ -238,7 +311,10 @@ describe('EvenementController (e2e)', () => {
         total: 1,
         data: [
           {
+            systemeCollecteCode: 'SCL_TEST_001',
+            systemeCollecteNom: 'Systeme collecte 1',
             typeEvenementCode: 'TYPE_2',
+            prisEnCompte: true,
           },
         ],
       });
@@ -248,6 +324,64 @@ describe('EvenementController (e2e)', () => {
         year: currentYear,
         page: 1,
         pageSize: 20,
+      });
+    });
+
+    it('returns non pris en compte SCL events', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      mockMasaProvider.findIntervenantById.mockResolvedValue({
+        intervenantIdentifiant: 1,
+        intervenantSiret: 'SIRET_TEST',
+      });
+      mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU_TEST_001',
+          systemeCollecteCode: 'SCL_TEST_001',
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+
+      mockMasaProvider.findSclBatchBySandreCdas.mockResolvedValue([
+        { systemeCollecteIdentifiant: 20, systemeCollecteCode: 'SCL_TEST_001' },
+      ]);
+
+      mockMasaProvider.findEvenementScl.mockResolvedValue({
+        data: [
+          {
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            ouvrageDepollutionNom: 'Station test 1',
+            systemeCollecteCode: 'SCL_TEST_001',
+            systemeCollecteNom: 'Systeme collecte 1',
+            typeEvenementCode: 'TYPE_4',
+            typeEvenementLibelle: 'Type 4',
+            prisEnCompte: false,
+            date: `${currentYear}-03-01`,
+            finalite: null,
+            commentaire: 'Evenement SCL non pris en compte',
+            pointMesureNumero: 'PM_2',
+            pointMesureLibelle: 'Point mesure 2',
+          },
+        ],
+        total: 1,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/suivi-regulier/evenement/scl?year=${currentYear}`)
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        total: 1,
+        data: [
+          {
+            systemeCollecteCode: 'SCL_TEST_001',
+            systemeCollecteNom: 'Systeme collecte 1',
+            prisEnCompte: false,
+          },
+        ],
       });
     });
   });

@@ -15,6 +15,36 @@ import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 
+function renderSortableDateHeader(
+  sortBy: EvenementSteuSortByValue | undefined,
+  sortOrder: 'ASC' | 'DESC' | undefined,
+  setSort: (nextSortBy: EvenementSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void,
+) {
+  const isSorted = sortBy === 'date';
+  const nextOrder: 'ASC' | 'DESC' = isSorted && sortOrder === 'ASC' ? 'DESC' : 'ASC';
+
+  return (
+    <button
+      type="button"
+      onClick={() => setSort('date', nextOrder)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+      }}
+    >
+      Date
+      {isSorted && (
+        <span className={fr.cx(sortOrder === 'ASC' ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line')} />
+      )}
+    </button>
+  );
+}
+
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
   const pageSize = 10;
@@ -83,8 +113,14 @@ export const EvenementDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
 
   const getTableData = (row: EvenementSteuDto | EvenementSclDto) => {
+    const codeSandre =
+      filters.mode === 'scl' ? (row as EvenementSclDto).systemeCollecteCode : row.ouvrageDepollutionCode;
+    const nom = filters.mode === 'scl' ? (row as EvenementSclDto).systemeCollecteNom : row.ouvrageDepollutionNom;
+
     const baseRow = [
       renderPrisEnCompteBadge(row.prisEnCompte),
+      codeSandre,
+      nom ?? '-',
       formatDate(row.date),
       `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
       row.finalite ?? '-',
@@ -96,6 +132,10 @@ export const EvenementDashboard = () => {
       return [...baseRow, `${sclRow.pointMesureNumero} - ${sclRow.pointMesureLibelle ?? '-'}`];
     }
     return baseRow;
+  };
+
+  const handleDateSort = (nextSortBy: EvenementSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => {
+    updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
   return (
@@ -196,7 +236,13 @@ export const EvenementDashboard = () => {
         data={(data?.data || []).map(getTableData)}
         headers={[
           'Pris en compte',
-          'Date',
+          'Code Sandre',
+          'Nom',
+          renderSortableDateHeader(
+            filters.sortBy as EvenementSteuSortByValue | undefined,
+            filters.sortOrder,
+            handleDateSort,
+          ),
           "Type d'événement",
           'Finalité',
           'Commentaire',
