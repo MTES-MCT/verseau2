@@ -44,10 +44,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build ${{ matrix.workspace }}
-        run: pnpm --filter ${{ matrix.workspace }} build --if-present
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present build
 
       - name: Run tests
-        run: pnpm --filter ${{ matrix.workspace }} test --if-present
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present test
 
       - name: Run E2E tests API and Worker
-        run: pnpm --filter ${{ matrix.workspace }} test:e2e:api-worker --if-present
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present test:e2e:api-worker
