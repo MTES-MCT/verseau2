@@ -87,8 +87,8 @@ export const EvenementDashboard = () => {
       renderPrisEnCompteBadge(row.prisEnCompte),
       formatDate(row.date),
       `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
-      row.finalite,
-      row.commentaire,
+      row.finalite ?? '-',
+      row.commentaire ?? '-',
     ];
 
     if (filters.mode === 'scl') {
