@@ -15,5 +15,8 @@ export * from './routes/referentiel.routes';
 export * from './routes/controle.routes';
 export * from './routes/conformite.routes';
 export * from './routes/indicateurs.routes';
+export * from './mesure/mesure.dto';
 export * from './routes/mesures.routes';
+export * from './suivi-regulier/evenement.dto';
+export * from './routes/suiviRegulier.routes';
 export * from './shared/pagination.schema';

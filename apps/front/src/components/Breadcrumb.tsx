@@ -40,6 +40,13 @@ export const Breadcrumb = () => {
       });
     }
 
+    if (pathname === AppRoutes.EVENEMENT_DASHBOARD) {
+      segments.push({
+        label: 'Tableau de bord',
+        href: AppRoutes.DASHBOARD,
+      });
+    }
+
     return segments.length > 0 ? segments : [];
   };
 
@@ -68,6 +75,8 @@ export const Breadcrumb = () => {
     currentPageLabel = 'Détail des mesures déposées';
   } else if (location.pathname === AppRoutes.REFERENTIEL_POINTS_DE_MESURE) {
     currentPageLabel = 'Référentiel descriptif des ouvrages';
+  } else if (location.pathname === AppRoutes.EVENEMENT_DASHBOARD) {
+    currentPageLabel = 'Événements';
   }
 
   return (

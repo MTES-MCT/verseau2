@@ -13,6 +13,7 @@ import { AuthenticationMiddleware } from '@authentication/authentication.middlew
 import { ConformiteModule } from '../conformite/conformite.module';
 import { IndicateursModule } from '../indicateurs/indicateurs.module';
 import { MesuresModule } from '../mesures/mesures.module';
+import { SuiviRegulierModule } from '../suivi-regulier/suivi-regulier.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MesuresModule } from '../mesures/mesures.module';
     IndicateursModule,
     ConformiteModule,
     MesuresModule,
+    SuiviRegulierModule,
   ],
   controllers: [VersionController],
   providers: [

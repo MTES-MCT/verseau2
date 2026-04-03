@@ -6,10 +6,37 @@ import {
   ConformiteSteuDetailDto,
   ConformiteSteuDto,
   ConformiteSteuSortByValue,
+  EvenementSclDto,
+  EvenementSclSortByValue,
+  EvenementSteuDto,
+  EvenementSteuSortByValue,
   MesuresSortByValue,
   OuvrageTypeValue,
   PaginationQuery,
 } from '@lib/dossier';
+
+/** Filtres pour la recherche d'événements STEU */
+export interface EvenementSteuFilters extends PaginationQuery {
+  steuCdns: number[];
+  year: number;
+  typeEvenementCode?: string;
+  sortBy?: EvenementSteuSortByValue;
+}
+
+/** Filtres pour la recherche d'événements SCL */
+export interface EvenementSclFilters extends PaginationQuery {
+  sclCdns: number[];
+  year: number;
+  typeEvenementCode?: string;
+  pointMesureIdentifiant?: number;
+  sortBy?: EvenementSclSortByValue;
+}
+
+/** Une ligne d'événement STEU */
+export type EvenementSteuRow = EvenementSteuDto;
+
+/** Une ligne d'événement SCL */
+export type EvenementSclRow = EvenementSclDto;
 
 export type MasaConformiteSteuSortByValue = ConformiteSteuSortByValue | 'conformiteNationaleProvisoire';
 export type MasaConformiteSclSortByValue = ConformiteSclSortByValue | 'conformiteNationaleTempsPluieProvisoire';
