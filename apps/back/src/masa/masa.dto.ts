@@ -13,6 +13,7 @@ import {
   MesuresSortByValue,
   OuvrageTypeValue,
   PaginationQuery,
+  TrancheObligationRfa,
 } from '@lib/dossier';
 
 /** Filtres pour la recherche d'événements STEU */
@@ -165,7 +166,7 @@ export interface PointMesureReferentielRow {
 export interface ConformiteSteuFilters extends PaginationQuery {
   steuCdns: number[];
   year: number;
-  trancheObligationRfa?: string;
+  trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSteuSortByValue;
 }
@@ -174,7 +175,7 @@ export interface ConformiteSteuFilters extends PaginationQuery {
 export interface ConformiteSclFilters extends PaginationQuery {
   steuCdns: number[];
   year: number;
-  trancheObligationRfa?: string;
+  trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSclSortByValue;
 }

@@ -1,5 +1,5 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
-import { ConformiteSclSortByValue, ConformiteSteuSortByValue, PaginationQuery } from '@lib/dossier';
+import { ConformiteSclSortByValue, ConformiteSteuSortByValue, PaginationQuery, TrancheObligationRfa } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -29,7 +29,7 @@ type PaginatedConformiteSclRows = {
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
-  trancheObligationRfa?: string;
+  trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSteuSortByValue;
 }
@@ -37,7 +37,7 @@ export interface ListConformiteSteuOptions extends PaginationQuery {
 export interface ListConformiteSclOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
-  trancheObligationRfa?: string;
+  trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSclSortByValue;
 }
