@@ -1189,6 +1189,8 @@ export class RoseauRepository implements RoseauGateway {
         SELECT
           evo.evo_inactif_on AS pris_en_compte,
           evo.evo_evt_dt AS date,
+          steu.steu_sandre_cda AS ouvrage_depollution_code,
+          steu.steu_nom_lb AS ouvrage_depollution_nom,
           t46.tlref_elt_cda AS type_evenement_code,
           t46.tlref_mnemo_lb AS type_evenement_libelle,
           t17.tlref_mnemo_lb AS finalite,
@@ -1216,6 +1218,8 @@ export class RoseauRepository implements RoseauGateway {
       {
         pris_en_compte: boolean;
         date: Date | string;
+        ouvrage_depollution_code: string;
+        ouvrage_depollution_nom: string | null;
         type_evenement_code: string;
         type_evenement_libelle: string;
         finalite: string | null;
@@ -1239,6 +1243,8 @@ export class RoseauRepository implements RoseauGateway {
       data: rows.map((row) => ({
         prisEnCompte: row.pris_en_compte,
         date: formatDate(row.date) ?? '',
+        ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
+        ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
         typeEvenementCode: row.type_evenement_code?.trim() ?? '',
         typeEvenementLibelle: row.type_evenement_libelle?.trim() ?? '',
         finalite: row.finalite?.trim() ?? null,
@@ -1298,6 +1304,10 @@ export class RoseauRepository implements RoseauGateway {
         SELECT
           evo.evo_inactif_on AS pris_en_compte,
           evo.evo_evt_dt AS date,
+          steu.steu_sandre_cda AS ouvrage_depollution_code,
+          steu.steu_nom_lb AS ouvrage_depollution_nom,
+          scl.scl_sandre_cda AS systeme_collecte_code,
+          scl.scl_lb AS systeme_collecte_nom,
           t46.tlref_elt_cda AS type_evenement_code,
           t46.tlref_mnemo_lb AS type_evenement_libelle,
           t17.tlref_mnemo_lb AS finalite,
@@ -1329,6 +1339,10 @@ export class RoseauRepository implements RoseauGateway {
       {
         pris_en_compte: boolean;
         date: Date | string;
+        ouvrage_depollution_code: string;
+        ouvrage_depollution_nom: string | null;
+        systeme_collecte_code: string;
+        systeme_collecte_nom: string | null;
         type_evenement_code: string;
         type_evenement_libelle: string;
         finalite: string | null;
@@ -1354,6 +1368,10 @@ export class RoseauRepository implements RoseauGateway {
       data: rows.map((row) => ({
         prisEnCompte: row.pris_en_compte,
         date: formatDate(row.date) ?? '',
+        ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
+        ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
+        systemeCollecteCode: row.systeme_collecte_code?.trim() ?? '',
+        systemeCollecteNom: row.systeme_collecte_nom?.trim() ?? null,
         typeEvenementCode: row.type_evenement_code?.trim() ?? '',
         typeEvenementLibelle: row.type_evenement_libelle?.trim() ?? '',
         finalite: row.finalite?.trim() ?? null,

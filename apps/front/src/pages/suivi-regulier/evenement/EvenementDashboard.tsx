@@ -14,6 +14,7 @@ import { useOuvrages } from '../../../hooks/useOuvrages';
 import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
+import { SortableHeader } from '../../../components/SortableHeader';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
@@ -83,8 +84,14 @@ export const EvenementDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
 
   const getTableData = (row: EvenementSteuDto | EvenementSclDto) => {
+    const codeSandre =
+      filters.mode === 'scl' ? (row as EvenementSclDto).systemeCollecteCode : row.ouvrageDepollutionCode;
+    const nom = filters.mode === 'scl' ? (row as EvenementSclDto).systemeCollecteNom : row.ouvrageDepollutionNom;
+
     const baseRow = [
       renderPrisEnCompteBadge(row.prisEnCompte),
+      codeSandre,
+      nom ?? '-',
       formatDate(row.date),
       `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
       row.finalite ?? '-',
@@ -96,6 +103,10 @@ export const EvenementDashboard = () => {
       return [...baseRow, `${sclRow.pointMesureNumero} - ${sclRow.pointMesureLibelle ?? '-'}`];
     }
     return baseRow;
+  };
+
+  const handleDateSort = (nextSortBy: EvenementSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => {
+    updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
   return (
@@ -196,7 +207,16 @@ export const EvenementDashboard = () => {
         data={(data?.data || []).map(getTableData)}
         headers={[
           'Pris en compte',
-          'Date',
+          'Code Sandre',
+          'Nom',
+          <SortableHeader
+            key="date"
+            label="Date"
+            field="date"
+            sortBy={filters.sortBy as EvenementSteuSortByValue | undefined}
+            sortOrder={filters.sortOrder}
+            onSort={handleDateSort}
+          />,
           "Type d'événement",
           'Finalité',
           'Commentaire',

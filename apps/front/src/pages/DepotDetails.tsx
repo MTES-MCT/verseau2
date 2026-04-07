@@ -6,6 +6,7 @@ import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { SortableHeader } from '../components/SortableHeader';
 import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
 import type { MesuresSortByValue } from '@lib/dossier';
@@ -123,28 +124,14 @@ export function DepotDetailsPage() {
       return col.label;
     }
 
-    const isSorted = form.sortBy === col.field;
-    const order = isSorted ? form.sortOrder : null;
-
     return (
-      <button
-        type="button"
-        onClick={() => setSort(col.field!, isSorted && order === 'ASC' ? 'DESC' : 'ASC')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-        }}
-      >
-        {col.label}
-        {isSorted && (
-          <span className={fr.cx(order === 'ASC' ? 'fr-icon-arrow-up-s-line' : 'fr-icon-arrow-down-s-line')} />
-        )}
-      </button>
+      <SortableHeader<MesuresSortByValue>
+        label={col.label}
+        field={col.field}
+        sortBy={form.sortBy}
+        sortOrder={form.sortOrder}
+        onSort={setSort}
+      />
     );
   });
 
