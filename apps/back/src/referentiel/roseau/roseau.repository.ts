@@ -431,7 +431,7 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    const { steuCdns, year, trancheObligationLibelle, impact, page, pageSize } = filters;
+    const { steuCdns, year, trancheObligationRfa, impact, page, pageSize } = filters;
 
     if (steuCdns.length === 0) {
       return { data: [], total: 0 };
@@ -466,8 +466,8 @@ export class RoseauRepository implements RoseauGateway {
     const steuPlaceholders = steuCdns.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
 
-    if (trancheObligationLibelle) {
-      whereClauses.push(`tltobl.tltobl_lb = ${addParam(trancheObligationLibelle)}`);
+    if (trancheObligationRfa) {
+      whereClauses.push(`tltobl.tltobl_rfa = ${addParam(trancheObligationRfa)}`);
     }
 
     const impactFilter = impact ? `WHERE impact_conformite = ${addParam(impact === 'avec')}` : '';
@@ -589,7 +589,7 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    const { steuCdns, year, trancheObligationLibelle, impact, page, pageSize } = filters;
+    const { steuCdns, year, trancheObligationRfa, impact, page, pageSize } = filters;
 
     if (steuCdns.length === 0) {
       return { data: [], total: 0 };
@@ -623,8 +623,8 @@ export class RoseauRepository implements RoseauGateway {
     const steuPlaceholders = steuCdns.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
 
-    if (trancheObligationLibelle) {
-      whereClauses.push(`tltobl.tltobl_lb = ${addParam(trancheObligationLibelle)}`);
+    if (trancheObligationRfa) {
+      whereClauses.push(`tltobl.tltobl_rfa = ${addParam(trancheObligationRfa)}`);
     }
 
     const impactFilter = impact ? `WHERE impact_conformite = ${addParam(impact === 'avec')}` : '';

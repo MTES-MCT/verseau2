@@ -12,6 +12,7 @@ import type {
   ConformiteSteuDto,
   ConformiteSteuSortByValue,
 } from '@lib/dossier';
+import { TRANCHE_OBLIGATION_OPTIONS } from '@lib/dossier';
 import { getPreviousSunday } from '@lib/shared';
 import { useMemo, useState, type MouseEvent } from 'react';
 import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
@@ -37,8 +38,6 @@ type ColumnConfig<TSortBy extends string> = {
   label: string;
   field: TSortBy | null;
 };
-
-const KNOWN_TRANCHE_OPTIONS = ['2000 à 9999 EH', '2000 EH ≤ capacité < 10000 EH', 'capacité ≥ 10000 EH'];
 
 const STEU_COLUMNS: ColumnConfig<ConformiteSteuSortByValue>[] = [
   { label: 'Code Sandre', field: 'ouvrageDepollutionCode' },
@@ -99,19 +98,7 @@ export function ConformiteDashboard() {
     [data?.data, mode],
   );
   const sclRows = useMemo(() => ((mode === 'scl' ? data?.data : []) ?? []) as ConformiteSclRow[], [data?.data, mode]);
-  const currentRows = (mode === 'steu' ? steuRows : sclRows) as Array<ConformiteSteuRow | ConformiteSclRow>;
-
-  const trancheOptions = useMemo(() => {
-    const values = new Set(KNOWN_TRANCHE_OPTIONS);
-
-    currentRows.forEach((row) => {
-      if (row.trancheObligationLibelle) {
-        values.add(row.trancheObligationLibelle);
-      }
-    });
-
-    return Array.from(values);
-  }, [currentRows]);
+  const trancheRfaEntries = Object.entries(TRANCHE_OBLIGATION_OPTIONS) as Array<[string, string]>;
 
   const headers = useMemo(() => {
     if (mode === 'steu') {
@@ -319,14 +306,14 @@ export function ConformiteDashboard() {
             <Select
               label="Tranche d'obligation"
               nativeSelectProps={{
-                value: form.trancheObligationLibelle,
-                onChange: (event) => updateForm('trancheObligationLibelle', event.target.value),
+                value: form.trancheObligationRfa,
+                onChange: (event) => updateForm('trancheObligationRfa', event.target.value),
               }}
             >
               <option value="">Toutes les tranches</option>
-              {trancheOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
+              {trancheRfaEntries.map(([rfa, label]) => (
+                <option key={rfa} value={rfa}>
+                  {label}
                 </option>
               ))}
             </Select>

@@ -23,7 +23,7 @@ const makeConformiteSteuRow = (): ConformiteSteuRow => ({
   steuCdn: 101,
   ouvrageDepollutionCode: 'STEU001',
   ouvrageDepollutionNom: 'Station test',
-  trancheObligationLibelle: '2000 à 9999 EH',
+  trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
   capaciteNominaleEH: 5000,
   suiviDebutDate: '2024-01-01',
   suiviFinDate: '2024-12-31',
@@ -38,7 +38,7 @@ const makeConformiteSclRow = (): ConformiteSclRow => ({
   sclCdn: 201,
   systemeCollecteCode: 'SCL001',
   systemeCollecteNom: 'Réseau test',
-  trancheObligationLibelle: '2000 à 9999 EH',
+  trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
   typeScl: 'Unitaire',
   suiviDebutDate: '2024-01-01',
   suiviFinDate: '2024-12-31',
@@ -202,7 +202,7 @@ describe('ConformiteService', () => {
       await service.listConformiteSteu({
         authorizedSteuCdas: ['STEU001'],
         year: 2023,
-        trancheObligationLibelle: '2000 à 9999 EH',
+        trancheObligationRfa: '30',
         impact: 'avec',
         sortBy: 'ouvrageDepollutionCode',
         sortOrder: 'DESC',
@@ -214,7 +214,7 @@ describe('ConformiteService', () => {
         expect.objectContaining({
           steuCdns: [101],
           year: 2023,
-          trancheObligationLibelle: '2000 à 9999 EH',
+          trancheObligationRfa: '30',
           impact: 'avec',
           sortBy: 'ouvrageDepollutionCode',
           sortOrder: 'DESC',
@@ -300,7 +300,7 @@ describe('ConformiteService', () => {
       await service.listConformiteScl({
         authorizedSteuCdas: ['STEU001'],
         year: 2021,
-        trancheObligationLibelle: '2000 à 9999 EH',
+        trancheObligationRfa: '30',
         impact: 'sans',
         sortBy: 'systemeCollecteCode',
         sortOrder: 'ASC',
@@ -312,7 +312,7 @@ describe('ConformiteService', () => {
         expect.objectContaining({
           steuCdns: [101],
           year: 2021,
-          trancheObligationLibelle: '2000 à 9999 EH',
+          trancheObligationRfa: '30',
           impact: 'sans',
           sortBy: 'systemeCollecteCode',
           sortOrder: 'ASC',

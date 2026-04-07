@@ -5,6 +5,7 @@ import {
   ConformiteSteuDetailDtoSchema,
   PaginatedConformiteSclResponseSchema,
   PaginatedConformiteSteuResponseSchema,
+  TrancheObligationRfaSchema,
 } from '../conformite/conformite.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 
@@ -60,7 +61,7 @@ export const listConformiteSteu = {
   query: z
     .object({
       year: ConformiteYearQuerySchema.shape.year,
-      trancheObligationLibelle: z.string().optional(),
+      trancheObligationRfa: TrancheObligationRfaSchema.optional(),
       impact: z.enum(['avec', 'sans']).optional(),
     })
     .extend(createPaginationQuerySchema(ConformiteSteuSortBy).shape),
@@ -73,7 +74,7 @@ export const listConformiteScl = {
   query: z
     .object({
       year: ConformiteYearQuerySchema.shape.year,
-      trancheObligationLibelle: z.string().optional(),
+      trancheObligationRfa: TrancheObligationRfaSchema.optional(),
       impact: z.enum(['avec', 'sans']).optional(),
     })
     .extend(createPaginationQuerySchema(ConformiteSclSortBy).shape),

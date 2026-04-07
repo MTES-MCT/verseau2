@@ -1,5 +1,5 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
-import { ConformiteSclSortByValue, ConformiteSteuSortByValue, PaginationQuery } from '@lib/dossier';
+import { ConformiteSclSortByValue, ConformiteSteuSortByValue, PaginationQuery, TrancheObligationRfa } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -29,7 +29,7 @@ type PaginatedConformiteSclRows = {
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
-  trancheObligationLibelle?: string;
+  trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSteuSortByValue;
 }
@@ -37,7 +37,7 @@ export interface ListConformiteSteuOptions extends PaginationQuery {
 export interface ListConformiteSclOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
-  trancheObligationLibelle?: string;
+  trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSclSortByValue;
 }
@@ -53,7 +53,7 @@ export class ConformiteService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteSteu(options: ListConformiteSteuOptions): Promise<PaginatedConformiteSteuRows> {
-    const { authorizedSteuCdas, year, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
+    const { authorizedSteuCdas, year, trancheObligationRfa, impact, page, pageSize, sortBy, sortOrder } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
@@ -69,7 +69,7 @@ export class ConformiteService {
       year,
       page,
       pageSize,
-      ...(trancheObligationLibelle ? { trancheObligationLibelle } : {}),
+      ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
@@ -82,7 +82,7 @@ export class ConformiteService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
-    const { authorizedSteuCdas, year, trancheObligationLibelle, impact, page, pageSize, sortBy, sortOrder } = options;
+    const { authorizedSteuCdas, year, trancheObligationRfa, impact, page, pageSize, sortBy, sortOrder } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
@@ -98,7 +98,7 @@ export class ConformiteService {
       year,
       page,
       pageSize,
-      ...(trancheObligationLibelle ? { trancheObligationLibelle } : {}),
+      ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),

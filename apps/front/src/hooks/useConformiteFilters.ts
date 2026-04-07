@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react';
-import type { ConformiteSclSortByValue, ConformiteSteuSortByValue, RouteQuery } from '@lib/dossier';
+import type {
+  ConformiteSclSortByValue,
+  ConformiteSteuSortByValue,
+  RouteQuery,
+  TrancheObligationRfa,
+} from '@lib/dossier';
 import { CURRENT_CONFORMITE_YEAR, FIRST_CONFORMITE_YEAR, listConformiteScl, listConformiteSteu } from '@lib/dossier';
 import { useConformiteScl, useConformiteSteu } from './useConformite';
 
@@ -11,7 +16,7 @@ type SortByValue = ConformiteSteuSortByValue | ConformiteSclSortByValue;
 export interface FilterState {
   mode: 'steu' | 'scl';
   year: string;
-  trancheObligationLibelle: string;
+  trancheObligationRfa: TrancheObligationRfa | '';
   impact: 'avec' | 'sans' | '';
   sortBy?: SortByValue;
   sortOrder?: 'ASC' | 'DESC';
@@ -20,7 +25,7 @@ export interface FilterState {
 const INITIAL_FILTERS: FilterState = {
   mode: 'steu',
   year: DEFAULT_CONFORMITE_YEAR.toString(),
-  trancheObligationLibelle: '',
+  trancheObligationRfa: '',
   impact: '',
   sortBy: undefined,
   sortOrder: undefined,
@@ -29,7 +34,7 @@ const INITIAL_FILTERS: FilterState = {
 function buildSteuQuery(submitted: FilterState, page: number): RouteQuery<typeof listConformiteSteu> {
   return {
     year: Number(submitted.year),
-    ...(submitted.trancheObligationLibelle ? { trancheObligationLibelle: submitted.trancheObligationLibelle } : {}),
+    ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}),
     ...(submitted.impact ? { impact: submitted.impact } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy as ConformiteSteuSortByValue } : {}),
     ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
@@ -41,7 +46,7 @@ function buildSteuQuery(submitted: FilterState, page: number): RouteQuery<typeof
 function buildSclQuery(submitted: FilterState, page: number): RouteQuery<typeof listConformiteScl> {
   return {
     year: Number(submitted.year),
-    ...(submitted.trancheObligationLibelle ? { trancheObligationLibelle: submitted.trancheObligationLibelle } : {}),
+    ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}),
     ...(submitted.impact ? { impact: submitted.impact } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy as ConformiteSclSortByValue } : {}),
     ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
