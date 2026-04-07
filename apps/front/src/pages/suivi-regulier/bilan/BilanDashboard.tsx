@@ -1,5 +1,7 @@
 import { useMemo, type ChangeEvent } from 'react';
 import type { BilanSteuSortByValue, BilanSclSortByValue } from '@lib/dossier';
+import type { SortByValue } from '../../../hooks/useBilanFilters';
+import type { ReactNode } from 'react';
 import { CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -87,7 +89,7 @@ export const BilanDashboard = () => {
 
   const data = filters.mode === 'steu' ? steuData : sclData;
 
-  const handleDateSort = (nextSortBy: any, nextSortOrder: 'ASC' | 'DESC') => {
+  const handleDateSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
@@ -97,14 +99,14 @@ export const BilanDashboard = () => {
 
   // replace "Date" with SortableHeader
   const dateIndex = headers.indexOf('Date');
-  const finalHeaders = [...headers] as any[];
+  const finalHeaders: (string | ReactNode)[] = [...headers];
   if (dateIndex !== -1) {
     finalHeaders[dateIndex] = (
-      <SortableHeader
+      <SortableHeader<SortByValue>
         key="date"
         label="Date"
         field="date"
-        sortBy={filters.sortBy as any}
+        sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onSort={handleDateSort}
       />
