@@ -58,7 +58,7 @@ describe('ConformiteController', () => {
           steuCdn: 101,
           ouvrageDepollutionCode: 'STEU001',
           ouvrageDepollutionNom: 'Station test',
-          trancheObligationLibelle: '2000 à 9999 EH',
+          trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
           capaciteNominaleEH: 5000,
           suiviDebutDate: '2024-01-01',
           suiviFinDate: '2024-12-31',
@@ -77,7 +77,7 @@ describe('ConformiteController', () => {
 
     const result = await controller.listConformiteSteu(makeRequest(['STEU001']), {
       year: 2024,
-      trancheObligationLibelle: '2000 EH ≤ capacité < 10000 EH',
+      trancheObligationRfa: '30',
       impact: 'avec',
       page: 1,
       pageSize: 20,
@@ -88,7 +88,7 @@ describe('ConformiteController', () => {
     expect(conformiteService.listConformiteSteu).toHaveBeenCalledWith({
       authorizedSteuCdas: ['STEU001'],
       year: 2024,
-      trancheObligationLibelle: '2000 EH ≤ capacité < 10000 EH',
+      trancheObligationRfa: '30',
       impact: 'avec',
       page: 1,
       pageSize: 20,
@@ -101,7 +101,7 @@ describe('ConformiteController', () => {
           steuCdn: 101,
           ouvrageDepollutionCode: 'STEU001',
           ouvrageDepollutionNom: 'Station test',
-          trancheObligationLibelle: '2000 à 9999 EH',
+          trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
           capaciteNominaleEH: 5000,
           suiviDebutDate: '2024-01-01',
           suiviFinDate: '2024-12-31',
@@ -124,7 +124,7 @@ describe('ConformiteController', () => {
           sclCdn: 201,
           systemeCollecteCode: 'SCL001',
           systemeCollecteNom: 'Réseau test',
-          trancheObligationLibelle: 'capacité ≥ 10000 EH',
+          trancheObligationLibelle: '[ 10 000 ; 100 000 [ EH',
           typeScl: 'Unitaire',
           suiviDebutDate: '2024-01-01',
           suiviFinDate: '2024-12-31',
@@ -143,7 +143,7 @@ describe('ConformiteController', () => {
 
     const result = await controller.listConformiteScl(makeRequest(['STEU002'], ['SCL001']), {
       year: 2023,
-      trancheObligationLibelle: 'capacité ≥ 10000 EH',
+      trancheObligationRfa: '40',
       impact: 'sans',
       page: 2,
       pageSize: 10,
@@ -154,7 +154,7 @@ describe('ConformiteController', () => {
     expect(conformiteService.listConformiteScl).toHaveBeenCalledWith({
       authorizedSteuCdas: ['STEU002'],
       year: 2023,
-      trancheObligationLibelle: 'capacité ≥ 10000 EH',
+      trancheObligationRfa: '40',
       impact: 'sans',
       page: 2,
       pageSize: 10,
@@ -167,7 +167,7 @@ describe('ConformiteController', () => {
           sclCdn: 201,
           systemeCollecteCode: 'SCL001',
           systemeCollecteNom: 'Réseau test',
-          trancheObligationLibelle: 'capacité ≥ 10000 EH',
+          trancheObligationLibelle: '[ 10 000 ; 100 000 [ EH',
           typeScl: 'Unitaire',
           suiviDebutDate: '2024-01-01',
           suiviFinDate: '2024-12-31',

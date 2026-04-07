@@ -1,6 +1,20 @@
 import { z } from 'zod';
 import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
+export const TRANCHE_OBLIGATION_RFA_VALUES = ['10', '20', '30', '40', '50'] as const;
+
+export type TrancheObligationRfa = (typeof TRANCHE_OBLIGATION_RFA_VALUES)[number];
+
+export const TrancheObligationRfaSchema = z.enum(TRANCHE_OBLIGATION_RFA_VALUES);
+
+export const TRANCHE_OBLIGATION_OPTIONS: Record<TrancheObligationRfa, string> = {
+  '10': 'Taille ≤ 200 EH',
+  '20': '] 200 ; 2 000 [ EH',
+  '30': '[ 2 000 ; 10 000 [ EH',
+  '40': '[ 10 000 ; 100 000 [ EH',
+  '50': '[ 100 000 ; ... [ EH',
+};
+
 export enum ConformiteProvisoire {
   Inconnue = '0',
   Conforme = '1',

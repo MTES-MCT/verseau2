@@ -165,7 +165,7 @@ export interface PointMesureReferentielRow {
 export interface ConformiteSteuFilters extends PaginationQuery {
   steuCdns: number[];
   year: number;
-  trancheObligationLibelle?: string;
+  trancheObligationRfa?: string;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSteuSortByValue;
 }
@@ -174,7 +174,7 @@ export interface ConformiteSteuFilters extends PaginationQuery {
 export interface ConformiteSclFilters extends PaginationQuery {
   steuCdns: number[];
   year: number;
-  trancheObligationLibelle?: string;
+  trancheObligationRfa?: string;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSclSortByValue;
 }
