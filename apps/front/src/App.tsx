@@ -12,6 +12,7 @@ import CallbackPage from './pages/CallbackPage';
 import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { EvenementDashboard } from './pages/suivi-regulier/evenement/EvenementDashboard';
+import { BilanDashboard } from './pages/suivi-regulier/bilan/BilanDashboard';
 import { AppHeader } from './components/Header';
 import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
@@ -73,6 +74,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EvenementDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.BILAN_DASHBOARD}
+              element={
+                <ProtectedRoute>
+                  <BilanDashboard />
                 </ProtectedRoute>
               }
             />

@@ -19,4 +19,6 @@ export * from './mesure/mesure.dto';
 export * from './routes/mesures.routes';
 export * from './suivi-regulier/evenement.dto';
 export * from './routes/suiviRegulier.routes';
+export * from './bilan/bilan.dto';
+export * from './routes/bilan.routes';
 export * from './shared/pagination.schema';

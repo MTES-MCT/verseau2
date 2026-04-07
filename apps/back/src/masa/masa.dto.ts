@@ -1,5 +1,9 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
 import {
+  BilanSclDto,
+  BilanSclSortByValue,
+  BilanSteuDto,
+  BilanSteuSortByValue,
   ConformiteSclDetailDto,
   ConformiteSclDto,
   ConformiteSclSortByValue,
@@ -32,6 +36,30 @@ export interface EvenementSclFilters extends PaginationQuery {
   pointMesureIdentifiant?: number;
   sortBy?: EvenementSclSortByValue;
 }
+
+/** Filtres pour la recherche de bilans STEU */
+export interface BilanSteuFilters extends PaginationQuery {
+  steuCdns: number[];
+  year: number;
+  ouvrageDepollutionCode?: string;
+  sortBy?: BilanSteuSortByValue;
+}
+
+/** Filtres pour la recherche de bilans SCL */
+export interface BilanSclFilters extends PaginationQuery {
+  sclCdns: number[];
+  year: number;
+  systemeCollecteCode?: string;
+  pointMesureIdentifiant?: number;
+  statut?: 'TP' | 'TS';
+  sortBy?: BilanSclSortByValue;
+}
+
+/** Une ligne de bilan STEU */
+export type BilanSteuRow = BilanSteuDto;
+
+/** Une ligne de bilan SCL */
+export type BilanSclRow = BilanSclDto;
 
 /** Une ligne d'événement STEU */
 export type EvenementSteuRow = EvenementSteuDto;

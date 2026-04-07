@@ -1,0 +1,49 @@
+import { useState } from 'react';
+import { CURRENT_BILAN_YEAR, type BilanSteuSortByValue, type BilanSclSortByValue } from '@lib/dossier';
+
+export type SortByValue = BilanSteuSortByValue | BilanSclSortByValue;
+
+export interface FilterState {
+  mode: 'steu' | 'scl';
+  year: number;
+  ouvrageDepollutionCode: string;
+  systemeCollecteCode: string;
+  pointMesureIdentifiant: string;
+  statut: 'TP' | 'TS' | '';
+  sortBy?: SortByValue;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+export const useBilanFilters = () => {
+  const [filters, setFilters] = useState<FilterState>({
+    mode: 'steu',
+    year: CURRENT_BILAN_YEAR,
+    ouvrageDepollutionCode: '',
+    systemeCollecteCode: '',
+    pointMesureIdentifiant: '',
+    statut: '',
+  });
+
+  const [page, setPage] = useState(1);
+
+  const updateFilter = (newFilters: Partial<FilterState>) => {
+    setFilters((prev) => {
+      const updated = { ...prev, ...newFilters };
+      if (newFilters.mode && newFilters.mode !== prev.mode) {
+        updated.sortBy = undefined;
+        updated.sortOrder = undefined;
+      }
+      if (newFilters.mode === 'steu') {
+        updated.pointMesureIdentifiant = '';
+        updated.systemeCollecteCode = '';
+        updated.statut = '';
+      } else if (newFilters.mode === 'scl') {
+        updated.ouvrageDepollutionCode = '';
+      }
+      return updated;
+    });
+    setPage(1);
+  };
+
+  return { filters, updateFilter, page, setPage };
+};
