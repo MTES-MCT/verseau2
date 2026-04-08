@@ -16,7 +16,6 @@ import type {
   ConformiteSteuDetailRow,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
-import { SclEntity } from '@referentiel/roseau/entities/scl.entity';
 import { LoggerService } from '@shared/logger/logger.service';
 
 const makeConformiteSteuRow = (): ConformiteSteuRow => ({

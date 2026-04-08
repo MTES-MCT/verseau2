@@ -140,12 +140,12 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
     });
   }
 
-  private async sendToAgenceDeEauSftp(depot: DepotModel, pdfBuffer: Buffer): Promise<void> {
+  private async sendToAgenceDeEauSftp(depot: DepotModel, _pdfBuffer: Buffer): Promise<void> {
     try {
       if (!depot.path) {
         throw new Error(`No XML file path for depot: ${depot.id}`);
       }
-      const xmlBuffer = await this.s3.download(depot.path);
+      const _xmlBuffer = await this.s3.download(depot.path);
 
       const remotePath = `verseau2/${depot.id}`;
 

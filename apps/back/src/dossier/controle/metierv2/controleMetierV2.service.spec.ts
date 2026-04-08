@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ControleMetierV2Service } from './controleMetierV2.service';
 import { ControleGateway } from '../controle.gateway';
-import { ControleMapper, ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
+import { ControleMapper } from '../isov1/controle.mapper';
 import { FctAssainissement } from '@lib/parser';
 import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
 import { ControleName, ControleType, ErrorCode } from '@lib/dossier';
@@ -2289,7 +2289,7 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should return no error when cdSupport is 1 (ignored by filter upstream)', () => {
-      const xmlObj: FctAssainissement = {
+      const _xmlObj: FctAssainissement = {
         ouvrages: [
           {
             cdOuvrageDepollution: 'STEU1',

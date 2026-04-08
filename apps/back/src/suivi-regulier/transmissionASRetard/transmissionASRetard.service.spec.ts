@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransmissionASRetardService } from './transmissionASRetard.service';
 import { MasaProvider } from '@masa/masa.provider';
-import { TransmissionASRetardSteuDto, TransmissionASRetardSclDto } from '@lib/dossier';
 
 describe('TransmissionASRetardService', () => {
   let service: TransmissionASRetardService;

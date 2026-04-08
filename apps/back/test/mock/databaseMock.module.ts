@@ -1,25 +1,25 @@
 import { Global, Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-const mockEntityManager = {
+const mockEntityManager: any = {
   save: jest.fn(),
   find: jest.fn(),
   findOne: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
-} as any;
+};
 
-const mockDataSource = {
+const mockDataSource: any = {
   createEntityManager: jest.fn().mockReturnValue(mockEntityManager),
   getRepository: jest.fn().mockReturnValue(mockEntityManager),
-} as any;
+};
 
 @Global()
 @Module({
   providers: [
     {
       provide: DataSource,
-      useValue: mockDataSource,
+      useValue: mockDataSource as DataSource,
     },
   ],
   exports: [DataSource],

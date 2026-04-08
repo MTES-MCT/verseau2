@@ -83,6 +83,7 @@ describe('TraceCalls Decorator', () => {
       return this.internalMethodUsingDependency(input);
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     async internalMethodUsingDependency(val: string) {
       return this.dependency.greet(val);
     }

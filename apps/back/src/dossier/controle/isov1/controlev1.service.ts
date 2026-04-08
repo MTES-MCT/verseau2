@@ -8,7 +8,7 @@ import { ControleGateway } from '../controle.gateway';
 import { ControleIndividuelWithoutSuccess, ControleMapper } from './controle.mapper';
 import { ControleModel } from '../controle.model';
 import { LoggerService } from '@shared/logger/logger.service';
-import { ControleV1DataFetcherService, ControleV1MasaData } from './controleV1DataFetcher.service';
+import { ControleV1DataFetcherService } from './controleV1DataFetcher.service';
 import { ItvCdnByRfa, SteuCdnBySandreCda } from '@masa/masa.dto';
 
 @Injectable()

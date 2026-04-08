@@ -10,7 +10,7 @@ import { UserService } from '@user/user.service';
 import { S3 } from '@infra/s3/s3';
 import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement } from '@lib/parser';
 import { DepotStep, DepotStatus, EtapeMetier, ControleSandreStatus, ControleStatus } from '@lib/dossier';
-import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
+import { DepotRightsException } from '@dossier/depot/depotError';
 import { AsyncTask } from '@worker/asyncTask';
 
 @Injectable()

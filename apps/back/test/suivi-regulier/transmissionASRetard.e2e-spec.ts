@@ -98,6 +98,7 @@ describe('TransmissionASRetardController (e2e)', () => {
     const res = await request(app.getHttpServer())
       .get('/suivi-regulier/transmission-as-retard/steu')
       .set('Cookie', ['access_token=valid-token'])
+
       .query({ year: validYear, page: 1, pageSize: 10, codeSandre: 'STEU_A' })
       .expect(200);
 
@@ -115,6 +116,7 @@ describe('TransmissionASRetardController (e2e)', () => {
     const res = await request(app.getHttpServer())
       .get('/suivi-regulier/transmission-as-retard/scl')
       .set('Cookie', ['access_token=valid-token'])
+
       .query({ year: validYear, page: 1, pageSize: 10, codeSandre: 'SCL_A' })
       .expect(200);
 

@@ -17,7 +17,7 @@ describe('SftpModule', () => {
     getOrThrow: jest.fn(),
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 

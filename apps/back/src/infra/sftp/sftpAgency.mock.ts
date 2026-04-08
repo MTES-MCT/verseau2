@@ -27,7 +27,6 @@ export class SftpAgencyMock implements SftpAgency {
     return this.mockClient;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hasClient(_agencyId: string): boolean {
     // En mode mock, on accepte toutes les agences par défaut
     return true;

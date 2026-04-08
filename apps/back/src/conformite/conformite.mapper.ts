@@ -21,35 +21,62 @@ type PaginatedRows<T> = {
 };
 
 export function toConformiteSteuDto(row: ConformiteSteuRow): ConformiteSteuDto {
-  const { conformiteNationaleProvisoire: _ignored, ...publicRow } = row;
-
-  return publicRow;
+  return {
+    steuCdn: row.steuCdn,
+    ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+    ouvrageDepollutionNom: row.ouvrageDepollutionNom,
+    trancheObligationLibelle: row.trancheObligationLibelle,
+    capaciteNominaleEH: row.capaciteNominaleEH,
+    suiviDebutDate: row.suiviDebutDate,
+    suiviFinDate: row.suiviFinDate,
+    conformiteLocaleProvisoire: row.conformiteLocaleProvisoire,
+    impactConformite: row.impactConformite,
+    suiviRegulierEffectue: row.suiviRegulierEffectue,
+    suiviRegulierDate: row.suiviRegulierDate,
+  };
 }
 
 export function toConformiteSclDto(row: ConformiteSclRow): ConformiteSclDto {
-  const { conformiteNationaleTempsPluieProvisoire: _ignored, ...publicRow } = row;
-
-  return publicRow;
+  return {
+    sclCdn: row.sclCdn,
+    systemeCollecteCode: row.systemeCollecteCode,
+    systemeCollecteNom: row.systemeCollecteNom,
+    trancheObligationLibelle: row.trancheObligationLibelle,
+    typeScl: row.typeScl,
+    suiviDebutDate: row.suiviDebutDate,
+    suiviFinDate: row.suiviFinDate,
+    conformiteLocaleTempsPluieProvisoire: row.conformiteLocaleTempsPluieProvisoire,
+    impactConformite: row.impactConformite,
+    suiviRegulierEffectue: row.suiviRegulierEffectue,
+    suiviRegulierDate: row.suiviRegulierDate,
+  };
 }
 
 export function toConformiteSteuDetailDto(detail: ConformiteSteuDetailRow): ConformiteSteuDetailDto {
-  const {
-    conformiteNationaleParametresConformesPeriodeNb: _ignoredConformesPeriodeNb,
-    conformiteNationaleParametresConformesAnneeNb: _ignoredConformesAnneeNb,
-    conformiteNationaleParametresNonConformesPeriodeNb: _ignoredNonConformesPeriodeNb,
-    conformiteNationaleParametresNonConformesAnneeNb: _ignoredNonConformesAnneeNb,
-    conformiteNationaleRedhibitoiresPeriodeNb: _ignoredRedhibitoiresPeriodeNb,
-    conformiteNationaleRedhibitoiresAnneeNb: _ignoredRedhibitoiresAnneeNb,
-    conformiteNationaleParametresConformesPeriodeLb: _ignoredConformesPeriodeLb,
-    conformiteNationaleParametresConformesAnneeLb: _ignoredConformesAnneeLb,
-    conformiteNationaleParametresNonConformesPeriodeLb: _ignoredNonConformesPeriodeLb,
-    conformiteNationaleParametresNonConformesAnneeLb: _ignoredNonConformesAnneeLb,
-    conformiteNationaleRedhibitoiresPeriodeLb: _ignoredRedhibitoiresPeriodeLb,
-    conformiteNationaleRedhibitoiresAnneeLb: _ignoredRedhibitoiresAnneeLb,
-    ...publicDetail
-  } = detail;
-
-  return publicDetail;
+  return {
+    conformiteLocaleParametresConformesPeriodeNb: detail.conformiteLocaleParametresConformesPeriodeNb,
+    conformiteLocaleParametresConformesAnneeNb: detail.conformiteLocaleParametresConformesAnneeNb,
+    conformiteLocaleParametresNonConformesPeriodeNb: detail.conformiteLocaleParametresNonConformesPeriodeNb,
+    conformiteLocaleParametresNonConformesAnneeNb: detail.conformiteLocaleParametresNonConformesAnneeNb,
+    conformiteLocaleRedhibitoiresPeriodeNb: detail.conformiteLocaleRedhibitoiresPeriodeNb,
+    conformiteLocaleRedhibitoiresAnneeNb: detail.conformiteLocaleRedhibitoiresAnneeNb,
+    conformiteLocaleParametresConformesPeriodeLb: detail.conformiteLocaleParametresConformesPeriodeLb,
+    conformiteLocaleParametresConformesAnneeLb: detail.conformiteLocaleParametresConformesAnneeLb,
+    conformiteLocaleParametresNonConformesPeriodeLb: detail.conformiteLocaleParametresNonConformesPeriodeLb,
+    conformiteLocaleParametresNonConformesAnneeLb: detail.conformiteLocaleParametresNonConformesAnneeLb,
+    conformiteLocaleRedhibitoiresPeriodeLb: detail.conformiteLocaleRedhibitoiresPeriodeLb,
+    conformiteLocaleRedhibitoiresAnneeLb: detail.conformiteLocaleRedhibitoiresAnneeLb,
+    hcnfPeriodeNb: detail.hcnfPeriodeNb,
+    hcnfAnneeNb: detail.hcnfAnneeNb,
+    hctsPeriodeNb: detail.hctsPeriodeNb,
+    hctsAnneeNb: detail.hctsAnneeNb,
+    hcnfPeriodeLb: detail.hcnfPeriodeLb,
+    hcnfAnneeLb: detail.hcnfAnneeLb,
+    hctsPeriodeLb: detail.hctsPeriodeLb,
+    hctsAnneeLb: detail.hctsAnneeLb,
+    evenementsPeriodeNb: detail.evenementsPeriodeNb,
+    evenementsAnneeNb: detail.evenementsAnneeNb,
+  };
 }
 
 export function toConformiteSclDetailDto(detail: ConformiteSclDetailRow): ConformiteSclDetailDto {

@@ -86,12 +86,14 @@ describe('IndicateursController (e2e) - Caching', () => {
   });
 
   it('/indicateurs/steu (GET) - should NOT share cache between different users', async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await
     const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockImplementation(async (cerbereId) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return [{ steuCda: 'STEU-' + cerbereId } as any];
     });
 
     // Mock different users for different tokens
+    // eslint-disable-next-line @typescript-eslint/require-await
     jest.spyOn(authService, 'validateToken').mockImplementation(async (token) => {
       const baseUser = {
         cerbereId: 'default',

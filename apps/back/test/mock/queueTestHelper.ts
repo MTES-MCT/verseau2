@@ -2,7 +2,6 @@
  * Queue test utilities for E2E tests with real PgBoss queue.
  * Provides helpers to wait for job completion and verify job states.
  */
-import { PgBoss } from 'pg-boss';
 import { DataSource } from 'typeorm';
 import { QueueName } from '@infra/queue/queue';
 
@@ -53,6 +52,7 @@ export async function getJobsForDepot(
   queueName: QueueName,
   depotId: string,
 ): Promise<PgBossJobRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const result = await dataSource.query(
     `SELECT id, name, data, state, output, completed_on 
      FROM pgboss.job 
@@ -67,6 +67,7 @@ export async function getJobsForDepot(
  * Get all jobs in a queue for inspection.
  */
 export async function getAllJobsInQueue(dataSource: DataSource, queueName: QueueName): Promise<PgBossJobRow[]> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const result = await dataSource.query(
     `SELECT id, name, data, state, output, completed_on 
      FROM pgboss.job 
@@ -119,6 +120,7 @@ export async function waitForQueueDrain(
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeoutMs) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const result = await dataSource.query(
       `SELECT COUNT(*) as count 
        FROM pgboss.job 
@@ -126,6 +128,7 @@ export async function waitForQueueDrain(
       [queueName],
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     const count = parseInt(result[0]?.count ?? '0', 10);
     if (count === 0) {
       return;
@@ -145,11 +148,13 @@ export async function countJobsInState(
   queueName: QueueName,
   state: 'created' | 'retry' | 'active' | 'completed' | 'failed',
 ): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const result = await dataSource.query(
     `SELECT COUNT(*) as count 
      FROM pgboss.job 
      WHERE name = $1 AND state = $2`,
     [queueName, state],
   );
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
   return parseInt(result[0]?.count ?? '0', 10);
 }
