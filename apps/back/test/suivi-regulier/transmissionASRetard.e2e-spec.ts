@@ -16,6 +16,9 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { MasaProvider } from '@masa/masa.provider';
+import { FIRST_TRANSMISSION_YEAR } from '@lib/dossier';
+
+const validYear = FIRST_TRANSMISSION_YEAR;
 
 const mockUser = (
   overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
@@ -92,10 +95,10 @@ describe('TransmissionASRetardController (e2e)', () => {
   it('/suivi-regulier/transmission-as-retard/steu (GET)', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
-    const res = await request(app.getHttpServer() as App)
+    const res = await request(app.getHttpServer())
       .get('/suivi-regulier/transmission-as-retard/steu')
       .set('Cookie', ['access_token=valid-token'])
-      .query({ year: 2025, page: 1, pageSize: 10, codeSandre: 'STEU_A' })
+      .query({ year: validYear, page: 1, pageSize: 10, codeSandre: 'STEU_A' })
       .expect(200);
 
     expect(res.body).toEqual({
@@ -109,10 +112,10 @@ describe('TransmissionASRetardController (e2e)', () => {
   it('/suivi-regulier/transmission-as-retard/scl (GET)', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
-    const res = await request(app.getHttpServer() as App)
+    const res = await request(app.getHttpServer())
       .get('/suivi-regulier/transmission-as-retard/scl')
       .set('Cookie', ['access_token=valid-token'])
-      .query({ year: 2025, page: 1, pageSize: 10, codeSandre: 'SCL_A' })
+      .query({ year: validYear, page: 1, pageSize: 10, codeSandre: 'SCL_A' })
       .expect(200);
 
     expect(res.body).toEqual({
