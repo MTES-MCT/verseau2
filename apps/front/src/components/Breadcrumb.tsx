@@ -47,6 +47,13 @@ export const Breadcrumb = () => {
       });
     }
 
+    if (pathname === AppRoutes.BILAN_DASHBOARD) {
+      segments.push({
+        label: 'Tableau de bord',
+        href: AppRoutes.DASHBOARD,
+      });
+    }
+
     return segments.length > 0 ? segments : [];
   };
 
@@ -77,6 +84,8 @@ export const Breadcrumb = () => {
     currentPageLabel = 'Référentiel descriptif des ouvrages';
   } else if (location.pathname === AppRoutes.EVENEMENT_DASHBOARD) {
     currentPageLabel = 'Événements';
+  } else if (location.pathname === AppRoutes.BILAN_DASHBOARD) {
+    currentPageLabel = 'Bilans';
   }
 
   return (

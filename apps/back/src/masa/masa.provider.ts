@@ -26,6 +26,10 @@ import {
   EvenementSteuFilters,
   EvenementSclRow,
   EvenementSteuRow,
+  BilanSteuFilters,
+  BilanSclFilters,
+  BilanSteuRow,
+  BilanSclRow,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -276,6 +280,14 @@ export class MasaProvider {
 
   async findEvenementTypes(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findEvenementTypes();
+  }
+
+  async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
+    return this.roseauGateway.findBilanSteu(filters);
+  }
+
+  async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
+    return this.roseauGateway.findBilanScl(filters);
   }
 
   async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {

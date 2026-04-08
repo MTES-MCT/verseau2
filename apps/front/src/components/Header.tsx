@@ -80,6 +80,11 @@ export function AppHeader() {
             isActive: isNavItemActive('/suivi-regulier'),
             menuLinks: [
               {
+                text: 'Bilans',
+                linkProps: { href: AppRoutes.BILAN_DASHBOARD },
+                isActive: isNavItemActive(AppRoutes.BILAN_DASHBOARD),
+              },
+              {
                 text: 'Conformité',
                 linkProps: { href: AppRoutes.CONFORMITE_DASHBOARD },
                 isActive: isNavItemActive(AppRoutes.CONFORMITE_DASHBOARD),
