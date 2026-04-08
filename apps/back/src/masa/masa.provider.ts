@@ -30,6 +30,10 @@ import {
   BilanSclFilters,
   BilanSteuRow,
   BilanSclRow,
+  TransmissionASRetardSclFilters,
+  TransmissionASRetardSteuFilters,
+  TransmissionASRetardSclRow,
+  TransmissionASRetardSteuRow,
   MesureFilters,
   MesureRow,
   SteuWithName,
@@ -288,6 +292,23 @@ export class MasaProvider {
 
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
     return this.roseauGateway.findBilanScl(filters);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Transmission AS en retard — Ouvrages en retard de transmission AS
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
+  async findTransmissionASRetardSteu(
+    filters: TransmissionASRetardSteuFilters,
+  ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
+    return this.roseauGateway.findTransmissionASRetardSteu(filters);
+  }
+
+  async findTransmissionASRetardScl(
+    filters: TransmissionASRetardSclFilters,
+  ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
+    return this.roseauGateway.findTransmissionASRetardScl(filters);
   }
 
   async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {

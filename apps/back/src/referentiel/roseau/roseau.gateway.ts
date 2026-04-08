@@ -15,6 +15,10 @@ import {
   BilanSclFilters,
   BilanSteuRow,
   BilanSclRow,
+  TransmissionASRetardSclFilters,
+  TransmissionASRetardSteuFilters,
+  TransmissionASRetardSclRow,
+  TransmissionASRetardSteuRow,
   ConformiteSclDetailRow,
   ConformiteSclFilters,
   ConformiteSclRow,
@@ -63,6 +67,12 @@ export interface RoseauGateway {
   findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }>;
   findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }>;
   findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }>;
+  findTransmissionASRetardSteu(
+    filters: TransmissionASRetardSteuFilters,
+  ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }>;
+  findTransmissionASRetardScl(
+    filters: TransmissionASRetardSclFilters,
+  ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }>;
   findEvenementTypes(): Promise<NomenclatureItem[]>;
   findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;

@@ -54,6 +54,13 @@ export const Breadcrumb = () => {
       });
     }
 
+    if (pathname === AppRoutes.TRANSMISSION_AS_RETARD_DASHBOARD) {
+      segments.push({
+        label: 'Tableau de bord',
+        href: AppRoutes.DASHBOARD,
+      });
+    }
+
     return segments.length > 0 ? segments : [];
   };
 
@@ -86,6 +93,8 @@ export const Breadcrumb = () => {
     currentPageLabel = 'Événements';
   } else if (location.pathname === AppRoutes.BILAN_DASHBOARD) {
     currentPageLabel = 'Bilans';
+  } else if (location.pathname === AppRoutes.TRANSMISSION_AS_RETARD_DASHBOARD) {
+    currentPageLabel = 'Transmission AS en retard';
   }
 
   return (
