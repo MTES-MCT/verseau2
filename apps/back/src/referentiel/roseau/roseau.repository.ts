@@ -51,6 +51,7 @@ import {
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
 import { UrfEntity } from '@referentiel/lanceleau/entities/urf.entity';
+import { toISODateOrNull } from '@lib/shared';
 
 interface ConformiteSteuRawRow {
   steu_cdn: number | string;
@@ -562,14 +563,6 @@ export class RoseauRepository implements RoseauGateway {
       dataQueryParams,
     );
 
-    const formatDate = (value: Date | string | null) => {
-      if (!value) {
-        return null;
-      }
-
-      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
-    };
-
     return {
       data: rows.map((row) => ({
         steuCdn: Number(row.steu_cdn),
@@ -580,13 +573,13 @@ export class RoseauRepository implements RoseauGateway {
           row.capacite_nominale_eh !== null && row.capacite_nominale_eh !== undefined
             ? Number(row.capacite_nominale_eh)
             : null,
-        suiviDebutDate: formatDate(row.suivi_debut_date),
-        suiviFinDate: formatDate(row.suivi_fin_date),
+        suiviDebutDate: toISODateOrNull(row.suivi_debut_date),
+        suiviFinDate: toISODateOrNull(row.suivi_fin_date),
         conformiteNationaleProvisoire: row.conformite_nationale_provisoire?.trim() ?? null,
         conformiteLocaleProvisoire: row.conformite_locale_provisoire?.trim() ?? null,
         impactConformite: row.impact_conformite,
         suiviRegulierEffectue: row.suivi_regulier_effectue,
-        suiviRegulierDate: formatDate(row.suivi_regulier_date),
+        suiviRegulierDate: toISODateOrNull(row.suivi_regulier_date),
       })),
       total: Number(countRows[0]?.total ?? 0),
     };
@@ -721,25 +714,13 @@ export class RoseauRepository implements RoseauGateway {
         systemeCollecteNom: row.systeme_collecte_nom?.trim() ?? null,
         trancheObligationLibelle: row.tranche_obligation_libelle?.trim() ?? null,
         typeScl: row.type_scl?.trim() ?? null,
-        suiviDebutDate: row.suivi_debut_date
-          ? typeof row.suivi_debut_date === 'string'
-            ? row.suivi_debut_date.split('T')[0]
-            : row.suivi_debut_date.toISOString().split('T')[0]
-          : null,
-        suiviFinDate: row.suivi_fin_date
-          ? typeof row.suivi_fin_date === 'string'
-            ? row.suivi_fin_date.split('T')[0]
-            : row.suivi_fin_date.toISOString().split('T')[0]
-          : null,
+        suiviDebutDate: toISODateOrNull(row.suivi_debut_date),
+        suiviFinDate: toISODateOrNull(row.suivi_fin_date),
         conformiteLocaleTempsPluieProvisoire: row.conformite_locale_temps_pluie_provisoire?.trim() ?? null,
         conformiteNationaleTempsPluieProvisoire: row.conformite_nationale_temps_pluie_provisoire?.trim() ?? null,
         impactConformite: row.impact_conformite,
         suiviRegulierEffectue: row.suivi_regulier_effectue,
-        suiviRegulierDate: row.suivi_regulier_date
-          ? typeof row.suivi_regulier_date === 'string'
-            ? row.suivi_regulier_date.split('T')[0]
-            : row.suivi_regulier_date.toISOString().split('T')[0]
-          : null,
+        suiviRegulierDate: toISODateOrNull(row.suivi_regulier_date),
       })),
       total: Number(countRows[0]?.total ?? 0),
     };
@@ -1238,15 +1219,10 @@ export class RoseauRepository implements RoseauGateway {
       dataQueryParams,
     );
 
-    const formatDate = (value: Date | string | null) => {
-      if (!value) return null;
-      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
-    };
-
     return {
       data: rows.map((row) => ({
         prisEnCompte: row.pris_en_compte,
-        date: formatDate(row.date) ?? '',
+        date: toISODateOrNull(row.date) ?? '',
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
         typeEvenementCode: row.type_evenement_code?.trim() ?? '',
@@ -1363,15 +1339,10 @@ export class RoseauRepository implements RoseauGateway {
       dataQueryParams,
     );
 
-    const formatDate = (value: Date | string | null) => {
-      if (!value) return null;
-      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
-    };
-
     return {
       data: rows.map((row) => ({
         prisEnCompte: row.pris_en_compte,
-        date: formatDate(row.date) ?? '',
+        date: toISODateOrNull(row.date) ?? '',
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
         systemeCollecteCode: row.systeme_collecte_code?.trim() ?? '',
@@ -1503,18 +1474,13 @@ export class RoseauRepository implements RoseauGateway {
       dataQueryParams,
     );
 
-    const formatDate = (value: Date | string | null) => {
-      if (!value) return null;
-      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
-    };
-
     return {
       data: rows.map((row) => ({
         steuCdn: row.steu_cdn,
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
         bilanEcarteParSpe: row.bilan_spe_a === 'NON PRIS EN COMPTE',
-        date: formatDate(row.date) ?? '',
+        date: toISODateOrNull(row.date) ?? '',
         parametreNom: row.parametre_nom?.trim() ?? null,
         hcnf: row.hcnf,
         evt: row.evt,
@@ -1643,11 +1609,6 @@ export class RoseauRepository implements RoseauGateway {
       dataQueryParams,
     );
 
-    const formatDate = (value: Date | string | null) => {
-      if (!value) return null;
-      return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
-    };
-
     return {
       data: rows.map((row) => ({
         sclCdn: row.scl_cdn,
@@ -1656,7 +1617,7 @@ export class RoseauRepository implements RoseauGateway {
         pointMesureIdentifiant: row.point_mesure_identifiant,
         pointMesureNumero: row.point_mesure_numero?.trim() ?? '',
         pointMesureLibelle: row.point_mesure_libelle?.trim() ?? null,
-        date: formatDate(row.date) ?? '',
+        date: toISODateOrNull(row.date) ?? '',
         volumeDeverse: row.volume_deverse != null ? Number(row.volume_deverse) : null,
         tempsDeversement: row.temps_deversement != null ? Number(row.temps_deversement) : null,
         statut: row.statut,
@@ -1776,8 +1737,8 @@ export class RoseauRepository implements RoseauGateway {
       pointMesureLocalisationCode: r.localisation_code?.trim() ?? null,
       pointMesureLocalisationLibelle: r.localisation_globale?.trim() ?? null,
       pointMesureSclCategorie: null,
-      pointMesureValiditeDebutDate: r.date_debut ? new Date(r.date_debut).toISOString().split('T')[0] : null,
-      pointMesureValiditeFinDate: r.date_fin ? new Date(r.date_fin).toISOString().split('T')[0] : null,
+      pointMesureValiditeDebutDate: toISODateOrNull(r.date_debut),
+      pointMesureValiditeFinDate: toISODateOrNull(r.date_fin),
     }));
   }
 
@@ -1831,8 +1792,8 @@ export class RoseauRepository implements RoseauGateway {
       pointMesureLocalisationCode: r.localisation_code?.trim() ?? null,
       pointMesureLocalisationLibelle: r.localisation_globale?.trim() ?? null,
       pointMesureSclCategorie: r.categorie?.trim() ?? null,
-      pointMesureValiditeDebutDate: r.date_debut ? new Date(r.date_debut).toISOString().split('T')[0] : null,
-      pointMesureValiditeFinDate: r.date_fin ? new Date(r.date_fin).toISOString().split('T')[0] : null,
+      pointMesureValiditeDebutDate: toISODateOrNull(r.date_debut),
+      pointMesureValiditeFinDate: toISODateOrNull(r.date_fin),
     }));
   }
 

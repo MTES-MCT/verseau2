@@ -23,17 +23,31 @@ export const getYearMinus = (numberOfYearsBefore: number): number => {
 };
 
 export const getTodayAsISODate = (): string => {
-  return new Date().toISOString().split('T')[0];
+  return dateToLocalISODate(new Date());
 };
 
 export const getNYearsAgoAsISODate = (n: number): string => {
   const date = new Date();
   date.setFullYear(date.getFullYear() - n);
-  return date.toISOString().split('T')[0];
+  return dateToLocalISODate(date);
 };
 
 export const getDateAsISODate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  return dateToLocalISODate(date);
+};
+
+const dateToLocalISODate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const toISODateOrNull = (value: Date | string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+  return typeof value === 'string' ? value.split('T')[0] : dateToLocalISODate(value);
 };
 
 export const getPreviousSunday = (date: Date = new Date()): string => {
