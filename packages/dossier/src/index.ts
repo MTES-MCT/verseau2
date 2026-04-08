@@ -21,4 +21,6 @@ export * from './suivi-regulier/evenement.dto';
 export * from './routes/suiviRegulier.routes';
 export * from './bilan/bilan.dto';
 export * from './routes/bilan.routes';
+export * from './transmission-as-retard/transmissionASRetard.dto';
+export * from './routes/transmissionASRetard.routes';
 export * from './shared/pagination.schema';

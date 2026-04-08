@@ -1,5 +1,10 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
-import { ConformiteSclSortByValue, ConformiteSteuSortByValue, PaginationQuery, TrancheObligationRfa } from '@lib/dossier';
+import {
+  ConformiteSclSortByValue,
+  ConformiteSteuSortByValue,
+  PaginationQuery,
+  TrancheObligationRfa,
+} from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,

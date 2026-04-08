@@ -13,6 +13,7 @@ import MockAuthorizationPage from './pages/MockAuthorizationPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { EvenementDashboard } from './pages/suivi-regulier/evenement/EvenementDashboard';
 import { BilanDashboard } from './pages/suivi-regulier/bilan/BilanDashboard';
+import { TransmissionASRetardDashboard } from './pages/suivi-regulier/transmissionASRetard/TransmissionASRetardDashboard';
 import { AppHeader } from './components/Header';
 import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
@@ -82,6 +83,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <BilanDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={AppRoutes.TRANSMISSION_AS_RETARD_DASHBOARD}
+              element={
+                <ProtectedRoute>
+                  <TransmissionASRetardDashboard />
                 </ProtectedRoute>
               }
             />

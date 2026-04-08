@@ -4,6 +4,10 @@ import {
   BilanSclSortByValue,
   BilanSteuDto,
   BilanSteuSortByValue,
+  TransmissionASRetardSclDto,
+  TransmissionASRetardSclSortByValue,
+  TransmissionASRetardSteuDto,
+  TransmissionASRetardSteuSortByValue,
   ConformiteSclDetailDto,
   ConformiteSclDto,
   ConformiteSclSortByValue,
@@ -53,6 +57,36 @@ export interface BilanSclFilters extends PaginationQuery {
   pointMesureIdentifiant?: number;
   statut?: 'TP' | 'TS';
   sortBy?: BilanSclSortByValue;
+}
+
+/** Filtres pour la recherche de transmissions AS en retard STEU */
+export interface TransmissionASRetardSteuFilters extends PaginationQuery {
+  steuCdns: number[];
+  year: number;
+  codeSandre?: string;
+  sortBy?: TransmissionASRetardSteuSortByValue;
+}
+
+/** Filtres pour la recherche de transmissions AS en retard SCL */
+export interface TransmissionASRetardSclFilters extends PaginationQuery {
+  sclCdns: number[];
+  year: number;
+  codeSandre?: string;
+  sortBy?: TransmissionASRetardSclSortByValue;
+}
+
+/** Ligne brute de transmission AS en retard STEU — inclut colonnes extra (déposant, mail, dateMailExploitant) */
+export interface TransmissionASRetardSteuRow extends TransmissionASRetardSteuDto {
+  deposant: string | null;
+  mail: string | null;
+  dateMailExploitant: string | null;
+}
+
+/** Ligne brute de transmission AS en retard SCL — inclut colonnes extra */
+export interface TransmissionASRetardSclRow extends TransmissionASRetardSclDto {
+  deposant: string | null;
+  mail: string | null;
+  dateMailExploitant: string | null;
 }
 
 /** Une ligne de bilan STEU */

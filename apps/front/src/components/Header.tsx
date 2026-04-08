@@ -94,6 +94,11 @@ export function AppHeader() {
                 linkProps: { href: AppRoutes.EVENEMENT_DASHBOARD },
                 isActive: isNavItemActive(AppRoutes.EVENEMENT_DASHBOARD),
               },
+              {
+                text: 'Transmission AS en retard',
+                linkProps: { href: AppRoutes.TRANSMISSION_AS_RETARD_DASHBOARD },
+                isActive: isNavItemActive(AppRoutes.TRANSMISSION_AS_RETARD_DASHBOARD),
+              },
             ],
           },
           {

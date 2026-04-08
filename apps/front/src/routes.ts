@@ -13,6 +13,7 @@ export const AppRoutes = {
   MOCK_AUTHORIZATION: '/mock_authorization',
   EVENEMENT_DASHBOARD: '/suivi-regulier/evenement',
   BILAN_DASHBOARD: '/suivi-regulier/bilan',
+  TRANSMISSION_AS_RETARD_DASHBOARD: '/suivi-regulier/transmission-as-retard',
   DESIGN_SYSTEM: '/design-system',
 } as const;
 
