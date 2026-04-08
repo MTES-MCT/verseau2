@@ -43,21 +43,22 @@ describe('toISODateOrNull', () => {
   it('returns YYYY-MM-DD string as-is', () => {
     expect(toISODateOrNull('2024-06-15')).toBe('2024-06-15');
   });
+
+  it('extracts date part from space-separated PostgreSQL timestamp', () => {
+    expect(toISODateOrNull('2024-06-15 01:30:00')).toBe('2024-06-15');
+  });
 });
 
-describe('UTC shift protection — Europe/Paris server scenario', () => {
-  // A record created at 2024-06-15T01:30:00 Paris time is stored as
-  // "2024-06-15 01:30:00" in the DB. When read back as a JS Date, using
-  // .toISOString() would produce "2024-06-14T23:30:00.000Z" and extracting
-  // the date part would give the wrong day (2024-06-14).
+describe('UTC shift protection', () => {
+  // These tests verify that our helpers use local date getters (getFullYear,
+  // getMonth, getDate) instead of .toISOString() which converts to UTC first.
+  // The key invariant: a Date constructed with local components must produce
+  // the same YYYY-MM-DD regardless of the machine timezone.
 
   it('getDateAsISODate returns the local date, not the UTC-shifted one', () => {
+    // Construct a date at 01:30 local — in any UTC+ timezone, toISOString()
+    // would shift this to the previous day (e.g. 23:30 UTC = June 14).
     const dbTimestamp = new Date(2024, 5, 15, 1, 30, 0); // 2024-06-15 01:30 local
-
-    // Naive approach — .toISOString() shifts to previous day in UTC+ zones
-    const naiveDate = dbTimestamp.toISOString().split('T')[0];
-    // In Europe/Paris (UTC+2 in summer), this produces '2024-06-14' — WRONG
-    expect(naiveDate).toBe('2024-06-14');
 
     // Our function uses local getters — always returns the correct local day
     expect(getDateAsISODate(dbTimestamp)).toBe('2024-06-15');
@@ -66,7 +67,6 @@ describe('UTC shift protection — Europe/Paris server scenario', () => {
   it('toISODateOrNull returns the local date from a Date object, not UTC', () => {
     const dbTimestamp = new Date(2024, 5, 15, 1, 30, 0);
 
-    expect(dbTimestamp.toISOString().split('T')[0]).toBe('2024-06-14'); // naive = wrong
     expect(toISODateOrNull(dbTimestamp)).toBe('2024-06-15');
   });
 
