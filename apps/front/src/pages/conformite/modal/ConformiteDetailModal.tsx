@@ -219,8 +219,17 @@ function getSclDetailRows(detail: ConformiteSclDetailDto) {
 export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
   const isModalOpen = useIsModalOpen(conformiteDetailModal, { onConceal: props.onClose });
   const { detail, isPreviousDisabled, isNextDisabled, onPrevious, onNext } = props;
+  const detailKey = `${detail?.mode}-${detail?.entityCode}-${detail?.year}`;
+  const [prevDetailKey, setPrevDetailKey] = useState(detailKey);
   const [copied, setCopied] = useState(false);
   const [isCopiedNoticeVisible, setIsCopiedNoticeVisible] = useState(false);
+
+  if (prevDetailKey !== detailKey) {
+    setPrevDetailKey(detailKey);
+    setCopied(false);
+    setIsCopiedNoticeVisible(false);
+  }
+
   const mode = detail?.mode ?? 'steu';
   const year = detail?.year ?? new Date().getFullYear();
   const entityCode = detail?.entityCode ?? '';
@@ -280,11 +289,6 @@ export function ConformiteDetailModal(props: ConformiteDetailModalProps) {
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isModalOpen, isNextDisabled, isPreviousDisabled, onNext, onPrevious]);
-
-  useEffect(() => {
-    setCopied(false);
-    setIsCopiedNoticeVisible(false);
-  }, [detail?.mode, detail?.entityCode, detail?.year]);
 
   useEffect(() => {
     if (!copied) {
