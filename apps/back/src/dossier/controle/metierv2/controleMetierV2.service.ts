@@ -57,7 +57,7 @@ export class ControleMetierV2Service {
       allowedCdSupport: ['3', '4', '5'],
     });
 
-    const { cmas, maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
+    const { cmas, maxDebits: _maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
     const tousControles = await Promise.all([
       // Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),

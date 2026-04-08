@@ -41,6 +41,7 @@ export class TransmissionASRetardService {
       page,
       pageSize,
       ...(codeSandre ? { codeSandre } : {}),
+
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
@@ -72,6 +73,7 @@ export class TransmissionASRetardService {
       page,
       pageSize,
       ...(codeSandre ? { codeSandre } : {}),
+
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };

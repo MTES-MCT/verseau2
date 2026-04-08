@@ -81,17 +81,27 @@ describe('BilanDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockUseBilanSteu.mockReturnValue(emptySteuResult as any);
-    mockUseBilanScl.mockReturnValue(emptySclResult as any);
-    mockUseOuvrages.mockReturnValue({ data: [], isLoading: false } as any);
-    mockUseSystemesCollecte.mockReturnValue({ data: [], isLoading: false } as any);
-    mockUsePointsMesure.mockReturnValue({ data: [], isLoading: false } as any);
+    mockUseBilanSteu.mockReturnValue(
+      emptySteuResult as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>,
+    );
+    mockUseBilanScl.mockReturnValue(
+      emptySclResult as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>,
+    );
+    mockUseOuvrages.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useOuvrages>
+    > as ReturnType<typeof useOuvrages>);
+    mockUseSystemesCollecte.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useSystemesCollecte>
+    > as ReturnType<typeof useSystemesCollecte>);
+    mockUsePointsMesure.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof usePointsMesure>
+    > as ReturnType<typeof usePointsMesure>);
   });
 
   it('affiche le tableau STEU par défaut', () => {
     mockUseBilanSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
-    } as any);
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
 
     renderPage();
 
@@ -103,10 +113,10 @@ describe('BilanDashboard', () => {
   it('change les colonnes quand on bascule vers SCL', () => {
     mockUseBilanSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
-    } as any);
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
     mockUseBilanScl.mockReturnValue({
       data: { data: [makeSclRow()], total: 1, page: 1, pageSize: 10 },
-    } as any);
+    } as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>);
 
     renderPage();
 
@@ -120,7 +130,7 @@ describe('BilanDashboard', () => {
   it('affiche uniquement N et N-1 dans le filtre année', async () => {
     mockUseBilanSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
-    } as any);
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
 
     renderPage();
     const yearSelect = screen.getByLabelText(/année/i);
@@ -146,7 +156,7 @@ describe('BilanDashboard', () => {
         page: 1,
         pageSize: 10,
       },
-    } as any);
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
 
     renderPage();
 
@@ -156,7 +166,7 @@ describe('BilanDashboard', () => {
   it('masque la pagination quand total tient sur une page', () => {
     mockUseBilanSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 5, page: 1, pageSize: 10 },
-    } as any);
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
 
     renderPage();
 

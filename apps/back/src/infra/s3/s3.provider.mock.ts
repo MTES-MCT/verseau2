@@ -2,9 +2,6 @@ import { ConfigService } from '@nestjs/config';
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { LoggerService } from '@shared/logger/logger.service';
 
-// Helper function to add delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const customizeMockS3Client = async (configService: ConfigService, s3Client: S3Client): Promise<S3Client> => {
   const logger = new LoggerService('createMockS3Client');
   logger.warn('MOCK S3 - Using Mocked S3');

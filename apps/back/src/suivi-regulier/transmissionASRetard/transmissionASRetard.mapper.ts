@@ -2,11 +2,31 @@ import type { TransmissionASRetardSteuDto, TransmissionASRetardSclDto } from '@l
 import type { TransmissionASRetardSteuRow, TransmissionASRetardSclRow } from '@masa/masa.dto';
 
 export function mapTransmissionASRetardSteuRowToDto(row: TransmissionASRetardSteuRow): TransmissionASRetardSteuDto {
-  const { deposant, mail, dateMailExploitant, ...dto } = row;
-  return dto;
+  return {
+    codeSandre: row.codeSandre,
+    nom: row.nom,
+    trancheObligation: row.trancheObligation,
+    capaciteNominale: row.capaciteNominale,
+    nbFichiersAsRecus: row.nbFichiersAsRecus,
+    dateDernierFichierRecu: row.dateDernierFichierRecu,
+    dateDebutPeriode: row.dateDebutPeriode,
+    dateFinPeriode: row.dateFinPeriode,
+    dateMesureSuivanteAttendue: row.dateMesureSuivanteAttendue,
+    nbJoursRetard: row.nbJoursRetard,
+  };
 }
 
 export function mapTransmissionASRetardSclRowToDto(row: TransmissionASRetardSclRow): TransmissionASRetardSclDto {
-  const { deposant, mail, dateMailExploitant, ...dto } = row;
-  return dto;
+  return {
+    codeSandre: row.codeSandre,
+    nom: row.nom,
+    trancheObligation: row.trancheObligation,
+    capaciteNominale: row.capaciteNominale,
+    nbFichiersAsRecus: row.nbFichiersAsRecus,
+    dateDernierFichierRecu: row.dateDernierFichierRecu,
+    dateDebutPeriode: row.dateDebutPeriode,
+    dateFinPeriode: row.dateFinPeriode,
+    dateMesureSuivanteAttendue: row.dateMesureSuivanteAttendue,
+    nbJoursRetard: row.nbJoursRetard,
+  };
 }

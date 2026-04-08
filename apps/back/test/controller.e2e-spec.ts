@@ -226,6 +226,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
       .expect(200);
 
     expect(response.body).toEqual({ authorized: true });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(droitsDepotService.validateDroits).toHaveBeenCalledWith(expect.any(String), ['STEU01'], [], true);
   });
 
@@ -272,6 +273,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
       .set('Cookie', ['access_token=token-user-1'])
       .expect(200);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(droitsDepotService.validateDroits).toHaveBeenCalledWith(expect.any(String), ['STEU01'], [], false);
   });
 });

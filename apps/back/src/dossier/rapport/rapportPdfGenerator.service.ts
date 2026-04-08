@@ -32,7 +32,7 @@ export class RapportPdfGeneratorService {
         doc.registerFont('MainFont', '/System/Library/Fonts/Helvetica.ttc', 'Helvetica');
         doc.registerFont('MainFont-Bold', '/System/Library/Fonts/Helvetica.ttc', 'Helvetica-Bold');
         doc.font('MainFont');
-      } catch (e) {
+      } catch {
         doc.font('Helvetica');
       }
 
