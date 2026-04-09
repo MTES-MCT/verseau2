@@ -16,7 +16,6 @@ describe('authenticatedFetch', () => {
     vi.clearAllMocks();
     vi.stubGlobal('fetch', vi.fn());
 
-    // Re-import to reset the module-level refreshPromise
     vi.resetModules();
   });
 
@@ -28,9 +27,6 @@ describe('authenticatedFetch', () => {
   const ok200 = () => new Response('ok', { status: 200, statusText: 'OK' });
 
   const unauthorized401 = () => new Response('Unauthorized', { status: 401, statusText: 'Unauthorized' });
-
-  /** Flush pending microtasks so all concurrent awaits settle. */
-  const flushMicrotasks = () => new Promise<void>((r) => setTimeout(r, 0));
 
   it('returns the response directly when status is not 401', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
@@ -54,55 +50,36 @@ describe('authenticatedFetch', () => {
     expect(response.status).toBe(200);
   });
 
-  it('triggers only one refresh when multiple parallel requests get 401', async () => {
+  it('delegates refresh to authService for each 401 (dedup is in authService)', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
 
-    // Deferred refresh: we control when it resolves
-    let resolveRefresh!: () => void;
-    mockRefreshToken.mockReturnValue(
-      new Promise<void>((resolve) => {
-        resolveRefresh = resolve;
-      }),
-    );
+    // authService.refreshToken is mocked, so each call resolves independently.
+    // The real deduplication happens inside authService.refreshToken().
+    mockRefreshToken.mockResolvedValue(undefined);
 
-    // First 5 fetch calls → 401, subsequent calls → 200 (retries)
+    // First 3 fetch calls → 401, subsequent calls → 200 (retries)
+    let callCount = 0;
     vi.mocked(fetch).mockImplementation(() => {
-      const callCount = vi.mocked(fetch).mock.calls.length;
-      if (callCount <= 5) {
+      callCount++;
+      if (callCount <= 3) {
         return Promise.resolve(unauthorized401());
       }
       return Promise.resolve(ok200());
     });
 
-    // Fire 5 parallel requests (they all yield at the first await)
     const promises = [
       authenticatedFetch('/api/endpoint-1'),
       authenticatedFetch('/api/endpoint-2'),
       authenticatedFetch('/api/endpoint-3'),
-      authenticatedFetch('/api/endpoint-4'),
-      authenticatedFetch('/api/endpoint-5'),
     ];
-
-    // Let microtasks run so all 5 calls receive their 401 and reach the
-    // refresh gate. The refresh promise is still pending, so they are all
-    // blocked on `await refreshPromise`.
-    await flushMicrotasks();
-
-    // At this point all 5 calls got their 401 and only ONE triggered the refresh
-    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
-    // The 5 initial fetches were made, but no retries yet (blocked on refresh)
-    expect(fetch).toHaveBeenCalledTimes(5);
-
-    // Now unblock the refresh
-    resolveRefresh();
 
     const responses = await Promise.all(promises);
 
-    // Still only 1 refresh call total
-    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
-    // 5 initial + 5 retries
-    expect(fetch).toHaveBeenCalledTimes(10);
-    expect(responses).toHaveLength(5);
+    // Each 401 delegates to authService.refreshToken (which deduplicates internally)
+    expect(mockRefreshToken).toHaveBeenCalledTimes(3);
+    // 3 initial + 3 retries
+    expect(fetch).toHaveBeenCalledTimes(6);
+    expect(responses).toHaveLength(3);
     responses.forEach((r) => expect(r.status).toBe(200));
   });
 
