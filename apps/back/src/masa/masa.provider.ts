@@ -220,7 +220,7 @@ export class MasaProvider {
     const ag = await this.lanceleauGateway.findAgByEmail(email);
     if (!ag) return null;
     return {
-      intervenantIdentifiant: ag.itvCdn,
+      intervenantId: ag.itvCdn,
       principalIdentifiant: ag.prCdn,
     };
   }
@@ -254,7 +254,7 @@ export class MasaProvider {
     const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
     if (!itv) return null;
     return {
-      intervenantIdentifiant: itv.itvCdn,
+      intervenantId: itv.itvCdn,
       intervenantNom: itv.itvNomLb,
       intervenantSiret: itv.itvRfa,
     };
@@ -311,8 +311,8 @@ export class MasaProvider {
     return this.roseauGateway.findTransmissionASRetardScl(filters);
   }
 
-  async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {
-    return this.roseauGateway.findPointsMesureBySclCdns(sclCdns);
+  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }
 
   // ---------------------------------------------------------------------------

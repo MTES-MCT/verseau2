@@ -48,7 +48,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .createQueryBuilder('itv')
       .where('itv.itv_rfa IN (:...rfas)', { rfas })
       .getMany();
-    return rows.map((itv) => ({ intervenantSiret: itv.itvRfa, intervenantIdentifiant: itv.itvCdn }));
+    return rows.map((itv) => ({ intervenantSiret: itv.itvRfa, intervenantId: itv.itvCdn }));
   }
 
   async findSupByRfa(supRfa: string): Promise<SupEntity | null> {

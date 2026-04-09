@@ -33,16 +33,16 @@ describe('TransmissionASRetardService', () => {
           codeSandre: 'ABC',
           nom: 'STEU 1',
           nbJoursRetard: 5,
-          deposant: 'Dep',
-          mail: 'a@b.c',
-          dateMailExploitant: '2026-01-01',
+          exploitantNom: 'Exploitant',
+          exploitantEmail: 'a@b.c',
+          exploitantDateEnvoiMail: '2026-01-01',
         },
       ],
       total: 1,
     };
     masaProvider.findTransmissionASRetardSteu.mockResolvedValue(mockData as any);
     masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-      { ouvrageDepollutionIdentifiant: 1, ouvrageDepollutionCode: 'ABC' },
+      { ouvrageDepollutionId: 1, ouvrageDepollutionCode: 'ABC' },
     ]);
 
     const result = await service.listTransmissionASRetardSteu({

@@ -57,9 +57,9 @@ export class DroitsDepotService {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
-    const intervenant = await this.masaProvider.findIntervenantById(ag.intervenantIdentifiant);
+    const intervenant = await this.masaProvider.findIntervenantById(ag.intervenantId);
     this.logger.log('Intervenant found', {
-      intervenantIdentifiant: intervenant?.intervenantIdentifiant,
+      intervenantId: intervenant?.intervenantId,
       siret: intervenant?.intervenantSiret,
     });
     if (!intervenant?.intervenantSiret) {

@@ -142,7 +142,7 @@ export function ReferentielPointsMesurePage() {
     point.pointMesureLibelle ?? '',
     point.pointMesureLocalisationCode ?? '',
     point.pointMesureLocalisationLibelle ?? '',
-    ...(isScl ? [point.pointMesureSclCategorie ?? ''] : []),
+    ...(isScl ? [point.pointMesureCategorieSystemeCollecte ?? ''] : []),
     point.pointMesureValiditeDebutDate ?? '',
     point.pointMesureValiditeFinDate ?? '',
     <SignalerButton

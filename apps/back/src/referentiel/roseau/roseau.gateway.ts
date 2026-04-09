@@ -74,7 +74,7 @@ export interface RoseauGateway {
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }>;
   findEvenementTypes(): Promise<NomenclatureItem[]>;
-  findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]>;
+  findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]>;
   findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
   findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
   findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;

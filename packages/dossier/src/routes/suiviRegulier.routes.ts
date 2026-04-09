@@ -45,7 +45,7 @@ export const listEvenementScl = {
     .object({
       year: EvenementYearSchema,
       typeEvenementCode: z.string().optional(),
-      pointMesureIdentifiant: z.coerce.number().optional(),
+      pointMesureId: z.coerce.number().optional(),
       systemeCollecteCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(EvenementSclSortBy).shape),
@@ -70,7 +70,7 @@ export const listEvenementPmo = {
   query: z.object({}),
   response: z.array(
     z.object({
-      pointMesureIdentifiant: z.number(),
+      pointMesureId: z.number(),
       pointMesureNumero: z.string(),
       pointMesureLibelle: z.string().nullable(),
     }),

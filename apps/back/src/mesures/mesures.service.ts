@@ -15,8 +15,8 @@ export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
   authorizedSteuCdas: string[];
   authorizedSclCdas: string[];
-  steuSandreCdas?: string[];
-  sclSandreCdas?: string[];
+  ouvrageDepollutionCodes?: string[];
+  systemeCollecteCodes?: string[];
   pmoCdn?: number;
   dateDebut?: string;
   dateFin?: string;
@@ -38,8 +38,8 @@ export class MesuresService {
       ouvrageType,
       authorizedSteuCdas,
       authorizedSclCdas,
-      steuSandreCdas: requestedSteus = [],
-      sclSandreCdas: requestedScls = [],
+      ouvrageDepollutionCodes: requestedOuvrages = [],
+      systemeCollecteCodes: requestedSystemesCollecte = [],
       pmoCdn,
       parametreCode,
       qualification,
@@ -51,18 +51,20 @@ export class MesuresService {
     let filters: MesureFilters;
 
     if (ouvrageType === 'scl') {
-      const sclSandreCdas =
-        requestedScls.length > 0 ? requestedScls.filter((cda) => authorizedSclCdas.includes(cda)) : authorizedSclCdas;
+      const systemeCollecteCodes =
+        requestedSystemesCollecte.length > 0
+          ? requestedSystemesCollecte.filter((code) => authorizedSclCdas.includes(code))
+          : authorizedSclCdas;
 
-      if (sclSandreCdas.length === 0) {
+      if (systemeCollecteCodes.length === 0) {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
       }
 
       filters = {
         ouvrageType: 'scl',
-        steuSandreCdas: [],
-        sclSandreCdas,
-        ...(pmoCdn !== undefined ? { pointMesureIdentifiant: pmoCdn } : {}),
+        ouvrageDepollutionCodes: [],
+        systemeCollecteCodes,
+        ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
         ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
         ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
         ...(statut ? { resultatAnalyseStatut: statut } : {}),
@@ -70,20 +72,20 @@ export class MesuresService {
         ...rest,
       };
     } else {
-      const steuSandreCdas =
-        requestedSteus.length > 0
-          ? requestedSteus.filter((cda) => authorizedSteuCdas.includes(cda))
+      const ouvrageDepollutionCodes =
+        requestedOuvrages.length > 0
+          ? requestedOuvrages.filter((code) => authorizedSteuCdas.includes(code))
           : authorizedSteuCdas;
 
-      if (steuSandreCdas.length === 0) {
+      if (ouvrageDepollutionCodes.length === 0) {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
       }
 
       filters = {
         ouvrageType: 'steu',
-        steuSandreCdas,
-        sclSandreCdas: [],
-        ...(pmoCdn !== undefined ? { pointMesureIdentifiant: pmoCdn } : {}),
+        ouvrageDepollutionCodes,
+        systemeCollecteCodes: [],
+        ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
         ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
         ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
         ...(statut ? { resultatAnalyseStatut: statut } : {}),

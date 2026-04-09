@@ -62,7 +62,7 @@ export const listPointsMesure = {
   }),
   response: z.array(
     z.object({
-      pointMesureIdentifiant: z.number(),
+      pointMesureId: z.number(),
       pointMesureNumero: z.string(),
       pointMesureLibelle: z.string().nullable(),
     }),

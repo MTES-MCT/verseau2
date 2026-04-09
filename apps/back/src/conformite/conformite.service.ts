@@ -64,13 +64,13 @@ export class ConformiteService {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
-    const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
-    if (steuCdns.length === 0) {
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
+    if (ouvrageDepollutionIds.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSteuFilters = {
-      steuCdns,
+      ouvrageDepollutionIds,
       year,
       page,
       pageSize,
@@ -93,13 +93,13 @@ export class ConformiteService {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
-    const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
-    if (steuCdns.length === 0) {
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
+    if (ouvrageDepollutionIds.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSclFilters = {
-      steuCdns,
+      ouvrageDepollutionIds,
       year,
       page,
       pageSize,
@@ -120,9 +120,9 @@ export class ConformiteService {
     year: number,
     authorizedSteuCdas: string[],
   ): Promise<ConformiteSteuDetailRow | null> {
-    const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
 
-    if (!steuCdns.includes(steuCdn)) {
+    if (!ouvrageDepollutionIds.includes(steuCdn)) {
       this.logger.warn(`Accès refusé au détail conformité STEU ${steuCdn}`);
       return null;
     }
@@ -136,9 +136,9 @@ export class ConformiteService {
     year: number,
     authorizedSclCdas: string[],
   ): Promise<ConformiteSclDetailRow | null> {
-    const sclCdns = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
 
-    if (!sclCdns.includes(sclCdn)) {
+    if (!systemeCollecteIds.includes(sclCdn)) {
       this.logger.warn(`Accès refusé au détail conformité SCL ${sclCdn}`);
       return null;
     }
@@ -157,7 +157,7 @@ export class ConformiteService {
 
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
 
-    return [...new Set(steus.map((steu) => steu.ouvrageDepollutionIdentifiant))];
+    return [...new Set(steus.map((steu) => steu.ouvrageDepollutionId))];
   }
 
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {

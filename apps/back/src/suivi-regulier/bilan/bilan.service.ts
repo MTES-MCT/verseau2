@@ -14,7 +14,7 @@ export interface ListBilanSclOptions extends PaginationQuery {
   authorizedSclCdas: string[];
   year: number;
   systemeCollecteCode?: string;
-  pointMesureIdentifiant?: number;
+  pointMesureId?: number;
   statut?: 'TP' | 'TS';
   sortBy?: BilanSclSortByValue;
 }
@@ -33,11 +33,11 @@ export class BilanService {
       return { data: [], total: 0, page, pageSize };
     }
 
-    const steuCdns = await this.resolveAuthorizedSteuCdns(cdasToQuery);
-    if (steuCdns.length === 0) return { data: [], total: 0, page, pageSize };
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(cdasToQuery);
+    if (ouvrageDepollutionIds.length === 0) return { data: [], total: 0, page, pageSize };
 
     const filters: BilanSteuFilters = {
-      steuCdns,
+      ouvrageDepollutionIds,
       year,
       page,
       pageSize,
@@ -50,17 +50,8 @@ export class BilanService {
   }
 
   async listBilanScl(options: ListBilanSclOptions) {
-    const {
-      authorizedSclCdas,
-      year,
-      systemeCollecteCode,
-      pointMesureIdentifiant,
-      statut,
-      page,
-      pageSize,
-      sortBy,
-      sortOrder,
-    } = options;
+    const { authorizedSclCdas, year, systemeCollecteCode, pointMesureId, statut, page, pageSize, sortBy, sortOrder } =
+      options;
 
     const cdasToQuery = systemeCollecteCode
       ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
@@ -70,16 +61,16 @@ export class BilanService {
       return { data: [], total: 0, page, pageSize };
     }
 
-    const sclCdns = await this.resolveAuthorizedSclCdns(cdasToQuery);
-    if (sclCdns.length === 0) return { data: [], total: 0, page, pageSize };
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(cdasToQuery);
+    if (systemeCollecteIds.length === 0) return { data: [], total: 0, page, pageSize };
 
     const filters: BilanSclFilters = {
-      sclCdns,
+      systemeCollecteIds,
       year,
       page,
       pageSize,
       ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
-      ...(pointMesureIdentifiant ? { pointMesureIdentifiant } : {}),
+      ...(pointMesureId ? { pointMesureId } : {}),
       ...(statut ? { statut } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
@@ -91,7 +82,7 @@ export class BilanService {
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
     if (authorizedSteuCdas.length === 0) return [];
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
-    return [...new Set(steus.map((s) => s.ouvrageDepollutionIdentifiant))];
+    return [...new Set(steus.map((s) => s.ouvrageDepollutionId))];
   }
 
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {

@@ -95,7 +95,7 @@ describe('BilanController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -109,7 +109,7 @@ describe('BilanController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionIdentifiant: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
+        { ouvrageDepollutionId: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
       ]);
 
       mockMasaProvider.findBilanSteu.mockResolvedValue({
@@ -149,7 +149,7 @@ describe('BilanController (e2e)', () => {
       });
 
       expect(mockMasaProvider.findBilanSteu).toHaveBeenCalledWith({
-        steuCdns: [10],
+        ouvrageDepollutionIds: [10],
         year: currentYear,
         page: 1,
         pageSize: 20,
@@ -168,7 +168,7 @@ describe('BilanController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -191,7 +191,7 @@ describe('BilanController (e2e)', () => {
             sclCdn: 20,
             systemeCollecteCode: 'SCL_TEST_001',
             systemeCollecteNom: 'Systeme collecte 1',
-            pointMesureIdentifiant: 1,
+            pointMesureId: 1,
             pointMesureNumero: 'PM_1',
             pointMesureLibelle: 'Point mesure 1',
             date: `${currentYear}-01-01`,
@@ -223,7 +223,7 @@ describe('BilanController (e2e)', () => {
       });
 
       expect(mockMasaProvider.findBilanScl).toHaveBeenCalledWith({
-        sclCdns: [20],
+        systemeCollecteIds: [20],
         year: currentYear,
         page: 1,
         pageSize: 20,

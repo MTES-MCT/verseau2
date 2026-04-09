@@ -187,7 +187,7 @@ export class ControleV1Service {
         continue;
       }
 
-      if (!expLinkSet.has(`${steu.ouvrageDepollutionIdentifiant}:${itv.intervenantIdentifiant}`)) {
+      if (!expLinkSet.has(`${steu.ouvrageDepollutionId}:${itv.intervenantId}`)) {
         errors.push({
           code: ErrorCode.E2_005,
           params: [cdIntervenant, cdOuvrageDepollution],

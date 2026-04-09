@@ -7,7 +7,7 @@ export interface FilterState {
   mode: 'steu' | 'scl';
   year: number;
   typeEvenementCode: string;
-  pointMesureIdentifiant: string;
+  pointMesureId: string;
   ouvrageDepollutionCode: string;
   systemeCollecteCode: string;
   sortBy?: SortByValue;
@@ -19,7 +19,7 @@ export const useEvenementFilters = () => {
     mode: 'steu',
     year: CURRENT_EVENEMENT_YEAR,
     typeEvenementCode: '',
-    pointMesureIdentifiant: '',
+    pointMesureId: '',
     ouvrageDepollutionCode: '',
     systemeCollecteCode: '',
   });
@@ -34,7 +34,7 @@ export const useEvenementFilters = () => {
         updated.sortOrder = undefined;
       }
       if (newFilters.mode === 'steu') {
-        updated.pointMesureIdentifiant = '';
+        updated.pointMesureId = '';
         updated.systemeCollecteCode = '';
       } else if (newFilters.mode === 'scl') {
         updated.ouvrageDepollutionCode = '';

@@ -75,7 +75,7 @@ describe('MesuresService', () => {
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ steuSandreCdas: ['STEU001', 'STEU002'], ouvrageType: 'steu' }),
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001', 'STEU002'], ouvrageType: 'steu' }),
       );
       expect(result.total).toBe(1);
       expect(result.data).toHaveLength(1);
@@ -101,12 +101,14 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001', 'STEU003'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        steuSandreCdas: ['STEU001', 'STEU002'],
+        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
         page: 1,
         pageSize: 20,
       });
 
-      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ steuSandreCdas: ['STEU001'] }));
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001'] }),
+      );
     });
 
     it('returns empty when requested STEUs are not in authorized list', async () => {
@@ -114,7 +116,7 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU999'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        steuSandreCdas: ['STEU001', 'STEU002'],
+        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
         page: 1,
         pageSize: 20,
       });
@@ -175,13 +177,13 @@ describe('MesuresService', () => {
         authorizedSteuCdas: [],
         authorizedSclCdas: ['SCL001'],
         ouvrageType: 'scl',
-        sclSandreCdas: ['SCL001'],
+        systemeCollecteCodes: ['SCL001'],
         page: 1,
         pageSize: 20,
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ ouvrageType: 'scl', sclSandreCdas: ['SCL001'] }),
+        expect.objectContaining({ ouvrageType: 'scl', systemeCollecteCodes: ['SCL001'] }),
       );
     });
 

@@ -103,7 +103,7 @@ describe('MesuresController', () => {
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
         expect.objectContaining({
           authorizedSteuCdas: ['STEU001'],
-          steuSandreCdas: ['STEU001'],
+          ouvrageDepollutionCodes: ['STEU001'],
           dateDebut: '2024-01-01',
           dateFin: '2024-12-31',
           parametreCode: 'MES_CO',

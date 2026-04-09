@@ -35,12 +35,12 @@ const mockMasaProvider = {
   findTransmissionASRetardScl: jest.fn().mockResolvedValue({ data: [], total: 0 }),
   findSteuBatchBySandreCdas: jest
     .fn()
-    .mockResolvedValue([{ ouvrageDepollutionIdentifiant: 101, ouvrageDepollutionCode: 'STEU_A' }]),
+    .mockResolvedValue([{ ouvrageDepollutionId: 101, ouvrageDepollutionCode: 'STEU_A' }]),
   findSclBatchBySandreCdas: jest
     .fn()
     .mockResolvedValue([{ systemeCollecteIdentifiant: 201, systemeCollecteCode: 'SCL_A' }]),
   findIntervenantById: jest.fn().mockResolvedValue({
-    intervenantIdentifiant: 1,
+    intervenantId: 1,
     intervenantSiret: 'SIRET_TEST',
   }),
   findVSteuSclItvByItvRfa: jest.fn().mockResolvedValue([

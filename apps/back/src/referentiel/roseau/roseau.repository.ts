@@ -68,9 +68,9 @@ interface TransmissionASRetardSteuRawRow {
   date_fin_periode: Date | string | null;
   date_mesure_suivante_attendue: Date | string | null;
   nb_jours_retard: number | null;
-  deposant: string | null;
-  mail: string | null;
-  date_mail_exploitant: Date | string | null;
+  exploitant_nom: string | null;
+  exploitant_email: string | null;
+  exploitant_date_envoi_mail: Date | string | null;
 }
 
 type TransmissionASRetardSclRawRow = TransmissionASRetardSteuRawRow;
@@ -219,7 +219,7 @@ export class RoseauRepository implements RoseauGateway {
       .getMany();
     return rows.map((s) => ({
       ouvrageDepollutionCode: s.steuSandreCda,
-      ouvrageDepollutionIdentifiant: s.steuCdn,
+      ouvrageDepollutionId: s.steuCdn,
     }));
   }
 
@@ -458,9 +458,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    const { steuCdns, year, trancheObligationRfa, impact, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, year, trancheObligationRfa, impact, page, pageSize } = filters;
 
-    if (steuCdns.length === 0) {
+    if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -490,7 +490,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const anneePlaceholder = addParam(annee);
-    const steuPlaceholders = steuCdns.map((steuCdn) => addParam(steuCdn)).join(', ');
+    const steuPlaceholders = ouvrageDepollutionIds.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
 
     if (trancheObligationRfa) {
@@ -608,9 +608,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    const { steuCdns, year, trancheObligationRfa, impact, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, year, trancheObligationRfa, impact, page, pageSize } = filters;
 
-    if (steuCdns.length === 0) {
+    if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -639,7 +639,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const anneePlaceholder = addParam(year);
-    const steuPlaceholders = steuCdns.map((steuCdn) => addParam(steuCdn)).join(', ');
+    const steuPlaceholders = ouvrageDepollutionIds.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
 
     if (trancheObligationRfa) {
@@ -887,9 +887,9 @@ export class RoseauRepository implements RoseauGateway {
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
     const {
       ouvrageType,
-      steuSandreCdas,
-      sclSandreCdas,
-      pointMesureIdentifiant,
+      ouvrageDepollutionCodes,
+      systemeCollecteCodes,
+      pointMesureId,
       dateDebut,
       dateFin,
       parametreAnalyseCode,
@@ -935,16 +935,16 @@ export class RoseauRepository implements RoseauGateway {
 
     const applyFilters = (qb: ReturnType<typeof buildBaseQuery>) => {
       if (ouvrageType === 'scl') {
-        if (sclSandreCdas.length > 0) {
-          qb.andWhere('scl.scl_sandre_cda IN (:...sclSandreCdas)', { sclSandreCdas });
+        if (systemeCollecteCodes.length > 0) {
+          qb.andWhere('scl.scl_sandre_cda IN (:...systemeCollecteCodes)', { systemeCollecteCodes });
         }
       } else {
-        if (steuSandreCdas.length > 0) {
-          qb.andWhere('steu.steu_sandre_cda IN (:...steuSandreCdas)', { steuSandreCdas });
+        if (ouvrageDepollutionCodes.length > 0) {
+          qb.andWhere('steu.steu_sandre_cda IN (:...ouvrageDepollutionCodes)', { ouvrageDepollutionCodes });
         }
       }
-      if (pointMesureIdentifiant !== undefined) {
-        qb.andWhere('pmo.pmo_cdn = :pointMesureIdentifiant', { pointMesureIdentifiant });
+      if (pointMesureId !== undefined) {
+        qb.andWhere('pmo.pmo_cdn = :pointMesureId', { pointMesureId });
       }
       if (dateDebut) {
         qb.andWhere('ple.ple_prelev_dt >= :dateDebut', { dateDebut });
@@ -1112,7 +1112,7 @@ export class RoseauRepository implements RoseauGateway {
 
     const rows = await qb.getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
     return rows.map((r) => ({
-      pointMesureIdentifiant: r.pmo_cdn,
+      pointMesureId: r.pmo_cdn,
       pointMesureNumero: r.pmo_no?.trim() ?? '',
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
     }));
@@ -1152,9 +1152,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
-    const { steuCdns, year, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize } = filters;
 
-    if (steuCdns.length === 0) {
+    if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -1180,7 +1180,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const yearPlaceholder = addParam(year);
-    const steuPlaceholders = steuCdns.map((cdn) => addParam(cdn)).join(', ');
+    const steuPlaceholders = ouvrageDepollutionIds.map((cdn) => addParam(cdn)).join(', ');
     const whereClauses = [
       `steu.steu_cdn IN (${steuPlaceholders})`,
       `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
@@ -1257,9 +1257,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
-    const { sclCdns, year, page, pageSize } = filters;
+    const { systemeCollecteIds, year, page, pageSize } = filters;
 
-    if (sclCdns.length === 0) {
+    if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -1286,7 +1286,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const yearPlaceholder = addParam(year);
-    const sclPlaceholders = sclCdns.map((cdn) => addParam(cdn)).join(', ');
+    const sclPlaceholders = systemeCollecteIds.map((cdn) => addParam(cdn)).join(', ');
     const whereClauses = [
       `scl.scl_cdn IN (${sclPlaceholders})`,
       `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
@@ -1297,8 +1297,8 @@ export class RoseauRepository implements RoseauGateway {
       whereClauses.push(`t46.tlref_elt_cda = ${addParam(filters.typeEvenementCode)}`);
     }
 
-    if (filters.pointMesureIdentifiant) {
-      whereClauses.push(`pmo.pmo_cdn = ${addParam(filters.pointMesureIdentifiant)}`);
+    if (filters.pointMesureId) {
+      whereClauses.push(`pmo.pmo_cdn = ${addParam(filters.pointMesureId)}`);
     }
 
     const baseQuery = `
@@ -1381,9 +1381,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
-    const { steuCdns, year, page, pageSize, ouvrageDepollutionCode } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize, ouvrageDepollutionCode } = filters;
 
-    if (steuCdns.length === 0) {
+    if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -1410,7 +1410,7 @@ export class RoseauRepository implements RoseauGateway {
 
     const startDate = addParam(`${year}-01-01`);
     const endDate = addParam(`${year}-12-31`);
-    const steuPlaceholders = steuCdns.map((cdn) => addParam(cdn)).join(', ');
+    const steuPlaceholders = ouvrageDepollutionIds.map((cdn) => addParam(cdn)).join(', ');
     const whereClauses = [
       `steu.steu_cdn IN (${steuPlaceholders})`,
       `resj.resj_mes_dt >= ${startDate}`,
@@ -1513,9 +1513,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
-    const { sclCdns, year, page, pageSize, systemeCollecteCode, pointMesureIdentifiant, statut } = filters;
+    const { systemeCollecteIds, year, page, pageSize, systemeCollecteCode, pointMesureId, statut } = filters;
 
-    if (sclCdns.length === 0) {
+    if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -1541,7 +1541,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const yearPlaceholder = addParam(year);
-    const sclPlaceholders = sclCdns.map((cdn) => addParam(cdn)).join(', ');
+    const sclPlaceholders = systemeCollecteIds.map((cdn) => addParam(cdn)).join(', ');
     const whereClauses = [
       `scl.scl_cdn IN (${sclPlaceholders})`,
       `date_part('year', d.devers_dt) = ${yearPlaceholder}`,
@@ -1552,8 +1552,8 @@ export class RoseauRepository implements RoseauGateway {
     if (systemeCollecteCode) {
       whereClauses.push(`scl.scl_sandre_cda = ${addParam(systemeCollecteCode)}`);
     }
-    if (pointMesureIdentifiant) {
-      whereClauses.push(`pmo.pmo_cdn = ${addParam(pointMesureIdentifiant)}`);
+    if (pointMesureId) {
+      whereClauses.push(`pmo.pmo_cdn = ${addParam(pointMesureId)}`);
     }
     if (statut) {
       whereClauses.push(`
@@ -1636,7 +1636,7 @@ export class RoseauRepository implements RoseauGateway {
         sclCdn: row.scl_cdn,
         systemeCollecteCode: row.systeme_collecte_code?.trim() ?? '',
         systemeCollecteNom: row.systeme_collecte_nom?.trim() ?? null,
-        pointMesureIdentifiant: row.point_mesure_identifiant,
+        pointMesureId: row.point_mesure_identifiant,
         pointMesureNumero: row.point_mesure_numero?.trim() ?? '',
         pointMesureLibelle: row.point_mesure_libelle?.trim() ?? null,
         date: toISODateOrNull(row.date) ?? '',
@@ -1651,9 +1651,9 @@ export class RoseauRepository implements RoseauGateway {
   async findTransmissionASRetardSteu(
     filters: TransmissionASRetardSteuFilters,
   ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
-    const { steuCdns, year, page, pageSize, codeSandre } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize, codeSandre } = filters;
 
-    if (steuCdns.length === 0) {
+    if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -1681,7 +1681,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const anneePlaceholder = addParam(year);
-    const steuPlaceholders = steuCdns.map((cdn) => addParam(cdn)).join(', ');
+    const steuPlaceholders = ouvrageDepollutionIds.map((cdn) => addParam(cdn)).join(', ');
     const anneeDebut = addParam(`${year}-01-01`);
     const anneeFin = addParam(`${year}-12-31`);
     const anneeSuivante = addParam(`${year + 1}-01-01`);
@@ -1718,9 +1718,9 @@ export class RoseauRepository implements RoseauGateway {
             )
             ELSE extract(day FROM (NOW() - ${dateFallbackRetard}::date))
           END AS nb_jours_retard,
-          itv.itv_mnemo_lb                    AS deposant,
-          adr.adr_mail_lb                     AS mail,
-          reg.steureg_mail_expl_dt            AS date_mail_exploitant
+          itv.itv_mnemo_lb                    AS exploitant_nom,
+          adr.adr_mail_lb                     AS exploitant_email,
+          reg.steureg_mail_expl_dt            AS exploitant_date_envoi_mail
         FROM roseau.steu steu
         JOIN roseau.cxntech cxn
           ON cxn.aval_steu_cdn = steu.steu_cdn
@@ -1804,9 +1804,9 @@ export class RoseauRepository implements RoseauGateway {
          date_fin_periode,
          date_mesure_suivante_attendue,
          nb_jours_retard,
-         deposant,
-         mail,
-         date_mail_exploitant
+         exploitant_nom,
+         exploitant_email,
+         exploitant_date_envoi_mail
        FROM filtered_data
        ORDER BY ${sortColumn} ${sortOrder}, code_sandre ASC
        LIMIT ${limitPlaceholder}
@@ -1831,9 +1831,9 @@ export class RoseauRepository implements RoseauGateway {
         dateFinPeriode: formatDate(row.date_fin_periode),
         dateMesureSuivanteAttendue: formatDate(row.date_mesure_suivante_attendue),
         nbJoursRetard: row.nb_jours_retard != null ? Number(row.nb_jours_retard) : null,
-        deposant: row.deposant?.trim() ?? null,
-        mail: row.mail?.trim() ?? null,
-        dateMailExploitant: formatDate(row.date_mail_exploitant),
+        exploitantNom: row.exploitant_nom?.trim() ?? null,
+        exploitantEmail: row.exploitant_email?.trim() ?? null,
+        exploitantDateEnvoiMail: formatDate(row.exploitant_date_envoi_mail),
       })),
       total: Number(countRows[0]?.total ?? 0),
     };
@@ -1842,9 +1842,9 @@ export class RoseauRepository implements RoseauGateway {
   async findTransmissionASRetardScl(
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
-    const { sclCdns, year, page, pageSize, codeSandre } = filters;
+    const { systemeCollecteIds, year, page, pageSize, codeSandre } = filters;
 
-    if (sclCdns.length === 0) {
+    if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -1872,7 +1872,7 @@ export class RoseauRepository implements RoseauGateway {
     };
 
     const anneePlaceholder = addParam(year);
-    const sclPlaceholders = sclCdns.map((cdn) => addParam(cdn)).join(', ');
+    const sclPlaceholders = systemeCollecteIds.map((cdn) => addParam(cdn)).join(', ');
     const anneeDebut = addParam(`${year}-01-01`);
     const anneeFin = addParam(`${year}-12-31`);
     const anneeSuivante = addParam(`${year + 1}-01-01`);
@@ -1909,9 +1909,9 @@ export class RoseauRepository implements RoseauGateway {
             )
             ELSE extract(day FROM (NOW() - ${dateFallbackRetard}::date))
           END AS nb_jours_retard,
-          itv.itv_mnemo_lb                    AS deposant,
-          adr.adr_mail_lb                     AS mail,
-          reg.sclreg_mail_expl_dt             AS date_mail_exploitant
+          itv.itv_mnemo_lb                    AS exploitant_nom,
+          adr.adr_mail_lb                     AS exploitant_email,
+          reg.sclreg_mail_expl_dt             AS exploitant_date_envoi_mail
         FROM roseau.scl scl
         JOIN roseau.steu steu
           ON steu.steu_cdn = scl.steu_cdn
@@ -1997,9 +1997,9 @@ export class RoseauRepository implements RoseauGateway {
          date_fin_periode,
          date_mesure_suivante_attendue,
          nb_jours_retard,
-         deposant,
-         mail,
-         date_mail_exploitant
+         exploitant_nom,
+         exploitant_email,
+         exploitant_date_envoi_mail
        FROM filtered_data
        ORDER BY ${sortColumn} ${sortOrder}, code_sandre ASC
        LIMIT ${limitPlaceholder}
@@ -2024,9 +2024,9 @@ export class RoseauRepository implements RoseauGateway {
         dateFinPeriode: formatDate(row.date_fin_periode),
         dateMesureSuivanteAttendue: formatDate(row.date_mesure_suivante_attendue),
         nbJoursRetard: row.nb_jours_retard != null ? Number(row.nb_jours_retard) : null,
-        deposant: row.deposant?.trim() ?? null,
-        mail: row.mail?.trim() ?? null,
-        dateMailExploitant: formatDate(row.date_mail_exploitant),
+        exploitantNom: row.exploitant_nom?.trim() ?? null,
+        exploitantEmail: row.exploitant_email?.trim() ?? null,
+        exploitantDateEnvoiMail: formatDate(row.exploitant_date_envoi_mail),
       })),
       total: Number(countRows[0]?.total ?? 0),
     };
@@ -2046,8 +2046,8 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {
-    if (sclCdns.length === 0) return [];
+  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
+    if (systemeCollecteIds.length === 0) return [];
 
     const rows = await this.pmoRepository
       .createQueryBuilder('pmo')
@@ -2055,12 +2055,12 @@ export class RoseauRepository implements RoseauGateway {
       .addSelect('pmo.pmo_no', 'pmo_no')
       .addSelect('pmo.pmo_lb', 'pmo_lb')
       .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
-      .where('scl.scl_cdn IN (:...sclCdns)', { sclCdns })
+      .where('scl.scl_cdn IN (:...systemeCollecteIds)', { systemeCollecteIds })
       .orderBy('pmo.pmo_no', 'ASC')
       .getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
 
     return rows.map((r) => ({
-      pointMesureIdentifiant: r.pmo_cdn,
+      pointMesureId: r.pmo_cdn,
       pointMesureNumero: r.pmo_no?.trim() ?? '',
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
     }));
@@ -2142,7 +2142,7 @@ export class RoseauRepository implements RoseauGateway {
       pointMesureLibelle: r.nom_point?.trim() ?? null,
       pointMesureLocalisationCode: r.localisation_code?.trim() ?? null,
       pointMesureLocalisationLibelle: r.localisation_globale?.trim() ?? null,
-      pointMesureSclCategorie: null,
+      pointMesureCategorieSystemeCollecte: null,
       pointMesureValiditeDebutDate: toISODateOrNull(r.date_debut),
       pointMesureValiditeFinDate: toISODateOrNull(r.date_fin),
     }));
@@ -2197,7 +2197,7 @@ export class RoseauRepository implements RoseauGateway {
       pointMesureLibelle: r.nom_point?.trim() ?? null,
       pointMesureLocalisationCode: r.localisation_code?.trim() ?? null,
       pointMesureLocalisationLibelle: r.localisation_globale?.trim() ?? null,
-      pointMesureSclCategorie: r.categorie?.trim() ?? null,
+      pointMesureCategorieSystemeCollecte: r.categorie?.trim() ?? null,
       pointMesureValiditeDebutDate: toISODateOrNull(r.date_debut),
       pointMesureValiditeFinDate: toISODateOrNull(r.date_fin),
     }));

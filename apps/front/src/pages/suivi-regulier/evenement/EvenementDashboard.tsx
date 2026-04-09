@@ -51,7 +51,7 @@ export const EvenementDashboard = () => {
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
     if (isScl) {
-      updateFilter({ systemeCollecteCode: newVal, pointMesureIdentifiant: '' });
+      updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
     } else {
       updateFilter({ ouvrageDepollutionCode: newVal });
     }
@@ -73,7 +73,7 @@ export const EvenementDashboard = () => {
     year: filters.year,
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.systemeCollecteCode ? { systemeCollecteCode: filters.systemeCollecteCode } : {}),
-    ...(filters.pointMesureIdentifiant ? { pointMesureIdentifiant: Number(filters.pointMesureIdentifiant) } : {}),
+    ...(filters.pointMesureId ? { pointMesureId: Number(filters.pointMesureId) } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -187,14 +187,13 @@ export const EvenementDashboard = () => {
             <Select
               label="Point de mesures"
               nativeSelectProps={{
-                value: filters.pointMesureIdentifiant,
-                onChange: (e: ChangeEvent<HTMLSelectElement>) =>
-                  updateFilter({ pointMesureIdentifiant: e.target.value }),
+                value: filters.pointMesureId,
+                onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ pointMesureId: e.target.value }),
               }}
             >
               <option value="">Tous les points</option>
               {(pmos || []).map((p) => (
-                <option key={p.pointMesureIdentifiant} value={p.pointMesureIdentifiant.toString()}>
+                <option key={p.pointMesureId} value={p.pointMesureId.toString()}>
                   {p.pointMesureNumero} - {p.pointMesureLibelle}
                 </option>
               ))}
