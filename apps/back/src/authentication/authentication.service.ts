@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import type { CookieOptions, Response } from 'express';
 
 import {
@@ -9,7 +9,9 @@ import {
   fetchUserInfo,
   skipSubjectCheck,
   type UserInfoResponse,
+  type TokenEndpointResponseHelpers,
 } from 'openid-client';
+import type * as oauth from 'oauth4webapi';
 import {
   Authentication,
   AuthenticatedUser,
@@ -108,7 +110,8 @@ export class AuthenticationService implements Authentication {
 
       return this.mapInternalClaimsToUser(payload);
     } catch (error) {
-      throw new Error(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      this.logger.error(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new UnauthorizedException();
     }
   }
 
@@ -209,14 +212,53 @@ export class AuthenticationService implements Authentication {
   }
 
   async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
-    const configuration = await this.getConfiguration();
-    const tokens = await refreshTokenGrant(configuration, refreshToken);
+    this.logger.log('Starting token refresh');
 
-    // Récupérer les infos utilisateur depuis le nouveau token Cerbere
-    const user = await this.getUserInfo(tokens.access_token);
+    let configuration: Configuration;
+    try {
+      configuration = await this.getConfiguration();
+    } catch (error) {
+      this.logger.error(
+        `Failed to get OIDC configuration during token refresh: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
 
-    // Re-résoudre les claims métier (peuvent avoir changé)
-    const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
+    let tokens: oauth.TokenEndpointResponse & TokenEndpointResponseHelpers;
+    try {
+      tokens = await refreshTokenGrant(configuration, refreshToken);
+      this.logger.log('OIDC refresh token grant succeeded');
+    } catch (error) {
+      this.logger.error(
+        `OIDC refresh token grant failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error,
+      );
+      throw new UnauthorizedException();
+    }
+
+    let user: AuthenticatedUser;
+    try {
+      // Récupérer les infos utilisateur depuis le nouveau token Cerbere
+      user = await this.getUserInfo(tokens.access_token);
+      this.logger.log(`User info retrieved for cerbereId=${user.cerbereId}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch user info after token refresh: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new UnauthorizedException();
+    }
+
+    let itvCdn: number | null;
+    let isExpertNational: boolean;
+    try {
+      // Re-résoudre les claims métier (peuvent avoir changé)
+      ({ itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId));
+    } catch (error) {
+      this.logger.error(
+        `Failed to resolve business claims for cerbereId=${user.cerbereId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw new UnauthorizedException();
+    }
 
     // Re-forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(
@@ -230,6 +272,8 @@ export class AuthenticationService implements Authentication {
     if (!tokens.refresh_token) {
       this.logger.warn('AS did not return a new refresh token');
     }
+
+    this.logger.log('Token refresh completed successfully');
 
     return {
       accessToken: internalToken,
