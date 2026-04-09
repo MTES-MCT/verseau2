@@ -325,11 +325,13 @@ export class AuthenticationService implements Authentication {
 
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {
     // The access_token cookie must live as long as the refresh_token cookie so that
-    // the browser still sends the (expired) JWT on a cold reload.  The JWT's own
-    // `exp` claim enforces actual expiration in the auth middleware; the cookie
-    // lifetime is purely a transport concern.  extractSubjectFromExpiredToken()
-    // verifies the signature (tolerating up to 7 days of clock drift) to safely
-    // recover the subject during a refresh.
+    // the browser still sends the (expired) JWT on a cold reload. The JWT's own
+    // `exp` claim still enforces expiration in the auth middleware; the cookie
+    // lifetime is purely a transport concern. During refresh,
+    // extractSubjectFromExpiredToken() verifies the signature while allowing tokens
+    // whose `exp` is up to 7 days in the past to pass verification, solely to
+    // recover the subject safely when the AS does not advertise refresh token
+    // lifetime.
     const cookieOptions: CookieOptions = {
       ...this.baseCookieOptions,
       maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
