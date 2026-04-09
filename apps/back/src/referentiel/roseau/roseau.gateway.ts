@@ -1,4 +1,3 @@
-import { SclEntity } from './entities/scl.entity';
 import { SteuEntity } from './entities/steu.entity';
 import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
@@ -35,12 +34,13 @@ import {
   NomenclatureItem,
   PointMesureReferentielRow,
   SclCdnBySandreCda,
+  SystemeCollecte,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
-  findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
+  findSclBySandreCda(sandreCda: string): Promise<SystemeCollecte | null>;
   findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
   findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]>;

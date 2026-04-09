@@ -105,6 +105,6 @@ export class EvenementService {
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {
     if (authorizedSclCdas.length === 0) return [];
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
-    return [...new Set(scls.map((s) => s.systemeCollecteIdentifiant))];
+    return [...new Set(scls.map((s) => s.systemeCollecteId))];
   }
 }

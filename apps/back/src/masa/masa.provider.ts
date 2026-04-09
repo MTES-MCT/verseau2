@@ -3,7 +3,6 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { SclEntity } from '@referentiel/roseau/entities/scl.entity';
 import {
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
@@ -42,9 +41,10 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
+  SystemeCollecte,
+  RolePrincipal,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
-import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
 
 /**
  * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
@@ -68,7 +68,7 @@ export class MasaProvider {
     return this.roseauGateway.findSteuBatchBySandreCdas(cdas);
   }
 
-  async findSclBySandreCda(cda: string): Promise<SclEntity | null> {
+  async findSclBySandreCda(cda: string): Promise<SystemeCollecte | null> {
     return this.roseauGateway.findSclBySandreCda(cda);
   }
 
@@ -240,7 +240,7 @@ export class MasaProvider {
   // Utilisé par DroitsDepotService pour vérifier déposant/expert bassin
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
-  async findRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {
+  async findRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null> {
     return await this.lanceleauGateway.findOrionRolesByPrCdn(prCdn);
   }
 

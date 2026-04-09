@@ -11,7 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { ItvCdnByRfa, VSteuSclItvResult } from '@masa/masa.dto';
+import { ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 
 @Injectable()
 export class LanceleauRepository implements LanceleauGateway {
@@ -72,8 +72,12 @@ export class LanceleauRepository implements LanceleauGateway {
     return !!role;
   }
 
-  async findOrionRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {
-    return this.orionRoleForPrincipalRepository.find({ where: { prCdn } });
+  async findOrionRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null> {
+    const roles = await this.orionRoleForPrincipalRepository.find({ where: { prCdn } });
+    return roles.map((r) => ({
+      principalIdentifiant: r.prCdn,
+      roleOrionId: r.roleCdn,
+    }));
   }
 
   async findAgByEmail(email: string): Promise<AgEntity | null> {

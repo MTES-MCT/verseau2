@@ -1,6 +1,7 @@
 ouvrageDepollutionCode, steu_sandre_cda, Code Sandre identifiant la station de traitement des eaux usees (STEU)
 ouvrageDepollutionId, steu_cdn, Identifiant technique interne de la STEU dans Roseau
 ouvrageDepollutionNom, steu_nom_lb, Denomination de la station de traitement des eaux usees
+systemeCollecteId, scl_cdn, Identifiant technique interne du systeme de collecte dans Roseau
 systemeCollecteCode, scl_sandre_cda, Code Sandre identifiant le systeme de collecte des eaux usees (SCL)
 systemeCollecteNom, scl_lb, Denomination du systeme de collecte
 intervenantId, itv_cdn, Identifiant technique interne de l'intervenant dans Lanceleau

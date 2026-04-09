@@ -36,9 +36,7 @@ const mockMasaProvider = {
   findSteuBatchBySandreCdas: jest
     .fn()
     .mockResolvedValue([{ ouvrageDepollutionId: 101, ouvrageDepollutionCode: 'STEU_A' }]),
-  findSclBatchBySandreCdas: jest
-    .fn()
-    .mockResolvedValue([{ systemeCollecteIdentifiant: 201, systemeCollecteCode: 'SCL_A' }]),
+  findSclBatchBySandreCdas: jest.fn().mockResolvedValue([{ systemeCollecteId: 201, systemeCollecteCode: 'SCL_A' }]),
   findIntervenantById: jest.fn().mockResolvedValue({
     intervenantId: 1,
     intervenantSiret: 'SIRET_TEST',

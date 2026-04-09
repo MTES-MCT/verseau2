@@ -367,7 +367,7 @@ describe('ConformiteService', () => {
       const detail = makeConformiteSclDetailRow();
 
       masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteIdentifiant: 201 },
+        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
       ]);
       masaProvider.findConformiteSclDetail.mockResolvedValue(detail);
 
@@ -380,7 +380,7 @@ describe('ConformiteService', () => {
 
     it('returns null when sclCdn is not authorized', async () => {
       masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteIdentifiant: 201 },
+        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
       ]);
 
       const result = await service.getConformiteSclDetail(999, 2019, ['SCL001']);

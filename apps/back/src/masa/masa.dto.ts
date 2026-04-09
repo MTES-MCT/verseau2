@@ -159,7 +159,7 @@ export interface SclWithName {
 /** Résultat SCL retourné par un fetch batch MASA */
 export interface SclCdnBySandreCda {
   systemeCollecteCode: string;
-  systemeCollecteIdentifiant: number;
+  systemeCollecteId: number;
 }
 
 /** Résultat ITV retourné par un fetch batch MASA */
@@ -180,6 +180,19 @@ export interface IntervenantAuth {
   intervenantId: number;
   intervenantNom?: string;
   intervenantSiret?: string; // siret
+}
+
+/** Système de collecte des eaux usées — résultat de recherche par code Sandre */
+export interface SystemeCollecte {
+  systemeCollecteId: number;
+  systemeCollecteCode: string;
+  systemeCollecteNom: string | null;
+}
+
+/** Rôle Orion attribué à un principal — utilisé pour vérifier les droits (déposant, expert bassin, etc.) */
+export interface RolePrincipal {
+  principalIdentifiant: number;
+  roleOrionId: number;
 }
 
 /** Droits STEU/SCL par SIRET intervenant — utilisé pour la validation des droits de dépôt */

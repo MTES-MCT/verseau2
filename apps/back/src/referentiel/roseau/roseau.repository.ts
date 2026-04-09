@@ -51,6 +51,7 @@ import {
   TransmissionASRetardSteuRow,
   TransmissionASRetardSclFilters,
   TransmissionASRetardSclRow,
+  SystemeCollecte,
 } from '@masa/masa.dto';
 import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
@@ -189,8 +190,14 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.find();
   }
 
-  async findSclBySandreCda(sandreCda: string): Promise<SclEntity | null> {
-    return this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
+  async findSclBySandreCda(sandreCda: string): Promise<SystemeCollecte | null> {
+    const scl = await this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
+    if (!scl) return null;
+    return {
+      systemeCollecteId: scl.sclCdn,
+      systemeCollecteCode: scl.sclSandreCda,
+      systemeCollecteNom: scl.sclLb,
+    };
   }
 
   async findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]> {
@@ -203,7 +210,7 @@ export class RoseauRepository implements RoseauGateway {
 
     return rows.map((scl) => ({
       systemeCollecteCode: scl.sclSandreCda,
-      systemeCollecteIdentifiant: scl.sclCdn,
+      systemeCollecteId: scl.sclCdn,
     }));
   }
 

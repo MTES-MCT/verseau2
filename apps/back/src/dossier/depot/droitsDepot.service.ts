@@ -50,7 +50,7 @@ export class DroitsDepotService {
     }
 
     const roles = await this.masaProvider.findRolesByPrCdn(ag.principalIdentifiant);
-    const roleCdns = new Set(roles?.map((r) => r.roleCdn));
+    const roleCdns = new Set(roles?.map((r) => r.roleOrionId));
     const hasRoleDeposantOrExpertBassin = roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU);
     this.logger.log('hasRoleDeposantOrExpertBassin', hasRoleDeposantOrExpertBassin);
     if (!hasRoleDeposantOrExpertBassin) {

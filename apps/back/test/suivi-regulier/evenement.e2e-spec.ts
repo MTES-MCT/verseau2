@@ -277,7 +277,7 @@ describe('EvenementController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteIdentifiant: 20, systemeCollecteCode: 'SCL_TEST_001' },
+        { systemeCollecteId: 20, systemeCollecteCode: 'SCL_TEST_001' },
       ]);
 
       mockMasaProvider.findEvenementScl.mockResolvedValue({
@@ -345,7 +345,7 @@ describe('EvenementController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteIdentifiant: 20, systemeCollecteCode: 'SCL_TEST_001' },
+        { systemeCollecteId: 20, systemeCollecteCode: 'SCL_TEST_001' },
       ]);
 
       mockMasaProvider.findEvenementScl.mockResolvedValue({
