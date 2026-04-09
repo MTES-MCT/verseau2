@@ -197,7 +197,6 @@ export class AuthenticationService implements Authentication {
 
     return {
       accessToken: internalToken,
-      idToken: tokens.id_token!,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
       cerbereAccessToken: tokens.access_token,
@@ -306,25 +305,10 @@ export class AuthenticationService implements Authentication {
 
     return {
       accessToken: internalToken,
-      idToken: tokens.id_token || '',
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
       cerbereAccessToken: tokens.access_token,
     };
-  }
-
-  async generateLogoutUrl(idToken: string): Promise<string> {
-    const configuration = await this.getConfiguration();
-    const endSessionEndpoint = configuration.serverMetadata().end_session_endpoint;
-    if (!endSessionEndpoint) {
-      throw new Error('End session endpoint not available');
-    }
-
-    const logoutUrl = new URL(endSessionEndpoint);
-    logoutUrl.searchParams.set('id_token_hint', idToken);
-    logoutUrl.searchParams.set('post_logout_redirect_uri', this.redirectUri.replace('/api/auth/callback', ''));
-
-    return logoutUrl.toString();
   }
 
   private get baseCookieOptions(): CookieOptions {
@@ -340,18 +324,22 @@ export class AuthenticationService implements Authentication {
   private readonly REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    const accessTokenOptions: CookieOptions = {
+    // The access_token cookie must live as long as the refresh_token cookie so that
+    // the browser still sends the (expired) JWT on a cold reload. The JWT's own
+    // `exp` claim still enforces expiration in the auth middleware; the cookie
+    // lifetime is purely a transport concern. During refresh,
+    // extractSubjectFromExpiredToken() verifies the signature while allowing tokens
+    // whose `exp` is up to 7 days in the past to pass verification, solely to
+    // recover the subject safely when the AS does not advertise refresh token
+    // lifetime.
+    const cookieOptions: CookieOptions = {
       ...this.baseCookieOptions,
-      maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
+      maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
     };
-    res.cookie('access_token', tokens.accessToken, accessTokenOptions);
+    res.cookie('access_token', tokens.accessToken, cookieOptions);
 
     if (tokens.refreshToken) {
-      const refreshTokenOptions: CookieOptions = {
-        ...this.baseCookieOptions,
-        maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
-      };
-      res.cookie('refresh_token', tokens.refreshToken, refreshTokenOptions);
+      res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
     }
   }
 

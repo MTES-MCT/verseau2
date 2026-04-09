@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockRefreshToken = vi.fn();
-const mockClearTokens = vi.fn();
+const mockClearSession = vi.fn();
 
 vi.mock('../services/auth.service', () => ({
   authService: {
     refreshToken: mockRefreshToken,
-    clearTokens: mockClearTokens,
-    getAccessToken: vi.fn().mockResolvedValue('token'),
+    clearSession: mockClearSession,
   },
 }));
 
@@ -15,7 +14,7 @@ describe('authenticatedFetch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefreshToken.mockReset();
-    mockClearTokens.mockReset();
+    mockClearSession.mockReset();
     vi.stubGlobal('fetch', vi.fn());
 
     vi.resetModules();
@@ -95,7 +94,7 @@ describe('authenticatedFetch', () => {
     mockRefreshToken.mockRejectedValueOnce(new Error('refresh failed'));
 
     await expect(authenticatedFetch('/api/test')).rejects.toThrow('Session expired');
-    expect(mockClearTokens).toHaveBeenCalledTimes(1);
+    expect(mockClearSession).toHaveBeenCalledTimes(1);
     expect(locationSpy.href).toBe('/');
   });
 });

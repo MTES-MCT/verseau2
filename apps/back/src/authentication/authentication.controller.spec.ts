@@ -30,7 +30,6 @@ describe('AuthenticationController', () => {
       getOIDCConfiguration: jest.fn(),
       handleCallback: jest.fn(),
       refreshTokens: jest.fn(),
-      generateLogoutUrl: jest.fn(),
       buildCookieResponse: jest.fn(),
       clearCookieResponse: jest.fn(),
     } as jest.Mocked<Authentication>;
@@ -104,7 +103,6 @@ describe('AuthenticationController', () => {
 
       const refreshedTokens: OIDCTokens = {
         accessToken: 'new-internal-jwt',
-        idToken: 'new-id-token',
         refreshToken: 'new-refresh-token', // AS rotated the token
         expiresIn: 3600,
         cerbereAccessToken: 'new-cerbere-token',
@@ -128,7 +126,6 @@ describe('AuthenticationController', () => {
 
       const refreshedTokens: OIDCTokens = {
         accessToken: 'new-internal-jwt',
-        idToken: 'new-id-token',
         refreshToken: undefined, // AS did NOT issue a new refresh token
         expiresIn: 3600,
         cerbereAccessToken: 'new-cerbere-token',
@@ -157,21 +154,12 @@ describe('AuthenticationController', () => {
   });
 
   describe('logout', () => {
-    it('should throw BadRequestException when idToken is missing', async () => {
+    it('should clear cookies', () => {
       const res = makeResponse();
 
-      await expect(controller.logout('', res)).rejects.toThrow(BadRequestException);
-    });
-
-    it('should clear cookies and return logout URL', async () => {
-      const res = makeResponse();
-      mockAuthentication.generateLogoutUrl.mockResolvedValue('https://auth.example.com/logout');
-
-      const result = await controller.logout('id-token-xyz', res);
+      controller.logout(res);
 
       expect(mockAuthentication.clearCookieResponse).toHaveBeenCalledWith(res);
-      expect(mockAuthentication.generateLogoutUrl).toHaveBeenCalledWith('id-token-xyz');
-      expect(result).toEqual({ logoutUrl: 'https://auth.example.com/logout' });
     });
   });
 
@@ -205,10 +193,8 @@ describe('AuthenticationController', () => {
       };
       mockAuthentication.handleCallback.mockResolvedValue({
         accessToken: 'internal-jwt',
-        idToken: 'id-token',
         refreshToken: 'refresh-token',
         expiresIn: 3600,
-        cerbereAccessToken: 'cerbere-token',
         user: mockUser,
       });
       mockUserService.findOrCreateUser.mockResolvedValue({} as never);

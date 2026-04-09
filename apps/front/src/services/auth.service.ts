@@ -2,25 +2,18 @@ import type { AuthenticatedUser, AuthenticatedUserWithIntervenant } from '../typ
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-interface TokenStorage {
-  access_token: string;
-  id_token: string;
-  refresh_token?: string;
+/** Only the access-token expiration timestamp needs to live in localStorage.
+ *  The actual tokens are stored as httpOnly cookies by the backend. */
+interface SessionStorage {
   expires_at: number;
 }
 
 interface AuthCallbackResponse {
-  accessToken: string;
-  idToken: string;
-  refreshToken?: string;
   expiresIn?: number;
   user: AuthenticatedUser;
 }
 
 interface RefreshResponse {
-  accessToken: string;
-  idToken: string;
-  refreshToken?: string;
   expiresIn?: number;
 }
 
@@ -31,7 +24,7 @@ interface OIDCConfiguration {
   scope: string;
 }
 
-const STORAGE_KEY = 'oidc_tokens';
+const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
 const NONCE_KEY = 'oidc_nonce';
 
@@ -131,60 +124,46 @@ class AuthService {
 
     const data: AuthCallbackResponse = await response.json();
 
-    // Tokens are now set as HttpOnly cookies by the backend
-    // We store the expiration and id_token (for logout hint)
-    this.storeTokens({
-      access_token: 'cookie-stored',
-      id_token: data.idToken,
-      refresh_token: 'cookie-stored',
+    // Tokens are set as httpOnly cookies by the backend.
+    // We only store the expiration timestamp so the frontend can proactively refresh.
+    this.storeSession({
       expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
     });
   }
 
   /**
-   * Logout the user
+   * Logout the user: clear httpOnly cookies via backend, then clear local session.
    */
   async logout(): Promise<void> {
-    const tokens = this.getTokens();
-    const idToken = tokens?.id_token;
-
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idToken }),
+        credentials: 'include',
       });
-
-      if (response.ok) {
-        const { logoutUrl } = await response.json();
-        this.clearTokens();
-        window.location.href = logoutUrl;
-      } else {
-        this.clearTokens();
-      }
     } catch {
-      this.clearTokens();
+      // Best-effort: even if the request fails, clear local state below.
+    } finally {
+      this.clearSession();
     }
   }
 
   /**
-   * Get the current access token, refreshing if necessary
+   * Check whether a valid session exists, refreshing proactively if needed.
+   * Returns a truthy string when the session is valid, null otherwise.
    */
   async getAccessToken(): Promise<string | null> {
-    const tokens = this.getTokens();
-    if (!tokens) {
+    const session = this.getSession();
+    if (!session) {
       return null;
     }
 
-    // Check if token is expired or will expire in the next 60 seconds
-    if (tokens.expires_at - Date.now() < 60000) {
+    // Proactively refresh if the token expires within the next 60 seconds
+    if (session.expires_at - Date.now() < 60000) {
       try {
         await this.refreshToken();
         return 'cookie-stored';
       } catch {
-        this.clearTokens();
+        this.clearSession();
         return null;
       }
     }
@@ -207,9 +186,6 @@ class AuthService {
   private async doRefreshToken(): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       credentials: 'include',
     });
 
@@ -219,21 +195,17 @@ class AuthService {
 
     const data: RefreshResponse = await response.json();
 
-    const tokens = this.getTokens();
-    this.storeTokens({
-      access_token: 'cookie-stored',
-      id_token: data.idToken || tokens?.id_token || '',
-      refresh_token: 'cookie-stored',
+    this.storeSession({
       expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
     });
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated (non-expired session exists locally).
    */
   isAuthenticated(): boolean {
-    const tokens = this.getTokens();
-    return !!tokens && tokens.expires_at > Date.now();
+    const session = this.getSession();
+    return !!session && session.expires_at > Date.now();
   }
 
   /**
@@ -245,13 +217,13 @@ class AuthService {
       credentials: 'include',
     });
 
-    // If the access-token cookie expired (out of sync with localStorage),
+    // If the access-token cookie has expired (JWT exp, not cookie maxAge),
     // refresh and retry once before giving up.
     if (response.status === 401) {
       try {
         await this.refreshToken();
       } catch (error) {
-        this.clearTokens();
+        this.clearSession();
         throw error;
       }
 
@@ -261,7 +233,7 @@ class AuthService {
       });
 
       if (!retryResponse.ok) {
-        this.clearTokens();
+        this.clearSession();
         throw new Error(retryResponse.status === 401 ? 'Session expired' : 'Failed to get user info');
       }
 
@@ -275,41 +247,34 @@ class AuthService {
     return response.json();
   }
 
-  /**
-   * Store tokens in localStorage
-   */
-  private storeTokens(tokens: TokenStorage): void {
+  private storeSession(session: SessionStorage): void {
     try {
-      this.storage.setItem(STORAGE_KEY, JSON.stringify(tokens));
+      this.storage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
-      console.error('Failed to store tokens:', error);
+      console.error('Failed to store session:', error);
     }
   }
 
-  /**
-   * Get tokens from localStorage
-   */
-  private getTokens(): TokenStorage | null {
+  private getSession(): SessionStorage | null {
     try {
       const stored = this.storage.getItem(STORAGE_KEY);
       if (!stored) {
         return null;
       }
-      return JSON.parse(stored) as TokenStorage;
+      return JSON.parse(stored) as SessionStorage;
     } catch (error) {
-      console.error('Failed to parse tokens:', error);
+      console.error('Failed to parse session:', error);
       return null;
     }
   }
 
-  /**
-   * Clear tokens from localStorage
-   */
-  clearTokens(): void {
+  clearSession(): void {
     try {
       this.storage.removeItem(STORAGE_KEY);
+      // Also remove the legacy key if it exists (migration)
+      this.storage.removeItem('oidc_tokens');
     } catch (error) {
-      console.error('Failed to clear tokens:', error);
+      console.error('Failed to clear session:', error);
     }
   }
 }
