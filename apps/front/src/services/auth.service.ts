@@ -39,6 +39,9 @@ class AuthService {
   private storage: Storage;
   private sessionStorage: Storage;
 
+  /** Shared promise so concurrent refreshes trigger only one request. */
+  private refreshPromise: Promise<void> | null = null;
+
   constructor() {
     this.storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage);
     this.sessionStorage = typeof window !== 'undefined' ? window.sessionStorage : ({} as Storage);
@@ -190,9 +193,18 @@ class AuthService {
   }
 
   /**
-   * Refresh the access token
+   * Refresh the access token (deduplicated: concurrent calls share a single request)
    */
   async refreshToken(): Promise<void> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.doRefreshToken().finally(() => {
+        this.refreshPromise = null;
+      });
+    }
+    return this.refreshPromise;
+  }
+
+  private async doRefreshToken(): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
@@ -232,6 +244,28 @@ class AuthService {
       method: 'GET',
       credentials: 'include',
     });
+
+    // If the access-token cookie expired (out of sync with localStorage),
+    // refresh and retry once before giving up.
+    if (response.status === 401) {
+      try {
+        await this.refreshToken();
+      } catch (error) {
+        this.clearTokens();
+        throw error;
+      }
+
+      const retryResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!retryResponse.ok) {
+        throw new Error('Failed to get user info');
+      }
+
+      return retryResponse.json();
+    }
 
     if (!response.ok) {
       throw new Error('Failed to get user info');

@@ -23,7 +23,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshUser = useCallback(async () => {
     try {
-      if (authService.isAuthenticated()) {
+      // Use getAccessToken() instead of isAuthenticated() so that an
+      // expired access token triggers a refresh via the refresh-token
+      // cookie. This is critical on page reload where the access token
+      // may have expired while a valid refresh token still exists.
+      const token = await authService.getAccessToken();
+      if (token) {
         const userData = await authService.getCurrentUser();
         setAuthenticatedUser(userData);
       } else {

@@ -28,7 +28,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     credentials: 'include',
   });
 
-  // Handle 401 by attempting to refresh token
+  // Handle 401 by attempting to refresh token (dedup handled by authService)
   if (response.status === 401) {
     try {
       await authService.refreshToken();
