@@ -7,6 +7,9 @@ export { buildRoutePath };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
+/** Shared promise so concurrent 401s trigger only one refresh. */
+let refreshPromise: Promise<void> | null = null;
+
 export class ApiError extends Error {
   status: number;
   statusText: string;
@@ -28,10 +31,15 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     credentials: 'include',
   });
 
-  // Handle 401 by attempting to refresh token
+  // Handle 401 by attempting to refresh token (deduplicated)
   if (response.status === 401) {
     try {
-      await authService.refreshToken();
+      if (!refreshPromise) {
+        refreshPromise = authService.refreshToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
+      await refreshPromise;
 
       const retryResponse = await fetch(url, {
         ...options,
