@@ -18,10 +18,11 @@ import type { Response } from 'express';
 
 export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
+  /** Verify the internal JWT signature (ignoring expiration) and return the `sub` claim. */
+  extractSubjectFromExpiredToken(token: string): Promise<string>;
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
   handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
-  getUserInfo(accessToken: string): Promise<AuthenticatedUser>;
-  refreshTokens(refreshToken: string): Promise<OIDCTokens>;
+  refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens>;
   generateLogoutUrl(idToken: string): Promise<string>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;
   clearCookieResponse(res: Response): void;

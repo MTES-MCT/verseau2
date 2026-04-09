@@ -19,6 +19,7 @@ import type { Response } from 'express';
 import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Throttle({ default: { ttl: 60000, limit: 10 } })
 @Controller('auth')
@@ -27,7 +28,10 @@ export class AuthenticationController {
     @Inject(Authentication) private readonly authentication: Authentication,
     private readonly userService: UserService,
     private readonly droitsUserService: DroitsUserService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(AuthenticationController.name);
+  }
 
   @Get('login')
   login() {
@@ -99,8 +103,15 @@ export class AuthenticationController {
       throw new BadRequestException('Missing refresh token');
     }
 
+    const accessToken = req.cookies['access_token'] as string | undefined;
+    if (!accessToken) {
+      throw new BadRequestException('Missing access token');
+    }
+
+    const expectedSubject = await this.authentication.extractSubjectFromExpiredToken(accessToken);
+
     try {
-      const tokens = await this.authentication.refreshTokens(refreshToken);
+      const tokens = await this.authentication.refreshTokens(refreshToken, expectedSubject);
 
       const tokensWithFallbackRefresh: typeof tokens = {
         ...tokens,
@@ -114,9 +125,11 @@ export class AuthenticationController {
         expiresIn: tokens.expiresIn,
       };
     } catch (error: unknown) {
-      throw new UnauthorizedException(
+      this.logger.error(
         `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error : undefined,
       );
+      throw new UnauthorizedException();
     }
   }
 

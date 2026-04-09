@@ -7,6 +7,7 @@ import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
+import { loggerProviderMock } from '@shared/logger/logger.mock';
 
 const makeResponse = (): jest.Mocked<Response> =>
   ({
@@ -25,9 +26,9 @@ describe('AuthenticationController', () => {
   beforeEach(async () => {
     mockAuthentication = {
       validateToken: jest.fn(),
+      extractSubjectFromExpiredToken: jest.fn(),
       getOIDCConfiguration: jest.fn(),
       handleCallback: jest.fn(),
-      getUserInfo: jest.fn(),
       refreshTokens: jest.fn(),
       generateLogoutUrl: jest.fn(),
       buildCookieResponse: jest.fn(),
@@ -62,6 +63,7 @@ describe('AuthenticationController', () => {
           provide: DroitsUserService,
           useValue: mockDroitsUserService,
         },
+        loggerProviderMock,
       ],
     }).compile();
 
@@ -80,9 +82,25 @@ describe('AuthenticationController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(BadRequestException);
     });
 
-    it('should set updated cookie when the AS returns a new refresh token (rotation)', async () => {
+    it('should throw BadRequestException when access token cookie is missing', async () => {
       const req = makeRequest({ refresh_token: 'old-refresh-token' });
       const res = makeResponse();
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw UnauthorizedException when access token signature verification fails', async () => {
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'forged-or-invalid-token' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockRejectedValue(new UnauthorizedException());
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should set updated cookie when the AS returns a new refresh token (rotation)', async () => {
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'internal-jwt' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
       const refreshedTokens: OIDCTokens = {
         accessToken: 'new-internal-jwt',
@@ -95,7 +113,7 @@ describe('AuthenticationController', () => {
 
       const result = await controller.refresh(req, res);
 
-      expect(mockAuthentication.refreshTokens).toHaveBeenCalledWith('old-refresh-token');
+      expect(mockAuthentication.refreshTokens).toHaveBeenCalledWith('old-refresh-token', 'user-123');
       expect(mockAuthentication.buildCookieResponse).toHaveBeenCalledWith(
         res,
         expect.objectContaining({ refreshToken: 'new-refresh-token' }),
@@ -104,8 +122,9 @@ describe('AuthenticationController', () => {
     });
 
     it('should fall back to old refresh token when the AS does not return a new one (no rotation)', async () => {
-      const req = makeRequest({ refresh_token: 'old-refresh-token' });
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'internal-jwt' });
       const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
       const refreshedTokens: OIDCTokens = {
         accessToken: 'new-internal-jwt',
@@ -126,8 +145,9 @@ describe('AuthenticationController', () => {
     });
 
     it('should throw UnauthorizedException when refreshTokens rejects (invalid grant / rotation enforced)', async () => {
-      const req = makeRequest({ refresh_token: 'expired-or-revoked-token' });
+      const req = makeRequest({ refresh_token: 'expired-or-revoked-token', access_token: 'internal-jwt' });
       const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
       mockAuthentication.refreshTokens.mockRejectedValue(new Error('invalid_grant'));
 

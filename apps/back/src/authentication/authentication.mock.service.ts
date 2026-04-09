@@ -24,6 +24,11 @@ export class AuthenticationMockService implements Authentication {
     return this.getMockUser();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  async extractSubjectFromExpiredToken(token: string): Promise<string> {
+    return this.getMockUser().cerbereId;
+  }
+
   getOIDCConfiguration(): Promise<OIDCConfiguration> {
     return Promise.resolve({
       authorizationEndpoint: 'http://localhost:5173/mock_authorization',
@@ -46,12 +51,7 @@ export class AuthenticationMockService implements Authentication {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
-    return this.getMockUser();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
-  async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
+  async refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens> {
     const fakeToken = 'mock-token';
     return {
       accessToken: fakeToken,
