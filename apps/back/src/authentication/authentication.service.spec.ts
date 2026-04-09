@@ -14,7 +14,6 @@ jest.mock('openid-client', () => ({
   authorizationCodeGrant: jest.fn(),
   refreshTokenGrant: jest.fn(),
   fetchUserInfo: jest.fn(),
-  skipSubjectCheck: Symbol('skipSubjectCheck'),
 }));
 
 const mockSign = jest.fn().mockResolvedValue('mock-internal-jwt');
@@ -170,7 +169,7 @@ describe('AuthenticationService', () => {
       expect(fetchUserInfo).not.toHaveBeenCalled();
     });
 
-    it('should handle missing optional fields', async () => {
+    it('should handle missing optional fields in handleCallback', async () => {
       const minimalUserInfo = {
         sub: 'user-minimal',
         preferred_username: 'minimal.user',
@@ -180,12 +179,22 @@ describe('AuthenticationService', () => {
         cerbere_matricule: 'MIN001',
       };
 
+      const mockTokens = {
+        access_token: 'mock-access-token',
+        id_token: 'mock-id-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        claims: () => ({ sub: 'user-minimal', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
+      };
+
+      (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(minimalUserInfo);
 
-      const result = await service.getUserInfo('mock-access-token');
+      const result = await service.handleCallback('mock-code', 'mock-nonce');
 
-      expect(result).toEqual(
-        createAuthenticatedUser({
+      expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'mock-access-token', 'user-minimal');
+      expect(result.user).toEqual(
+        expect.objectContaining({
           cerbereId: 'user-minimal',
           mel: 'minimal@example.com',
         }),
@@ -202,6 +211,7 @@ describe('AuthenticationService', () => {
         id_token: 'new-id-token',
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
+        claims: () => ({ sub: 'user-123', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
       };
       const mockUserInfo = {
         sub: 'user-123',
@@ -220,6 +230,7 @@ describe('AuthenticationService', () => {
       const result = await service.refreshTokens(mockRefreshToken);
 
       expect(refreshTokenGrant).toHaveBeenCalledWith(mockConfiguration, mockRefreshToken);
+      expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-cerbere-access-token', 'user-123');
       expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('user-123');
       expect(mockDroitsUserService.isExpertNationalVerseau).toHaveBeenCalledWith('user-123');
 
@@ -231,21 +242,21 @@ describe('AuthenticationService', () => {
       expect(result.expiresIn).toBe(3600);
     });
 
-    it('should handle missing id_token in response', async () => {
+    it('should reject refresh when no ID token is returned (no sub to verify)', async () => {
       const mockRefreshedTokens = {
         access_token: 'new-access-token',
         id_token: undefined,
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
+        claims: () => undefined,
       };
-      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
-      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
 
-      const result = await service.refreshTokens(mockRefreshToken);
-
-      expect(result.idToken).toBe('');
+      await expect(service.refreshTokens(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'No ID token returned by the authorization server during token refresh',
+      );
     });
 
     it('should propagate errors from refreshTokenGrant as generic 401', async () => {
@@ -292,11 +303,20 @@ describe('AuthenticationService', () => {
   });
 
   describe('lazy discovery', () => {
+    const mockRefreshTokensWithClaims = {
+      access_token: 'new-access-token',
+      id_token: 'new-id-token',
+      refresh_token: 'new-refresh-token',
+      expires_in: 3600,
+      claims: () => ({ sub: 'u1', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
+    };
+
     it('should call discovery() only once and reuse the configuration', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensWithClaims);
       (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
 
-      await service.getUserInfo('token1');
-      await service.getUserInfo('token2');
+      await service.refreshTokens('rt1');
+      await service.refreshTokens('rt2');
 
       expect(discovery).toHaveBeenCalledTimes(1);
     });
@@ -304,7 +324,7 @@ describe('AuthenticationService', () => {
     it('should throw ServiceUnavailableException when discovery fails', async () => {
       (discovery as jest.Mock).mockRejectedValue(new Error('Connection refused'));
 
-      await expect(service.getUserInfo('token')).rejects.toMatchObject({
+      await expect(service.refreshTokens('rt')).rejects.toMatchObject({
         message: 'OIDC provider unreachable: Connection refused',
       });
     });
@@ -313,13 +333,14 @@ describe('AuthenticationService', () => {
       (discovery as jest.Mock)
         .mockRejectedValueOnce(new Error('Transient error'))
         .mockResolvedValueOnce(mockConfiguration);
+      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensWithClaims);
       (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
 
       // First call fails
-      await expect(service.getUserInfo('token')).rejects.toThrow();
+      await expect(service.refreshTokens('rt')).rejects.toThrow();
       // Second call succeeds (discovery retried)
-      const result = await service.getUserInfo('token');
-      expect(result.cerbereId).toBe('u1');
+      const result = await service.refreshTokens('rt');
+      expect(result.accessToken).toBe('mock-internal-jwt');
       expect(discovery).toHaveBeenCalledTimes(2);
     });
   });
@@ -385,6 +406,7 @@ describe('AuthenticationService', () => {
         id_token: 'new-id-token',
         refresh_token: undefined,
         expires_in: 3600,
+        claims: () => ({ sub: 'user-123', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
       };
       const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 
@@ -402,6 +424,7 @@ describe('AuthenticationService', () => {
         id_token: 'new-id-token',
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
+        claims: () => ({ sub: 'user-123', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
       };
       const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 

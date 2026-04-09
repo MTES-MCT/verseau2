@@ -27,7 +27,6 @@ describe('AuthenticationController', () => {
       validateToken: jest.fn(),
       getOIDCConfiguration: jest.fn(),
       handleCallback: jest.fn(),
-      getUserInfo: jest.fn(),
       refreshTokens: jest.fn(),
       generateLogoutUrl: jest.fn(),
       buildCookieResponse: jest.fn(),

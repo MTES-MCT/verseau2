@@ -20,7 +20,6 @@ export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
   handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
-  getUserInfo(accessToken: string): Promise<AuthenticatedUser>;
   refreshTokens(refreshToken: string): Promise<OIDCTokens>;
   generateLogoutUrl(idToken: string): Promise<string>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;

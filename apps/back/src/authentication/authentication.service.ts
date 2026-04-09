@@ -7,7 +7,6 @@ import {
   authorizationCodeGrant,
   refreshTokenGrant,
   fetchUserInfo,
-  skipSubjectCheck,
   type UserInfoResponse,
   type TokenEndpointResponse,
   type TokenEndpointResponseHelpers,
@@ -141,7 +140,12 @@ export class AuthenticationService implements Authentication {
       pkceCodeVerifier: undefined,
     });
 
-    const userInfo = await this.fetchUserInfoClaims(tokens.access_token);
+    const idTokenClaims = tokens.claims();
+    if (!idTokenClaims) {
+      throw new UnauthorizedException('No ID token returned by the authorization server');
+    }
+
+    const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
     const user = this.mapOpenIdUserToUser(userInfo);
 
     // Résoudre les claims métier depuis Lanceleau
@@ -174,15 +178,10 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
-    const userInfo = await this.fetchUserInfoClaims(accessToken);
-    return this.mapOpenIdUserToUser(userInfo);
-  }
-
-  private async fetchUserInfoClaims(accessToken: string): Promise<UserInfoResponse> {
+  private async fetchUserInfoClaims(accessToken: string, expectedSubject: string): Promise<UserInfoResponse> {
     const configuration = await this.getConfiguration();
 
-    const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, skipSubjectCheck);
+    const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, expectedSubject);
 
     return userInfo;
   }
@@ -236,10 +235,17 @@ export class AuthenticationService implements Authentication {
       throw new UnauthorizedException();
     }
 
+    const idTokenClaims = tokens.claims();
+    if (!idTokenClaims) {
+      this.logger.error('No ID token returned by the authorization server during token refresh');
+      throw new UnauthorizedException();
+    }
+
     let user: AuthenticatedUser;
     try {
       // Récupérer les infos utilisateur depuis le nouveau token Cerbere
-      user = await this.getUserInfo(tokens.access_token);
+      const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
+      user = this.mapOpenIdUserToUser(userInfo);
       this.logger.log(`User info retrieved for cerbereId=${user.cerbereId}`);
     } catch (error) {
       this.logger.error(
