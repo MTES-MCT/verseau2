@@ -83,17 +83,24 @@ describe('Controller (e2e) - Unauthorized', () => {
     });
 
     it('/auth/refresh (POST) - Should return 201', async () => {
+      // Forge a minimal JWT with a sub claim for the access_token cookie
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ sub: 'test-user-id' })).toString('base64url');
+      const fakeJwt = `${header}.${payload}.fake`;
       return request(app.getHttpServer())
         .post('/auth/refresh')
-        .set('Cookie', ['refresh_token=refresh-token-abc'])
+        .set('Cookie', [`refresh_token=refresh-token-abc`, `access_token=${fakeJwt}`])
         .expect(201);
     });
 
     it('/auth/refresh (POST) - Should return 401 when refreshTokens throw an error', async () => {
       jest.spyOn(authService, 'refreshTokens').mockRejectedValueOnce(new Error('Refresh failed'));
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ sub: 'test-user-id' })).toString('base64url');
+      const fakeJwt = `${header}.${payload}.fake`;
       return request(app.getHttpServer())
         .post('/auth/refresh')
-        .set('Cookie', ['refresh_token=refresh-token-abc'])
+        .set('Cookie', [`refresh_token=refresh-token-abc`, `access_token=${fakeJwt}`])
         .expect(401);
     });
 

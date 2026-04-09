@@ -7,7 +7,6 @@ import {
   authorizationCodeGrant,
   refreshTokenGrant,
   fetchUserInfo,
-  skipSubjectCheck,
   type UserInfoResponse,
   type TokenEndpointResponse,
   type TokenEndpointResponseHelpers,
@@ -115,6 +114,33 @@ export class AuthenticationService implements Authentication {
     }
   }
 
+  /**
+   * Vérifie la signature HMAC du JWT interne Verseau2 (en tolérant l'expiration)
+   * et retourne le claim `sub`. Utilisé lors du refresh pour obtenir le sujet
+   * attendu de manière sûre plutôt que de décoder le payload sans vérification.
+   */
+  async extractSubjectFromExpiredToken(token: string): Promise<string> {
+    try {
+      const { payload } = await jwtVerify(token, this.jwtSecret, {
+        algorithms: ['HS256'],
+        // Le refresh est appelé précisément quand l'access token a expiré.
+        // On tolère une expiration de 7 jours (durée max du refresh token).
+        clockTolerance: 7 * 24 * 60 * 60,
+      });
+
+      if (!payload.sub) {
+        throw new Error('Missing sub claim');
+      }
+
+      return payload.sub;
+    } catch (error) {
+      this.logger.error(
+        `Failed to extract subject from expired token: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      throw new UnauthorizedException();
+    }
+  }
+
   async getOIDCConfiguration(): Promise<OIDCConfiguration> {
     const configuration = await this.getConfiguration();
     const metadata = configuration.serverMetadata();
@@ -141,7 +167,12 @@ export class AuthenticationService implements Authentication {
       pkceCodeVerifier: undefined,
     });
 
-    const userInfo = await this.fetchUserInfoClaims(tokens.access_token);
+    const idTokenClaims = tokens.claims();
+    if (!idTokenClaims) {
+      throw new UnauthorizedException('No ID token returned by the authorization server');
+    }
+
+    const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
     const user = this.mapOpenIdUserToUser(userInfo);
 
     // Résoudre les claims métier depuis Lanceleau
@@ -166,7 +197,7 @@ export class AuthenticationService implements Authentication {
 
     return {
       accessToken: internalToken,
-      idToken: tokens.id_token!,
+      idToken: tokens.id_token,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
       cerbereAccessToken: tokens.access_token,
@@ -174,15 +205,10 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async getUserInfo(accessToken: string): Promise<AuthenticatedUser> {
-    const userInfo = await this.fetchUserInfoClaims(accessToken);
-    return this.mapOpenIdUserToUser(userInfo);
-  }
-
-  private async fetchUserInfoClaims(accessToken: string): Promise<UserInfoResponse> {
+  private async fetchUserInfoClaims(accessToken: string, expectedSubject: string): Promise<UserInfoResponse> {
     const configuration = await this.getConfiguration();
 
-    const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, skipSubjectCheck);
+    const userInfo: UserInfoResponse = await fetchUserInfo(configuration, accessToken, expectedSubject);
 
     return userInfo;
   }
@@ -211,7 +237,7 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
+  async refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens> {
     this.logger.log('Starting token refresh');
 
     let configuration: Configuration;
@@ -239,7 +265,10 @@ export class AuthenticationService implements Authentication {
     let user: AuthenticatedUser;
     try {
       // Récupérer les infos utilisateur depuis le nouveau token Cerbere
-      user = await this.getUserInfo(tokens.access_token);
+      // expectedSubject provient du JWT interne Verseau2 (cookie access_token) et non du id_token OIDC,
+      // car le spec OIDC n'impose pas le retour d'un id_token lors d'un refresh grant.
+      const userInfo = await this.fetchUserInfoClaims(tokens.access_token, expectedSubject);
+      user = this.mapOpenIdUserToUser(userInfo);
       this.logger.log(`User info retrieved for cerbereId=${user.cerbereId}`);
     } catch (error) {
       this.logger.error(
@@ -277,25 +306,10 @@ export class AuthenticationService implements Authentication {
 
     return {
       accessToken: internalToken,
-      idToken: tokens.id_token || '',
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
       cerbereAccessToken: tokens.access_token,
     };
-  }
-
-  async generateLogoutUrl(idToken: string): Promise<string> {
-    const configuration = await this.getConfiguration();
-    const endSessionEndpoint = configuration.serverMetadata().end_session_endpoint;
-    if (!endSessionEndpoint) {
-      throw new Error('End session endpoint not available');
-    }
-
-    const logoutUrl = new URL(endSessionEndpoint);
-    logoutUrl.searchParams.set('id_token_hint', idToken);
-    logoutUrl.searchParams.set('post_logout_redirect_uri', this.redirectUri.replace('/api/auth/callback', ''));
-
-    return logoutUrl.toString();
   }
 
   private get baseCookieOptions(): CookieOptions {
@@ -311,18 +325,22 @@ export class AuthenticationService implements Authentication {
   private readonly REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
   buildCookieResponse(res: Response, tokens: OIDCTokens): void {
-    const accessTokenOptions: CookieOptions = {
+    // The access_token cookie must live as long as the refresh_token cookie so that
+    // the browser still sends the (expired) JWT on a cold reload. The JWT's own
+    // `exp` claim still enforces expiration in the auth middleware; the cookie
+    // lifetime is purely a transport concern. During refresh,
+    // extractSubjectFromExpiredToken() verifies the signature while allowing tokens
+    // whose `exp` is up to 7 days in the past to pass verification, solely to
+    // recover the subject safely when the AS does not advertise refresh token
+    // lifetime.
+    const cookieOptions: CookieOptions = {
       ...this.baseCookieOptions,
-      maxAge: tokens.expiresIn ? tokens.expiresIn * 1000 : undefined,
+      maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
     };
-    res.cookie('access_token', tokens.accessToken, accessTokenOptions);
+    res.cookie('access_token', tokens.accessToken, cookieOptions);
 
     if (tokens.refreshToken) {
-      const refreshTokenOptions: CookieOptions = {
-        ...this.baseCookieOptions,
-        maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
-      };
-      res.cookie('refresh_token', tokens.refreshToken, refreshTokenOptions);
+      res.cookie('refresh_token', tokens.refreshToken, cookieOptions);
     }
 
     if (tokens.idToken) {

@@ -2,7 +2,9 @@ import type { AuthenticatedUser, AuthenticatedUserWithIntervenant } from '../typ
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-interface SessionMeta {
+/** Only the access-token expiration timestamp needs to live in localStorage.
+ *  The actual tokens are stored as httpOnly cookies by the backend. */
+interface SessionStorage {
   expires_at: number;
 }
 
@@ -22,7 +24,7 @@ interface OIDCConfiguration {
   scope: string;
 }
 
-const STORAGE_KEY = 'oidc_session_meta';
+const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
 const NONCE_KEY = 'oidc_nonce';
 
@@ -122,7 +124,7 @@ class AuthService {
 
     const data: AuthCallbackResponse = await response.json();
 
-    // Tokens are set as HttpOnly cookies by the backend.
+    // Tokens are set as httpOnly cookies by the backend.
     // We only store the expiration timestamp so the frontend can proactively refresh.
     this.storeSession({
       expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
@@ -130,7 +132,7 @@ class AuthService {
   }
 
   /**
-   * Logout the user
+   * Logout the user: clear httpOnly cookies via backend, then clear local session.
    */
   async logout(): Promise<void> {
     try {
@@ -147,12 +149,14 @@ class AuthService {
         this.clearSession();
       }
     } catch {
+      // Best-effort: even if the request fails, clear local state below.
       this.clearSession();
     }
   }
 
   /**
-   * Get the current access token, refreshing if necessary
+   * Check whether a valid session exists, refreshing proactively if needed.
+   * Returns a truthy string when the session is valid, null otherwise.
    */
   async getAccessToken(): Promise<string | null> {
     const session = this.getSession();
@@ -160,7 +164,7 @@ class AuthService {
       return null;
     }
 
-    // Check if token is expired or will expire in the next 60 seconds
+    // Proactively refresh if the token expires within the next 60 seconds
     if (session.expires_at - Date.now() < 60000) {
       try {
         await this.refreshToken();
@@ -204,7 +208,7 @@ class AuthService {
   }
 
   /**
-   * Check if user is authenticated
+   * Check if user is authenticated (non-expired session exists locally).
    */
   isAuthenticated(): boolean {
     const session = this.getSession();
@@ -220,7 +224,7 @@ class AuthService {
       credentials: 'include',
     });
 
-    // If the access-token cookie expired (out of sync with session meta),
+    // If the access-token cookie has expired (JWT exp, not cookie maxAge),
     // refresh and retry once before giving up.
     if (response.status === 401) {
       try {
@@ -236,7 +240,8 @@ class AuthService {
       });
 
       if (!retryResponse.ok) {
-        throw new Error('Failed to get user info');
+        this.clearSession();
+        throw new Error(retryResponse.status === 401 ? 'Session expired' : 'Failed to get user info');
       }
 
       return retryResponse.json();
@@ -249,10 +254,7 @@ class AuthService {
     return response.json();
   }
 
-  /**
-   * Store session metadata in localStorage
-   */
-  private storeSession(session: SessionMeta): void {
+  private storeSession(session: SessionStorage): void {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
@@ -260,28 +262,24 @@ class AuthService {
     }
   }
 
-  /**
-   * Get session metadata from localStorage
-   */
-  private getSession(): SessionMeta | null {
+  private getSession(): SessionStorage | null {
     try {
       const stored = this.storage.getItem(STORAGE_KEY);
       if (!stored) {
         return null;
       }
-      return JSON.parse(stored) as SessionMeta;
+      return JSON.parse(stored) as SessionStorage;
     } catch (error) {
       console.error('Failed to parse session:', error);
       return null;
     }
   }
 
-  /**
-   * Clear session metadata from localStorage
-   */
   clearSession(): void {
     try {
       this.storage.removeItem(STORAGE_KEY);
+      // Also remove the legacy key if it exists (migration)
+      this.storage.removeItem('oidc_tokens');
     } catch (error) {
       console.error('Failed to clear session:', error);
     }
