@@ -261,7 +261,8 @@ class AuthService {
       });
 
       if (!retryResponse.ok) {
-        throw new Error('Failed to get user info');
+        this.clearTokens();
+        throw new Error(retryResponse.status === 401 ? 'Session expired' : 'Failed to get user info');
       }
 
       return retryResponse.json();
