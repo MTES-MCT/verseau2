@@ -9,9 +9,9 @@ import {
   fetchUserInfo,
   skipSubjectCheck,
   type UserInfoResponse,
+  type TokenEndpointResponse,
   type TokenEndpointResponseHelpers,
 } from 'openid-client';
-import type * as oauth from 'oauth4webapi';
 import {
   Authentication,
   AuthenticatedUser,
@@ -224,7 +224,7 @@ export class AuthenticationService implements Authentication {
       throw error;
     }
 
-    let tokens: oauth.TokenEndpointResponse & TokenEndpointResponseHelpers;
+    let tokens: TokenEndpointResponse & TokenEndpointResponseHelpers;
     try {
       tokens = await refreshTokenGrant(configuration, refreshToken);
       this.logger.log('OIDC refresh token grant succeeded');
