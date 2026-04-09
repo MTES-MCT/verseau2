@@ -108,24 +108,7 @@ export class AuthenticationController {
       throw new BadRequestException('Missing access token');
     }
 
-    let expectedSubject: string;
-    try {
-      // Decode the JWT payload without signature verification (the signature was
-      // already verified when the token was issued by this server). We only need
-      // the sub claim to pass to refreshTokens as expectedSubject.
-      const [, payloadB64] = accessToken.split('.');
-      if (!payloadB64) {
-        throw new Error('Malformed JWT');
-      }
-      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as { sub?: string };
-      if (!payload.sub) {
-        throw new Error('Missing sub claim');
-      }
-      expectedSubject = payload.sub;
-    } catch (error) {
-      this.logger.error('Invalid access token during refresh: cannot extract subject', error);
-      throw new UnauthorizedException();
-    }
+    const expectedSubject = await this.authentication.extractSubjectFromExpiredToken(accessToken);
 
     try {
       const tokens = await this.authentication.refreshTokens(refreshToken, expectedSubject);

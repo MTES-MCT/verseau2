@@ -202,6 +202,40 @@ describe('AuthenticationService', () => {
     });
   });
 
+  describe('extractSubjectFromExpiredToken', () => {
+    it('should return sub from a valid (possibly expired) internal JWT', async () => {
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { sub: 'user-123' },
+      });
+
+      const result = await service.extractSubjectFromExpiredToken('expired.jwt.token');
+
+      expect(jwtVerify).toHaveBeenCalledWith('expired.jwt.token', expect.any(Uint8Array), {
+        algorithms: ['HS256'],
+        clockTolerance: 7 * 24 * 60 * 60,
+      });
+      expect(result).toBe('user-123');
+    });
+
+    it('should throw UnauthorizedException when signature verification fails', async () => {
+      (jwtVerify as jest.Mock).mockRejectedValue(new Error('signature verification failed'));
+
+      await expect(service.extractSubjectFromExpiredToken('forged.jwt.token')).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to extract subject from expired token: signature verification failed',
+      );
+    });
+
+    it('should throw UnauthorizedException when sub claim is missing', async () => {
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { email: 'no-sub@example.com' },
+      });
+
+      await expect(service.extractSubjectFromExpiredToken('no-sub.jwt.token')).rejects.toThrow(UnauthorizedException);
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to extract subject from expired token: Missing sub claim');
+    });
+  });
+
   describe('refreshTokens', () => {
     const mockRefreshToken = 'refresh-token-abc';
 

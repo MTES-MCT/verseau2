@@ -17,13 +17,6 @@ const makeResponse = (): jest.Mocked<Response> =>
 
 const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ cookies }) as unknown as CustomRequest;
 
-/** Forge a minimal JWT-like token with a sub claim (header.payload.signature). */
-const forgeAccessToken = (sub: string): string => {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({ sub })).toString('base64url');
-  return `${header}.${payload}.fake-signature`;
-};
-
 describe('AuthenticationController', () => {
   let controller: AuthenticationController;
   let mockAuthentication: jest.Mocked<Authentication>;
@@ -33,6 +26,7 @@ describe('AuthenticationController', () => {
   beforeEach(async () => {
     mockAuthentication = {
       validateToken: jest.fn(),
+      extractSubjectFromExpiredToken: jest.fn(),
       getOIDCConfiguration: jest.fn(),
       handleCallback: jest.fn(),
       refreshTokens: jest.fn(),
@@ -95,17 +89,18 @@ describe('AuthenticationController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw UnauthorizedException when access token is not a valid JWT', async () => {
-      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'not-a-jwt' });
+    it('should throw UnauthorizedException when access token signature verification fails', async () => {
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'forged-or-invalid-token' });
       const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should set updated cookie when the AS returns a new refresh token (rotation)', async () => {
-      const accessToken = forgeAccessToken('user-123');
-      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: accessToken });
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'internal-jwt' });
       const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
       const refreshedTokens: OIDCTokens = {
         accessToken: 'new-internal-jwt',
@@ -127,9 +122,9 @@ describe('AuthenticationController', () => {
     });
 
     it('should fall back to old refresh token when the AS does not return a new one (no rotation)', async () => {
-      const accessToken = forgeAccessToken('user-123');
-      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: accessToken });
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'internal-jwt' });
       const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
       const refreshedTokens: OIDCTokens = {
         accessToken: 'new-internal-jwt',
@@ -150,9 +145,9 @@ describe('AuthenticationController', () => {
     });
 
     it('should throw UnauthorizedException when refreshTokens rejects (invalid grant / rotation enforced)', async () => {
-      const accessToken = forgeAccessToken('user-123');
-      const req = makeRequest({ refresh_token: 'expired-or-revoked-token', access_token: accessToken });
+      const req = makeRequest({ refresh_token: 'expired-or-revoked-token', access_token: 'internal-jwt' });
       const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
       mockAuthentication.refreshTokens.mockRejectedValue(new Error('invalid_grant'));
 

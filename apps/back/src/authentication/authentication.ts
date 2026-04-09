@@ -18,6 +18,8 @@ import type { Response } from 'express';
 
 export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
+  /** Verify the internal JWT signature (ignoring expiration) and return the `sub` claim. */
+  extractSubjectFromExpiredToken(token: string): Promise<string>;
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
   handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
   refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens>;

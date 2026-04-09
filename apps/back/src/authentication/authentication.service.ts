@@ -114,6 +114,33 @@ export class AuthenticationService implements Authentication {
     }
   }
 
+  /**
+   * Vérifie la signature HMAC du JWT interne Verseau2 (en tolérant l'expiration)
+   * et retourne le claim `sub`. Utilisé lors du refresh pour obtenir le sujet
+   * attendu de manière sûre plutôt que de décoder le payload sans vérification.
+   */
+  async extractSubjectFromExpiredToken(token: string): Promise<string> {
+    try {
+      const { payload } = await jwtVerify(token, this.jwtSecret, {
+        algorithms: ['HS256'],
+        // Le refresh est appelé précisément quand l'access token a expiré.
+        // On tolère une expiration de 7 jours (durée max du refresh token).
+        clockTolerance: 7 * 24 * 60 * 60,
+      });
+
+      if (!payload.sub) {
+        throw new Error('Missing sub claim');
+      }
+
+      return payload.sub;
+    } catch (error) {
+      this.logger.error(
+        `Failed to extract subject from expired token: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      throw new UnauthorizedException();
+    }
+  }
+
   async getOIDCConfiguration(): Promise<OIDCConfiguration> {
     const configuration = await this.getConfiguration();
     const metadata = configuration.serverMetadata();
