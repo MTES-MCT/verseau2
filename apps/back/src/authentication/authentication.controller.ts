@@ -10,6 +10,7 @@ import {
   Req,
   Res,
   UseGuards,
+  HttpCode,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
@@ -79,10 +80,8 @@ export class AuthenticationController {
       // Set cookies via AuthenticationService helper (access_token = JWT interne, refresh_token)
       this.authentication.buildCookieResponse(res, {
         accessToken: result.accessToken,
-        idToken: result.idToken,
         refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
-        cerbereAccessToken: result.cerbereAccessToken,
       });
 
       return {
@@ -134,15 +133,9 @@ export class AuthenticationController {
   }
 
   @Post('logout')
-  async logout(@Body('idToken') idToken: string, @Res({ passthrough: true }) res: Response) {
-    if (!idToken) {
-      throw new BadRequestException('Missing ID token');
-    }
-
+  @HttpCode(204)
+  logout(@Res({ passthrough: true }) res: Response) {
     this.authentication.clearCookieResponse(res);
-
-    const logoutUrl = await this.authentication.generateLogoutUrl(idToken);
-    return { logoutUrl };
   }
 
   @Get('me')

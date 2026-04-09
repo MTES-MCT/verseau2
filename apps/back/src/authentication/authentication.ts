@@ -1,9 +1,8 @@
 export interface OIDCTokens {
   accessToken: string;
-  idToken: string;
   refreshToken?: string;
   expiresIn?: number;
-  cerbereAccessToken?: string; // token Cerbere original, stocké dans un cookie séparé pour refresh/logout
+  cerbereAccessToken?: string; // token Cerbere original, utilisé en interne pour fetchUserInfo
 }
 
 export interface OIDCConfiguration {
@@ -23,7 +22,6 @@ export interface Authentication {
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
   handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
   refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens>;
-  generateLogoutUrl(idToken: string): Promise<string>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;
   clearCookieResponse(res: Response): void;
 }

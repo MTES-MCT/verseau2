@@ -43,7 +43,6 @@ export class AuthenticationMockService implements Authentication {
     const fakeToken = 'mock-token';
     return {
       accessToken: fakeToken,
-      idToken: fakeToken,
       refreshToken: fakeToken,
       expiresIn: 3600,
       user: this.getMockUser(),
@@ -55,15 +54,9 @@ export class AuthenticationMockService implements Authentication {
     const fakeToken = 'mock-token';
     return {
       accessToken: fakeToken,
-      idToken: fakeToken,
       refreshToken: fakeToken,
       expiresIn: 3600,
     };
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  generateLogoutUrl(idToken: string): Promise<string> {
-    return Promise.resolve('http://localhost:5173');
   }
 
   private get baseCookieOptions() {

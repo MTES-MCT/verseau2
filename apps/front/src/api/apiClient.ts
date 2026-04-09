@@ -41,7 +41,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
       return retryResponse;
     } catch {
       // Refresh failed, redirect to login
-      authService.clearTokens();
+      authService.clearSession();
       window.location.href = '/';
       throw new ApiError('Session expired', 401, 'Unauthorized');
     }
@@ -51,24 +51,15 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 }
 
 /**
- * POST with FormData (for file uploads)
+ * POST with FormData (for file uploads).
+ * Uses authenticatedFetch for automatic 401-retry via cookie-based auth.
  */
 export async function apiPostFormData<T>(endpoint: string, formData: FormData): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const token = await authService.getAccessToken();
 
-  if (!token) {
-    window.location.href = '/';
-    throw new ApiError('Not authenticated', 401, 'Unauthorized');
-  }
-
-  const response = await fetch(url, {
+  const response = await authenticatedFetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: formData,
-    credentials: 'include',
   });
 
   if (!response.ok) {

@@ -270,7 +270,6 @@ describe('AuthenticationService', () => {
       // Le token retourné est un JWT interne (pas le token Cerbere)
       expect(result.accessToken).toBe('mock-internal-jwt');
       expect(result.cerbereAccessToken).toBe('new-cerbere-access-token');
-      expect(result.idToken).toBe('new-id-token');
       expect(result.refreshToken).toBe('new-refresh-token');
       expect(result.expiresIn).toBe(3600);
     });
@@ -291,7 +290,6 @@ describe('AuthenticationService', () => {
 
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-access-token', 'user-123');
       expect(result.accessToken).toBe('mock-internal-jwt');
-      expect(result.idToken).toBe('');
     });
 
     it('should propagate errors from refreshTokenGrant as generic 401', async () => {
@@ -304,36 +302,6 @@ describe('AuthenticationService', () => {
         'OIDC refresh token grant failed: Invalid refresh token',
         expect.any(Error),
       );
-    });
-  });
-
-  describe('generateLogoutUrl', () => {
-    const mockIdToken = 'id-token-xyz';
-
-    it('should generate correct logout URL with id_token_hint', async () => {
-      const logoutUrl = await service.generateLogoutUrl(mockIdToken);
-
-      expect(logoutUrl).toBe(
-        'https://auth.example.com/logout?id_token_hint=id-token-xyz&post_logout_redirect_uri=https%3A%2F%2Fapp.example.com',
-      );
-    });
-
-    it('should throw error when end_session_endpoint is missing', async () => {
-      mockConfiguration.serverMetadata.mockReturnValue({
-        ...mockServerMetadata,
-        end_session_endpoint: undefined,
-      });
-
-      await expect(service.generateLogoutUrl(mockIdToken)).rejects.toThrow('End session endpoint not available');
-    });
-
-    it('should correctly strip /api/auth/callback from redirect URI', async () => {
-      const logoutUrl = await service.generateLogoutUrl(mockIdToken);
-      const url = new URL(logoutUrl);
-      const postLogoutRedirect = url.searchParams.get('post_logout_redirect_uri');
-
-      expect(postLogoutRedirect).toBe('https://app.example.com');
-      expect(postLogoutRedirect).not.toContain('/api/auth/callback');
     });
   });
 
@@ -380,14 +348,15 @@ describe('AuthenticationService', () => {
   });
 
   describe('buildCookieResponse', () => {
-    it('should set access_token and refresh_token cookies', () => {
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+    it('should set access_token and refresh_token cookies with same maxAge (7 days)', () => {
       const mockRes = {
         cookie: jest.fn(),
       } as unknown as import('express').Response;
 
       service.buildCookieResponse(mockRes, {
         accessToken: 'internal-jwt',
-        idToken: 'id-token',
         refreshToken: 'refresh-token',
         expiresIn: 3600,
       });
@@ -399,7 +368,7 @@ describe('AuthenticationService', () => {
           httpOnly: true,
           secure: true,
           sameSite: 'strict',
-          maxAge: 3600 * 1000,
+          maxAge: SEVEN_DAYS_MS,
         }),
       );
 
@@ -410,7 +379,7 @@ describe('AuthenticationService', () => {
           httpOnly: true,
           secure: true,
           sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000,
+          maxAge: SEVEN_DAYS_MS,
         }),
       );
     });
@@ -422,7 +391,6 @@ describe('AuthenticationService', () => {
 
       service.buildCookieResponse(mockRes, {
         accessToken: 'internal-jwt',
-        idToken: 'id-token',
         expiresIn: 3600,
       });
 

@@ -31,7 +31,7 @@ describe('authService.refreshToken deduplication', () => {
   }
 
   const refreshResponse = (expiresIn = 3600) =>
-    new Response(JSON.stringify({ accessToken: 'new', idToken: 'new-id', expiresIn }), {
+    new Response(JSON.stringify({ expiresIn }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
