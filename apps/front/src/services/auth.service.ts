@@ -248,7 +248,12 @@ class AuthService {
     // If the access-token cookie expired (out of sync with localStorage),
     // refresh and retry once before giving up.
     if (response.status === 401) {
-      await this.refreshToken();
+      try {
+        await this.refreshToken();
+      } catch (error) {
+        this.clearTokens();
+        throw error;
+      }
 
       const retryResponse = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',

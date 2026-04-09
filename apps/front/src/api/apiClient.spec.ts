@@ -12,8 +12,10 @@ vi.mock('../services/auth.service', () => ({
 }));
 
 describe('authenticatedFetch', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
+    mockRefreshToken.mockReset();
+    mockClearTokens.mockReset();
     vi.stubGlobal('fetch', vi.fn());
 
     vi.resetModules();
