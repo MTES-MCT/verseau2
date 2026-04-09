@@ -121,7 +121,8 @@ export class AuthenticationController {
   }
 
   @Post('logout')
-  async logout(@Body('idToken') idToken: string, @Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: CustomRequest, @Res({ passthrough: true }) res: Response) {
+    const idToken = req.cookies['id_token'] as string | undefined;
     if (!idToken) {
       throw new BadRequestException('Missing ID token');
     }

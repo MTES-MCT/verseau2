@@ -324,10 +324,19 @@ export class AuthenticationService implements Authentication {
       };
       res.cookie('refresh_token', tokens.refreshToken, refreshTokenOptions);
     }
+
+    if (tokens.idToken) {
+      const idTokenOptions: CookieOptions = {
+        ...this.baseCookieOptions,
+        maxAge: this.REFRESH_TOKEN_MAX_AGE_MS,
+      };
+      res.cookie('id_token', tokens.idToken, idTokenOptions);
+    }
   }
 
   clearCookieResponse(res: Response): void {
     res.clearCookie('access_token', this.baseCookieOptions);
     res.clearCookie('refresh_token', this.baseCookieOptions);
+    res.clearCookie('id_token', this.baseCookieOptions);
   }
 }

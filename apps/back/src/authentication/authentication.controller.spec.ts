@@ -137,17 +137,19 @@ describe('AuthenticationController', () => {
   });
 
   describe('logout', () => {
-    it('should throw BadRequestException when idToken is missing', async () => {
+    it('should throw BadRequestException when id_token cookie is missing', async () => {
+      const req = makeRequest({});
       const res = makeResponse();
 
-      await expect(controller.logout('', res)).rejects.toThrow(BadRequestException);
+      await expect(controller.logout(req, res)).rejects.toThrow(BadRequestException);
     });
 
     it('should clear cookies and return logout URL', async () => {
+      const req = makeRequest({ id_token: 'id-token-xyz' });
       const res = makeResponse();
       mockAuthentication.generateLogoutUrl.mockResolvedValue('https://auth.example.com/logout');
 
-      const result = await controller.logout('id-token-xyz', res);
+      const result = await controller.logout(req, res);
 
       expect(mockAuthentication.clearCookieResponse).toHaveBeenCalledWith(res);
       expect(mockAuthentication.generateLogoutUrl).toHaveBeenCalledWith('id-token-xyz');

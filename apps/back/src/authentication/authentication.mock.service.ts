@@ -82,11 +82,16 @@ export class AuthenticationMockService implements Authentication {
     if (tokens.refreshToken) {
       res.cookie('refresh_token', tokens.refreshToken, this.baseCookieOptions);
     }
+
+    if (tokens.idToken) {
+      res.cookie('id_token', tokens.idToken, this.baseCookieOptions);
+    }
   }
 
   clearCookieResponse(res: Response): void {
     res.clearCookie('access_token', this.baseCookieOptions);
     res.clearCookie('refresh_token', this.baseCookieOptions);
+    res.clearCookie('id_token', this.baseCookieOptions);
   }
 
   private getMockUser(): AuthenticatedUserAndNomPrenom {

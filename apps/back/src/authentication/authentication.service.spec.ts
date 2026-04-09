@@ -32,7 +32,7 @@ jest.mock('jose', () => ({
   })),
 }));
 
-import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
+import { discovery, refreshTokenGrant, fetchUserInfo } from 'openid-client';
 import { jwtVerify } from 'jose';
 
 const mockServerMetadata = {
@@ -325,7 +325,7 @@ describe('AuthenticationService', () => {
   });
 
   describe('buildCookieResponse', () => {
-    it('should set access_token and refresh_token cookies', () => {
+    it('should set access_token, refresh_token and id_token cookies', () => {
       const mockRes = {
         cookie: jest.fn(),
       } as unknown as import('express').Response;
@@ -358,16 +358,27 @@ describe('AuthenticationService', () => {
           maxAge: 7 * 24 * 60 * 60 * 1000,
         }),
       );
+
+      expect(mockRes.cookie).toHaveBeenCalledWith(
+        'id_token',
+        'id-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        }),
+      );
     });
 
-    it('should not set refresh_token cookie when refreshToken is absent', () => {
+    it('should not set refresh_token or id_token cookies when they are absent', () => {
       const mockRes = {
         cookie: jest.fn(),
       } as unknown as import('express').Response;
 
       service.buildCookieResponse(mockRes, {
         accessToken: 'internal-jwt',
-        idToken: 'id-token',
+        idToken: '',
         expiresIn: 3600,
       });
 

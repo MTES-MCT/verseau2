@@ -41,7 +41,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
       return retryResponse;
     } catch {
       // Refresh failed, redirect to login
-      authService.clearTokens();
+      authService.clearSession();
       window.location.href = '/';
       throw new ApiError('Session expired', 401, 'Unauthorized');
     }
