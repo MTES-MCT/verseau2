@@ -210,7 +210,7 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async refreshTokens(refreshToken: string): Promise<OIDCTokens> {
+  async refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens> {
     this.logger.log('Starting token refresh');
 
     let configuration: Configuration;
@@ -235,16 +235,12 @@ export class AuthenticationService implements Authentication {
       throw new UnauthorizedException();
     }
 
-    const idTokenClaims = tokens.claims();
-    if (!idTokenClaims) {
-      this.logger.error('No ID token returned by the authorization server during token refresh');
-      throw new UnauthorizedException();
-    }
-
     let user: AuthenticatedUser;
     try {
       // Récupérer les infos utilisateur depuis le nouveau token Cerbere
-      const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
+      // expectedSubject provient du JWT interne Verseau2 (cookie access_token) et non du id_token OIDC,
+      // car le spec OIDC n'impose pas le retour d'un id_token lors d'un refresh grant.
+      const userInfo = await this.fetchUserInfoClaims(tokens.access_token, expectedSubject);
       user = this.mapOpenIdUserToUser(userInfo);
       this.logger.log(`User info retrieved for cerbereId=${user.cerbereId}`);
     } catch (error) {

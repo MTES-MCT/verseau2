@@ -211,7 +211,6 @@ describe('AuthenticationService', () => {
         id_token: 'new-id-token',
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
-        claims: () => ({ sub: 'user-123', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
       };
       const mockUserInfo = {
         sub: 'user-123',
@@ -227,7 +226,7 @@ describe('AuthenticationService', () => {
       mockDroitsUserService.resolveItvCdn.mockResolvedValue(42);
       mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(true);
 
-      const result = await service.refreshTokens(mockRefreshToken);
+      const result = await service.refreshTokens(mockRefreshToken, 'user-123');
 
       expect(refreshTokenGrant).toHaveBeenCalledWith(mockConfiguration, mockRefreshToken);
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-cerbere-access-token', 'user-123');
@@ -242,27 +241,29 @@ describe('AuthenticationService', () => {
       expect(result.expiresIn).toBe(3600);
     });
 
-    it('should reject refresh when no ID token is returned (no sub to verify)', async () => {
+    it('should succeed even when no ID token is returned (sub comes from expectedSubject parameter)', async () => {
       const mockRefreshedTokens = {
         access_token: 'new-access-token',
         id_token: undefined,
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
-        claims: () => undefined,
       };
+      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
 
-      await expect(service.refreshTokens(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'No ID token returned by the authorization server during token refresh',
-      );
+      const result = await service.refreshTokens(mockRefreshToken, 'user-123');
+
+      expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-access-token', 'user-123');
+      expect(result.accessToken).toBe('mock-internal-jwt');
+      expect(result.idToken).toBe('');
     });
 
     it('should propagate errors from refreshTokenGrant as generic 401', async () => {
       (refreshTokenGrant as jest.Mock).mockRejectedValue(new Error('Invalid refresh token'));
 
-      await expect(service.refreshTokens(mockRefreshToken)).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
 
       // Detailed error is logged server-side (message + original error object)
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -303,20 +304,19 @@ describe('AuthenticationService', () => {
   });
 
   describe('lazy discovery', () => {
-    const mockRefreshTokensWithClaims = {
+    const mockRefreshTokensResponse = {
       access_token: 'new-access-token',
       id_token: 'new-id-token',
       refresh_token: 'new-refresh-token',
       expires_in: 3600,
-      claims: () => ({ sub: 'u1', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
     };
 
     it('should call discovery() only once and reuse the configuration', async () => {
-      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensWithClaims);
+      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensResponse);
       (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
 
-      await service.refreshTokens('rt1');
-      await service.refreshTokens('rt2');
+      await service.refreshTokens('rt1', 'u1');
+      await service.refreshTokens('rt2', 'u1');
 
       expect(discovery).toHaveBeenCalledTimes(1);
     });
@@ -324,7 +324,7 @@ describe('AuthenticationService', () => {
     it('should throw ServiceUnavailableException when discovery fails', async () => {
       (discovery as jest.Mock).mockRejectedValue(new Error('Connection refused'));
 
-      await expect(service.refreshTokens('rt')).rejects.toMatchObject({
+      await expect(service.refreshTokens('rt', 'u1')).rejects.toMatchObject({
         message: 'OIDC provider unreachable: Connection refused',
       });
     });
@@ -333,13 +333,13 @@ describe('AuthenticationService', () => {
       (discovery as jest.Mock)
         .mockRejectedValueOnce(new Error('Transient error'))
         .mockResolvedValueOnce(mockConfiguration);
-      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensWithClaims);
+      (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensResponse);
       (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
 
       // First call fails
-      await expect(service.refreshTokens('rt')).rejects.toThrow();
+      await expect(service.refreshTokens('rt', 'u1')).rejects.toThrow();
       // Second call succeeds (discovery retried)
-      const result = await service.refreshTokens('rt');
+      const result = await service.refreshTokens('rt', 'u1');
       expect(result.accessToken).toBe('mock-internal-jwt');
       expect(discovery).toHaveBeenCalledTimes(2);
     });
@@ -406,14 +406,13 @@ describe('AuthenticationService', () => {
         id_token: 'new-id-token',
         refresh_token: undefined,
         expires_in: 3600,
-        claims: () => ({ sub: 'user-123', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
       };
       const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
 
-      await service.refreshTokens(mockRefreshToken);
+      await service.refreshTokens(mockRefreshToken, 'user-123');
 
       expect(mockLogger.warn).toHaveBeenCalledWith('AS did not return a new refresh token');
     });
@@ -424,14 +423,13 @@ describe('AuthenticationService', () => {
         id_token: 'new-id-token',
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
-        claims: () => ({ sub: 'user-123', iss: 'https://auth.example.com', aud: 'test-client-id', exp: 0, iat: 0 }),
       };
       const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
 
-      await service.refreshTokens(mockRefreshToken);
+      await service.refreshTokens(mockRefreshToken, 'user-123');
 
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });

@@ -7,6 +7,7 @@ import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
+import { loggerProviderMock } from '@shared/logger/logger.mock';
 
 const makeResponse = (): jest.Mocked<Response> =>
   ({
@@ -15,6 +16,13 @@ const makeResponse = (): jest.Mocked<Response> =>
   }) as unknown as jest.Mocked<Response>;
 
 const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ cookies }) as unknown as CustomRequest;
+
+/** Forge a minimal JWT-like token with a sub claim (header.payload.signature). */
+const forgeAccessToken = (sub: string): string => {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub })).toString('base64url');
+  return `${header}.${payload}.fake-signature`;
+};
 
 describe('AuthenticationController', () => {
   let controller: AuthenticationController;
@@ -61,6 +69,7 @@ describe('AuthenticationController', () => {
           provide: DroitsUserService,
           useValue: mockDroitsUserService,
         },
+        loggerProviderMock,
       ],
     }).compile();
 
@@ -79,8 +88,23 @@ describe('AuthenticationController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(BadRequestException);
     });
 
-    it('should set updated cookie when the AS returns a new refresh token (rotation)', async () => {
+    it('should throw BadRequestException when access token cookie is missing', async () => {
       const req = makeRequest({ refresh_token: 'old-refresh-token' });
+      const res = makeResponse();
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw UnauthorizedException when access token is not a valid JWT', async () => {
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: 'not-a-jwt' });
+      const res = makeResponse();
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should set updated cookie when the AS returns a new refresh token (rotation)', async () => {
+      const accessToken = forgeAccessToken('user-123');
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: accessToken });
       const res = makeResponse();
 
       const refreshedTokens: OIDCTokens = {
@@ -94,7 +118,7 @@ describe('AuthenticationController', () => {
 
       const result = await controller.refresh(req, res);
 
-      expect(mockAuthentication.refreshTokens).toHaveBeenCalledWith('old-refresh-token');
+      expect(mockAuthentication.refreshTokens).toHaveBeenCalledWith('old-refresh-token', 'user-123');
       expect(mockAuthentication.buildCookieResponse).toHaveBeenCalledWith(
         res,
         expect.objectContaining({ refreshToken: 'new-refresh-token' }),
@@ -103,7 +127,8 @@ describe('AuthenticationController', () => {
     });
 
     it('should fall back to old refresh token when the AS does not return a new one (no rotation)', async () => {
-      const req = makeRequest({ refresh_token: 'old-refresh-token' });
+      const accessToken = forgeAccessToken('user-123');
+      const req = makeRequest({ refresh_token: 'old-refresh-token', access_token: accessToken });
       const res = makeResponse();
 
       const refreshedTokens: OIDCTokens = {
@@ -125,7 +150,8 @@ describe('AuthenticationController', () => {
     });
 
     it('should throw UnauthorizedException when refreshTokens rejects (invalid grant / rotation enforced)', async () => {
-      const req = makeRequest({ refresh_token: 'expired-or-revoked-token' });
+      const accessToken = forgeAccessToken('user-123');
+      const req = makeRequest({ refresh_token: 'expired-or-revoked-token', access_token: accessToken });
       const res = makeResponse();
 
       mockAuthentication.refreshTokens.mockRejectedValue(new Error('invalid_grant'));

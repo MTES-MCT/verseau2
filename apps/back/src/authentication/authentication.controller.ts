@@ -19,6 +19,7 @@ import type { Response } from 'express';
 import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { LoggerService } from '@shared/logger/logger.service';
 
 @Throttle({ default: { ttl: 60000, limit: 10 } })
 @Controller('auth')
@@ -27,7 +28,10 @@ export class AuthenticationController {
     @Inject(Authentication) private readonly authentication: Authentication,
     private readonly userService: UserService,
     private readonly droitsUserService: DroitsUserService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(AuthenticationController.name);
+  }
 
   @Get('login')
   login() {
@@ -99,8 +103,32 @@ export class AuthenticationController {
       throw new BadRequestException('Missing refresh token');
     }
 
+    const accessToken = req.cookies['access_token'] as string | undefined;
+    if (!accessToken) {
+      throw new BadRequestException('Missing access token');
+    }
+
+    let expectedSubject: string;
     try {
-      const tokens = await this.authentication.refreshTokens(refreshToken);
+      // Decode the JWT payload without signature verification (the signature was
+      // already verified when the token was issued by this server). We only need
+      // the sub claim to pass to refreshTokens as expectedSubject.
+      const [, payloadB64] = accessToken.split('.');
+      if (!payloadB64) {
+        throw new Error('Malformed JWT');
+      }
+      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as { sub?: string };
+      if (!payload.sub) {
+        throw new Error('Missing sub claim');
+      }
+      expectedSubject = payload.sub;
+    } catch (error) {
+      this.logger.error('Invalid access token during refresh: cannot extract subject', error);
+      throw new UnauthorizedException();
+    }
+
+    try {
+      const tokens = await this.authentication.refreshTokens(refreshToken, expectedSubject);
 
       const tokensWithFallbackRefresh: typeof tokens = {
         ...tokens,
@@ -114,9 +142,11 @@ export class AuthenticationController {
         expiresIn: tokens.expiresIn,
       };
     } catch (error: unknown) {
-      throw new UnauthorizedException(
+      this.logger.error(
         `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error : undefined,
       );
+      throw new UnauthorizedException();
     }
   }
 
