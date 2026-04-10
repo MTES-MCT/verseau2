@@ -3,6 +3,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
+import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
 import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
@@ -59,6 +60,7 @@ export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(RoseauBilanGateway) private readonly roseauBilanGateway: RoseauBilanGateway,
+    @Inject(RoseauConformiteGateway) private readonly roseauConformiteGateway: RoseauConformiteGateway,
     @Inject(RoseauEvenementGateway) private readonly roseauEvenementGateway: RoseauEvenementGateway,
     @Inject(RoseauTransmissionGateway) private readonly roseauTransmissionGateway: RoseauTransmissionGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
@@ -327,7 +329,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    return this.roseauGateway.findConformiteSteu(filters);
+    return this.roseauConformiteGateway.findConformiteSteu(filters);
   }
 
   // ---------------------------------------------------------------------------
@@ -336,7 +338,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    return this.roseauGateway.findConformiteScl(filters);
+    return this.roseauConformiteGateway.findConformiteScl(filters);
   }
 
   // ---------------------------------------------------------------------------
@@ -345,7 +347,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null> {
-    return this.roseauGateway.findConformiteSteuDetail(steuCdn, annee);
+    return this.roseauConformiteGateway.findConformiteSteuDetail(steuCdn, annee);
   }
 
   // ---------------------------------------------------------------------------
@@ -354,7 +356,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null> {
-    return this.roseauGateway.findConformiteSclDetail(sclCdn, annee);
+    return this.roseauConformiteGateway.findConformiteSclDetail(sclCdn, annee);
   }
 
   // ---------------------------------------------------------------------------

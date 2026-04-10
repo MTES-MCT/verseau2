@@ -12,6 +12,8 @@ import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
 import { RoseauBilanRepository } from '@referentiel/roseau/roseauBilan.repository';
+import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
+import { RoseauConformiteRepository } from '@referentiel/roseau/roseauConformite.repository';
 import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
 import { RoseauEvenementRepository } from '@referentiel/roseau/roseauEvenement.repository';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
@@ -67,11 +69,13 @@ describe('DroitsDepotService (e2e)', () => {
         LanceleauRepository,
         RoseauRepository,
         RoseauBilanRepository,
+        RoseauConformiteRepository,
         RoseauEvenementRepository,
         UserRepository,
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
         { provide: RoseauBilanGateway, useExisting: RoseauBilanRepository },
+        { provide: RoseauConformiteGateway, useExisting: RoseauConformiteRepository },
         { provide: RoseauEvenementGateway, useExisting: RoseauEvenementRepository },
         RoseauTransmissionRepository,
         { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },

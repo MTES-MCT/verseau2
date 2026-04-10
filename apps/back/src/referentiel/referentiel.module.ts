@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoseauGateway } from './roseau/roseau.gateway';
 import { RoseauBilanGateway } from './roseau/roseauBilan.gateway';
 import { RoseauBilanRepository } from './roseau/roseauBilan.repository';
+import { RoseauConformiteGateway } from './roseau/roseauConformite.gateway';
+import { RoseauConformiteRepository } from './roseau/roseauConformite.repository';
 import { RoseauEvenementGateway } from './roseau/roseauEvenement.gateway';
 import { RoseauEvenementRepository } from './roseau/roseauEvenement.repository';
 import { RoseauTransmissionGateway } from './roseau/roseauTransmission.gateway';
@@ -80,11 +82,19 @@ import { MasaModule } from '@masa/masa.module';
   providers: [
     { provide: RoseauGateway, useClass: RoseauRepository },
     { provide: RoseauBilanGateway, useClass: RoseauBilanRepository },
+    { provide: RoseauConformiteGateway, useClass: RoseauConformiteRepository },
     { provide: RoseauEvenementGateway, useClass: RoseauEvenementRepository },
     { provide: RoseauTransmissionGateway, useClass: RoseauTransmissionRepository },
     { provide: LanceleauGateway, useClass: LanceleauRepository },
     ParametreGateway,
   ],
-  exports: [RoseauGateway, RoseauBilanGateway, RoseauEvenementGateway, RoseauTransmissionGateway, LanceleauGateway],
+  exports: [
+    RoseauGateway,
+    RoseauBilanGateway,
+    RoseauConformiteGateway,
+    RoseauEvenementGateway,
+    RoseauTransmissionGateway,
+    LanceleauGateway,
+  ],
 })
 export class ReferentielModule {}
