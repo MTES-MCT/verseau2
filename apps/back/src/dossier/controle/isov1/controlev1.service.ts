@@ -712,7 +712,7 @@ export class ControleV1Service {
     }
 
     for (const cdSystemeCollecte of systemesCollecteToCheck) {
-      const exists = Boolean(await this.roseauGateway.findSclBySandreCda(cdSystemeCollecte));
+      const exists = (await this.roseauGateway.findSclsBySandreCdas([cdSystemeCollecte])).length > 0;
       if (!exists) {
         errors.push({
           code: ErrorCode.E2_022,

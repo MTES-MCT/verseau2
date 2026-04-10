@@ -51,6 +51,13 @@ import {
   RolePrincipal,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
+import {
+  mapSclRefsToSclCdnBySandreCda,
+  mapSclRefsToSclWithName,
+  mapSclRefsToSystemeCollecte,
+  mapSteuRefsToSteuCdnBySandreCda,
+  mapSteuRefsToSteuWithName,
+} from './fromMasa.mapper';
 
 /**
  * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
@@ -78,15 +85,15 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
-    return this.roseauGateway.findSteuBatchBySandreCdas(cdas);
+    return mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
   }
 
   async findSclBySandreCda(cda: string): Promise<SystemeCollecte | null> {
-    return this.roseauGateway.findSclBySandreCda(cda);
+    return mapSclRefsToSystemeCollecte(await this.roseauGateway.findSclsBySandreCdas([cda]));
   }
 
   async findSclBatchBySandreCdas(cdas: string[]): Promise<SclCdnBySandreCda[]> {
-    return this.roseauGateway.findSclBatchBySandreCdas(cdas);
+    return mapSclRefsToSclCdnBySandreCda(await this.roseauGateway.findSclsBySandreCdas(cdas));
   }
 
   // ---------------------------------------------------------------------------
@@ -359,7 +366,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
-    return this.roseauGateway.findSteuWithNamesBySandreCdas(sandreCdas);
+    return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
   }
 
   // ---------------------------------------------------------------------------
@@ -368,7 +375,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
-    return this.roseauGateway.findSclWithNamesBySandreCdas(sandreCdas);
+    return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
   }
 
   // ---------------------------------------------------------------------------

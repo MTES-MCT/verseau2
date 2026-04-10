@@ -23,15 +23,12 @@ import {
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
-  SteuWithName,
-  SclWithName,
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
-  SclCdnBySandreCda,
-  SystemeCollecte,
+  SclRef,
+  SteuRef,
 } from '@masa/masa.dto';
-import { SteuCdnBySandreCda } from '@masa/masa.dto';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
 
 @Injectable()
@@ -63,43 +60,37 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.find();
   }
 
-  async findSclBySandreCda(sandreCda: string): Promise<SystemeCollecte | null> {
-    const scl = await this.sclRepository.findOne({ where: { sclSandreCda: sandreCda } });
-    if (!scl) return null;
-    return {
-      systemeCollecteId: scl.sclCdn,
-      systemeCollecteCode: scl.sclSandreCda,
-      systemeCollecteNom: scl.sclLb,
-    };
+  async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
+    return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
-  async findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]> {
+  async findSteusBySandreCdas(sandreCdas: string[]): Promise<SteuRef[]> {
+    if (sandreCdas.length === 0) return [];
+
+    const rows = await this.steuRepository
+      .createQueryBuilder('steu')
+      .where('steu.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .getMany();
+
+    return rows.map((s) => ({
+      ouvrageDepollutionCode: s.steuSandreCda,
+      ouvrageDepollutionId: s.steuCdn,
+      ouvrageDepollutionNom: s.steuNomLb ?? null,
+    }));
+  }
+
+  async findSclsBySandreCdas(sandreCdas: string[]): Promise<SclRef[]> {
     if (sandreCdas.length === 0) return [];
 
     const rows = await this.sclRepository
-      .createQueryBuilder('s')
-      .where('s.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .createQueryBuilder('scl')
+      .where('scl.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
       .getMany();
 
     return rows.map((scl) => ({
       systemeCollecteCode: scl.sclSandreCda,
       systemeCollecteId: scl.sclCdn,
-    }));
-  }
-
-  async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
-    return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
-  }
-
-  async findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]> {
-    if (sandreCdas.length === 0) return [];
-    const rows = await this.steuRepository
-      .createQueryBuilder('s')
-      .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
-      .getMany();
-    return rows.map((s) => ({
-      ouvrageDepollutionCode: s.steuSandreCda,
-      ouvrageDepollutionId: s.steuCdn,
+      systemeCollecteNom: scl.sclLb ?? null,
     }));
   }
 
@@ -337,30 +328,6 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
-    if (sandreCdas.length === 0) return [];
-    const rows = await this.steuRepository
-      .createQueryBuilder('s')
-      .where('s.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
-      .getMany();
-    return rows.map((s) => ({
-      ouvrageDepollutionCode: s.steuSandreCda?.trim() ?? '',
-      ouvrageDepollutionNom: s.steuNomLb?.trim() ?? null,
-    }));
-  }
-
-  async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
-    if (sandreCdas.length === 0) return [];
-    const rows = await this.sclRepository
-      .createQueryBuilder('scl')
-      .where('scl.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
-      .getMany();
-    return rows.map((s) => ({
-      systemeCollecteCode: s.sclSandreCda?.trim() ?? '',
-      systemeCollecteNom: s.sclLb?.trim() ?? null,
-    }));
-  }
-
   async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
     const qb = this.pmoRepository
       .createQueryBuilder('pmo')
@@ -369,12 +336,10 @@ export class RoseauRepository implements RoseauGateway {
       .addSelect('pmo.pmo_lb', 'pmo_lb');
 
     if (ouvrageType === 'scl') {
-      // Mode SCL : pmo -> scl (jointure directe via scl_cdn)
       qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });
     } else {
-      // Mode STEU : pmo -> steu (jointure directe via steu_cdn)
       qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });

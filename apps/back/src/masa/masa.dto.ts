@@ -138,6 +138,20 @@ export interface ChargeEntranteMaxComparison {
   bilanReferenceAnnee: number;
 }
 
+/** Référence STEU consolidée — utilisée comme contrat source MASA pour les résolutions par code */
+export interface SteuRef {
+  ouvrageDepollutionId: number;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionNom: string | null;
+}
+
+/** Référence SCL consolidée — utilisée comme contrat source MASA pour les résolutions par code */
+export interface SclRef {
+  systemeCollecteId: number;
+  systemeCollecteCode: string;
+  systemeCollecteNom: string | null;
+}
+
 /** Résultat STEU retourné par un fetch batch MASA */
 export interface SteuCdnBySandreCda {
   ouvrageDepollutionCode: string;

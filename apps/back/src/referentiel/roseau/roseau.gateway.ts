@@ -6,23 +6,19 @@ import {
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
-  ProductionBoueZero,
-  SteuWithName,
-  SclWithName,
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
-  SclCdnBySandreCda,
-  SystemeCollecte,
+  ProductionBoueZero,
+  SclRef,
+  SteuRef,
 } from '@masa/masa.dto';
-import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
-  findSclBySandreCda(sandreCda: string): Promise<SystemeCollecte | null>;
-  findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]>;
+  findSteusBySandreCdas(sandreCdas: string[]): Promise<SteuRef[]>;
+  findSclsBySandreCdas(sandreCdas: string[]): Promise<SclRef[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
   checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>>;
   checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>>;
@@ -39,8 +35,6 @@ export interface RoseauGateway {
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
   findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]>;
-  findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
-  findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
   findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
   findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
