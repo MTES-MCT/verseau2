@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauReferentielPointMesureGateway } from '@referentiel/roseau/roseauReferentielPointMesure.gateway';
 import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
 import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
 import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
@@ -60,6 +61,8 @@ import { ROLE } from '@user/user.model';
 export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(RoseauReferentielPointMesureGateway)
+    private readonly roseauReferentielPointMesureGateway: RoseauReferentielPointMesureGateway,
     @Inject(RoseauBilanGateway) private readonly roseauBilanGateway: RoseauBilanGateway,
     @Inject(RoseauConformiteGateway) private readonly roseauConformiteGateway: RoseauConformiteGateway,
     @Inject(RoseauEvenementGateway) private readonly roseauEvenementGateway: RoseauEvenementGateway,
@@ -428,6 +431,6 @@ export class MasaProvider {
     ouvrageCode: string,
     filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): Promise<PointMesureReferentielRow[]> {
-    return this.roseauGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
+    return this.roseauReferentielPointMesureGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
   }
 }

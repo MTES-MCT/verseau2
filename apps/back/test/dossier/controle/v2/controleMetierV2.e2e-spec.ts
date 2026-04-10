@@ -8,6 +8,8 @@ import { ControleMapper } from '@dossier/controle/isov1/controle.mapper';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ControleRepository } from '@dossier/controle/controle.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauReferentielPointMesureGateway } from '@referentiel/roseau/roseauReferentielPointMesure.gateway';
+import { RoseauReferentielPointMesureRepository } from '@referentiel/roseau/roseauReferentielPointMesure.repository';
 import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
 import { RoseauBilanRepository } from '@referentiel/roseau/roseauBilan.repository';
 import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
@@ -72,6 +74,7 @@ describe('ControleMetierV2Service (e2e)', () => {
         ControleMapper,
         ControleRepository,
         RoseauRepository,
+        RoseauReferentielPointMesureRepository,
         RoseauBilanRepository,
         RoseauConformiteRepository,
         RoseauEvenementRepository,
@@ -79,6 +82,7 @@ describe('ControleMetierV2Service (e2e)', () => {
         MasaProvider,
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
+        { provide: RoseauReferentielPointMesureGateway, useExisting: RoseauReferentielPointMesureRepository },
         { provide: RoseauBilanGateway, useExisting: RoseauBilanRepository },
         { provide: RoseauConformiteGateway, useExisting: RoseauConformiteRepository },
         { provide: RoseauEvenementGateway, useExisting: RoseauEvenementRepository },

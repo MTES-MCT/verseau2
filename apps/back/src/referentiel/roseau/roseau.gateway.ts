@@ -12,7 +12,6 @@ import {
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
-  PointMesureReferentielRow,
   SclCdnBySandreCda,
   SystemeCollecte,
 } from '@masa/masa.dto';
@@ -49,11 +48,6 @@ export interface RoseauGateway {
     pmoCdn: number,
   ): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
-  findPointsMesureReferentiel(
-    ouvrageType: 'steu' | 'scl',
-    ouvrageCode: string,
-    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
-  ): Promise<PointMesureReferentielRow[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');
