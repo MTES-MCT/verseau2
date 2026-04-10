@@ -411,11 +411,11 @@ export class MasaProvider {
   }
 
   async findStatuts(): Promise<NomenclatureItem[]> {
-    return this.roseauGateway.findStatuts();
+    return this.roseauGateway.findNomenclatureByRfa('LREF_20');
   }
 
   async findQualifications(): Promise<NomenclatureItem[]> {
-    return this.roseauGateway.findQualifications();
+    return this.roseauGateway.findNomenclatureByRfa('LREF_18');
   }
 
   // ---------------------------------------------------------------------------

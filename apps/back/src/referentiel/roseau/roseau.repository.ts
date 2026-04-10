@@ -462,14 +462,6 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findStatuts(): Promise<NomenclatureItem[]> {
-    return this.findNomenclatureByRfa('LREF_20');
-  }
-
-  async findQualifications(): Promise<NomenclatureItem[]> {
-    return this.findNomenclatureByRfa('LREF_18');
-  }
-
   async findPointsMesureReferentiel(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,

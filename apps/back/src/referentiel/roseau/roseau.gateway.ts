@@ -49,8 +49,6 @@ export interface RoseauGateway {
     pmoCdn: number,
   ): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
-  findStatuts(): Promise<NomenclatureItem[]>;
-  findQualifications(): Promise<NomenclatureItem[]>;
   findPointsMesureReferentiel(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
