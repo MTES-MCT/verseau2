@@ -329,7 +329,7 @@ export class RoseauRepository implements RoseauGateway {
       .filter((row) => row.capacite_nominale !== null)
       .map((row) => ({
         ouvrageDepollutionCode: row.steu_sandre_cda.trim(),
-        ouvrageDepollutionCapaciteNominaleEH: row.capacite_nominale!,
+        capaciteNominaleEH: row.capacite_nominale!,
       }));
   }
 

@@ -1097,5 +1097,5 @@ function findCapaciteNominale(
   capacitesNominales: CapaciteNominaleBySandreCda[],
   sandreCda: string,
 ): number | undefined {
-  return capacitesNominales.find((c) => c.ouvrageDepollutionCode === sandreCda)?.ouvrageDepollutionCapaciteNominaleEH;
+  return capacitesNominales.find((c) => c.ouvrageDepollutionCode === sandreCda)?.capaciteNominaleEH;
 }

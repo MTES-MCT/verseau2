@@ -29,12 +29,11 @@ pointMesureLocalisationCode, tlref_elt_cda (LREF_16), Code de localisation du po
 pointMesureLocalisationLibelle, tlref_mnemo_lb (LREF_16), Libelle de la localisation du point de mesure
 pointMesureCategorieSystemeCollecte, tlref_mnemo_lb (LREF_24), Categorie du point de mesure pour les systemes de collecte (via orm.tlref_24_cdn)
 resultatAnnuelConcentrationMoyenne, resa_cma_val, Concentration moyenne annuelle calculee pour un parametre et une STEU
-ouvrageDepollutionCapaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants
+capaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants
 ouvrageDepollutionDebitMaximalReference, max(stchan_pc95_val; cpy_ref_debit_mt), Debit maximal de reference calcule comme le max entre le percentile 95 et le debit de reference
 chargeEntranteMaximaleEHN, stchan_r_eh_max_chg_val (annee N), Charge entrante maximale en equivalent-habitants pour l'annee courante
 chargeEntranteMaximaleEHNMoins1, stchan_r_eh_max_chg_val (annee N-1), Charge entrante maximale en equivalent-habitants pour l'annee precedente
 trancheObligationLibelle, tltobl_lb, Libelle de la tranche de taille d'agglomeration (obligation reglementaire)
-capaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants dans le tableau conformite
 suiviDebutDate, steureg_suiv_deb_dt / sclreg_suiv_deb_dt, Date de debut de la periode de suivi du bilan conformite
 suiviFinDate, steureg_suiv_fin_dt / sclreg_suiv_fin_dt, Date de fin de la periode de suivi du bilan conformite
 conformiteNationaleProvisoire, cfprf_r_glob_perf_eru_conf_in, Conformite nationale provisoire en performance ERU de la STEU

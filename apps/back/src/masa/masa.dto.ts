@@ -113,7 +113,7 @@ export interface CmaBySandreCdaAndParam {
 /** CTL051 / CTL060 — Capacité nominale en EH pour un STEU donné et une année */
 export interface CapaciteNominaleBySandreCda {
   ouvrageDepollutionCode: string;
-  ouvrageDepollutionCapaciteNominaleEH: number;
+  capaciteNominaleEH: number;
 }
 
 /** CTL053 — Débit max de référence (max(PC95, Dref)) pour un STEU donné */
