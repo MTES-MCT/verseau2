@@ -213,10 +213,10 @@ export class RoseauGatewayTestMock {
  * Mock for LanceleauGateway.
  */
 export class LanceleauGatewayTestMock {
-  findByItvCdn = jest.fn().mockResolvedValue(null);
+  findIntervenantById = jest.fn().mockResolvedValue(null);
 
   reset(): void {
-    this.findByItvCdn.mockClear().mockResolvedValue(null);
+    this.findIntervenantById.mockClear().mockResolvedValue(null);
   }
 }
 
