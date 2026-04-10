@@ -17,7 +17,9 @@ import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gate
 import { RoseauEvenementRepository } from '@referentiel/roseau/roseauEvenement.repository';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauMesureDeposeeGateway } from '@referentiel/roseau/roseauMesureDeposee.gateway';
 import { RoseauTransmissionRepository } from '@referentiel/roseau/roseauTransmission.repository';
+import { RoseauMesureDeposeeRepository } from '@referentiel/roseau/roseauMesureDeposee.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { MasaProvider } from '@masa/masa.provider';
@@ -79,6 +81,8 @@ describe('ControleV1Service (e2e)', () => {
         { provide: RoseauEvenementGateway, useExisting: RoseauEvenementRepository },
         RoseauTransmissionRepository,
         { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },
+        RoseauMesureDeposeeRepository,
+        { provide: RoseauMesureDeposeeGateway, useExisting: RoseauMesureDeposeeRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
         { provide: LoggerService, useClass: LoggerServiceMock },
       ],

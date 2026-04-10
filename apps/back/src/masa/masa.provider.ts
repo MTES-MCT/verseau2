@@ -6,6 +6,7 @@ import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
 import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
 import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauMesureDeposeeGateway } from '@referentiel/roseau/roseauMesureDeposee.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
   CmaBySandreCdaAndParam,
@@ -63,6 +64,7 @@ export class MasaProvider {
     @Inject(RoseauConformiteGateway) private readonly roseauConformiteGateway: RoseauConformiteGateway,
     @Inject(RoseauEvenementGateway) private readonly roseauEvenementGateway: RoseauEvenementGateway,
     @Inject(RoseauTransmissionGateway) private readonly roseauTransmissionGateway: RoseauTransmissionGateway,
+    @Inject(RoseauMesureDeposeeGateway) private readonly roseauMesureDeposeeGateway: RoseauMesureDeposeeGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
@@ -274,7 +276,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
-    return this.roseauGateway.findMesures(filters);
+    return this.roseauMesureDeposeeGateway.findMesures(filters);
   }
 
   // ---------------------------------------------------------------------------

@@ -18,7 +18,9 @@ import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gate
 import { RoseauEvenementRepository } from '@referentiel/roseau/roseauEvenement.repository';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauMesureDeposeeGateway } from '@referentiel/roseau/roseauMesureDeposee.gateway';
 import { RoseauTransmissionRepository } from '@referentiel/roseau/roseauTransmission.repository';
+import { RoseauMesureDeposeeRepository } from '@referentiel/roseau/roseauMesureDeposee.repository';
 import { MasaProvider } from '@masa/masa.provider';
 import { UserGateway } from '@user/user.gateway';
 import { UserRepository } from '@user/user.repository';
@@ -79,6 +81,8 @@ describe('DroitsDepotService (e2e)', () => {
         { provide: RoseauEvenementGateway, useExisting: RoseauEvenementRepository },
         RoseauTransmissionRepository,
         { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },
+        RoseauMesureDeposeeRepository,
+        { provide: RoseauMesureDeposeeGateway, useExisting: RoseauMesureDeposeeRepository },
         { provide: UserGateway, useExisting: UserRepository },
         { provide: LoggerService, useClass: LoggerServiceMock },
       ],
