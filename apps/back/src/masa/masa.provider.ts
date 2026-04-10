@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
   CmaBySandreCdaAndParam,
@@ -55,6 +56,7 @@ import { ROLE } from '@user/user.model';
 export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(RoseauTransmissionGateway) private readonly roseauTransmissionGateway: RoseauTransmissionGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
@@ -302,13 +304,13 @@ export class MasaProvider {
   async findTransmissionASRetardSteu(
     filters: TransmissionASRetardSteuFilters,
   ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
-    return this.roseauGateway.findTransmissionASRetardSteu(filters);
+    return this.roseauTransmissionGateway.findTransmissionASRetardSteu(filters);
   }
 
   async findTransmissionASRetardScl(
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
-    return this.roseauGateway.findTransmissionASRetardScl(filters);
+    return this.roseauTransmissionGateway.findTransmissionASRetardScl(filters);
   }
 
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {

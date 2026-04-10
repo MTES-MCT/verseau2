@@ -11,6 +11,8 @@ import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
+import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauTransmissionRepository } from '@referentiel/roseau/roseauTransmission.repository';
 import { MasaProvider } from '@masa/masa.provider';
 import { UserGateway } from '@user/user.gateway';
 import { UserRepository } from '@user/user.repository';
@@ -63,6 +65,8 @@ describe('DroitsDepotService (e2e)', () => {
         UserRepository,
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
+        RoseauTransmissionRepository,
+        { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },
         { provide: UserGateway, useExisting: UserRepository },
         { provide: LoggerService, useClass: LoggerServiceMock },
       ],

@@ -9,6 +9,8 @@ import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ControleRepository } from '@dossier/controle/controle.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
+import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauTransmissionRepository } from '@referentiel/roseau/roseauTransmission.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
@@ -66,6 +68,8 @@ describe('ControleMetierV2Service (e2e)', () => {
         MasaProvider,
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
+        RoseauTransmissionRepository,
+        { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
       ],
     }).compile();
