@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { RoseauGateway } from './roseau.gateway';
 import { AgaEntity } from './entities/aga.entity';
 import { SclEntity } from './entities/scl.entity';
@@ -37,9 +37,6 @@ import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
   constructor(
-    private readonly dataSource: DataSource,
-    @InjectRepository(AgaEntity)
-    private readonly agaRepository: Repository<AgaEntity>,
     @InjectRepository(SclEntity)
     private readonly sclRepository: Repository<SclEntity>,
     @InjectRepository(SteuEntity)
