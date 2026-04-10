@@ -613,20 +613,6 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findEvenementTypes(): Promise<NomenclatureItem[]> {
-    const rows = await this.tlrefRepository
-      .createQueryBuilder('tlref')
-      .where('tlref.trl_rfa = :trlRfa', { trlRfa: 'LREF_46' })
-      .andWhere('tlref.tlref_elt_cda IN (:...codes)', { codes: ['1', '2', '3', '4'] })
-      .orderBy('tlref.tlref_elt_cda', 'ASC')
-      .getMany();
-
-    return rows.map((r) => ({
-      elementNomenclatureCode: r.tlrefEltCda?.trim() ?? '',
-      elementNomenclatureLibelle: r.tlrefMnemoLb?.trim() ?? null,
-    }));
-  }
-
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
     if (systemeCollecteIds.length === 0) return [];
 

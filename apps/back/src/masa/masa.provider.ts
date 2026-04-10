@@ -291,7 +291,7 @@ export class MasaProvider {
   }
 
   async findEvenementTypes(): Promise<NomenclatureItem[]> {
-    return this.roseauGateway.findEvenementTypes();
+    return this.roseauEvenementGateway.findEvenementTypes();
   }
 
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {

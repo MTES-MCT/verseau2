@@ -1,7 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { EvenementSclFilters, EvenementSteuFilters, EvenementSclRow, EvenementSteuRow } from '@masa/masa.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import {
+  EvenementSclFilters,
+  EvenementSteuFilters,
+  EvenementSclRow,
+  EvenementSteuRow,
+  NomenclatureItem,
+} from '@masa/masa.dto';
 import { toISODateOrNull } from '@lib/shared';
+import { TlrefEntity } from './entities/tlref.entity';
 import { RoseauEvenementGateway } from './roseauEvenement.gateway';
 
 interface EvenementSteuRawRow {
@@ -24,7 +32,25 @@ interface EvenementSclRawRow extends EvenementSteuRawRow {
 
 @Injectable()
 export class RoseauEvenementRepository implements RoseauEvenementGateway {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    @InjectRepository(TlrefEntity)
+    private readonly tlrefRepository: Repository<TlrefEntity>,
+  ) {}
+
+  async findEvenementTypes(): Promise<NomenclatureItem[]> {
+    const rows = await this.tlrefRepository
+      .createQueryBuilder('tlref')
+      .where('tlref.trl_rfa = :trlRfa', { trlRfa: 'LREF_46' })
+      .andWhere('tlref.tlref_elt_cda IN (:...codes)', { codes: ['1', '2', '3', '4'] })
+      .orderBy('tlref.tlref_elt_cda', 'ASC')
+      .getMany();
+
+    return rows.map((r) => ({
+      elementNomenclatureCode: r.tlrefEltCda?.trim() ?? '',
+      elementNomenclatureLibelle: r.tlrefMnemoLb?.trim() ?? null,
+    }));
+  }
 
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
     const { ouvrageDepollutionIds, year, page, pageSize } = filters;
