@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
 import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
@@ -57,6 +58,7 @@ import { ROLE } from '@user/user.model';
 export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(RoseauBilanGateway) private readonly roseauBilanGateway: RoseauBilanGateway,
     @Inject(RoseauEvenementGateway) private readonly roseauEvenementGateway: RoseauEvenementGateway,
     @Inject(RoseauTransmissionGateway) private readonly roseauTransmissionGateway: RoseauTransmissionGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
@@ -291,11 +293,11 @@ export class MasaProvider {
   }
 
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
-    return this.roseauGateway.findBilanSteu(filters);
+    return this.roseauBilanGateway.findBilanSteu(filters);
   }
 
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
-    return this.roseauGateway.findBilanScl(filters);
+    return this.roseauBilanGateway.findBilanScl(filters);
   }
 
   // ---------------------------------------------------------------------------
