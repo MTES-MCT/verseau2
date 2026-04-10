@@ -63,7 +63,7 @@ export interface BilanSclFilters extends PaginationQuery {
 export interface TransmissionASRetardSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
-  codeSandre?: string;
+  ouvrageDepollutionCode?: string;
   sortBy?: TransmissionASRetardSteuSortByValue;
 }
 
@@ -71,7 +71,7 @@ export interface TransmissionASRetardSteuFilters extends PaginationQuery {
 export interface TransmissionASRetardSclFilters extends PaginationQuery {
   systemeCollecteIds: number[];
   year: number;
-  codeSandre?: string;
+  systemeCollecteCode?: string;
   sortBy?: TransmissionASRetardSclSortByValue;
 }
 

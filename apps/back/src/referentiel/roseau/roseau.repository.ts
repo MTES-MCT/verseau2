@@ -1658,7 +1658,7 @@ export class RoseauRepository implements RoseauGateway {
   async findTransmissionASRetardSteu(
     filters: TransmissionASRetardSteuFilters,
   ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, page, pageSize, codeSandre } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize, ouvrageDepollutionCode } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -1669,10 +1669,10 @@ export class RoseauRepository implements RoseauGateway {
 
     const sortMap: Record<NonNullable<TransmissionASRetardSteuFilters['sortBy']>, string> = {
       nbJoursRetard: 'nb_jours_retard',
-      codeSandre: 'code_sandre',
-      nom: 'nom',
-      trancheObligation: 'tranche_obligation',
-      capaciteNominale: 'capacite_nominale',
+      ouvrageDepollutionCode: 'code_sandre',
+      ouvrageDepollutionNom: 'nom',
+      trancheObligationLibelle: 'tranche_obligation',
+      capaciteNominaleEH: 'capacite_nominale',
       dateDernierFichierRecu: 'date_dernier_fichier_recu',
     };
 
@@ -1697,8 +1697,8 @@ export class RoseauRepository implements RoseauGateway {
 
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
 
-    if (codeSandre) {
-      whereClauses.push(`RTRIM(steu.steu_sandre_cda) = ${addParam(codeSandre)}`);
+    if (ouvrageDepollutionCode) {
+      whereClauses.push(`RTRIM(steu.steu_sandre_cda) = ${addParam(ouvrageDepollutionCode)}`);
     }
 
     const baseQuery = `
@@ -1828,10 +1828,10 @@ export class RoseauRepository implements RoseauGateway {
 
     return {
       data: rows.map((row) => ({
-        codeSandre: row.code_sandre?.trim() ?? '',
-        nom: row.nom?.trim() ?? null,
-        trancheObligation: row.tranche_obligation?.trim() ?? null,
-        capaciteNominale: row.capacite_nominale != null ? Number(row.capacite_nominale) : null,
+        ouvrageDepollutionCode: row.code_sandre?.trim() ?? '',
+        ouvrageDepollutionNom: row.nom?.trim() ?? null,
+        trancheObligationLibelle: row.tranche_obligation?.trim() ?? null,
+        capaciteNominaleEH: row.capacite_nominale != null ? Number(row.capacite_nominale) : null,
         nbFichiersAsRecus: row.nb_fichiers_as_recus != null ? Number(row.nb_fichiers_as_recus) : null,
         dateDernierFichierRecu: formatDate(row.date_dernier_fichier_recu),
         dateDebutPeriode: formatDate(row.date_debut_periode),
@@ -1849,7 +1849,7 @@ export class RoseauRepository implements RoseauGateway {
   async findTransmissionASRetardScl(
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, page, pageSize, codeSandre } = filters;
+    const { systemeCollecteIds, year, page, pageSize, systemeCollecteCode } = filters;
 
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
@@ -1860,10 +1860,10 @@ export class RoseauRepository implements RoseauGateway {
 
     const sortMap: Record<NonNullable<TransmissionASRetardSclFilters['sortBy']>, string> = {
       nbJoursRetard: 'nb_jours_retard',
-      codeSandre: 'code_sandre',
-      nom: 'nom',
-      trancheObligation: 'tranche_obligation',
-      capaciteNominale: 'capacite_nominale',
+      systemeCollecteCode: 'code_sandre',
+      systemeCollecteNom: 'nom',
+      trancheObligationLibelle: 'tranche_obligation',
+      capaciteNominaleEH: 'capacite_nominale',
       dateDernierFichierRecu: 'date_dernier_fichier_recu',
     };
 
@@ -1888,8 +1888,8 @@ export class RoseauRepository implements RoseauGateway {
 
     const whereClauses = [`scl.scl_cdn IN (${sclPlaceholders})`];
 
-    if (codeSandre) {
-      whereClauses.push(`RTRIM(scl.scl_sandre_cda) = ${addParam(codeSandre)}`);
+    if (systemeCollecteCode) {
+      whereClauses.push(`RTRIM(scl.scl_sandre_cda) = ${addParam(systemeCollecteCode)}`);
     }
 
     const baseQuery = `
@@ -2021,10 +2021,10 @@ export class RoseauRepository implements RoseauGateway {
 
     return {
       data: rows.map((row) => ({
-        codeSandre: row.code_sandre?.trim() ?? '',
-        nom: row.nom?.trim() ?? null,
-        trancheObligation: row.tranche_obligation?.trim() ?? null,
-        capaciteNominale: row.capacite_nominale != null ? Number(row.capacite_nominale) : null,
+        systemeCollecteCode: row.code_sandre?.trim() ?? '',
+        systemeCollecteNom: row.nom?.trim() ?? null,
+        trancheObligationLibelle: row.tranche_obligation?.trim() ?? null,
+        capaciteNominaleEH: row.capacite_nominale != null ? Number(row.capacite_nominale) : null,
         nbFichiersAsRecus: row.nb_fichiers_as_recus != null ? Number(row.nb_fichiers_as_recus) : null,
         dateDernierFichierRecu: formatDate(row.date_dernier_fichier_recu),
         dateDebutPeriode: formatDate(row.date_debut_periode),

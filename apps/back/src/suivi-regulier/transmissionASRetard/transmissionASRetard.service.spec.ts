@@ -30,8 +30,8 @@ describe('TransmissionASRetardService', () => {
     const mockData = {
       data: [
         {
-          codeSandre: 'ABC',
-          nom: 'STEU 1',
+          ouvrageDepollutionCode: 'ABC',
+          ouvrageDepollutionNom: 'STEU 1',
           nbJoursRetard: 5,
           exploitantNom: 'Exploitant',
           exploitantEmail: 'a@b.c',

@@ -7,14 +7,14 @@ import { mapTransmissionASRetardSteuRowToDto, mapTransmissionASRetardSclRowToDto
 export interface ListTransmissionASRetardSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
-  codeSandre?: string;
+  ouvrageDepollutionCode?: string;
   sortBy?: TransmissionASRetardSteuSortByValue;
 }
 
 export interface ListTransmissionASRetardSclOptions extends PaginationQuery {
   authorizedSclCdas: string[];
   year: number;
-  codeSandre?: string;
+  systemeCollecteCode?: string;
   sortBy?: TransmissionASRetardSclSortByValue;
 }
 
@@ -23,12 +23,12 @@ export class TransmissionASRetardService {
   constructor(private readonly masaProvider: MasaProvider) {}
 
   async listTransmissionASRetardSteu(options: ListTransmissionASRetardSteuOptions) {
-    const { authorizedSteuCdas, year, codeSandre, page, pageSize, sortBy, sortOrder } = options;
-    const cdasToQuery = codeSandre
-      ? [codeSandre].filter((code) => authorizedSteuCdas.includes(code))
+    const { authorizedSteuCdas, year, ouvrageDepollutionCode, page, pageSize, sortBy, sortOrder } = options;
+    const cdasToQuery = ouvrageDepollutionCode
+      ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
 
-    if (cdasToQuery.length === 0 && codeSandre) {
+    if (cdasToQuery.length === 0 && ouvrageDepollutionCode) {
       return { data: [], total: 0, page, pageSize };
     }
 
@@ -40,7 +40,7 @@ export class TransmissionASRetardService {
       year,
       page,
       pageSize,
-      ...(codeSandre ? { codeSandre } : {}),
+      ...(ouvrageDepollutionCode ? { ouvrageDepollutionCode } : {}),
 
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
@@ -55,12 +55,12 @@ export class TransmissionASRetardService {
   }
 
   async listTransmissionASRetardScl(options: ListTransmissionASRetardSclOptions) {
-    const { authorizedSclCdas, year, codeSandre, page, pageSize, sortBy, sortOrder } = options;
-    const cdasToQuery = codeSandre
-      ? [codeSandre].filter((code) => authorizedSclCdas.includes(code))
+    const { authorizedSclCdas, year, systemeCollecteCode, page, pageSize, sortBy, sortOrder } = options;
+    const cdasToQuery = systemeCollecteCode
+      ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
       : authorizedSclCdas;
 
-    if (cdasToQuery.length === 0 && codeSandre) {
+    if (cdasToQuery.length === 0 && systemeCollecteCode) {
       return { data: [], total: 0, page, pageSize };
     }
 
@@ -72,7 +72,7 @@ export class TransmissionASRetardService {
       year,
       page,
       pageSize,
-      ...(codeSandre ? { codeSandre } : {}),
+      ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
 
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),

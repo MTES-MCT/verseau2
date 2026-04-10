@@ -103,3 +103,9 @@ resultatAnalyseQualification, tlref_mnemo_lb (LREF_18), Qualification de la donn
 exploitantNom, itv_mnemo_lb, Nom ou raison sociale de l'exploitant associe au retard de transmission AS
 exploitantEmail, adr_mail_lb, Adresse email de l'exploitant associe au retard de transmission AS
 exploitantDateEnvoiMail, steureg_mail_expl_dt / sclreg_mail_expl_dt, Date d'envoi du mail a l'exploitant pour le suivi regulier
+nbFichiersAsRecus, suivqual_fic_nb, Nombre de fichiers d'autosurveillance recus pour l'ouvrage et l'annee
+dateDernierFichierRecu, suivqual_der_trans_dt, Date de reception du dernier fichier d'autosurveillance transmis
+dateDebutPeriode, v_dep_suiv_reg_ref_deb_dt, Date de debut de la periode de reference pour la transmission AS
+dateFinPeriode, v_dep_suiv_reg_ref_fin_dt, Date de fin de la periode de reference pour la transmission AS
+dateMesureSuivanteAttendue, computed (steureg_suiv_fin_dt / sclreg_suiv_fin_dt + 1 mois), Date a laquelle la prochaine mesure d'autosurveillance est attendue
+nbJoursRetard, computed (NOW - dateMesureSuivanteAttendue), Nombre de jours de retard dans la transmission des donnees d'autosurveillance

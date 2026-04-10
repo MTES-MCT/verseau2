@@ -32,10 +32,10 @@ function renderRetardBadge(nbJours: number | null): ReactNode {
 
 export function buildTransmissionASRetardSteuTableRows(items: TransmissionASRetardSteuDto[]): ReactNode[][] {
   return items.map((item) => [
-    item.codeSandre,
-    item.nom ?? '-',
-    item.trancheObligation ?? '-',
-    item.capaciteNominale !== null ? String(item.capaciteNominale) : '-',
+    item.ouvrageDepollutionCode,
+    item.ouvrageDepollutionNom ?? '-',
+    item.trancheObligationLibelle ?? '-',
+    item.capaciteNominaleEH !== null ? String(item.capaciteNominaleEH) : '-',
     item.nbFichiersAsRecus !== null ? String(item.nbFichiersAsRecus) : '-',
     item.dateDernierFichierRecu ? formatDate(item.dateDernierFichierRecu) : '-',
     item.dateDebutPeriode ? formatDate(item.dateDebutPeriode) : '-',
@@ -47,10 +47,10 @@ export function buildTransmissionASRetardSteuTableRows(items: TransmissionASReta
 
 export function buildTransmissionASRetardSclTableRows(items: TransmissionASRetardSclDto[]): ReactNode[][] {
   return items.map((item) => [
-    item.codeSandre,
-    item.nom ?? '-',
-    item.trancheObligation ?? '-',
-    item.capaciteNominale !== null ? String(item.capaciteNominale) : '-',
+    item.systemeCollecteCode,
+    item.systemeCollecteNom ?? '-',
+    item.trancheObligationLibelle ?? '-',
+    item.capaciteNominaleEH !== null ? String(item.capaciteNominaleEH) : '-',
     item.nbFichiersAsRecus !== null ? String(item.nbFichiersAsRecus) : '-',
     item.dateDernierFichierRecu ? formatDate(item.dateDernierFichierRecu) : '-',
     item.dateDebutPeriode ? formatDate(item.dateDebutPeriode) : '-',
