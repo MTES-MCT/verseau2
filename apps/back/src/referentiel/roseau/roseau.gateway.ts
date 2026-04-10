@@ -6,10 +6,6 @@ import {
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
-  EvenementSclFilters,
-  EvenementSteuFilters,
-  EvenementSclRow,
-  EvenementSteuRow,
   BilanSteuFilters,
   BilanSclFilters,
   BilanSteuRow,
@@ -59,8 +55,6 @@ export interface RoseauGateway {
   findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }>;
   findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null>;
   findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null>;
-  findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }>;
-  findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }>;
   findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }>;
   findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }>;
   findEvenementTypes(): Promise<NomenclatureItem[]>;

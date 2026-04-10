@@ -9,6 +9,8 @@ import { ControleMapper } from '@dossier/controle/isov1/controle.mapper';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ControleRepository } from '@dossier/controle/controle.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
+import { RoseauEvenementRepository } from '@referentiel/roseau/roseauEvenement.repository';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
 import { RoseauTransmissionRepository } from '@referentiel/roseau/roseauTransmission.repository';
@@ -60,11 +62,13 @@ describe('ControleV1Service (e2e)', () => {
         ControleMapper,
         ControleRepository,
         RoseauRepository,
+        RoseauEvenementRepository,
         LanceleauRepository,
         MasaProvider,
         ControleV1DataFetcherService,
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
+        { provide: RoseauEvenementGateway, useExisting: RoseauEvenementRepository },
         RoseauTransmissionRepository,
         { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },

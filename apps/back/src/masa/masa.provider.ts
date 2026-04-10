@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
 import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import {
@@ -56,6 +57,7 @@ import { ROLE } from '@user/user.model';
 export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(RoseauEvenementGateway) private readonly roseauEvenementGateway: RoseauEvenementGateway,
     @Inject(RoseauTransmissionGateway) private readonly roseauTransmissionGateway: RoseauTransmissionGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
@@ -277,11 +279,11 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
-    return this.roseauGateway.findEvenementSteu(filters);
+    return this.roseauEvenementGateway.findEvenementSteu(filters);
   }
 
   async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
-    return this.roseauGateway.findEvenementScl(filters);
+    return this.roseauEvenementGateway.findEvenementScl(filters);
   }
 
   async findEvenementTypes(): Promise<NomenclatureItem[]> {

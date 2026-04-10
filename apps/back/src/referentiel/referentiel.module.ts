@@ -1,6 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RoseauGateway } from './roseau/roseau.gateway';
+import { RoseauEvenementGateway } from './roseau/roseauEvenement.gateway';
+import { RoseauEvenementRepository } from './roseau/roseauEvenement.repository';
 import { RoseauTransmissionGateway } from './roseau/roseauTransmission.gateway';
 import { RoseauTransmissionRepository } from './roseau/roseauTransmission.repository';
 import { AgaEntity } from './roseau/entities/aga.entity';
@@ -75,10 +77,11 @@ import { MasaModule } from '@masa/masa.module';
   controllers: [ReferentielController],
   providers: [
     { provide: RoseauGateway, useClass: RoseauRepository },
+    { provide: RoseauEvenementGateway, useClass: RoseauEvenementRepository },
     { provide: RoseauTransmissionGateway, useClass: RoseauTransmissionRepository },
     { provide: LanceleauGateway, useClass: LanceleauRepository },
     ParametreGateway,
   ],
-  exports: [RoseauGateway, RoseauTransmissionGateway, LanceleauGateway],
+  exports: [RoseauGateway, RoseauEvenementGateway, RoseauTransmissionGateway, LanceleauGateway],
 })
 export class ReferentielModule {}
