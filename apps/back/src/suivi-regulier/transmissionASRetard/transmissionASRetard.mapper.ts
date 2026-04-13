@@ -3,10 +3,10 @@ import type { TransmissionASRetardSteuRow, TransmissionASRetardSclRow } from '@m
 
 export function mapTransmissionASRetardSteuRowToDto(row: TransmissionASRetardSteuRow): TransmissionASRetardSteuDto {
   return {
-    codeSandre: row.codeSandre,
-    nom: row.nom,
-    trancheObligation: row.trancheObligation,
-    capaciteNominale: row.capaciteNominale,
+    ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+    ouvrageDepollutionNom: row.ouvrageDepollutionNom,
+    trancheObligationLibelle: row.trancheObligationLibelle,
+    capaciteNominaleEH: row.capaciteNominaleEH,
     nbFichiersAsRecus: row.nbFichiersAsRecus,
     dateDernierFichierRecu: row.dateDernierFichierRecu,
     dateDebutPeriode: row.dateDebutPeriode,
@@ -18,10 +18,10 @@ export function mapTransmissionASRetardSteuRowToDto(row: TransmissionASRetardSte
 
 export function mapTransmissionASRetardSclRowToDto(row: TransmissionASRetardSclRow): TransmissionASRetardSclDto {
   return {
-    codeSandre: row.codeSandre,
-    nom: row.nom,
-    trancheObligation: row.trancheObligation,
-    capaciteNominale: row.capaciteNominale,
+    systemeCollecteCode: row.systemeCollecteCode,
+    systemeCollecteNom: row.systemeCollecteNom,
+    trancheObligationLibelle: row.trancheObligationLibelle,
+    capaciteNominaleEH: row.capaciteNominaleEH,
     nbFichiersAsRecus: row.nbFichiersAsRecus,
     dateDernierFichierRecu: row.dateDernierFichierRecu,
     dateDebutPeriode: row.dateDebutPeriode,

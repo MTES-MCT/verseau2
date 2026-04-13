@@ -11,7 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { ItvCdnByRfa, VSteuSclItvResult } from '@masa/masa.dto';
+import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 
 @Injectable()
 export class LanceleauRepository implements LanceleauGateway {
@@ -34,8 +34,14 @@ export class LanceleauRepository implements LanceleauGateway {
     private readonly vSteuSclItvRepository: Repository<VSteuSclItvEntity>,
   ) {}
 
-  async findByItvCdn(itvCdn: number): Promise<ItvEntity | null> {
-    return this.itvRepository.findOne({ where: { itvCdn } });
+  async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
+    const itv = await this.itvRepository.findOne({ where: { itvCdn } });
+    if (!itv) return null;
+    return {
+      intervenantId: itv.itvCdn,
+      intervenantNom: itv.itvNomLb,
+      intervenantSiret: itv.itvRfa,
+    };
   }
 
   async findItvByRfa(itvRfa: string): Promise<ItvEntity | null> {
@@ -48,7 +54,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .createQueryBuilder('itv')
       .where('itv.itv_rfa IN (:...rfas)', { rfas })
       .getMany();
-    return rows.map((itv) => ({ intervenantSiret: itv.itvRfa, intervenantIdentifiant: itv.itvCdn }));
+    return rows.map((itv) => ({ intervenantSiret: itv.itvRfa, intervenantId: itv.itvCdn }));
   }
 
   async findSupByRfa(supRfa: string): Promise<SupEntity | null> {
@@ -72,16 +78,26 @@ export class LanceleauRepository implements LanceleauGateway {
     return !!role;
   }
 
-  async findOrionRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {
-    return this.orionRoleForPrincipalRepository.find({ where: { prCdn } });
+  async findOrionRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null> {
+    const roles = await this.orionRoleForPrincipalRepository.find({ where: { prCdn } });
+    return roles.map((r) => ({
+      principalIdentifiant: r.prCdn,
+      roleOrionId: r.roleCdn,
+    }));
   }
 
-  async findAgByEmail(email: string): Promise<AgEntity | null> {
-    return this.agRepository
+  async findAgByEmail(email: string): Promise<AgByEmail | null> {
+    const ag = await this.agRepository
       .createQueryBuilder('ag')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
       .where('oc.mail = :email', { email })
       .getOne();
+
+    if (!ag) return null;
+    return {
+      intervenantId: ag.itvCdn,
+      principalIdentifiant: ag.prCdn,
+    };
   }
 
   private mapVSteuSclItvEntityToResult(entity: VSteuSclItvEntity): VSteuSclItvResult {

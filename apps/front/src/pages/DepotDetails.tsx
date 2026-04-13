@@ -69,7 +69,7 @@ export function DepotDetailsPage() {
 
   const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) =>
     formatOption({
-      elementNomenclatureCode: String(option.pointMesureIdentifiant),
+      elementNomenclatureCode: String(option.pointMesureId),
       elementNomenclatureLibelle: option.pointMesureLibelle,
     }),
   );

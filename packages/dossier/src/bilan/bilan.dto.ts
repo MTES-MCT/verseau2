@@ -19,7 +19,7 @@ export const BilanSclDtoSchema = z.object({
   sclCdn: z.number(),
   systemeCollecteCode: z.string(),
   systemeCollecteNom: z.string().nullable(),
-  pointMesureIdentifiant: z.number(),
+  pointMesureId: z.number(),
   pointMesureNumero: z.string(),
   pointMesureLibelle: z.string().nullable(),
   date: z.string(),

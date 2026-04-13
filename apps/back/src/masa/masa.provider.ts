@@ -2,8 +2,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauReferentielPointMesureGateway } from '@referentiel/roseau/roseauReferentielPointMesure.gateway';
+import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
+import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
+import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
+import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauMesureDeposeeGateway } from '@referentiel/roseau/roseauMesureDeposee.gateway';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
-import { SclEntity } from '@referentiel/roseau/entities/scl.entity';
 import {
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
@@ -42,9 +47,17 @@ import {
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
+  SystemeCollecte,
+  RolePrincipal,
 } from './masa.dto';
 import { ROLE } from '@user/user.model';
-import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
+import {
+  mapSclRefsToSclCdnBySandreCda,
+  mapSclRefsToSclWithName,
+  mapSclRefsToSystemeCollecte,
+  mapSteuRefsToSteuCdnBySandreCda,
+  mapSteuRefsToSteuWithName,
+} from './fromMasa.mapper';
 
 /**
  * MasaProvider est un service qui centralise tous les appels aux données live de la future API REST MASA.
@@ -55,6 +68,13 @@ import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/ori
 export class MasaProvider {
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
+    @Inject(RoseauReferentielPointMesureGateway)
+    private readonly roseauReferentielPointMesureGateway: RoseauReferentielPointMesureGateway,
+    @Inject(RoseauBilanGateway) private readonly roseauBilanGateway: RoseauBilanGateway,
+    @Inject(RoseauConformiteGateway) private readonly roseauConformiteGateway: RoseauConformiteGateway,
+    @Inject(RoseauEvenementGateway) private readonly roseauEvenementGateway: RoseauEvenementGateway,
+    @Inject(RoseauTransmissionGateway) private readonly roseauTransmissionGateway: RoseauTransmissionGateway,
+    @Inject(RoseauMesureDeposeeGateway) private readonly roseauMesureDeposeeGateway: RoseauMesureDeposeeGateway,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
@@ -65,15 +85,15 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
-    return this.roseauGateway.findSteuBatchBySandreCdas(cdas);
+    return mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
   }
 
-  async findSclBySandreCda(cda: string): Promise<SclEntity | null> {
-    return this.roseauGateway.findSclBySandreCda(cda);
+  async findSclBySandreCda(cda: string): Promise<SystemeCollecte | null> {
+    return mapSclRefsToSystemeCollecte(await this.roseauGateway.findSclsBySandreCdas([cda]));
   }
 
   async findSclBatchBySandreCdas(cdas: string[]): Promise<SclCdnBySandreCda[]> {
-    return this.roseauGateway.findSclBatchBySandreCdas(cdas);
+    return mapSclRefsToSclCdnBySandreCda(await this.roseauGateway.findSclsBySandreCdas(cdas));
   }
 
   // ---------------------------------------------------------------------------
@@ -217,12 +237,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findAgByEmail(email: string): Promise<AgByEmail | null> {
-    const ag = await this.lanceleauGateway.findAgByEmail(email);
-    if (!ag) return null;
-    return {
-      intervenantIdentifiant: ag.itvCdn,
-      principalIdentifiant: ag.prCdn,
-    };
+    return this.lanceleauGateway.findAgByEmail(email);
   }
 
   // ---------------------------------------------------------------------------
@@ -240,7 +255,7 @@ export class MasaProvider {
   // Utilisé par DroitsDepotService pour vérifier déposant/expert bassin
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
-  async findRolesByPrCdn(prCdn: number): Promise<OrionRoleForPrincipalEntity[] | null> {
+  async findRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null> {
     return await this.lanceleauGateway.findOrionRolesByPrCdn(prCdn);
   }
 
@@ -251,13 +266,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
-    const itv = await this.lanceleauGateway.findByItvCdn(itvCdn);
-    if (!itv) return null;
-    return {
-      intervenantIdentifiant: itv.itvCdn,
-      intervenantNom: itv.itvNomLb,
-      intervenantSiret: itv.itvRfa,
-    };
+    return this.lanceleauGateway.findIntervenantById(itvCdn);
   }
 
   // ---------------------------------------------------------------------------
@@ -266,7 +275,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
-    return this.roseauGateway.findMesures(filters);
+    return this.roseauMesureDeposeeGateway.findMesures(filters);
   }
 
   // ---------------------------------------------------------------------------
@@ -275,23 +284,23 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
-    return this.roseauGateway.findEvenementSteu(filters);
+    return this.roseauEvenementGateway.findEvenementSteu(filters);
   }
 
   async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
-    return this.roseauGateway.findEvenementScl(filters);
+    return this.roseauEvenementGateway.findEvenementScl(filters);
   }
 
   async findEvenementTypes(): Promise<NomenclatureItem[]> {
-    return this.roseauGateway.findEvenementTypes();
+    return this.roseauEvenementGateway.findEvenementTypes();
   }
 
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
-    return this.roseauGateway.findBilanSteu(filters);
+    return this.roseauBilanGateway.findBilanSteu(filters);
   }
 
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
-    return this.roseauGateway.findBilanScl(filters);
+    return this.roseauBilanGateway.findBilanScl(filters);
   }
 
   // ---------------------------------------------------------------------------
@@ -302,17 +311,17 @@ export class MasaProvider {
   async findTransmissionASRetardSteu(
     filters: TransmissionASRetardSteuFilters,
   ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
-    return this.roseauGateway.findTransmissionASRetardSteu(filters);
+    return this.roseauTransmissionGateway.findTransmissionASRetardSteu(filters);
   }
 
   async findTransmissionASRetardScl(
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
-    return this.roseauGateway.findTransmissionASRetardScl(filters);
+    return this.roseauTransmissionGateway.findTransmissionASRetardScl(filters);
   }
 
-  async findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]> {
-    return this.roseauGateway.findPointsMesureBySclCdns(sclCdns);
+  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }
 
   // ---------------------------------------------------------------------------
@@ -321,7 +330,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    return this.roseauGateway.findConformiteSteu(filters);
+    return this.roseauConformiteGateway.findConformiteSteu(filters);
   }
 
   // ---------------------------------------------------------------------------
@@ -330,7 +339,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    return this.roseauGateway.findConformiteScl(filters);
+    return this.roseauConformiteGateway.findConformiteScl(filters);
   }
 
   // ---------------------------------------------------------------------------
@@ -339,7 +348,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null> {
-    return this.roseauGateway.findConformiteSteuDetail(steuCdn, annee);
+    return this.roseauConformiteGateway.findConformiteSteuDetail(steuCdn, annee);
   }
 
   // ---------------------------------------------------------------------------
@@ -348,7 +357,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null> {
-    return this.roseauGateway.findConformiteSclDetail(sclCdn, annee);
+    return this.roseauConformiteGateway.findConformiteSclDetail(sclCdn, annee);
   }
 
   // ---------------------------------------------------------------------------
@@ -357,7 +366,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
-    return this.roseauGateway.findSteuWithNamesBySandreCdas(sandreCdas);
+    return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
   }
 
   // ---------------------------------------------------------------------------
@@ -366,7 +375,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
-    return this.roseauGateway.findSclWithNamesBySandreCdas(sandreCdas);
+    return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
   }
 
   // ---------------------------------------------------------------------------
@@ -401,11 +410,11 @@ export class MasaProvider {
   }
 
   async findStatuts(): Promise<NomenclatureItem[]> {
-    return this.roseauGateway.findStatuts();
+    return this.roseauGateway.findNomenclatureByRfa('LREF_20');
   }
 
   async findQualifications(): Promise<NomenclatureItem[]> {
-    return this.roseauGateway.findQualifications();
+    return this.roseauGateway.findNomenclatureByRfa('LREF_18');
   }
 
   // ---------------------------------------------------------------------------
@@ -418,6 +427,6 @@ export class MasaProvider {
     ouvrageCode: string,
     filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
   ): Promise<PointMesureReferentielRow[]> {
-    return this.roseauGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
+    return this.roseauReferentielPointMesureGateway.findPointsMesureReferentiel(ouvrageType, ouvrageCode, filters);
   }
 }

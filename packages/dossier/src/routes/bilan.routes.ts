@@ -38,7 +38,7 @@ export const listBilanScl = {
     .object({
       year: BilanYearSchema,
       systemeCollecteCode: z.string().optional(),
-      pointMesureIdentifiant: z.coerce.number().optional(),
+      pointMesureId: z.coerce.number().optional(),
       statut: z.enum(['TP', 'TS']).optional(),
     })
     .extend(createPaginationQuerySchema(BilanSclSortBy).shape),

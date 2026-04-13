@@ -24,7 +24,7 @@ export class DroitsUserService {
     }
 
     const ag = await this.masaProvider.findAgByEmail(user.email);
-    return ag ? ag.intervenantIdentifiant : null;
+    return ag ? ag.intervenantId : null;
   }
 
   async isExpertNationalVerseau(sub: string): Promise<boolean> {
@@ -75,9 +75,7 @@ export class DroitsUserService {
       const itvCdn = await this.resolveItvCdn(sub);
       if (itvCdn) {
         const intervenant = await this.masaProvider.findIntervenantById(itvCdn);
-        return intervenant
-          ? { itvCdn: intervenant.intervenantIdentifiant, nom: intervenant.intervenantNom }
-          : { itvCdn };
+        return intervenant ? { itvCdn: intervenant.intervenantId, nom: intervenant.intervenantNom } : { itvCdn };
       }
       return null;
     } catch (error) {

@@ -28,7 +28,7 @@ export const PointMesureReferentielSchema = z.object({
   pointMesureLibelle: z.string().nullable(),
   pointMesureLocalisationCode: z.string().nullable(),
   pointMesureLocalisationLibelle: z.string().nullable(),
-  pointMesureSclCategorie: z.string().nullable(),
+  pointMesureCategorieSystemeCollecte: z.string().nullable(),
   pointMesureValiditeDebutDate: z.string().nullable(),
   pointMesureValiditeFinDate: z.string().nullable(),
 });

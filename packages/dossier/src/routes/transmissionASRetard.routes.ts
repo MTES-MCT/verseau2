@@ -10,20 +10,20 @@ import { createPaginationQuerySchema } from '../shared/pagination.schema';
 
 export const TransmissionASRetardSteuSortBy = z.enum([
   'nbJoursRetard',
-  'codeSandre',
-  'nom',
-  'trancheObligation',
-  'capaciteNominale',
+  'ouvrageDepollutionCode',
+  'ouvrageDepollutionNom',
+  'trancheObligationLibelle',
+  'capaciteNominaleEH',
   'dateDernierFichierRecu',
 ]);
 export type TransmissionASRetardSteuSortByValue = z.infer<typeof TransmissionASRetardSteuSortBy>;
 
 export const TransmissionASRetardSclSortBy = z.enum([
   'nbJoursRetard',
-  'codeSandre',
-  'nom',
-  'trancheObligation',
-  'capaciteNominale',
+  'systemeCollecteCode',
+  'systemeCollecteNom',
+  'trancheObligationLibelle',
+  'capaciteNominaleEH',
   'dateDernierFichierRecu',
 ]);
 export type TransmissionASRetardSclSortByValue = z.infer<typeof TransmissionASRetardSclSortBy>;
@@ -39,7 +39,7 @@ export const listTransmissionASRetardSteu = {
   query: z
     .object({
       year: TransmissionYearSchema,
-      codeSandre: z.string().optional(),
+      ouvrageDepollutionCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(TransmissionASRetardSteuSortBy).shape),
   response: PaginatedTransmissionASRetardSteuResponseSchema,
@@ -51,7 +51,7 @@ export const listTransmissionASRetardScl = {
   query: z
     .object({
       year: TransmissionYearSchema,
-      codeSandre: z.string().optional(),
+      systemeCollecteCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(TransmissionASRetardSclSortBy).shape),
   response: PaginatedTransmissionASRetardSclResponseSchema,

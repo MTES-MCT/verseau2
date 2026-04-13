@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
 export const TransmissionASRetardSteuDtoSchema = z.object({
-  codeSandre: z.string(),
-  nom: z.string().nullable(),
-  trancheObligation: z.string().nullable(),
-  capaciteNominale: z.number().nullable(),
+  ouvrageDepollutionCode: z.string(),
+  ouvrageDepollutionNom: z.string().nullable(),
+  trancheObligationLibelle: z.string().nullable(),
+  capaciteNominaleEH: z.number().nullable(),
   nbFichiersAsRecus: z.number().nullable(),
   dateDernierFichierRecu: z.string().nullable(),
   dateDebutPeriode: z.string().nullable(),
@@ -16,12 +16,11 @@ export const TransmissionASRetardSteuDtoSchema = z.object({
 
 export type TransmissionASRetardSteuDto = z.infer<typeof TransmissionASRetardSteuDtoSchema>;
 
-// SCL a exactement les mêmes colonnes affichées
 export const TransmissionASRetardSclDtoSchema = z.object({
-  codeSandre: z.string(),
-  nom: z.string().nullable(),
-  trancheObligation: z.string().nullable(),
-  capaciteNominale: z.number().nullable(),
+  systemeCollecteCode: z.string(),
+  systemeCollecteNom: z.string().nullable(),
+  trancheObligationLibelle: z.string().nullable(),
+  capaciteNominaleEH: z.number().nullable(),
   nbFichiersAsRecus: z.number().nullable(),
   dateDernierFichierRecu: z.string().nullable(),
   dateDebutPeriode: z.string().nullable(),

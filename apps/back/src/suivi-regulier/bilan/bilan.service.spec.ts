@@ -45,7 +45,7 @@ describe('BilanService', () => {
     });
 
     it('calls masaProvider with resolved cdns', async () => {
-      (masaProviderMock.findSteuBatchBySandreCdas as any).mockResolvedValue([{ ouvrageDepollutionIdentifiant: 123 }]);
+      (masaProviderMock.findSteuBatchBySandreCdas as any).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
       (masaProviderMock.findBilanSteu as any).mockResolvedValue({
         data: [{ steuCdn: 123, ouvrageDepollutionCode: 'STEU1' }],
         total: 1,
@@ -60,7 +60,7 @@ describe('BilanService', () => {
 
       expect(masaProviderMock.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU1']);
       expect(masaProviderMock.findBilanSteu).toHaveBeenCalledWith({
-        steuCdns: [123],
+        ouvrageDepollutionIds: [123],
         year: 2024,
         page: 1,
         pageSize: 10,

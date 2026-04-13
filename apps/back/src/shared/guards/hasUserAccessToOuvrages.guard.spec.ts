@@ -3,7 +3,7 @@ import { HasUserAccessToOuvragesGuard } from './hasUserAccessToOuvrages.guard';
 import type { IntervenantAuth, VSteuSclItvResult } from '@masa/masa.dto';
 
 const makeIntervenant = (itvCdn: number, itvRfa: string): IntervenantAuth => ({
-  intervenantIdentifiant: itvCdn,
+  intervenantId: itvCdn,
   intervenantSiret: itvRfa,
 });
 

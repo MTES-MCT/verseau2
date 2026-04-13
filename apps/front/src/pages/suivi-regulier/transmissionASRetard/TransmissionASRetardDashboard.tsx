@@ -50,10 +50,10 @@ export const TransmissionASRetardDashboard = () => {
       }));
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
-  const currentOuvrageValue = filters.codeSandre || null;
+  const currentOuvrageValue = filters.ouvrageCode || null;
 
   const handleOuvrageChange = (value: string | null) => {
-    updateFilter({ codeSandre: value ?? '' });
+    updateFilter({ ouvrageCode: value ?? '' });
   };
 
   const handleSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
@@ -64,7 +64,7 @@ export const TransmissionASRetardDashboard = () => {
     page,
     pageSize,
     year: filters.year,
-    ...(filters.codeSandre ? { codeSandre: filters.codeSandre } : {}),
+    ...(filters.ouvrageCode ? { ouvrageDepollutionCode: filters.ouvrageCode } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as TransmissionASRetardSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -73,7 +73,7 @@ export const TransmissionASRetardDashboard = () => {
     page,
     pageSize,
     year: filters.year,
-    ...(filters.codeSandre ? { codeSandre: filters.codeSandre } : {}),
+    ...(filters.ouvrageCode ? { systemeCollecteCode: filters.ouvrageCode } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as TransmissionASRetardSclSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -90,14 +90,23 @@ export const TransmissionASRetardDashboard = () => {
   const headers = buildTransmissionASRetardTableHeaders();
 
   // Rendre les colonnes triables
-  const sortableColumns: { label: string; field: SortByValue }[] = [
-    { label: 'Code Sandre', field: 'codeSandre' },
-    { label: 'Nom', field: 'nom' },
-    { label: "Tranche d'obligation (EH)", field: 'trancheObligation' },
-    { label: 'Capacité nominale (EH)', field: 'capaciteNominale' },
-    { label: 'Date dernier fichier reçu', field: 'dateDernierFichierRecu' },
-    { label: 'Nb jours de retard', field: 'nbJoursRetard' },
-  ];
+  const sortableColumns: { label: string; field: SortByValue }[] = isScl
+    ? [
+        { label: 'Code Sandre', field: 'systemeCollecteCode' },
+        { label: 'Nom', field: 'systemeCollecteNom' },
+        { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
+        { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
+        { label: 'Date dernier fichier reçu', field: 'dateDernierFichierRecu' },
+        { label: 'Nb jours de retard', field: 'nbJoursRetard' },
+      ]
+    : [
+        { label: 'Code Sandre', field: 'ouvrageDepollutionCode' },
+        { label: 'Nom', field: 'ouvrageDepollutionNom' },
+        { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
+        { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
+        { label: 'Date dernier fichier reçu', field: 'dateDernierFichierRecu' },
+        { label: 'Nb jours de retard', field: 'nbJoursRetard' },
+      ];
 
   const finalHeaders: (string | ReactNode)[] = headers.map((header) => {
     const sortable = sortableColumns.find((s) => s.label === header);

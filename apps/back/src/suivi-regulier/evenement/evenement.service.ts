@@ -16,7 +16,7 @@ export interface ListEvenementSclOptions extends PaginationQuery {
   year: number;
   typeEvenementCode?: string;
   systemeCollecteCode?: string;
-  pointMesureIdentifiant?: number;
+  pointMesureId?: number;
   sortBy?: EvenementSclSortByValue;
 }
 
@@ -35,10 +35,10 @@ export class EvenementService {
       return { data: [], total: 0, page, pageSize };
     }
 
-    const steuCdns = await this.resolveAuthorizedSteuCdns(cdasToQuery);
-    if (steuCdns.length === 0) return { data: [], total: 0, page, pageSize };
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(cdasToQuery);
+    if (ouvrageDepollutionIds.length === 0) return { data: [], total: 0, page, pageSize };
     const filters: EvenementSteuFilters = {
-      steuCdns,
+      ouvrageDepollutionIds,
       year,
       page,
       pageSize,
@@ -56,7 +56,7 @@ export class EvenementService {
       year,
       typeEvenementCode,
       systemeCollecteCode,
-      pointMesureIdentifiant,
+      pointMesureId,
       page,
       pageSize,
       sortBy,
@@ -70,15 +70,15 @@ export class EvenementService {
       return { data: [], total: 0, page, pageSize };
     }
 
-    const sclCdns = await this.resolveAuthorizedSclCdns(cdasToQuery);
-    if (sclCdns.length === 0) return { data: [], total: 0, page, pageSize };
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(cdasToQuery);
+    if (systemeCollecteIds.length === 0) return { data: [], total: 0, page, pageSize };
     const filters: EvenementSclFilters = {
-      sclCdns,
+      systemeCollecteIds,
       year,
       page,
       pageSize,
       ...(typeEvenementCode ? { typeEvenementCode } : {}),
-      ...(pointMesureIdentifiant ? { pointMesureIdentifiant } : {}),
+      ...(pointMesureId ? { pointMesureId } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
@@ -91,20 +91,20 @@ export class EvenementService {
   }
 
   async listAvailablePointsMesure(authorizedSclCdas: string[]) {
-    const sclCdns = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
-    if (sclCdns.length === 0) return [];
-    return this.masaProvider.findPointsMesureBySclCdns(sclCdns);
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
+    if (systemeCollecteIds.length === 0) return [];
+    return this.masaProvider.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }
 
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
     if (authorizedSteuCdas.length === 0) return [];
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
-    return [...new Set(steus.map((s) => s.ouvrageDepollutionIdentifiant))];
+    return [...new Set(steus.map((s) => s.ouvrageDepollutionId))];
   }
 
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {
     if (authorizedSclCdas.length === 0) return [];
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
-    return [...new Set(scls.map((s) => s.systemeCollecteIdentifiant))];
+    return [...new Set(scls.map((s) => s.systemeCollecteId))];
   }
 }

@@ -63,7 +63,7 @@ const makeSclRow = (overrides: Partial<BilanSclDto> = {}): BilanSclDto => ({
   sclCdn: 202,
   systemeCollecteCode: 'SCL001',
   systemeCollecteNom: 'Collecteur Beta',
-  pointMesureIdentifiant: 1,
+  pointMesureId: 1,
   pointMesureNumero: 'PM1',
   pointMesureLibelle: 'Point 1',
   date: '2024-01-01',

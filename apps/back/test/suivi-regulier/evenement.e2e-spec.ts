@@ -95,7 +95,7 @@ describe('EvenementController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -109,7 +109,7 @@ describe('EvenementController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionIdentifiant: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
+        { ouvrageDepollutionId: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
       ]);
 
       mockMasaProvider.findEvenementSteu.mockResolvedValue({
@@ -148,7 +148,7 @@ describe('EvenementController (e2e)', () => {
       });
 
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
-        steuCdns: [10],
+        ouvrageDepollutionIds: [10],
         year: currentYear,
         page: 1,
         pageSize: 20,
@@ -159,7 +159,7 @@ describe('EvenementController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -173,7 +173,7 @@ describe('EvenementController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionIdentifiant: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
+        { ouvrageDepollutionId: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
       ]);
 
       mockMasaProvider.findEvenementSteu.mockResolvedValue({
@@ -210,7 +210,7 @@ describe('EvenementController (e2e)', () => {
       });
 
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
-        steuCdns: [10],
+        ouvrageDepollutionIds: [10],
         year: currentYear,
         page: 1,
         pageSize: 20,
@@ -223,7 +223,7 @@ describe('EvenementController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -263,7 +263,7 @@ describe('EvenementController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -277,7 +277,7 @@ describe('EvenementController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteIdentifiant: 20, systemeCollecteCode: 'SCL_TEST_001' },
+        { systemeCollecteId: 20, systemeCollecteCode: 'SCL_TEST_001' },
       ]);
 
       mockMasaProvider.findEvenementScl.mockResolvedValue({
@@ -320,7 +320,7 @@ describe('EvenementController (e2e)', () => {
       });
 
       expect(mockMasaProvider.findEvenementScl).toHaveBeenCalledWith({
-        sclCdns: [20],
+        systemeCollecteIds: [20],
         year: currentYear,
         page: 1,
         pageSize: 20,
@@ -331,7 +331,7 @@ describe('EvenementController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       mockMasaProvider.findIntervenantById.mockResolvedValue({
-        intervenantIdentifiant: 1,
+        intervenantId: 1,
         intervenantSiret: 'SIRET_TEST',
       });
       mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
@@ -345,7 +345,7 @@ describe('EvenementController (e2e)', () => {
       ]);
 
       mockMasaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteIdentifiant: 20, systemeCollecteCode: 'SCL_TEST_001' },
+        { systemeCollecteId: 20, systemeCollecteCode: 'SCL_TEST_001' },
       ]);
 
       mockMasaProvider.findEvenementScl.mockResolvedValue({

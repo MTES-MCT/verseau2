@@ -8,7 +8,7 @@ export interface FilterState {
   year: number;
   ouvrageDepollutionCode: string;
   systemeCollecteCode: string;
-  pointMesureIdentifiant: string;
+  pointMesureId: string;
   statut: 'TP' | 'TS' | '';
   sortBy?: SortByValue;
   sortOrder?: 'ASC' | 'DESC';
@@ -20,7 +20,7 @@ export const useBilanFilters = () => {
     year: CURRENT_BILAN_YEAR,
     ouvrageDepollutionCode: '',
     systemeCollecteCode: '',
-    pointMesureIdentifiant: '',
+    pointMesureId: '',
     statut: '',
   });
 
@@ -34,7 +34,7 @@ export const useBilanFilters = () => {
         updated.sortOrder = undefined;
       }
       if (newFilters.mode === 'steu') {
-        updated.pointMesureIdentifiant = '';
+        updated.pointMesureId = '';
         updated.systemeCollecteCode = '';
         updated.statut = '';
       } else if (newFilters.mode === 'scl') {

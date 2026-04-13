@@ -490,7 +490,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
       isExpertNational: false,
     });
     jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
-      intervenantIdentifiant: 100,
+      intervenantId: 100,
       intervenantSiret: 'SIRET001',
     });
     jest.spyOn(masaProvider, 'findVSteuSclItvByItvRfa').mockResolvedValue([
@@ -511,7 +511,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
         pointMesureLibelle: 'Point entrée',
         pointMesureLocalisationCode: 'ENT',
         pointMesureLocalisationLibelle: 'Entrée',
-        pointMesureSclCategorie: 'REG',
+        pointMesureCategorieSystemeCollecte: 'REG',
         pointMesureValiditeDebutDate: '2020-01-01',
         pointMesureValiditeFinDate: null,
       },
@@ -533,7 +533,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
           pointMesureLibelle: 'Point entrée',
           pointMesureLocalisationCode: 'ENT',
           pointMesureLocalisationLibelle: 'Entrée',
-          pointMesureSclCategorie: 'REG',
+          pointMesureCategorieSystemeCollecte: 'REG',
           pointMesureValiditeDebutDate: '2020-01-01',
           pointMesureValiditeFinDate: null,
         },
