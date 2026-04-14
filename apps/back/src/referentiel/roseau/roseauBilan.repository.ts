@@ -10,7 +10,7 @@ interface BilanSteuRawRow {
   ouvrage_depollution_nom: string | null;
   date: Date | string;
   parametre_nom: string | null;
-  bilan_spe_a: number;
+  bilan_spe_a: string;
   evt: 'Oui' | 'Non';
   hcnf: 'Oui' | 'Non';
   finalite: string | null;
@@ -134,7 +134,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         steuCdn: row.steu_cdn,
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
-        bilanEcarteParSpe: row.bilan_spe_a === 2,
+        bilanEcarteParSpe: row.bilan_spe_a === '2',
         date: toISODateOrNull(row.date) ?? '',
         parametreNom: row.parametre_nom?.trim() ?? null,
         hcnf: row.hcnf,
