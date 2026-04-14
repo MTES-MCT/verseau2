@@ -45,7 +45,6 @@ export interface EvenementSclFilters extends PaginationQuery {
 export interface BilanSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
-  ouvrageDepollutionCode?: string;
   sortBy?: BilanSteuSortByValue;
 }
 
@@ -53,7 +52,6 @@ export interface BilanSteuFilters extends PaginationQuery {
 export interface BilanSclFilters extends PaginationQuery {
   systemeCollecteIds: number[];
   year: number;
-  systemeCollecteCode?: string;
   pointMesureId?: number;
   statut?: 'TP' | 'TS';
   sortBy?: BilanSclSortByValue;
@@ -63,7 +61,6 @@ export interface BilanSclFilters extends PaginationQuery {
 export interface TransmissionASRetardSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
-  ouvrageDepollutionCode?: string;
   sortBy?: TransmissionASRetardSteuSortByValue;
 }
 
@@ -71,7 +68,6 @@ export interface TransmissionASRetardSteuFilters extends PaginationQuery {
 export interface TransmissionASRetardSclFilters extends PaginationQuery {
   systemeCollecteIds: number[];
   year: number;
-  systemeCollecteCode?: string;
   sortBy?: TransmissionASRetardSclSortByValue;
 }
 

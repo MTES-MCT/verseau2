@@ -33,7 +33,7 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
   async findTransmissionASRetardSteu(
     filters: TransmissionASRetardSteuFilters,
   ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, page, pageSize, ouvrageDepollutionCode } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -71,10 +71,6 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
     const dateFallbackRetard = addParam(`${year}-02-01`);
 
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
-
-    if (ouvrageDepollutionCode) {
-      whereClauses.push(`RTRIM(steu.steu_sandre_cda) = ${addParam(ouvrageDepollutionCode)}`);
-    }
 
     const baseQuery = `
       WITH params AS (SELECT ${anneePlaceholder}::int AS annee),
@@ -224,7 +220,7 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
   async findTransmissionASRetardScl(
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, page, pageSize, systemeCollecteCode } = filters;
+    const { systemeCollecteIds, year, page, pageSize } = filters;
 
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
@@ -262,10 +258,6 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
     const dateFallbackRetard = addParam(`${year}-02-01`);
 
     const whereClauses = [`scl.scl_cdn IN (${sclPlaceholders})`];
-
-    if (systemeCollecteCode) {
-      whereClauses.push(`RTRIM(scl.scl_sandre_cda) = ${addParam(systemeCollecteCode)}`);
-    }
 
     const baseQuery = `
       WITH params AS (SELECT ${anneePlaceholder}::int AS annee),

@@ -40,8 +40,6 @@ export class TransmissionASRetardService {
       year,
       page,
       pageSize,
-      ...(ouvrageDepollutionCode ? { ouvrageDepollutionCode } : {}),
-
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
@@ -72,8 +70,6 @@ export class TransmissionASRetardService {
       year,
       page,
       pageSize,
-      ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
-
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };

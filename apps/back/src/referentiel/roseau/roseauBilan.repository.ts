@@ -34,7 +34,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
   constructor(private readonly dataSource: DataSource) {}
 
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, page, pageSize, ouvrageDepollutionCode } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -55,25 +55,21 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean> = [];
-    const addParam = (value: number | string | boolean) => {
+    const queryParams: Array<number | string | boolean | number[]> = [];
+    const addParam = (value: number | string | boolean | number[]) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
 
     const startDate = addParam(`${year}-01-01`);
     const endDate = addParam(`${year}-12-31`);
-    const steuPlaceholders = ouvrageDepollutionIds.map((cdn) => addParam(cdn)).join(', ');
+    const steuArrayParam = addParam(ouvrageDepollutionIds);
     const whereClauses = [
-      `steu.steu_cdn IN (${steuPlaceholders})`,
+      `steu.steu_cdn = ANY(${steuArrayParam}::int[])`,
       `resj.resj_mes_dt >= ${startDate}`,
       `resj.resj_mes_dt <= ${endDate}`,
       `(resj.resj_jok_in = '2' OR resj.resj_aok_in = '2')`,
     ];
-
-    if (ouvrageDepollutionCode) {
-      whereClauses.push(`steu.steu_sandre_cda = ${addParam(ouvrageDepollutionCode)}`);
-    }
 
     const baseQuery = `
       WITH base_data AS (
@@ -83,11 +79,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
           steu.steu_nom_lb AS ouvrage_depollution_nom,
           resj.resj_mes_dt::date AS date,
           par.par_court_nom_lb AS parametre_nom,
-          CASE resj.resj_aok_in
-            WHEN '1' THEN 'PRIS EN COMPTE'
-            WHEN '2' THEN 'NON PRIS EN COMPTE'
-            ELSE 'SANS OBJET'
-          END AS bilan_spe_a,
+          resj.resj_aok_in AS bilan_spe_a, 
           CASE resj.resj_evt_in
             WHEN 'O' THEN 'Oui'
             ELSE 'Non'
@@ -142,7 +134,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         steuCdn: row.steu_cdn,
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
-        bilanEcarteParSpe: row.bilan_spe_a === 'NON PRIS EN COMPTE',
+        bilanEcarteParSpe: row.bilan_spe_a === '2',
         date: toISODateOrNull(row.date) ?? '',
         parametreNom: row.parametre_nom?.trim() ?? null,
         hcnf: row.hcnf,
@@ -154,7 +146,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
   }
 
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, page, pageSize, systemeCollecteCode, pointMesureId, statut } = filters;
+    const { systemeCollecteIds, year, page, pageSize, pointMesureId, statut } = filters;
 
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
@@ -175,24 +167,21 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean> = [];
-    const addParam = (value: number | string | boolean) => {
+    const queryParams: Array<number | string | boolean | number[]> = [];
+    const addParam = (value: number | string | boolean | number[]) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
 
     const yearPlaceholder = addParam(year);
-    const sclPlaceholders = systemeCollecteIds.map((cdn) => addParam(cdn)).join(', ');
+    const sclArrayParam = addParam(systemeCollecteIds);
     const whereClauses = [
-      `scl.scl_cdn IN (${sclPlaceholders})`,
+      `scl.scl_cdn = ANY(${sclArrayParam}::int[])`,
       `date_part('year', d.devers_dt) = ${yearPlaceholder}`,
       `d.devers_pris_en_compte_on = false`,
       `(d.devers_statut_in IN ('TP', 'TS') OR d.devers_statut_s_in IN ('TP', 'TS'))`,
     ];
 
-    if (systemeCollecteCode) {
-      whereClauses.push(`scl.scl_sandre_cda = ${addParam(systemeCollecteCode)}`);
-    }
     if (pointMesureId) {
       whereClauses.push(`pmo.pmo_cdn = ${addParam(pointMesureId)}`);
     }
