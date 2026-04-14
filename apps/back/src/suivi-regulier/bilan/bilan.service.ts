@@ -41,7 +41,6 @@ export class BilanService {
       year,
       page,
       pageSize,
-      ...(ouvrageDepollutionCode ? { ouvrageDepollutionCode } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
@@ -69,7 +68,6 @@ export class BilanService {
       year,
       page,
       pageSize,
-      ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
       ...(pointMesureId ? { pointMesureId } : {}),
       ...(statut ? { statut } : {}),
       ...(sortBy ? { sortBy } : {}),
