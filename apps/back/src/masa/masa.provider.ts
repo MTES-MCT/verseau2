@@ -251,7 +251,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // path: /api/agents/par-email
+  // path: /api/agents/by-email
   async findAgByEmail(email: string): Promise<AgByEmail | null> {
     return this.lanceleauGateway.findAgByEmail(email);
   }
@@ -272,7 +272,7 @@ export class MasaProvider {
   // Utilisé par DroitsDepotService pour vérifier déposant/expert bassin
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
-  // path: /api/roles/par-principal/:prCdn
+  // path: /api/roles/by-principal/:prCdn
   async findRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null> {
     return await this.lanceleauGateway.findOrionRolesByPrCdn(prCdn);
   }
