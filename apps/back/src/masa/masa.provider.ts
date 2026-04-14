@@ -84,14 +84,17 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/batch
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
     return mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
   }
 
+  // path: /api/systemes-collecte/:cda
   async findSclBySandreCda(cda: string): Promise<SystemeCollecte | null> {
     return mapSclRefsToSystemeCollecte(await this.roseauGateway.findSclsBySandreCdas([cda]));
   }
 
+  // path: /api/systemes-collecte/batch
   async findSclBatchBySandreCdas(cdas: string[]): Promise<SclCdnBySandreCda[]> {
     return mapSclRefsToSclCdnBySandreCda(await this.roseauGateway.findSclsBySandreCdas(cdas));
   }
@@ -101,6 +104,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/intervenants/batch
   async findItvBatchByRfas(rfas: string[]): Promise<ItvCdnByRfa[]> {
     return this.lanceleauGateway.findItvBatchByRfas(rfas);
   }
@@ -111,6 +115,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/liens-exploitants/check
   async checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>> {
     return this.roseauGateway.checkExpSteuLinksBatch(links);
   }
@@ -121,6 +126,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/points-mesure/existence/check
   async checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>> {
     return this.roseauGateway.checkPmoExistenceBatch(queries);
   }
@@ -131,6 +137,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/systemes-collecte/liens-agglomerations/check
   async checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>> {
     return this.roseauGateway.checkSclAgglomerationLinksBatch(links);
   }
@@ -150,6 +157,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/capacite-nominale/batch
   async findCapaciteNominaleBatch(steuCdas: string[], year: number): Promise<CapaciteNominaleBySandreCda[]> {
     return this.roseauGateway.findCapaciteNominaleBatch(steuCdas, year);
   }
@@ -159,6 +167,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/concentrations-moyennes/batch
   async findConcentrationsMoyennesBatch(
     steuCdas: string[],
     year: number,
@@ -172,6 +181,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/max-debits-reference/batch
   async findMaxDebitsReferenceBatch(steuCdas: string[]): Promise<MaxDebitBySandreCda[]> {
     return this.roseauGateway.findMaxDebitsReferenceBatch(steuCdas);
   }
@@ -181,6 +191,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/charge-entrante-max/batch
   async findChargeEntranteMaxComparison(
     steuSandreCdas: string[],
     year: number,
@@ -193,6 +204,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel batch à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/production-boue-zero/batch
   async findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]> {
     return this.roseauGateway.findProductionBoueZeroBatch(steuSandreCdas, year);
   }
@@ -202,6 +214,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/droits/ouvrages-by-codes
   async findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]> {
     return this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
   }
@@ -211,6 +224,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/droits/ouvrages-by-intervenant
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
     const cacheKey = `vSteuSclItv:${itvRfa}`;
     const cached = await this.cacheManager.get<VSteuSclItvResult[]>(cacheKey);
@@ -226,6 +240,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/intervenants/siret-by-email
   async findSiretByEmail(email: string): Promise<string | null> {
     return this.lanceleauGateway.findSiretByEmail(email);
   }
@@ -236,6 +251,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/agents/par-email
   async findAgByEmail(email: string): Promise<AgByEmail | null> {
     return this.lanceleauGateway.findAgByEmail(email);
   }
@@ -246,6 +262,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/roles/check
   async hasRole(prCdn: number, roleCdn: ROLE): Promise<boolean> {
     return await this.lanceleauGateway.hasRole(prCdn, roleCdn);
   }
@@ -255,6 +272,7 @@ export class MasaProvider {
   // Utilisé par DroitsDepotService pour vérifier déposant/expert bassin
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
+  // path: /api/roles/par-principal/:prCdn
   async findRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null> {
     return await this.lanceleauGateway.findOrionRolesByPrCdn(prCdn);
   }
@@ -265,6 +283,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/intervenants/:itvCdn
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
     return this.lanceleauGateway.findIntervenantById(itvCdn);
   }
@@ -274,6 +293,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/mesures/search
   async findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }> {
     return this.roseauMesureDeposeeGateway.findMesures(filters);
   }
@@ -283,22 +303,27 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/evenements/steu/search
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
     return this.roseauEvenementGateway.findEvenementSteu(filters);
   }
 
+  // path: /api/evenements/systemes-collecte/search
   async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
     return this.roseauEvenementGateway.findEvenementScl(filters);
   }
 
+  // path: /api/evenements/types
   async findEvenementTypes(): Promise<NomenclatureItem[]> {
     return this.roseauEvenementGateway.findEvenementTypes();
   }
 
+  // path: /api/bilans/steu/search
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
     return this.roseauBilanGateway.findBilanSteu(filters);
   }
 
+  // path: /api/bilans/systemes-collecte/search
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
     return this.roseauBilanGateway.findBilanScl(filters);
   }
@@ -308,18 +333,21 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/transmissions-as-retard/steu/search
   async findTransmissionASRetardSteu(
     filters: TransmissionASRetardSteuFilters,
   ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }> {
     return this.roseauTransmissionGateway.findTransmissionASRetardSteu(filters);
   }
 
+  // path: /api/transmissions-as-retard/systemes-collecte/search
   async findTransmissionASRetardScl(
     filters: TransmissionASRetardSclFilters,
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
     return this.roseauTransmissionGateway.findTransmissionASRetardScl(filters);
   }
 
+  // path: /api/systemes-collecte/points-mesure
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
     return this.roseauGateway.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }
@@ -329,6 +357,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/conformites/steu/search
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
     return this.roseauConformiteGateway.findConformiteSteu(filters);
   }
@@ -338,6 +367,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/conformites/systemes-collecte/search
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
     return this.roseauConformiteGateway.findConformiteScl(filters);
   }
@@ -347,6 +377,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/conformites/steu/:steuCdn/detail
   async findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null> {
     return this.roseauConformiteGateway.findConformiteSteuDetail(steuCdn, annee);
   }
@@ -356,6 +387,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/conformites/systemes-collecte/:sclCdn/detail
   async findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null> {
     return this.roseauConformiteGateway.findConformiteSclDetail(sclCdn, annee);
   }
@@ -365,6 +397,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/steu/avec-noms/batch
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
     return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
   }
@@ -374,6 +407,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/systemes-collecte/avec-noms/batch
   async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
     return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
   }
@@ -383,6 +417,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/ouvrages/:type/:code/points-mesure
   async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
     return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
   }
@@ -392,6 +427,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/ouvrages/:type/:code/points-mesure/:pmoCdn/parametres
   async findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
@@ -405,14 +441,17 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/nomenclatures/finalites
   async findFinalites(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_17');
   }
 
+  // path: /api/nomenclatures/statuts
   async findStatuts(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_20');
   }
 
+  // path: /api/nomenclatures/qualifications
   async findQualifications(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_18');
   }
@@ -422,6 +461,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
+  // path: /api/referentiel/ouvrages/:type/:code/points-mesure
   async findPointsMesureReferentiel(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
