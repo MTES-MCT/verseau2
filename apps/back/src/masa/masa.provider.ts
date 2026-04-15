@@ -66,6 +66,8 @@ import {
  */
 @Injectable()
 export class MasaProvider {
+  private readonly inFlightVSteuSclItv = new Map<string, Promise<VSteuSclItvResult[]>>();
+
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(RoseauReferentielPointMesureGateway)
@@ -228,11 +230,27 @@ export class MasaProvider {
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
     const cacheKey = `vSteuSclItv:${itvRfa}`;
     const cached = await this.cacheManager.get<VSteuSclItvResult[]>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
 
-    const result = await this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
-    await this.cacheManager.set(cacheKey, result, 3_600_000);
-    return result;
+    const inFlight = this.inFlightVSteuSclItv.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const promise = this.lanceleauGateway
+      .findVSteuSclItvByItvRfa(itvRfa)
+      .then(async (result) => {
+        await this.cacheManager.set(cacheKey, result, 3_600_000);
+        return result;
+      })
+      .finally(() => {
+        this.inFlightVSteuSclItv.delete(cacheKey);
+      });
+
+    this.inFlightVSteuSclItv.set(cacheKey, promise);
+    return promise;
   }
 
   // ---------------------------------------------------------------------------
@@ -398,6 +416,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // path: /api/steu/with-noms/by-codes-sandre/batch
+  // sandreCdas could be as many as 6000
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
     return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
   }
@@ -408,6 +427,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // path: /api/systemes-collecte/with-noms/by-codes-sandre/batch
+  // sandreCdas could be as many as 6000
   async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
     return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
   }

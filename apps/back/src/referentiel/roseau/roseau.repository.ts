@@ -69,7 +69,7 @@ export class RoseauRepository implements RoseauGateway {
 
     const rows = await this.steuRepository
       .createQueryBuilder('steu')
-      .where('steu.steu_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .where('steu.steu_sandre_cda = ANY(:sandreCdas)', { sandreCdas })
       .getMany();
 
     return rows.map((s) => ({
