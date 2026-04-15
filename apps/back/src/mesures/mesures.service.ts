@@ -1,6 +1,6 @@
 import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
-import { PaginatedMesuresResponse, PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
+import { PaginatedMesuresResponse, PaginationQuery, MesuresSortByValue, type OuvrageTypeValue } from '@lib/dossier';
 import {
   MesureFilters,
   SteuWithName,
@@ -104,16 +104,19 @@ export class MesuresService {
     };
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listOuvrages(authorizedSteuCdas: string[]): Promise<SteuWithName[]> {
     if (authorizedSteuCdas.length === 0) return [];
     return this.masaProvider.findSteuWithNamesBySandreCdas(authorizedSteuCdas);
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listSystemesCollecte(authorizedSclCdas: string[]): Promise<SclWithName[]> {
     if (authorizedSclCdas.length === 0) return [];
     return this.masaProvider.findSclWithNamesBySandreCdas(authorizedSclCdas);
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listPointsMesure(
     authorizedSteuCdas: string[],
     authorizedSclCdas: string[],
@@ -129,6 +132,7 @@ export class MesuresService {
     return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listParametresMesure(
     authorizedSteuCdas: string[],
     authorizedSclCdas: string[],

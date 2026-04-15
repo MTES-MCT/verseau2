@@ -4,10 +4,30 @@ import { Logger, LogLevel } from '@nestjs/common';
 import { performance } from 'perf_hooks';
 import { ulid } from 'ulid';
 import { LoggerService } from './logger.service';
-//
+
+function bufferLine(logLines: string[], callIdPrefix: string, msg: string) {
+  logLines.push(`${callIdPrefix}${msg}`);
+}
+
+function flush(logLines: string[], logger: LoggerService, level: LogLevel) {
+  const logMethod = logger[level as keyof Logger] as (msg: string) => void;
+  if (typeof logMethod === 'function') {
+    logLines.forEach((line) => logMethod.call(logger, line));
+  } else {
+    logLines.forEach((line) => logger.log(line));
+  }
+}
+
+function flushError(logLines: string[], logger: LoggerService, callIdPrefix: string, errorMsg: string) {
+  logLines.push(`${callIdPrefix} ${errorMsg}`);
+  logLines.forEach((line) => logger.error(line));
+}
+
 /**
  * Decorator that logs all method calls made within the decorated method.
  * It uses a Proxy to intercept property access on 'this'.
+ * All log lines are buffered and written as a single entry at the end
+ * to prevent interleaving with other concurrent logs.
  *
  * @param level The log level to use (default: 'debug')
  */
@@ -22,20 +42,9 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
       const propName = String(propertyKey);
       const startTime = performance.now();
 
-      const log = (msg: string) => {
-        const logMethod = logger[level as keyof Logger] as (msg: string) => void;
-        if (typeof logMethod === 'function') {
-          logMethod.call(logger, `${callIdPrefix}${msg}`);
-        } else {
-          logger.log(`${callIdPrefix}${msg}`);
-        }
-      };
+      const logLines: string[] = [];
 
-      const logError = (msg: string) => {
-        logger.error(`${callIdPrefix} ${msg}`);
-      };
-
-      log(`>>> [START] ${propName}`);
+      bufferLine(logLines, callIdPrefix, `>>> [START] ${propName}`);
 
       // Create a proxy of 'this' to intercept calls to other methods or services
       const proxy = new Proxy(this, {
@@ -51,12 +60,12 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
               if (result instanceof Promise) {
                 return result.finally(() => {
                   const duration = (performance.now() - subStart).toFixed(2);
-                  log(`    [INTERNAL CALL] this.${String(prop)}() - ${duration}ms`);
+                  bufferLine(logLines, callIdPrefix, `    [INTERNAL CALL] this.${String(prop)}() - ${duration}ms`);
                 });
               }
 
               const duration = (performance.now() - subStart).toFixed(2);
-              log(`    [INTERNAL CALL] this.${String(prop)}() - ${duration}ms`);
+              bufferLine(logLines, callIdPrefix, `    [INTERNAL CALL] this.${String(prop)}() - ${duration}ms`);
               return result;
             };
           }
@@ -81,12 +90,20 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
                     if (result instanceof Promise) {
                       return result.finally(() => {
                         const duration = (performance.now() - subStart).toFixed(2);
-                        log(`    [SERVICE CALL] ${String(prop)}.${String(propSub)}() - ${duration}ms`);
+                        bufferLine(
+                          logLines,
+                          callIdPrefix,
+                          `    [SERVICE CALL] ${String(prop)}.${String(propSub)}() - ${duration}ms`,
+                        );
                       });
                     }
 
                     const duration = (performance.now() - subStart).toFixed(2);
-                    log(`    [SERVICE CALL] ${String(prop)}.${String(propSub)}() - ${duration}ms`);
+                    bufferLine(
+                      logLines,
+                      callIdPrefix,
+                      `    [SERVICE CALL] ${String(prop)}.${String(propSub)}() - ${duration}ms`,
+                    );
                     return result;
                   };
                 }
@@ -106,23 +123,30 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
           return result
             .then((res: unknown) => {
               const duration = (performance.now() - startTime).toFixed(2);
-              log(`<<< [END] ${propName} | Duration: ${duration}ms `);
+              bufferLine(logLines, callIdPrefix, `<<< [END] ${propName} | Duration: ${duration}ms `);
+              flush(logLines, logger, level);
               return res;
             })
             .catch((err: Error) => {
               const duration = (performance.now() - startTime).toFixed(2);
-              logError(`!!! [ERROR] ${propName} | Duration: ${duration}ms | ${err.message}`);
+              flushError(
+                logLines,
+                logger,
+                callIdPrefix,
+                `!!! [ERROR] ${propName} | Duration: ${duration}ms | ${err.message}`,
+              );
               throw err;
             });
         }
 
         const duration = (performance.now() - startTime).toFixed(2);
-        log(`<<< [END] ${propName} | Duration: ${duration}ms`);
+        bufferLine(logLines, callIdPrefix, `<<< [END] ${propName} | Duration: ${duration}ms`);
+        flush(logLines, logger, level);
         return result;
       } catch (err) {
         const duration = (performance.now() - startTime).toFixed(2);
         const message = err instanceof Error ? err.message : String(err);
-        logError(`!!! [ERROR] ${propName} | Duration: ${duration}ms | ${message}`);
+        flushError(logLines, logger, callIdPrefix, `!!! [ERROR] ${propName} | Duration: ${duration}ms | ${message}`);
         throw err;
       }
     };

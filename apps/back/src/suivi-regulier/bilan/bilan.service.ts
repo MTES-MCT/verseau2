@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { BilanSteuSortByValue, BilanSclSortByValue, PaginationQuery } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
+import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListBilanSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -23,6 +24,7 @@ export interface ListBilanSclOptions extends PaginationQuery {
 export class BilanService {
   constructor(private readonly masaProvider: MasaProvider) {}
 
+  @TraceCalls(LOG_LEVELS[2])
   async listBilanSteu(options: ListBilanSteuOptions) {
     const { authorizedSteuCdas, year, ouvrageDepollutionCode, page, pageSize, sortBy, sortOrder } = options;
     const cdasToQuery = ouvrageDepollutionCode
@@ -48,6 +50,7 @@ export class BilanService {
     return { ...result, page, pageSize };
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listBilanScl(options: ListBilanSclOptions) {
     const { authorizedSclCdas, year, systemeCollecteCode, pointMesureId, statut, page, pageSize, sortBy, sortOrder } =
       options;
@@ -77,12 +80,14 @@ export class BilanService {
     return { ...result, page, pageSize };
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
     if (authorizedSteuCdas.length === 0) return [];
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
     return [...new Set(steus.map((s) => s.ouvrageDepollutionId))];
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {
     if (authorizedSclCdas.length === 0) return [];
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
