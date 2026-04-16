@@ -29,7 +29,6 @@ export function DepotDetailsPage() {
     setSort,
     ouvrages,
     ouvragesLoading,
-    ouvrageSearch,
     setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
