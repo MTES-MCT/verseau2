@@ -367,27 +367,8 @@ export function ConformiteDashboard() {
 
           <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-3')}>
             <Select
-              label="Tranche d'obligation"
-              hint={<br />}
-              nativeSelectProps={{
-                value: form.trancheObligationRfa,
-                onChange: (event) => updateForm('trancheObligationRfa', event.target.value),
-              }}
-            >
-              <option value="">Toutes les tranches</option>
-              {trancheRfaEntries.map(([rfa, label]) => (
-                <option key={rfa} value={rfa}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </div>
-
-        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mb-2w')}>
-          <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-3')}>
-            <Select
               label="Impact"
+              hint={<br />}
               nativeSelectProps={{
                 value: form.impact,
                 onChange: (event) => updateForm('impact', event.target.value),

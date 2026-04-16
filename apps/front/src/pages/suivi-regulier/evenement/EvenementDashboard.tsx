@@ -203,7 +203,7 @@ export const EvenementDashboard = () => {
             ))}
           </Select>
         </div>
-        <div className={`fr-col-12 fr-col-lg-7 ${filters.mode === 'steu' ? 'fr-col-xl-6' : 'fr-col-xl-4'}`}>
+        <div className={`fr-col-12 fr-col-lg-7 fr-col-xl-4`}>
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
             hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
@@ -218,7 +218,7 @@ export const EvenementDashboard = () => {
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
             <SelectAutocomplete
               label="Point de mesures"
-              hintText={hasOuvrageSelected ? 'Effacez la sélection pour tous les points' : undefined}
+              hintText={'\b'}
               placeholder="Rechercher un point de mesure"
               options={pointMesureOptions}
               value={filters.pointMesureId || null}
@@ -249,7 +249,7 @@ export const EvenementDashboard = () => {
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
             <SelectAutocomplete
               label="Point de mesures"
-              hintText={hasOuvrageSelected ? 'Effacez la sélection pour tous les points' : undefined}
+              hintText={'\b'}
               disabled={!hasOuvrageSelected}
               placeholder="Rechercher un point de mesure"
               options={pointMesureOptions}
