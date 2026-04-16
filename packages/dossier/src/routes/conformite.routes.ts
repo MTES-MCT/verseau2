@@ -61,6 +61,7 @@ export const listConformiteSteu = {
   query: z
     .object({
       year: ConformiteYearQuerySchema.shape.year,
+      ouvrageDepollutionCode: z.string().optional(),
       trancheObligationRfa: TrancheObligationRfaSchema.optional(),
       impact: z.enum(['avec', 'sans']).optional(),
     })
@@ -74,6 +75,7 @@ export const listConformiteScl = {
   query: z
     .object({
       year: ConformiteYearQuerySchema.shape.year,
+      systemeCollecteCode: z.string().optional(),
       trancheObligationRfa: TrancheObligationRfaSchema.optional(),
       impact: z.enum(['avec', 'sans']).optional(),
     })

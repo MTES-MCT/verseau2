@@ -34,6 +34,7 @@ type PaginatedConformiteSclRows = {
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
+  ouvrageDepollutionCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSteuSortByValue;
@@ -42,6 +43,7 @@ export interface ListConformiteSteuOptions extends PaginationQuery {
 export interface ListConformiteSclOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
+  systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSclSortByValue;
@@ -58,7 +60,17 @@ export class ConformiteService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteSteu(options: ListConformiteSteuOptions): Promise<PaginatedConformiteSteuRows> {
-    const { authorizedSteuCdas, year, trancheObligationRfa, impact, page, pageSize, sortBy, sortOrder } = options;
+    const {
+      authorizedSteuCdas,
+      year,
+      ouvrageDepollutionCode,
+      trancheObligationRfa,
+      impact,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
@@ -74,6 +86,7 @@ export class ConformiteService {
       year,
       page,
       pageSize,
+      ...(ouvrageDepollutionCode ? { ouvrageDepollutionCode } : {}),
       ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),
@@ -87,7 +100,17 @@ export class ConformiteService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
-    const { authorizedSteuCdas, year, trancheObligationRfa, impact, page, pageSize, sortBy, sortOrder } = options;
+    const {
+      authorizedSteuCdas,
+      year,
+      systemeCollecteCode,
+      trancheObligationRfa,
+      impact,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
@@ -103,6 +126,7 @@ export class ConformiteService {
       year,
       page,
       pageSize,
+      ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
       ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),

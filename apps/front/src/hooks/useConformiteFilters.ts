@@ -16,6 +16,7 @@ type SortByValue = ConformiteSteuSortByValue | ConformiteSclSortByValue;
 export interface FilterState {
   mode: 'steu' | 'scl';
   year: string;
+  ouvrageCode: string;
   trancheObligationRfa: TrancheObligationRfa | '';
   impact: 'avec' | 'sans' | '';
   sortBy?: SortByValue;
@@ -25,6 +26,7 @@ export interface FilterState {
 const INITIAL_FILTERS: FilterState = {
   mode: 'steu',
   year: DEFAULT_CONFORMITE_YEAR.toString(),
+  ouvrageCode: '',
   trancheObligationRfa: '',
   impact: '',
   sortBy: undefined,
@@ -34,6 +36,7 @@ const INITIAL_FILTERS: FilterState = {
 function buildSteuQuery(submitted: FilterState, page: number): RouteQuery<typeof listConformiteSteu> {
   return {
     year: Number(submitted.year),
+    ...(submitted.ouvrageCode ? { ouvrageDepollutionCode: submitted.ouvrageCode } : {}),
     ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}),
     ...(submitted.impact ? { impact: submitted.impact } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy as ConformiteSteuSortByValue } : {}),
@@ -46,6 +49,7 @@ function buildSteuQuery(submitted: FilterState, page: number): RouteQuery<typeof
 function buildSclQuery(submitted: FilterState, page: number): RouteQuery<typeof listConformiteScl> {
   return {
     year: Number(submitted.year),
+    ...(submitted.ouvrageCode ? { systemeCollecteCode: submitted.ouvrageCode } : {}),
     ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}),
     ...(submitted.impact ? { impact: submitted.impact } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy as ConformiteSclSortByValue } : {}),
@@ -66,11 +70,13 @@ export function useConformiteFilters() {
     [],
   );
 
+  const hasOuvrageSelected = !!form.ouvrageCode;
+
   const steuQuery = buildSteuQuery(form, page);
   const sclQuery = buildSclQuery(form, page);
 
-  const steuResult = useConformiteSteu(steuQuery, form.mode === 'steu');
-  const sclResult = useConformiteScl(sclQuery, form.mode === 'scl');
+  const steuResult = useConformiteSteu(steuQuery, form.mode === 'steu' && hasOuvrageSelected);
+  const sclResult = useConformiteScl(sclQuery, form.mode === 'scl' && hasOuvrageSelected);
 
   const activeResult = form.mode === 'steu' ? steuResult : sclResult;
   const totalPages = activeResult.data ? Math.ceil(activeResult.data.total / PAGE_SIZE) : 0;
@@ -79,6 +85,7 @@ export function useConformiteFilters() {
     setForm((current) => ({
       ...current,
       mode,
+      ouvrageCode: '',
       sortBy: undefined,
       sortOrder: undefined,
     }));
@@ -98,6 +105,7 @@ export function useConformiteFilters() {
   return {
     form,
     appliedYear: Number(form.year),
+    hasOuvrageSelected,
     updateForm,
     updateMode,
     setSort,

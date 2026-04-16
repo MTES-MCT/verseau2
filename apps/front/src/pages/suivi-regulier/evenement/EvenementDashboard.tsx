@@ -6,25 +6,29 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { useEvenementSteu, useEvenementScl, useEvenementTypes, useEvenementPmo } from '../../../hooks/useEvenement';
+import { useEvenementSteu, useEvenementScl, useEvenementTypes } from '../../../hooks/useEvenement';
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
 import { renderPrisEnCompteBadge } from '../../../helper/evenementTableData';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
+import { usePointsMesure } from '../../../hooks/usePointsMesure';
 import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
+import { TableLoader } from '../../../components/common/TableLoader';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
   const pageSize = 10;
   const [ouvrageSearch, setOuvrageSearch] = useState('');
-
   const [sclSearch, setSclSearch] = useState('');
+  const isScl = filters.mode === 'scl';
 
   const { data: types } = useEvenementTypes();
-  const { data: pmos } = useEvenementPmo(filters.mode === 'scl');
+  const pointsMesureOuvrageType = isScl ? 'scl' : 'steu';
+  const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : filters.ouvrageDepollutionCode || null;
+  const { data: pmos = [] } = usePointsMesure(pointsMesureOuvrageType, pointsMesureOuvrageCode);
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
@@ -35,8 +39,6 @@ export const EvenementDashboard = () => {
         .map((year) => year.toString()),
     [],
   );
-
-  const isScl = filters.mode === 'scl';
 
   const ouvragesOptions: AutocompleteOption[] = isScl
     ? systemesCollecte.map((s) => ({
@@ -50,6 +52,11 @@ export const EvenementDashboard = () => {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
   const currentOuvrageValue = isScl ? filters.systemeCollecteCode : filters.ouvrageDepollutionCode;
+  const hasOuvrageSelected = !!currentOuvrageValue;
+  const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
+    value: p.pointMesureId.toString(),
+    label: `${p.pointMesureNumero} - ${p.pointMesureLibelle ?? ''}`.trim().replace(/ -$/, ''),
+  }));
 
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
@@ -58,8 +65,13 @@ export const EvenementDashboard = () => {
       updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
     } else {
       setOuvrageSearch(newVal);
-      updateFilter({ ouvrageDepollutionCode: newVal });
+      updateFilter({ ouvrageDepollutionCode: newVal, pointMesureId: '' });
     }
+  };
+
+  const handlePointMesureChange = (value: string | null) => {
+    const newVal = value ?? '';
+    updateFilter({ pointMesureId: newVal });
   };
 
   useEffect(() => {
@@ -84,6 +96,7 @@ export const EvenementDashboard = () => {
     year: filters.year,
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
+    ...(filters.pointMesureId ? { pointMesureId: Number(filters.pointMesureId) } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as EvenementSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -99,10 +112,20 @@ export const EvenementDashboard = () => {
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 
-  const { data: steuData } = useEvenementSteu(steuQuery, filters.mode === 'steu');
-  const { data: sclData } = useEvenementScl(sclQuery, filters.mode === 'scl');
+  const {
+    data: steuData,
+    isLoading: steuLoading,
+    isFetching: steuFetching,
+  } = useEvenementSteu(steuQuery, filters.mode === 'steu' && hasOuvrageSelected);
+  const {
+    data: sclData,
+    isLoading: sclLoading,
+    isFetching: sclFetching,
+  } = useEvenementScl(sclQuery, filters.mode === 'scl' && hasOuvrageSelected);
 
   const data = filters.mode === 'steu' ? steuData : sclData;
+  const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
+  const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
 
   const getTableData = (row: EvenementSteuDto | EvenementSclDto) => {
     const codeSandre =
@@ -191,10 +214,24 @@ export const EvenementDashboard = () => {
             onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
+        {!isScl && (
+          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
+            <SelectAutocomplete
+              label="Point de mesures"
+              hintText={hasOuvrageSelected ? 'Effacez la sélection pour tous les points' : undefined}
+              placeholder="Rechercher un point de mesure"
+              options={pointMesureOptions}
+              value={filters.pointMesureId || null}
+              onChange={handlePointMesureChange}
+              disabled={!hasOuvrageSelected}
+            />
+          </div>
+        )}
         <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
           <Select
             label="Type d'événement"
             hint={<br />}
+            disabled={!hasOuvrageSelected}
             nativeSelectProps={{
               value: filters.typeEvenementCode,
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ typeEvenementCode: e.target.value }),
@@ -210,58 +247,58 @@ export const EvenementDashboard = () => {
         </div>
         {filters.mode === 'scl' && (
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
-            <Select
+            <SelectAutocomplete
               label="Point de mesures"
-              hint={<br />}
-              nativeSelectProps={{
-                value: filters.pointMesureId,
-                onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ pointMesureId: e.target.value }),
-              }}
-            >
-              <option value="">Tous les points</option>
-              {(pmos || []).map((p) => (
-                <option key={p.pointMesureId} value={p.pointMesureId.toString()}>
-                  {p.pointMesureNumero} - {p.pointMesureLibelle}
-                </option>
-              ))}
-            </Select>
+              hintText={hasOuvrageSelected ? 'Effacez la sélection pour tous les points' : undefined}
+              disabled={!hasOuvrageSelected}
+              placeholder="Rechercher un point de mesure"
+              options={pointMesureOptions}
+              value={filters.pointMesureId || null}
+              onChange={handlePointMesureChange}
+            />
           </div>
         )}
       </div>
 
-      <Table
-        data={(data?.data || []).map(getTableData)}
-        headers={[
-          'Pris en compte',
-          'Code Sandre',
-          'Nom',
-          <SortableHeader
-            key="date"
-            label="Date"
-            field="date"
-            sortBy={filters.sortBy as EvenementSteuSortByValue | undefined}
-            sortOrder={filters.sortOrder}
-            onSort={handleDateSort}
-          />,
-          "Type d'événement",
-          'Finalité',
-          'Commentaire',
-          ...(filters.mode === 'scl' ? ['Point de mesures'] : []),
-        ]}
-      />
-      {Math.ceil((data?.total || 0) / pageSize) > 1 && (
-        <Pagination
-          count={Math.ceil((data?.total || 0) / pageSize)}
-          defaultPage={page}
-          getPageLinkProps={(pageNumber: number) => ({
-            href: `#page-${pageNumber}`,
-            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.preventDefault();
-              setPage(pageNumber);
-            },
-          })}
+      <TableLoader
+        isLoading={isLoading && hasOuvrageSelected}
+        isFetching={isFetching}
+        hasOuvrageSelected={hasOuvrageSelected}
+      >
+        <Table
+          data={(data?.data || []).map(getTableData)}
+          headers={[
+            'Pris en compte',
+            'Code Sandre',
+            'Nom',
+            <SortableHeader
+              key="date"
+              label="Date"
+              field="date"
+              sortBy={filters.sortBy as EvenementSteuSortByValue | undefined}
+              sortOrder={filters.sortOrder}
+              onSort={handleDateSort}
+            />,
+            "Type d'événement",
+            'Finalité',
+            'Commentaire',
+            ...(filters.mode === 'scl' ? ['Point de mesures'] : []),
+          ]}
         />
-      )}
+        {Math.ceil((data?.total || 0) / pageSize) > 1 && (
+          <Pagination
+            count={Math.ceil((data?.total || 0) / pageSize)}
+            defaultPage={page}
+            getPageLinkProps={(pageNumber: number) => ({
+              href: `#page-${pageNumber}`,
+              onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                setPage(pageNumber);
+              },
+            })}
+          />
+        )}
+      </TableLoader>
     </div>
   );
 };

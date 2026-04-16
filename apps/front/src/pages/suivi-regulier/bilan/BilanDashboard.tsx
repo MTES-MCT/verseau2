@@ -11,9 +11,9 @@ import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useBilanSteu, useBilanScl } from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
@@ -23,17 +23,19 @@ import {
   buildBilanSclTableHeaders,
   buildBilanSclTableRows,
 } from '../../../helper/bilanTableData';
+import { TableLoader } from '../../../components/common/TableLoader';
 
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
   const pageSize = 10;
   const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
 
   const isScl = filters.mode === 'scl';
 
-  const { data: pmos } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode || null : null);
+  const { data: pmos = [] } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode || null : null);
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
   const yearOptions = useMemo(
     () =>
@@ -55,15 +57,26 @@ export const BilanDashboard = () => {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
   const currentOuvrageValue = isScl ? filters.systemeCollecteCode : filters.ouvrageDepollutionCode;
+  const hasOuvrageSelected = !!currentOuvrageValue;
+  const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
+    value: p.pointMesureId.toString(),
+    label: `${p.pointMesureNumero} - ${p.pointMesureLibelle ?? ''}`.trim().replace(/ -$/, ''),
+  }));
 
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
     if (isScl) {
+      setSclSearch(newVal);
       updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
     } else {
       setOuvrageSearch(newVal);
       updateFilter({ ouvrageDepollutionCode: newVal });
     }
+  };
+
+  const handlePointMesureChange = (value: string | null) => {
+    const newVal = value ?? '';
+    updateFilter({ pointMesureId: newVal });
   };
 
   useEffect(() => {
@@ -73,6 +86,14 @@ export const BilanDashboard = () => {
     }
     setOuvrageSearch(filters.ouvrageDepollutionCode);
   }, [filters.ouvrageDepollutionCode, isScl]);
+
+  useEffect(() => {
+    if (!isScl) {
+      setSclSearch('');
+      return;
+    }
+    setSclSearch(filters.systemeCollecteCode);
+  }, [filters.systemeCollecteCode, isScl]);
 
   const steuQuery = {
     page,
@@ -94,10 +115,20 @@ export const BilanDashboard = () => {
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 
-  const { data: steuData } = useBilanSteu(steuQuery, filters.mode === 'steu');
-  const { data: sclData } = useBilanScl(sclQuery, filters.mode === 'scl');
+  const {
+    data: steuData,
+    isLoading: steuLoading,
+    isFetching: steuFetching,
+  } = useBilanSteu(steuQuery, filters.mode === 'steu' && hasOuvrageSelected);
+  const {
+    data: sclData,
+    isLoading: sclLoading,
+    isFetching: sclFetching,
+  } = useBilanScl(sclQuery, filters.mode === 'scl' && hasOuvrageSelected);
 
   const data = filters.mode === 'steu' ? steuData : sclData;
+  const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
+  const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
 
   const handleDateSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
@@ -177,39 +208,31 @@ export const BilanDashboard = () => {
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
             hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
-            placeholder={
-              ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Rechercher une station'
-            }
+            placeholder={isScl ? 'Rechercher un SCL' : 'Rechercher une station'}
             options={ouvragesOptions}
             value={currentOuvrageValue || null}
             onChange={handleOuvrageChange}
-            onInputChange={isScl ? undefined : setOuvrageSearch}
+            onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
-
         {isScl && (
           <>
             <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
-              <Select
+              <SelectAutocomplete
                 label="Point de mesures"
-                hint={<br />}
-                nativeSelectProps={{
-                  value: filters.pointMesureId,
-                  onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ pointMesureId: e.target.value }),
-                }}
-              >
-                <option value="">Tous les points</option>
-                {(pmos || []).map((p) => (
-                  <option key={p.pointMesureId} value={p.pointMesureId.toString()}>
-                    {p.pointMesureNumero} - {p.pointMesureLibelle}
-                  </option>
-                ))}
-              </Select>
+                hintText={'Sélectionner un point de mesure'}
+                disabled={!hasOuvrageSelected}
+                placeholder="Rechercher un point de mesure"
+                options={pointMesureOptions}
+                value={filters.pointMesureId || null}
+                onChange={handlePointMesureChange}
+              />
             </div>
             <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
               <Select
                 label="Statut"
                 hint={<br />}
+                disabled={!hasOuvrageSelected}
                 nativeSelectProps={{
                   value: filters.statut,
                   onChange: (e: ChangeEvent<HTMLSelectElement>) =>
@@ -225,20 +248,26 @@ export const BilanDashboard = () => {
         )}
       </div>
 
-      <Table data={tableData} headers={finalHeaders} />
-      {Math.ceil((data?.total || 0) / pageSize) > 1 && (
-        <Pagination
-          count={Math.ceil((data?.total || 0) / pageSize)}
-          defaultPage={page}
-          getPageLinkProps={(pageNumber: number) => ({
-            href: `#page-${pageNumber}`,
-            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.preventDefault();
-              setPage(pageNumber);
-            },
-          })}
-        />
-      )}
+      <TableLoader
+        isLoading={isLoading && hasOuvrageSelected}
+        isFetching={isFetching}
+        hasOuvrageSelected={hasOuvrageSelected}
+      >
+        <Table data={tableData} headers={finalHeaders} />
+        {Math.ceil((data?.total || 0) / pageSize) > 1 && (
+          <Pagination
+            count={Math.ceil((data?.total || 0) / pageSize)}
+            defaultPage={page}
+            getPageLinkProps={(pageNumber: number) => ({
+              href: `#page-${pageNumber}`,
+              onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                setPage(pageNumber);
+              },
+            })}
+          />
+        )}
+      </TableLoader>
     </div>
   );
 };

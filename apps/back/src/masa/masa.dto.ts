@@ -29,6 +29,7 @@ export interface EvenementSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
   typeEvenementCode?: string;
+  pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
 }
 
@@ -251,6 +252,7 @@ export interface PointMesureReferentielRow {
 export interface ConformiteSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
+  ouvrageDepollutionCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSteuSortByValue;
@@ -260,6 +262,7 @@ export interface ConformiteSteuFilters extends PaginationQuery {
 export interface ConformiteSclFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
+  systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSclSortByValue;

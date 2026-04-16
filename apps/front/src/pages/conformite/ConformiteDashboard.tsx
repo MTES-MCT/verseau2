@@ -14,10 +14,13 @@ import type {
 } from '@lib/dossier';
 import { TRANCHE_OBLIGATION_OPTIONS } from '@lib/dossier';
 import { getPreviousSunday } from '@lib/shared';
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './modal/ConformiteDetailModal.shared';
 import { SortableHeader } from '../../components/SortableHeader';
+import { SelectAutocomplete, type AutocompleteOption } from '../../components/SelectAutocomplete';
+import { useAsyncOuvragesSearch } from '../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../hooks/useAsyncSystemesCollecteSearch';
 import {
   buildConformiteSclTableHeaders,
   buildConformiteSclTableRows,
@@ -25,6 +28,7 @@ import {
   buildConformiteSteuTableRows,
 } from '../../helper/conformiteTableData';
 import { useConformiteFilters } from '../../hooks/useConformiteFilters';
+import { TableLoader } from '../../components/common/TableLoader';
 
 type ConformiteSteuRow = ConformiteSteuDto;
 
@@ -76,6 +80,7 @@ export function ConformiteDashboard() {
   const {
     form,
     appliedYear,
+    hasOuvrageSelected,
     updateForm,
     updateMode,
     setSort,
@@ -90,9 +95,54 @@ export function ConformiteDashboard() {
     yearOptions,
   } = useConformiteFilters();
   const [selectedDetailKey, setSelectedDetailKey] = useState<string | null>(null);
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
 
   const mode = form.mode;
+  const isScl = mode === 'scl';
   const selectedYear = appliedYear;
+
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
+
+  const ouvragesOptions: AutocompleteOption[] = isScl
+    ? systemesCollecte.map((s) => ({
+        value: s.systemeCollecteCode,
+        label: s.systemeCollecteNom ?? s.systemeCollecteCode,
+      }))
+    : ouvrages.map((o) => ({
+        value: o.ouvrageDepollutionCode,
+        label: o.ouvrageDepollutionNom ?? o.ouvrageDepollutionCode,
+      }));
+
+  const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
+
+  const handleOuvrageChange = (value: string | null) => {
+    const newVal = value ?? '';
+    if (isScl) {
+      setSclSearch(newVal);
+    } else {
+      setOuvrageSearch(newVal);
+    }
+    updateForm('ouvrageCode', newVal);
+  };
+
+  useEffect(() => {
+    if (isScl) {
+      setOuvrageSearch('');
+      return;
+    }
+    setOuvrageSearch(form.ouvrageCode);
+  }, [form.ouvrageCode, isScl]);
+
+  useEffect(() => {
+    if (!isScl) {
+      setSclSearch('');
+      return;
+    }
+    setSclSearch(form.ouvrageCode);
+  }, [form.ouvrageCode, isScl]);
+
   const steuRows = useMemo(
     () => ((mode === 'steu' ? data?.data : []) ?? []) as ConformiteSteuRow[],
     [data?.data, mode],
@@ -259,9 +309,10 @@ export function ConformiteDashboard() {
       </div>
       <div className={fr.cx('fr-mb-3w')}>
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mb-4w')}>
-          <div className={fr.cx('fr-col-12', 'fr-col-lg-4')}>
+          <div className={fr.cx('fr-col-12', 'fr-col-lg-3')}>
             <RadioButtons
               legend="Type de tableau"
+              hintText={<br />}
               name="conformite-mode"
               orientation="horizontal"
               options={[
@@ -288,6 +339,7 @@ export function ConformiteDashboard() {
           <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-2')}>
             <Select
               label="Année"
+              hint={<br />}
               nativeSelectProps={{
                 value: form.year,
                 onChange: (event) => updateForm('year', event.target.value),
@@ -301,9 +353,22 @@ export function ConformiteDashboard() {
             </Select>
           </div>
 
+          <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-4')}>
+            <SelectAutocomplete
+              label={isScl ? 'Système de collecte' : 'Station'}
+              hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+              placeholder={isScl ? 'Rechercher un SCL' : 'Rechercher une station'}
+              options={ouvragesOptions}
+              value={form.ouvrageCode || null}
+              onChange={handleOuvrageChange}
+              onInputChange={isScl ? setSclSearch : setOuvrageSearch}
+            />
+          </div>
+
           <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-3')}>
             <Select
               label="Tranche d'obligation"
+              hint={<br />}
               nativeSelectProps={{
                 value: form.trancheObligationRfa,
                 onChange: (event) => updateForm('trancheObligationRfa', event.target.value),
@@ -317,7 +382,9 @@ export function ConformiteDashboard() {
               ))}
             </Select>
           </div>
+        </div>
 
+        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mb-2w')}>
           <div className={fr.cx('fr-col-12', 'fr-col-md-4', 'fr-col-lg-3')}>
             <Select
               label="Impact"
@@ -334,8 +401,6 @@ export function ConformiteDashboard() {
         </div>
       </div>
 
-      {isLoading && <p>Chargement des données...</p>}
-
       {!isLoading && error && (
         <Alert
           severity="error"
@@ -347,49 +412,62 @@ export function ConformiteDashboard() {
         />
       )}
 
-      {!isLoading && !error && total === 0 && <p>Aucun résultat trouvé</p>}
+      <TableLoader
+        isLoading={isLoading && hasOuvrageSelected}
+        isFetching={isFetching}
+        hasOuvrageSelected={hasOuvrageSelected}
+      >
+        {!error && total === 0 && <p>Aucun résultat trouvé</p>}
 
-      {!isLoading && !error && total > 0 && (
-        <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
-          <Table headers={headers} data={tableData} noCaption bordered noScroll={false} className={fr.cx('fr-mb-2w')} />
-
-          <ConformiteDetailModal
-            detail={selectedDetail}
-            isPreviousDisabled={selectedDetailIndex <= 0}
-            isNextDisabled={selectedDetailIndex === detailEntries.length - 1}
-            onPrevious={() => {
-              if (selectedDetailIndex > 0) {
-                setSelectedDetailKey(detailEntries[selectedDetailIndex - 1]?.key ?? null);
-              }
-            }}
-            onNext={() => {
-              if (selectedDetailIndex < detailEntries.length - 1) {
-                setSelectedDetailKey(detailEntries[selectedDetailIndex + 1]?.key ?? null);
-              }
-            }}
-            onClose={() => setSelectedDetailKey(null)}
-          />
-
-          <p className={fr.cx('fr-text--sm', 'fr-mb-2w')}>
-            Affichage de {firstResult} à {lastResult} sur {total} résultats
-          </p>
-
-          {totalPages > 1 && (
-            <Pagination
-              count={totalPages}
-              defaultPage={page}
-              getPageLinkProps={(pageNumber) => ({
-                href: `#page-${pageNumber}`,
-                onClick: (event: MouseEvent<HTMLAnchorElement>) => {
-                  event.preventDefault();
-                  setPage(pageNumber);
-                },
-              })}
-              showFirstLast={true}
+        {!error && total > 0 && (
+          <>
+            <Table
+              headers={headers}
+              data={tableData}
+              noCaption
+              bordered
+              noScroll={false}
+              className={fr.cx('fr-mb-2w')}
             />
-          )}
-        </div>
-      )}
+
+            <ConformiteDetailModal
+              detail={selectedDetail}
+              isPreviousDisabled={selectedDetailIndex <= 0}
+              isNextDisabled={selectedDetailIndex === detailEntries.length - 1}
+              onPrevious={() => {
+                if (selectedDetailIndex > 0) {
+                  setSelectedDetailKey(detailEntries[selectedDetailIndex - 1]?.key ?? null);
+                }
+              }}
+              onNext={() => {
+                if (selectedDetailIndex < detailEntries.length - 1) {
+                  setSelectedDetailKey(detailEntries[selectedDetailIndex + 1]?.key ?? null);
+                }
+              }}
+              onClose={() => setSelectedDetailKey(null)}
+            />
+
+            <p className={fr.cx('fr-text--sm', 'fr-mb-2w')}>
+              Affichage de {firstResult} à {lastResult} sur {total} résultats
+            </p>
+
+            {totalPages > 1 && (
+              <Pagination
+                count={totalPages}
+                defaultPage={page}
+                getPageLinkProps={(pageNumber) => ({
+                  href: `#page-${pageNumber}`,
+                  onClick: (event: MouseEvent<HTMLAnchorElement>) => {
+                    event.preventDefault();
+                    setPage(pageNumber);
+                  },
+                })}
+                showFirstLast={true}
+              />
+            )}
+          </>
+        )}
+      </TableLoader>
     </div>
   );
 }
