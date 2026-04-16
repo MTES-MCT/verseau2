@@ -12,9 +12,8 @@ import type {
   ConformiteSteuDto,
   ConformiteSteuSortByValue,
 } from '@lib/dossier';
-import { TRANCHE_OBLIGATION_OPTIONS } from '@lib/dossier';
 import { getPreviousSunday } from '@lib/shared';
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import { ConformiteDetailModal } from './modal/ConformiteDetailModal';
 import { conformiteDetailModal, type ConformiteDetailEntry } from './modal/ConformiteDetailModal.shared';
 import { SortableHeader } from '../../components/SortableHeader';
@@ -127,29 +126,17 @@ export function ConformiteDashboard() {
     updateForm('ouvrageCode', newVal);
   };
 
-  useEffect(() => {
-    if (isScl) {
-      setOuvrageSearch('');
-      return;
-    }
-    setOuvrageSearch(form.ouvrageCode);
-  }, [form.ouvrageCode, isScl]);
-
-  useEffect(() => {
-    if (!isScl) {
-      setSclSearch('');
-      return;
-    }
-    setSclSearch(form.ouvrageCode);
-  }, [form.ouvrageCode, isScl]);
+  const handleModeChange = (nextMode: 'steu' | 'scl') => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateMode(nextMode);
+  };
 
   const steuRows = useMemo(
     () => ((mode === 'steu' ? data?.data : []) ?? []) as ConformiteSteuRow[],
     [data?.data, mode],
   );
   const sclRows = useMemo(() => ((mode === 'scl' ? data?.data : []) ?? []) as ConformiteSclRow[], [data?.data, mode]);
-  const trancheRfaEntries = Object.entries(TRANCHE_OBLIGATION_OPTIONS) as Array<[string, string]>;
-
   const headers = useMemo(() => {
     if (mode === 'steu') {
       return [
@@ -321,7 +308,7 @@ export function ConformiteDashboard() {
                   nativeInputProps: {
                     value: 'steu',
                     checked: mode === 'steu',
-                    onChange: () => updateMode('steu'),
+                    onChange: () => handleModeChange('steu'),
                   },
                 },
                 {
@@ -329,7 +316,7 @@ export function ConformiteDashboard() {
                   nativeInputProps: {
                     value: 'scl',
                     checked: mode === 'scl',
-                    onChange: () => updateMode('scl'),
+                    onChange: () => handleModeChange('scl'),
                   },
                 },
               ]}
