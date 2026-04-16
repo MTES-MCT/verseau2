@@ -36,7 +36,9 @@ describe('MesuresService', () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
       findMesures: jest.fn(),
       findSteuWithNamesBySandreCdas: jest.fn(),
+      findSteuWithNamesBySandreCdasAndLabel: jest.fn(),
       findSclWithNamesBySandreCdas: jest.fn(),
+      findSclWithNamesBySandreCdasAndLabel: jest.fn(),
       findPointsMesureByOuvrage: jest.fn(),
       findParametresByOuvrageAndPmo: jest.fn(),
       findFinalites: jest.fn(),
@@ -253,6 +255,24 @@ describe('MesuresService', () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' });
     });
+
+    it('returns empty array when search has less than 2 characters', async () => {
+      const result = await service.listOuvrages(['STEU001'], 's');
+
+      expect(result).toEqual([]);
+      expect(masaProvider.findSteuWithNamesBySandreCdasAndLabel).not.toHaveBeenCalled();
+    });
+
+    it('delegates to search when a search term is provided', async () => {
+      masaProvider.findSteuWithNamesBySandreCdasAndLabel.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' },
+      ]);
+
+      const result = await service.listOuvrages(['STEU001', 'STEU002'], 'sta');
+
+      expect(masaProvider.findSteuWithNamesBySandreCdasAndLabel).toHaveBeenCalledWith(['STEU001', 'STEU002'], 'sta');
+      expect(result).toEqual([{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }]);
+    });
   });
 
   describe('listSystemesCollecte', () => {
@@ -274,6 +294,24 @@ describe('MesuresService', () => {
       expect(masaProvider.findSclWithNamesBySandreCdas).toHaveBeenCalledWith(['SCL001', 'SCL002']);
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' });
+    });
+
+    it('returns empty array when search term is too short', async () => {
+      const result = await service.listSystemesCollecte(['SCL001', 'SCL002'], 'r');
+
+      expect(result).toEqual([]);
+      expect(masaProvider.findSclWithNamesBySandreCdasAndLabel).not.toHaveBeenCalled();
+    });
+
+    it('delegates to searchSclWithNamesBySandreCdas when search is provided', async () => {
+      masaProvider.findSclWithNamesBySandreCdasAndLabel.mockResolvedValue([
+        { systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' },
+      ]);
+
+      const result = await service.listSystemesCollecte(['SCL001', 'SCL002'], 'rés');
+
+      expect(masaProvider.findSclWithNamesBySandreCdasAndLabel).toHaveBeenCalledWith(['SCL001', 'SCL002'], 'rés');
+      expect(result).toEqual([{ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' }]);
     });
   });
 

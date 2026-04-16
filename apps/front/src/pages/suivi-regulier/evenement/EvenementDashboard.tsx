@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
@@ -10,20 +10,23 @@ import { useEvenementSteu, useEvenementScl, useEvenementTypes, useEvenementPmo }
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
 import { renderPrisEnCompteBadge } from '../../../helper/evenementTableData';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useOuvrages } from '../../../hooks/useOuvrages';
-import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
   const pageSize = 10;
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+
+  const [sclSearch, setSclSearch] = useState('');
 
   const { data: types } = useEvenementTypes();
   const { data: pmos } = useEvenementPmo(filters.mode === 'scl');
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
   const yearOptions = useMemo(
     () =>
@@ -51,11 +54,29 @@ export const EvenementDashboard = () => {
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
     if (isScl) {
+      setSclSearch(newVal);
       updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
     } else {
+      setOuvrageSearch(newVal);
       updateFilter({ ouvrageDepollutionCode: newVal });
     }
   };
+
+  useEffect(() => {
+    if (isScl) {
+      setOuvrageSearch('');
+      return;
+    }
+    setOuvrageSearch(filters.ouvrageDepollutionCode);
+  }, [filters.ouvrageDepollutionCode, isScl]);
+
+  useEffect(() => {
+    if (!isScl) {
+      setSclSearch('');
+      return;
+    }
+    setSclSearch(filters.systemeCollecteCode);
+  }, [filters.systemeCollecteCode, isScl]);
 
   const steuQuery = {
     page,
@@ -124,6 +145,7 @@ export const EvenementDashboard = () => {
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'STEU',
@@ -145,6 +167,7 @@ export const EvenementDashboard = () => {
         <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
@@ -160,15 +183,18 @@ export const EvenementDashboard = () => {
         <div className={`fr-col-12 fr-col-lg-7 ${filters.mode === 'steu' ? 'fr-col-xl-6' : 'fr-col-xl-4'}`}>
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
-            placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
+            hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+            placeholder={isScl ? 'Rechercher un SCL' : 'Rechercher une station'}
             options={ouvragesOptions}
             value={currentOuvrageValue || null}
             onChange={handleOuvrageChange}
+            onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
         <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
           <Select
             label="Type d'événement"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.typeEvenementCode,
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ typeEvenementCode: e.target.value }),
@@ -186,6 +212,7 @@ export const EvenementDashboard = () => {
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
             <Select
               label="Point de mesures"
+              hint={<br />}
               nativeSelectProps={{
                 value: filters.pointMesureId,
                 onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ pointMesureId: e.target.value }),

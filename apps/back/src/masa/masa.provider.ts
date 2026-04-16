@@ -421,6 +421,14 @@ export class MasaProvider {
     return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
   }
 
+  async findSteuWithNamesBySandreCdasAndLabel(
+    sandreCdas: string[],
+    search: string,
+    limit = 20,
+  ): Promise<SteuWithName[]> {
+    return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdasAndLabel(sandreCdas, search, limit));
+  }
+
   // ---------------------------------------------------------------------------
   // Mesures — SCL autorisés avec noms pour le dropdown système de collecte
   // TODO: Remplacer par appel à l'API MASA quand disponible
@@ -430,6 +438,10 @@ export class MasaProvider {
   // sandreCdas could be as many as 6000
   async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
     return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
+  }
+
+  async findSclWithNamesBySandreCdasAndLabel(sandreCdas: string[], search: string, limit = 20): Promise<SclWithName[]> {
+    return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdasAndLabel(sandreCdas, search, limit));
   }
 
   // ---------------------------------------------------------------------------
