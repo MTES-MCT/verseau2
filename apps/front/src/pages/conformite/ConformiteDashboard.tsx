@@ -257,9 +257,8 @@ export function ConformiteDashboard() {
           <h1 className={fr.cx('fr-mb-0')}>Tableau de bord conformité</h1>
         </div>
       </div>
-
       <div className={fr.cx('fr-mb-3w')}>
-        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-grid-row--bottom')}>
+        <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mb-4w')}>
           <div className={fr.cx('fr-col-12', 'fr-col-lg-4')}>
             <RadioButtons
               legend="Type de tableau"
