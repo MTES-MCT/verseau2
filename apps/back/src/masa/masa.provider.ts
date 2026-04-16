@@ -88,7 +88,14 @@ export class MasaProvider {
 
   // path: /api/steu/batch
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
-    return mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
+    const cacheKey = `findSteuBatchBySandreCdas:${cdas.join(',')}`;
+    const cachedResult = await this.cacheManager.get<SteuCdnBySandreCda[]>(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
+    const result = mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
+    await this.cacheManager.set(cacheKey, result, 3_600_000);
+    return result;
   }
 
   // path: /api/systemes-collecte/by-code-sandre/:sandreCda
