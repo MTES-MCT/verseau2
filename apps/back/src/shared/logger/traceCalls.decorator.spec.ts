@@ -94,7 +94,7 @@ describe('TraceCalls Decorator', () => {
     }
   }
 
-  it('should buffer all log lines and write them in a single call at the end', async () => {
+  it('should buffer all log lines and flush them sequentially at the end', async () => {
     const example = new Example();
     const result = await example.mainMethod('input');
 
@@ -130,7 +130,7 @@ describe('TraceCalls Decorator', () => {
     );
   });
 
-  it('should log errors with duration in a single call', async () => {
+  it('should buffer and flush error logs sequentially at the end', async () => {
     const example = new Example();
 
     await expect(example.errorMethod()).rejects.toThrow('Failure');

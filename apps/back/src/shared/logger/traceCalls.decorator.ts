@@ -26,8 +26,8 @@ function flushError(logLines: string[], logger: LoggerService, callIdPrefix: str
 /**
  * Decorator that logs all method calls made within the decorated method.
  * It uses a Proxy to intercept property access on 'this'.
- * All log lines are buffered and written as a single entry at the end
- * to prevent interleaving with other concurrent logs.
+ * All log lines are buffered and flushed sequentially at the end of execution
+ * to reduce interleaving with other concurrent logs.
  *
  * @param level The log level to use (default: 'debug')
  */

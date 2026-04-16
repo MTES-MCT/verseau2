@@ -106,7 +106,7 @@ export class RoseauRepository implements RoseauGateway {
 
     const rows = await this.sclRepository
       .createQueryBuilder('scl')
-      .where('scl.scl_sandre_cda IN (:...sandreCdas)', { sandreCdas })
+      .where('scl.scl_sandre_cda = ANY(:sandreCdas)', { sandreCdas })
       .getMany();
 
     return rows.map((scl) => ({

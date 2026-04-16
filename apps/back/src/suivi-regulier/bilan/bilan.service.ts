@@ -80,14 +80,12 @@ export class BilanService {
     return { ...result, page, pageSize };
   }
 
-  @TraceCalls(LOG_LEVELS[2])
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
     if (authorizedSteuCdas.length === 0) return [];
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
     return [...new Set(steus.map((s) => s.ouvrageDepollutionId))];
   }
 
-  @TraceCalls(LOG_LEVELS[2])
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {
     if (authorizedSclCdas.length === 0) return [];
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
