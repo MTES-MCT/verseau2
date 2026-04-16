@@ -7,8 +7,8 @@ import { renderWithQueryClient } from '../test.helper';
 vi.mock('../hooks/useMesures', () => ({
   useMesures: vi.fn(),
 }));
-vi.mock('../hooks/useOuvrages', () => ({
-  useOuvrages: vi.fn(),
+vi.mock('../hooks/useAsyncOuvragesSearch', () => ({
+  useAsyncOuvragesSearch: vi.fn(),
 }));
 vi.mock('../hooks/useSystemesCollecte', () => ({
   useSystemesCollecte: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('../hooks/useQualifications', () => ({
 }));
 
 import { useMesures } from '../hooks/useMesures';
-import { useOuvrages } from '../hooks/useOuvrages';
+import { useAsyncOuvragesSearch } from '../hooks/useAsyncOuvragesSearch';
 import { useSystemesCollecte } from '../hooks/useSystemesCollecte';
 import { usePointsMesure } from '../hooks/usePointsMesure';
 import { useParametresMesure } from '../hooks/useParametresMesure';
@@ -39,7 +39,7 @@ import { useStatuts } from '../hooks/useStatuts';
 import { useQualifications } from '../hooks/useQualifications';
 
 const mockUseMesures = vi.mocked(useMesures);
-const mockUseOuvrages = vi.mocked(useOuvrages);
+const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
 const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseParametresMesure = vi.mocked(useParametresMesure);
@@ -99,7 +99,9 @@ const makeMesure = (overrides = {}) => ({
 describe('DepotDetailsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseOuvrages.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useOuvrages>);
+    mockUseAsyncOuvragesSearch.mockReturnValue(
+      emptyOuvragesResult as unknown as ReturnType<typeof useAsyncOuvragesSearch>,
+    );
     mockUseSystemesCollecte.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useSystemesCollecte>);
     mockUseMesures.mockReturnValue(emptyMesuresResult as unknown as ReturnType<typeof useMesures>);
     mockUsePointsMesure.mockReturnValue(emptyPointsMesureResult as unknown as ReturnType<typeof usePointsMesure>);
@@ -127,7 +129,7 @@ describe('DepotDetailsPage', () => {
   it('renders all filter labels', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    expect(screen.getByRole('combobox', { name: 'Station' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /station/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/date début/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date fin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
@@ -152,19 +154,19 @@ describe('DepotDetailsPage', () => {
   });
 
   it('renders ouvrage dropdown showing options after clicking', () => {
-    mockUseOuvrages.mockReturnValue({
+    mockUseAsyncOuvragesSearch.mockReturnValue({
       data: [
         { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' },
         { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionNom: 'Station B' },
       ],
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useOuvrages>);
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
 
     renderWithQueryClient(<DepotDetailsPage />);
 
     // Open the autocomplete dropdown
-    fireEvent.click(screen.getByRole('combobox', { name: 'Station' }));
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
 
     expect(screen.getByRole('option', { name: /Station A/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Station B/i })).toBeInTheDocument();
@@ -433,6 +435,6 @@ describe('DepotDetailsPage', () => {
     const fieldset = document.querySelector('fieldset');
     expect(fieldset).toBeInTheDocument();
     // Station combobox is inside the fieldset, not inside the advanced filters section
-    expect(fieldset).toContainElement(screen.getByRole('combobox', { name: 'Station' }));
+    expect(fieldset).toContainElement(screen.getByRole('combobox', { name: /station/i }));
   });
 });

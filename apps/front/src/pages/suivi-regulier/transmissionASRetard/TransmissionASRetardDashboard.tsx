@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import type { TransmissionASRetardSteuSortByValue, TransmissionASRetardSclSortByValue } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useTransmissionASRetardFilters';
 import type { ReactNode } from 'react';
@@ -11,11 +11,11 @@ import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useTransmissionASRetardSteu, useTransmissionASRetardScl } from '../../../hooks/useTransmissionASRetard';
 import { useTransmissionASRetardFilters } from '../../../hooks/useTransmissionASRetardFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useOuvrages } from '../../../hooks/useOuvrages';
 import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import {
   buildTransmissionASRetardTableHeaders,
   buildTransmissionASRetardSteuTableRows,
@@ -25,10 +25,11 @@ import {
 export const TransmissionASRetardDashboard = () => {
   const { filters, updateFilter, page, setPage } = useTransmissionASRetardFilters();
   const pageSize = 10;
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
 
   const isScl = filters.mode === 'scl';
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
 
   const yearOptions = useMemo(
@@ -53,8 +54,19 @@ export const TransmissionASRetardDashboard = () => {
   const currentOuvrageValue = filters.ouvrageCode || null;
 
   const handleOuvrageChange = (value: string | null) => {
+    if (!isScl) {
+      setOuvrageSearch(value ?? '');
+    }
     updateFilter({ ouvrageCode: value ?? '' });
   };
+
+  useEffect(() => {
+    if (isScl) {
+      setOuvrageSearch('');
+      return;
+    }
+    setOuvrageSearch(filters.ouvrageCode);
+  }, [filters.ouvrageCode, isScl]);
 
   const handleSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
@@ -142,6 +154,7 @@ export const TransmissionASRetardDashboard = () => {
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'STEU',
@@ -163,6 +176,7 @@ export const TransmissionASRetardDashboard = () => {
         <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
@@ -178,10 +192,14 @@ export const TransmissionASRetardDashboard = () => {
         <div className="fr-col-12 fr-col-lg-7 fr-col-xl-6">
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
-            placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
+            hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+            placeholder={
+              ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Rechercher une station'
+            }
             options={ouvragesOptions}
             value={currentOuvrageValue}
             onChange={handleOuvrageChange}
+            onInputChange={isScl ? undefined : setOuvrageSearch}
           />
         </div>
       </div>

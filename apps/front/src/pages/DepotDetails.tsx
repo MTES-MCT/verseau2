@@ -29,6 +29,8 @@ export function DepotDetailsPage() {
     setSort,
     ouvrages,
     ouvragesLoading,
+    ouvrageSearch,
+    setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
     ouvrageError,
@@ -179,10 +181,14 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
               <SelectAutocomplete
                 label={isScl ? 'Système de collecte' : 'Station'}
-                placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
+                hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+                placeholder={
+                  ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Rechercher une station'
+                }
                 options={ouvragesOptions}
                 value={form.selectedOuvrageCode || null}
                 onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
+                onInputChange={isScl ? undefined : setOuvrageSearch}
                 state={ouvrageError ? 'error' : 'default'}
                 stateRelatedMessage={ouvrageError || undefined}
               />
@@ -191,6 +197,7 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
               <SelectAutocomplete
                 label="Point de mesure"
+                hintText={'\b'}
                 placeholder={
                   !form.selectedOuvrageCode
                     ? isScl
@@ -210,6 +217,7 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
               <SelectAutocomplete
                 label="Paramètre"
+                hintText={'\b'}
                 placeholder={
                   form.selectedPmoCdn === null
                     ? 'Sélectionnez un point'

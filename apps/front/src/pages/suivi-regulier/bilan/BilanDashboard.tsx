@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import type { BilanSteuSortByValue, BilanSclSortByValue } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useBilanFilters';
 import type { ReactNode } from 'react';
@@ -11,9 +11,9 @@ import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useBilanSteu, useBilanScl } from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useOuvrages } from '../../../hooks/useOuvrages';
 import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
@@ -27,11 +27,12 @@ import {
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
   const pageSize = 10;
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
 
   const isScl = filters.mode === 'scl';
 
   const { data: pmos } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode || null : null);
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
 
   const yearOptions = useMemo(
@@ -60,9 +61,18 @@ export const BilanDashboard = () => {
     if (isScl) {
       updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
     } else {
+      setOuvrageSearch(newVal);
       updateFilter({ ouvrageDepollutionCode: newVal });
     }
   };
+
+  useEffect(() => {
+    if (isScl) {
+      setOuvrageSearch('');
+      return;
+    }
+    setOuvrageSearch(filters.ouvrageDepollutionCode);
+  }, [filters.ouvrageDepollutionCode, isScl]);
 
   const steuQuery = {
     page,
@@ -128,6 +138,7 @@ export const BilanDashboard = () => {
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'STEU',
@@ -149,6 +160,7 @@ export const BilanDashboard = () => {
         <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
@@ -164,10 +176,14 @@ export const BilanDashboard = () => {
         <div className={`fr-col-12 fr-col-lg-7 ${isScl ? 'fr-col-xl-4' : 'fr-col-xl-6'}`}>
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
-            placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
+            hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+            placeholder={
+              ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Rechercher une station'
+            }
             options={ouvragesOptions}
             value={currentOuvrageValue || null}
             onChange={handleOuvrageChange}
+            onInputChange={isScl ? undefined : setOuvrageSearch}
           />
         </div>
 
@@ -176,6 +192,7 @@ export const BilanDashboard = () => {
             <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
               <Select
                 label="Point de mesures"
+                hint={<br />}
                 nativeSelectProps={{
                   value: filters.pointMesureId,
                   onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ pointMesureId: e.target.value }),
@@ -192,6 +209,7 @@ export const BilanDashboard = () => {
             <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
               <Select
                 label="Statut"
+                hint={<br />}
                 nativeSelectProps={{
                   value: filters.statut,
                   onChange: (e: ChangeEvent<HTMLSelectElement>) =>

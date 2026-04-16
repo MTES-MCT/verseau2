@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
 import { useBilanScl, useBilanSteu } from '../../../hooks/useBilan';
 import { BilanDashboard } from './BilanDashboard';
-import { useOuvrages } from '../../../hooks/useOuvrages';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
 
@@ -14,8 +14,8 @@ vi.mock('../../../hooks/useBilan', () => ({
   useBilanScl: vi.fn(),
 }));
 
-vi.mock('../../../hooks/useOuvrages', () => ({
-  useOuvrages: vi.fn(),
+vi.mock('../../../hooks/useAsyncOuvragesSearch', () => ({
+  useAsyncOuvragesSearch: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useSystemesCollecte', () => ({
@@ -28,7 +28,7 @@ vi.mock('../../../hooks/usePointsMesure', () => ({
 
 const mockUseBilanSteu = vi.mocked(useBilanSteu);
 const mockUseBilanScl = vi.mocked(useBilanScl);
-const mockUseOuvrages = vi.mocked(useOuvrages);
+const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
 const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 
@@ -87,9 +87,9 @@ describe('BilanDashboard', () => {
     mockUseBilanScl.mockReturnValue(
       emptySclResult as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>,
     );
-    mockUseOuvrages.mockReturnValue({ data: [], isLoading: false } as Partial<
-      ReturnType<typeof useOuvrages>
-    > as ReturnType<typeof useOuvrages>);
+    mockUseAsyncOuvragesSearch.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useAsyncOuvragesSearch>
+    > as ReturnType<typeof useAsyncOuvragesSearch>);
     mockUseSystemesCollecte.mockReturnValue({ data: [], isLoading: false } as Partial<
       ReturnType<typeof useSystemesCollecte>
     > as ReturnType<typeof useSystemesCollecte>);
