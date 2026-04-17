@@ -33,7 +33,7 @@ export class ConformiteController {
       authorizedSteuCdas: req.authorizedSteuCdas!,
       year: query.year,
       ouvrageDepollutionCode: query.ouvrageDepollutionCode,
-      trancheObligationRfa: query.trancheObligationRfa,
+      trancheObligationRfa: query.trancheObligationRfa, // TODO : remove trancheObligationRfa ?
       impact: query.impact,
       page: query.page,
       pageSize: query.pageSize,
@@ -54,7 +54,7 @@ export class ConformiteController {
       authorizedSteuCdas: req.authorizedSteuCdas!,
       year: query.year,
       systemeCollecteCode: query.systemeCollecteCode,
-      trancheObligationRfa: query.trancheObligationRfa,
+      trancheObligationRfa: query.trancheObligationRfa, // TODO : remove trancheObligationRfa ?
       impact: query.impact,
       page: query.page,
       pageSize: query.pageSize,

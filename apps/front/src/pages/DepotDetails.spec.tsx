@@ -10,8 +10,8 @@ vi.mock('../hooks/useMesures', () => ({
 vi.mock('../hooks/useAsyncOuvragesSearch', () => ({
   useAsyncOuvragesSearch: vi.fn(),
 }));
-vi.mock('../hooks/useSystemesCollecte', () => ({
-  useSystemesCollecte: vi.fn(),
+vi.mock('../hooks/useAsyncSystemesCollecteSearch', () => ({
+  useAsyncSystemesCollecteSearch: vi.fn(),
 }));
 vi.mock('../hooks/usePointsMesure', () => ({
   usePointsMesure: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('../hooks/useQualifications', () => ({
 
 import { useMesures } from '../hooks/useMesures';
 import { useAsyncOuvragesSearch } from '../hooks/useAsyncOuvragesSearch';
-import { useSystemesCollecte } from '../hooks/useSystemesCollecte';
+import { useAsyncSystemesCollecteSearch } from '../hooks/useAsyncSystemesCollecteSearch';
 import { usePointsMesure } from '../hooks/usePointsMesure';
 import { useParametresMesure } from '../hooks/useParametresMesure';
 import { useFinalites } from '../hooks/useFinalites';
@@ -40,7 +40,7 @@ import { useQualifications } from '../hooks/useQualifications';
 
 const mockUseMesures = vi.mocked(useMesures);
 const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
-const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
+const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseParametresMesure = vi.mocked(useParametresMesure);
 const mockUseFinalites = vi.mocked(useFinalites);
@@ -102,7 +102,9 @@ describe('DepotDetailsPage', () => {
     mockUseAsyncOuvragesSearch.mockReturnValue(
       emptyOuvragesResult as unknown as ReturnType<typeof useAsyncOuvragesSearch>,
     );
-    mockUseSystemesCollecte.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useSystemesCollecte>);
+    mockUseAsyncSystemesCollecteSearch.mockReturnValue(
+      emptyOuvragesResult as unknown as ReturnType<typeof useAsyncSystemesCollecteSearch>,
+    );
     mockUseMesures.mockReturnValue(emptyMesuresResult as unknown as ReturnType<typeof useMesures>);
     mockUsePointsMesure.mockReturnValue(emptyPointsMesureResult as unknown as ReturnType<typeof usePointsMesure>);
     mockUseParametresMesure.mockReturnValue(emptyParametresResult as unknown as ReturnType<typeof useParametresMesure>);
@@ -150,7 +152,7 @@ describe('DepotDetailsPage', () => {
 
     // The dropdown label should change from "Ouvrage (STEU)" to something else
     expect(screen.queryByRole('combobox', { name: 'Station' })).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/tous les systèmes/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/rechercher un scl/i)).toBeInTheDocument();
   });
 
   it('renders ouvrage dropdown showing options after clicking', () => {

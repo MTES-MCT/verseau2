@@ -32,6 +32,7 @@ export function DepotDetailsPage() {
     setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
+    setSclSearch,
     ouvrageError,
     pointsMesure,
     pointsMesureLoading,
@@ -182,12 +183,12 @@ export function DepotDetailsPage() {
                 label={isScl ? 'Système de collecte' : 'Station'}
                 hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
                 placeholder={
-                  ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Rechercher une station'
+                  ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Rechercher un SCL' : 'Rechercher une station'
                 }
                 options={ouvragesOptions}
                 value={form.selectedOuvrageCode || null}
                 onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
-                onInputChange={isScl ? undefined : setOuvrageSearch}
+                onInputChange={isScl ? setSclSearch : setOuvrageSearch}
                 state={ouvrageError ? 'error' : 'default'}
                 stateRelatedMessage={ouvrageError || undefined}
               />

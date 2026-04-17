@@ -17,7 +17,7 @@ export interface FilterState {
   mode: 'steu' | 'scl';
   year: string;
   ouvrageCode: string;
-  trancheObligationRfa: TrancheObligationRfa | '';
+  trancheObligationRfa: TrancheObligationRfa | ''; // TODO : remove trancheObligationRfa ?
   impact: 'avec' | 'sans' | '';
   sortBy?: SortByValue;
   sortOrder?: 'ASC' | 'DESC';
@@ -27,7 +27,7 @@ const INITIAL_FILTERS: FilterState = {
   mode: 'steu',
   year: DEFAULT_CONFORMITE_YEAR.toString(),
   ouvrageCode: '',
-  trancheObligationRfa: '',
+  trancheObligationRfa: '', // TODO : remove trancheObligationRfa ?
   impact: '',
   sortBy: undefined,
   sortOrder: undefined,
@@ -37,7 +37,7 @@ function buildSteuQuery(submitted: FilterState, page: number): RouteQuery<typeof
   return {
     year: Number(submitted.year),
     ...(submitted.ouvrageCode ? { ouvrageDepollutionCode: submitted.ouvrageCode } : {}),
-    ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}),
+    ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}), // TODO : remove trancheObligationRfa ?
     ...(submitted.impact ? { impact: submitted.impact } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy as ConformiteSteuSortByValue } : {}),
     ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
@@ -50,7 +50,7 @@ function buildSclQuery(submitted: FilterState, page: number): RouteQuery<typeof 
   return {
     year: Number(submitted.year),
     ...(submitted.ouvrageCode ? { systemeCollecteCode: submitted.ouvrageCode } : {}),
-    ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}),
+    ...(submitted.trancheObligationRfa ? { trancheObligationRfa: submitted.trancheObligationRfa } : {}), // TODO : remove trancheObligationRfa ?
     ...(submitted.impact ? { impact: submitted.impact } : {}),
     ...(submitted.sortBy ? { sortBy: submitted.sortBy as ConformiteSclSortByValue } : {}),
     ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
