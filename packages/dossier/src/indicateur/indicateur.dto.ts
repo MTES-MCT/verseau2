@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 
 export const IndicateurSteuDtoSchema = z.object({
   bassin: z.string(),
@@ -28,3 +29,7 @@ export const IndicateurSteuDtoSchema = z.object({
 });
 
 export type IndicateurSteuDto = z.infer<typeof IndicateurSteuDtoSchema>;
+
+export const PaginatedIndicateurSteuResponseSchema = createPaginatedResponseSchema(IndicateurSteuDtoSchema);
+
+export type PaginatedIndicateurSteuResponse = z.infer<typeof PaginatedIndicateurSteuResponseSchema>;

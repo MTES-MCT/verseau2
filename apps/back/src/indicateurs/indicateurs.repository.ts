@@ -34,15 +34,22 @@ interface IndicateurSteuRecord {
 export class IndicateursRepository implements IndicateursGateway {
   constructor(private readonly dataSource: DataSource) {}
 
-  async findIndicateursSteu(steuCodes: string[]): Promise<IndicateurSteuDto[]> {
+  async findIndicateursSteu(
+    steuCodes: string[],
+    page: number,
+    pageSize: number,
+  ): Promise<{ data: IndicateurSteuDto[]; total: number }> {
     if (steuCodes.length === 0) {
-      return [];
+      return { data: [], total: 0 };
     }
 
     const placeholders = steuCodes.map((_, i) => `$${i + 1}`).join(',');
+    const limitParam = steuCodes.length + 1;
+    const offsetParam = steuCodes.length + 2;
+    const offset = (page - 1) * pageSize;
 
     const previousYear = getYearMinus(1);
-    const query = `
+    const baseQuery = `
 SELECT
     TRIM(cdb.cdb_nom_lb)                       AS bassin,
     reg.reg_lb                                 AS region,
@@ -99,42 +106,53 @@ JOIN roseau.tlref t03 ON t03.tlref_cdn = aga.tlref_03_cdn
 JOIN roseau.tltobl tltobl ON tltobl.tltobl_rfa = aga.tltobl_rfa
 LEFT JOIN roseau.scl scl ON scl.steu_cdn = steu.steu_cdn
 LEFT JOIN roseau.sclconf sclconf ON sclconf.scl_cdn = scl.scl_cdn AND sclconf.sclconf_an = ${previousYear}
-WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders});
+WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders})
     `;
 
-    const results: IndicateurSteuRecord[] = await this.dataSource.query(query, steuCodes);
+    const countQuery = `SELECT COUNT(*)::int AS total FROM (${baseQuery}) indicateurs`;
+    const dataQuery = `${baseQuery} ORDER BY nom_steu ASC NULLS LAST, code_sandre_steu ASC LIMIT $${limitParam} OFFSET $${offsetParam}`;
 
-    return results.map((r: IndicateurSteuRecord) => ({
-      bassin: r.bassin,
-      region: r.region,
-      departement: r.departement,
-      codeSandreAgglo: r.code_sandre_agglo,
-      nomAgglo: r.nom_agglo,
-      nature: r.nature,
-      trancheObligation: r.tranche_obligation,
-      etatAgglo: r.etat_agglo,
-      tailleAggloEhAnN: Number(r.taille_agglo_eh_an_n),
-      sommeChargesMaxEntrantesEh: Number(r.somme_charges_max_entrantes_eh),
-      codeSandreSteu: r.code_sandre_steu,
-      nomSteu: r.nom_steu,
-      capaciteNominaleEhAnN: Number(r.capacite_nominale_eh_an_n),
-      debitReference: Number(r.debit_reference),
-      chargeEntranteEhAnN: Number(r.charge_entrante_eh_an_n),
-      pc95Retenu: r.pc95_retenu !== null ? Number(r.pc95_retenu) : null,
-      nbAnneesMaxPc95: Number(r.nb_annees_max_pc95),
-      annee: previousYear,
-      codeSandreScl: r.code_sandre_scl ?? null,
-      dateValidationConformite: r.date_validation_conformite ?? null,
-      volumeDeverse5ansPc:
-        r.volume_deverse_5ans_pc !== null && r.volume_deverse_5ans_pc !== undefined
-          ? Number(r.volume_deverse_5ans_pc)
-          : null,
-      fluxDeverse5ansPc:
-        r.flux_deverse_5ans_pc !== null && r.flux_deverse_5ans_pc !== undefined ? Number(r.flux_deverse_5ans_pc) : null,
-      joursDeversement5ansMoy:
-        r.jours_deversement_5ans_moy !== null && r.jours_deversement_5ans_moy !== undefined
-          ? Number(r.jours_deversement_5ans_moy)
-          : null,
-    }));
+    const [countResult, results] = await Promise.all([
+      this.dataSource.query<{ total: number }[]>(countQuery, steuCodes),
+      this.dataSource.query<IndicateurSteuRecord[]>(dataQuery, [...steuCodes, pageSize, offset]),
+    ]);
+
+    return {
+      total: countResult[0]?.total ?? 0,
+      data: results.map((r: IndicateurSteuRecord) => ({
+        bassin: r.bassin,
+        region: r.region,
+        departement: r.departement,
+        codeSandreAgglo: r.code_sandre_agglo,
+        nomAgglo: r.nom_agglo,
+        nature: r.nature,
+        trancheObligation: r.tranche_obligation,
+        etatAgglo: r.etat_agglo,
+        tailleAggloEhAnN: Number(r.taille_agglo_eh_an_n),
+        sommeChargesMaxEntrantesEh: Number(r.somme_charges_max_entrantes_eh),
+        codeSandreSteu: r.code_sandre_steu,
+        nomSteu: r.nom_steu,
+        capaciteNominaleEhAnN: Number(r.capacite_nominale_eh_an_n),
+        debitReference: Number(r.debit_reference),
+        chargeEntranteEhAnN: Number(r.charge_entrante_eh_an_n),
+        pc95Retenu: r.pc95_retenu !== null ? Number(r.pc95_retenu) : null,
+        nbAnneesMaxPc95: Number(r.nb_annees_max_pc95),
+        annee: previousYear,
+        codeSandreScl: r.code_sandre_scl ?? null,
+        dateValidationConformite: r.date_validation_conformite ?? null,
+        volumeDeverse5ansPc:
+          r.volume_deverse_5ans_pc !== null && r.volume_deverse_5ans_pc !== undefined
+            ? Number(r.volume_deverse_5ans_pc)
+            : null,
+        fluxDeverse5ansPc:
+          r.flux_deverse_5ans_pc !== null && r.flux_deverse_5ans_pc !== undefined
+            ? Number(r.flux_deverse_5ans_pc)
+            : null,
+        joursDeversement5ansMoy:
+          r.jours_deversement_5ans_moy !== null && r.jours_deversement_5ans_moy !== undefined
+            ? Number(r.jours_deversement_5ans_moy)
+            : null,
+      })),
+    };
   }
 }
