@@ -98,7 +98,8 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
   constructor(private readonly dataSource: DataSource) {}
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, trancheObligationRfa, impact, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, year, ouvrageDepollutionCode, trancheObligationRfa, impact, page, pageSize } =
+      filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -132,6 +133,10 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
     const anneePlaceholder = addParam(annee);
     const steuPlaceholders = ouvrageDepollutionIds.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
+
+    if (ouvrageDepollutionCode) {
+      whereClauses.push(`RTRIM(steu.steu_sandre_cda) = ${addParam(ouvrageDepollutionCode)}`);
+    }
 
     if (trancheObligationRfa) {
       whereClauses.push(`tltobl.tltobl_rfa = ${addParam(trancheObligationRfa)}`);
@@ -248,7 +253,7 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, trancheObligationRfa, impact, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, year, systemeCollecteCode, trancheObligationRfa, impact, page, pageSize } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -281,6 +286,10 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
     const anneePlaceholder = addParam(year);
     const steuPlaceholders = ouvrageDepollutionIds.map((steuCdn) => addParam(steuCdn)).join(', ');
     const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
+
+    if (systemeCollecteCode) {
+      whereClauses.push(`RTRIM(scl.scl_sandre_cda) = ${addParam(systemeCollecteCode)}`);
+    }
 
     if (trancheObligationRfa) {
       whereClauses.push(`tltobl.tltobl_rfa = ${addParam(trancheObligationRfa)}`);

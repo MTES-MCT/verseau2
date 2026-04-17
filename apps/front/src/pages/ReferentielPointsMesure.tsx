@@ -90,6 +90,8 @@ export function ReferentielPointsMesurePage() {
     handleSearch,
     ouvrages,
     ouvragesLoading,
+    ouvrageSearch,
+    setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
     ouvrageError,
@@ -200,6 +202,7 @@ export function ReferentielPointsMesurePage() {
             legend="Type d'ouvrage"
             name="ouvrageType"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'Station (STEU)',
@@ -226,10 +229,22 @@ export function ReferentielPointsMesurePage() {
           <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
             <SelectAutocomplete
               label={isScl ? 'Système de collecte' : 'Station'}
-              placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
+              hintText={
+                isScl
+                  ? undefined
+                  : ouvrageSearch.trim().length < 2
+                    ? 'Saisissez au moins 2 caractères'
+                    : ouvragesLoading
+                      ? 'Recherche en cours...'
+                      : undefined
+              }
+              placeholder={
+                ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Rechercher une station'
+              }
               options={ouvragesOptions}
               value={form.selectedOuvrageCode || null}
               onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
+              onInputChange={isScl ? undefined : setOuvrageSearch}
               state={ouvrageError ? 'error' : 'default'}
               stateRelatedMessage={ouvrageError || undefined}
             />

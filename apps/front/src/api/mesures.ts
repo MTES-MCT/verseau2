@@ -16,11 +16,19 @@ export async function fetchMesures(query: RouteQuery<typeof listMesures>) {
 }
 
 export async function fetchOuvrages() {
-  return apiCall(listOuvrages);
+  return apiCall(listOuvrages, { query: {} });
+}
+
+export async function searchOuvrages(search: string) {
+  return apiCall(listOuvrages, { query: { search } });
 }
 
 export async function fetchSystemesCollecte() {
-  return apiCall(listSystemesCollecte);
+  return apiCall(listSystemesCollecte, { query: {} });
+}
+
+export async function searchSystemesCollecte(search: string) {
+  return apiCall(listSystemesCollecte, { query: { search } });
 }
 
 export async function fetchPointsMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string) {

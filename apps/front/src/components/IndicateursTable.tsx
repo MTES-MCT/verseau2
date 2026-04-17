@@ -1,10 +1,21 @@
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { useIndicateursSteu } from '../hooks/useIndicateursSteu';
 import { fr } from '@codegouvfr/react-dsfr';
+import { useState } from 'react';
+import { SkeletonLine } from './common/Skeleton';
 import './IndicateursTable.css';
 
+const PAGE_SIZE = 10;
+
+const SKELETON_WIDTHS = ['100px', '80px', '60px', '80px', '80px', '120px', '150px', '150px', '150px'];
+
 export function IndicateursTable() {
-  const { data: indicateurs, isLoading, error } = useIndicateursSteu();
+  const [currentPage, setCurrentPage] = useState(1);
+  const { data, isLoading, isFetching, error } = useIndicateursSteu({ page: currentPage, pageSize: PAGE_SIZE });
+  const indicateurs = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   if (error) {
     return (
@@ -26,18 +37,7 @@ export function IndicateursTable() {
     'Nb jours de déversement moyen (5 ans)',
   ];
 
-  // Placeholder rows to prevent layout shift during loading
-  const loadingData = Array(1).fill([
-    <div key="s1" className="fr-skeleton" style={{ width: '100px', height: '1rem' }} />,
-    <div key="s2" className="fr-skeleton" style={{ width: '80px', height: '1rem' }} />,
-    <div key="s3" className="fr-skeleton" style={{ width: '60px', height: '1rem' }} />,
-    <div key="s4" className="fr-skeleton" style={{ width: '80px', height: '1rem' }} />,
-    <div key="s5" className="fr-skeleton" style={{ width: '80px', height: '1rem' }} />,
-    <div key="s6" className="fr-skeleton" style={{ width: '120px', height: '1rem' }} />,
-    <div key="s7" className="fr-skeleton" style={{ width: '150px', height: '1rem' }} />,
-    <div key="s8" className="fr-skeleton" style={{ width: '150px', height: '1rem' }} />,
-    <div key="s9" className="fr-skeleton" style={{ width: '150px', height: '1rem' }} />,
-  ]);
+  const loadingData = [SKELETON_WIDTHS.map((width, index) => <SkeletonLine key={`loading-${index}`} width={width} />)];
 
   const formatConfNumber = (value: number | null, isEvaluated: boolean, suffix = '') => {
     if (value !== null && value !== undefined) {
@@ -63,6 +63,23 @@ export function IndicateursTable() {
       })
     : [];
 
+  const isPageTransition = isFetching && !isLoading && tableData.length > 0;
+  const displayedTableData = isPageTransition
+    ? tableData.map((row, rowIndex) =>
+        row.map((_, cellIndex) => (
+          <SkeletonLine key={`page-${rowIndex}-cell-${cellIndex}`} width={SKELETON_WIDTHS[cellIndex]} />
+        )),
+      )
+    : tableData;
+
+  const getPageLinkProps = (pageNumber: number) => ({
+    href: `#indicateurs-page-${pageNumber}`,
+    onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+      setCurrentPage(pageNumber);
+    },
+  });
+
   return (
     <div className={fr.cx('fr-mb-4w')}>
       <div className="fr-grid-row fr-grid-row--middle fr-mb-2w">
@@ -76,7 +93,26 @@ export function IndicateursTable() {
           <span className="fr-badge fr-badge--info fr-badge--no-icon">Par système d'assainissement</span>
         </div>
       </div>
-      <Table headers={headers} data={isLoading ? loadingData : tableData} noCaption />
+      <Table headers={headers} data={isLoading ? loadingData : displayedTableData} noCaption />
+
+      {totalPages > 1 && (
+        <div className="fr-mt-4w">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Pagination
+              count={totalPages}
+              defaultPage={currentPage}
+              getPageLinkProps={getPageLinkProps}
+              showFirstLast={true}
+            />
+            <div className="fr-mb-2w fr-pt-1w" style={{ marginLeft: '1.5rem' }}>
+              <p className="fr-text--sm">
+                Affichage de {(currentPage - 1) * PAGE_SIZE + 1} à {Math.min(currentPage * PAGE_SIZE, total)} sur{' '}
+                {total} entrées
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

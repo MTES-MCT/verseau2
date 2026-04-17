@@ -123,19 +123,27 @@ describe('MesuresController', () => {
       const ouvrages = [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }];
       mesuresService.listOuvrages.mockResolvedValue(ouvrages);
 
-      const result = await controller.listOuvrages(makeRequest(['STEU001'], []));
+      const result = await controller.listOuvrages(makeRequest(['STEU001'], []), {});
 
-      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001']);
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001'], undefined);
       expect(result).toEqual(ouvrages);
     });
 
     it('delegates with empty STEU list', async () => {
       mesuresService.listOuvrages.mockResolvedValue([]);
 
-      const result = await controller.listOuvrages(makeRequest([], []));
+      const result = await controller.listOuvrages(makeRequest([], []), {});
 
-      expect(mesuresService.listOuvrages).toHaveBeenCalledWith([]);
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith([], undefined);
       expect(result).toEqual([]);
+    });
+
+    it('passes search query to service', async () => {
+      mesuresService.listOuvrages.mockResolvedValue([]);
+
+      await controller.listOuvrages(makeRequest(['STEU001'], []), { search: 'sta' });
+
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001'], 'sta');
     });
   });
 });

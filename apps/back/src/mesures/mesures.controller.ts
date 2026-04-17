@@ -49,14 +49,20 @@ export class MesuresController {
 
   @Get('ouvrages')
   @UseGuards(HasUserAccessToOuvragesGuard)
-  async listOuvrages(@Req() req: CustomRequest): Promise<RouteResponse<typeof listOuvrages>> {
-    return this.mesuresService.listOuvrages(req.authorizedSteuCdas!);
+  async listOuvrages(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(listOuvrages['query'])) query: RouteQuery<typeof listOuvrages>,
+  ): Promise<RouteResponse<typeof listOuvrages>> {
+    return this.mesuresService.listOuvrages(req.authorizedSteuCdas!, query.search);
   }
 
   @Get('systemes-collecte')
   @UseGuards(HasUserAccessToOuvragesGuard)
-  async listSystemesCollecte(@Req() req: CustomRequest): Promise<RouteResponse<typeof listSystemesCollecte>> {
-    return this.mesuresService.listSystemesCollecte(req.authorizedSclCdas!);
+  async listSystemesCollecte(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(listSystemesCollecte['query'])) query: RouteQuery<typeof listSystemesCollecte>,
+  ): Promise<RouteResponse<typeof listSystemesCollecte>> {
+    return this.mesuresService.listSystemesCollecte(req.authorizedSclCdas!, query.search);
   }
 
   @Get('points-mesure')

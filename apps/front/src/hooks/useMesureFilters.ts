@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
 import type { MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
-import { useOuvrages } from './useOuvrages';
-import { useSystemesCollecte } from './useSystemesCollecte';
 import { usePointsMesure } from './usePointsMesure';
 import { useParametresMesure } from './useParametresMesure';
 import { useFinalites } from './useFinalites';
 import { useStatuts } from './useStatuts';
 import { useQualifications } from './useQualifications';
+import { useAsyncOuvragesSearch } from './useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from './useAsyncSystemesCollecteSearch';
 
 const PAGE_SIZE = 20;
 
@@ -46,9 +46,11 @@ export function useMesureFilters() {
   const [hasSearched, setHasSearched] = useState(false);
   const [page, setPage] = useState(1);
   const [ouvrageError, setOuvrageError] = useState<string>('');
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
   const { data: pointsMesure = [], isLoading: pointsMesureLoading } = usePointsMesure(
     form.ouvrageType,
     form.selectedOuvrageCode || null,
@@ -106,6 +108,8 @@ export function useMesureFilters() {
 
   function updateOuvrageType(ouvrageType: OuvrageTypeValue) {
     setOuvrageError('');
+    setOuvrageSearch('');
+    setSclSearch('');
     setForm({
       ...INITIAL_FILTERS,
       ouvrageType,
@@ -113,6 +117,17 @@ export function useMesureFilters() {
       dateFin: form.dateFin,
     });
   }
+
+  useEffect(() => {
+    if (form.ouvrageType === 'scl') {
+      setOuvrageSearch('');
+      setSclSearch(form.selectedOuvrageCode);
+      return;
+    }
+
+    setSclSearch('');
+    setOuvrageSearch(form.selectedOuvrageCode);
+  }, [form.ouvrageType, form.selectedOuvrageCode]);
 
   function updateForm(field: Exclude<keyof FilterState, 'selectedPmoCdn' | 'ouvrageType'>, value: string) {
     setForm((f) => {
@@ -146,8 +161,12 @@ export function useMesureFilters() {
     setSort,
     ouvrages,
     ouvragesLoading,
+    ouvrageSearch,
+    setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
+    sclSearch,
+    setSclSearch,
     ouvrageError,
     pointsMesure,
     pointsMesureLoading,

@@ -34,6 +34,9 @@ export const listMesures = {
 export const listOuvrages = {
   method: 'GET',
   path: '/mesures/ouvrages',
+  query: z.object({
+    search: z.string().trim().min(2).optional(),
+  }),
   response: z.array(
     z.object({
       ouvrageDepollutionCode: z.string(),
@@ -45,6 +48,9 @@ export const listOuvrages = {
 export const listSystemesCollecte = {
   method: 'GET',
   path: '/mesures/systemes-collecte',
+  query: z.object({
+    search: z.string().trim().min(2).optional(),
+  }),
   response: z.array(
     z.object({
       systemeCollecteCode: z.string(),

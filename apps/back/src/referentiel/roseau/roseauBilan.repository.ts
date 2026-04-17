@@ -65,7 +65,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     const endDate = addParam(`${year}-12-31`);
     const steuArrayParam = addParam(ouvrageDepollutionIds);
     const whereClauses = [
-      `steu.steu_cdn = ANY(${steuArrayParam}::int[])`,
+      `steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))`,
       `resj.resj_mes_dt >= ${startDate}`,
       `resj.resj_mes_dt <= ${endDate}`,
       `(resj.resj_jok_in = '2' OR resj.resj_aok_in = '2')`,
@@ -176,7 +176,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     const yearPlaceholder = addParam(year);
     const sclArrayParam = addParam(systemeCollecteIds);
     const whereClauses = [
-      `scl.scl_cdn = ANY(${sclArrayParam}::int[])`,
+      `scl.scl_cdn IN (SELECT unnest(${sclArrayParam}::int[]))`,
       `date_part('year', d.devers_dt) = ${yearPlaceholder}`,
       `d.devers_pris_en_compte_on = false`,
       `(d.devers_statut_in IN ('TP', 'TS') OR d.devers_statut_s_in IN ('TP', 'TS'))`,

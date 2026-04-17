@@ -92,6 +92,10 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
       whereClauses.push(`t46.tlref_elt_cda = ${addParam(filters.typeEvenementCode)}`);
     }
 
+    if (filters.pointMesureId) {
+      whereClauses.push(`evo.pmo_cdn = ${addParam(filters.pointMesureId)}`);
+    }
+
     const baseQuery = `
       WITH base_data AS (
         SELECT

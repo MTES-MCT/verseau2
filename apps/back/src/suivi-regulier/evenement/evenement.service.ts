@@ -8,6 +8,7 @@ export interface ListEvenementSteuOptions extends PaginationQuery {
   year: number;
   typeEvenementCode?: string;
   ouvrageDepollutionCode?: string;
+  pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
 }
 
@@ -25,8 +26,17 @@ export class EvenementService {
   constructor(private readonly masaProvider: MasaProvider) {}
 
   async listEvenementSteu(options: ListEvenementSteuOptions) {
-    const { authorizedSteuCdas, year, typeEvenementCode, ouvrageDepollutionCode, page, pageSize, sortBy, sortOrder } =
-      options;
+    const {
+      authorizedSteuCdas,
+      year,
+      typeEvenementCode,
+      ouvrageDepollutionCode,
+      pointMesureId,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    } = options;
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
@@ -43,6 +53,7 @@ export class EvenementService {
       page,
       pageSize,
       ...(typeEvenementCode ? { typeEvenementCode } : {}),
+      ...(pointMesureId ? { pointMesureId } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };

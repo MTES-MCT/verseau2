@@ -66,6 +66,8 @@ import {
  */
 @Injectable()
 export class MasaProvider {
+  private readonly inFlightVSteuSclItv = new Map<string, Promise<VSteuSclItvResult[]>>();
+
   constructor(
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(RoseauReferentielPointMesureGateway)
@@ -86,7 +88,14 @@ export class MasaProvider {
 
   // path: /api/steu/batch
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
-    return mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
+    const cacheKey = `findSteuBatchBySandreCdas:${cdas.join(',')}`;
+    const cachedResult = await this.cacheManager.get<SteuCdnBySandreCda[]>(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
+    const result = mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
+    await this.cacheManager.set(cacheKey, result, 3_600_000);
+    return result;
   }
 
   // path: /api/systemes-collecte/by-code-sandre/:sandreCda
@@ -228,11 +237,27 @@ export class MasaProvider {
   async findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]> {
     const cacheKey = `vSteuSclItv:${itvRfa}`;
     const cached = await this.cacheManager.get<VSteuSclItvResult[]>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
 
-    const result = await this.lanceleauGateway.findVSteuSclItvByItvRfa(itvRfa);
-    await this.cacheManager.set(cacheKey, result, 3_600_000);
-    return result;
+    const inFlight = this.inFlightVSteuSclItv.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const promise = this.lanceleauGateway
+      .findVSteuSclItvByItvRfa(itvRfa)
+      .then(async (result) => {
+        await this.cacheManager.set(cacheKey, result, 3_600_000);
+        return result;
+      })
+      .finally(() => {
+        this.inFlightVSteuSclItv.delete(cacheKey);
+      });
+
+    this.inFlightVSteuSclItv.set(cacheKey, promise);
+    return promise;
   }
 
   // ---------------------------------------------------------------------------
@@ -398,8 +423,17 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // path: /api/steu/with-noms/by-codes-sandre/batch
+  // sandreCdas could be as many as 6000
   async findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]> {
     return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
+  }
+
+  async findSteuWithNamesBySandreCdasAndLabel(
+    sandreCdas: string[],
+    search: string,
+    limit = 20,
+  ): Promise<SteuWithName[]> {
+    return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdasAndLabel(sandreCdas, search, limit));
   }
 
   // ---------------------------------------------------------------------------
@@ -408,8 +442,13 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // path: /api/systemes-collecte/with-noms/by-codes-sandre/batch
+  // sandreCdas could be as many as 6000
   async findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]> {
     return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
+  }
+
+  async findSclWithNamesBySandreCdasAndLabel(sandreCdas: string[], search: string, limit = 20): Promise<SclWithName[]> {
+    return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdasAndLabel(sandreCdas, search, limit));
   }
 
   // ---------------------------------------------------------------------------

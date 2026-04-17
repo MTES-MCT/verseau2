@@ -1,11 +1,12 @@
-import { Controller, Get, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import { IndicateursService } from './indicateurs.service';
-import type { RouteResponse } from '@lib/dossier';
+import type { RouteQuery, RouteResponse } from '@lib/dossier';
 import { getIndicateursSteu } from '@lib/dossier';
 import { CerbereIdCacheInterceptor } from '@shared/cerbereIdCache.interceptor';
 import { CacheTTL } from '@nestjs/cache-manager';
+import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 
 @Controller('indicateurs')
 @UseGuards(MeGuard)
@@ -15,8 +16,11 @@ export class IndicateursController {
   constructor(private readonly indicateursService: IndicateursService) {}
 
   @Get('steu')
-  async getIndicateursSteu(@Req() req: CustomRequest): Promise<RouteResponse<typeof getIndicateursSteu>> {
+  async getIndicateursSteu(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(getIndicateursSteu['query'])) query: RouteQuery<typeof getIndicateursSteu>,
+  ): Promise<RouteResponse<typeof getIndicateursSteu>> {
     const subId = req.user.cerbereId;
-    return await this.indicateursService.getIndicateursSteu(subId);
+    return await this.indicateursService.getIndicateursSteu(subId, query.page, query.pageSize);
   }
 }

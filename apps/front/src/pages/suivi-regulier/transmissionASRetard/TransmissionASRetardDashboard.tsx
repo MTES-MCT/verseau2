@@ -1,4 +1,4 @@
-import { useMemo, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import type { TransmissionASRetardSteuSortByValue, TransmissionASRetardSclSortByValue } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useTransmissionASRetardFilters';
 import type { ReactNode } from 'react';
@@ -11,25 +11,28 @@ import { Table } from '@codegouvfr/react-dsfr/Table';
 import { useTransmissionASRetardSteu, useTransmissionASRetardScl } from '../../../hooks/useTransmissionASRetard';
 import { useTransmissionASRetardFilters } from '../../../hooks/useTransmissionASRetardFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useOuvrages } from '../../../hooks/useOuvrages';
-import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import {
   buildTransmissionASRetardTableHeaders,
   buildTransmissionASRetardSteuTableRows,
   buildTransmissionASRetardSclTableRows,
 } from '../../../helper/transmissionASRetardTableData';
+import { TableLoader } from '../../../components/common/TableLoader';
 
 export const TransmissionASRetardDashboard = () => {
   const { filters, updateFilter, page, setPage } = useTransmissionASRetardFilters();
   const pageSize = 10;
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
 
   const isScl = filters.mode === 'scl';
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
   const yearOptions = useMemo(
     () =>
@@ -51,10 +54,33 @@ export const TransmissionASRetardDashboard = () => {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
   const currentOuvrageValue = filters.ouvrageCode || null;
+  const hasOuvrageSelected = !!filters.ouvrageCode;
 
   const handleOuvrageChange = (value: string | null) => {
-    updateFilter({ ouvrageCode: value ?? '' });
+    const newVal = value ?? '';
+    if (isScl) {
+      setSclSearch(newVal);
+    } else {
+      setOuvrageSearch(newVal);
+    }
+    updateFilter({ ouvrageCode: newVal });
   };
+
+  useEffect(() => {
+    if (isScl) {
+      setOuvrageSearch('');
+      return;
+    }
+    setOuvrageSearch(filters.ouvrageCode);
+  }, [filters.ouvrageCode, isScl]);
+
+  useEffect(() => {
+    if (!isScl) {
+      setSclSearch('');
+      return;
+    }
+    setSclSearch(filters.ouvrageCode);
+  }, [filters.ouvrageCode, isScl]);
 
   const handleSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
@@ -78,10 +104,20 @@ export const TransmissionASRetardDashboard = () => {
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 
-  const { data: steuData } = useTransmissionASRetardSteu(steuQuery, !isScl);
-  const { data: sclData } = useTransmissionASRetardScl(sclQuery, isScl);
+  const {
+    data: steuData,
+    isLoading: steuLoading,
+    isFetching: steuFetching,
+  } = useTransmissionASRetardSteu(steuQuery, !isScl && hasOuvrageSelected);
+  const {
+    data: sclData,
+    isLoading: sclLoading,
+    isFetching: sclFetching,
+  } = useTransmissionASRetardScl(sclQuery, isScl && hasOuvrageSelected);
 
   const data = isScl ? sclData : steuData;
+  const isLoading = isScl ? sclLoading : steuLoading;
+  const isFetching = isScl ? sclFetching : steuFetching;
 
   const tableData = isScl
     ? buildTransmissionASRetardSclTableRows(sclData?.data || [])
@@ -142,6 +178,7 @@ export const TransmissionASRetardDashboard = () => {
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'STEU',
@@ -163,6 +200,7 @@ export const TransmissionASRetardDashboard = () => {
         <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
@@ -178,28 +216,36 @@ export const TransmissionASRetardDashboard = () => {
         <div className="fr-col-12 fr-col-lg-7 fr-col-xl-6">
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
-            placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
+            hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+            placeholder={isScl ? 'Rechercher un SCL' : 'Rechercher une station'}
             options={ouvragesOptions}
             value={currentOuvrageValue}
             onChange={handleOuvrageChange}
+            onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
       </div>
 
-      <Table data={tableData} headers={finalHeaders} />
-      {Math.ceil((data?.total || 0) / pageSize) > 1 && (
-        <Pagination
-          count={Math.ceil((data?.total || 0) / pageSize)}
-          defaultPage={page}
-          getPageLinkProps={(pageNumber: number) => ({
-            href: `#page-${pageNumber}`,
-            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.preventDefault();
-              setPage(pageNumber);
-            },
-          })}
-        />
-      )}
+      <TableLoader
+        isLoading={isLoading && hasOuvrageSelected}
+        isFetching={isFetching}
+        hasOuvrageSelected={hasOuvrageSelected}
+      >
+        <Table data={tableData} headers={finalHeaders} />
+        {Math.ceil((data?.total || 0) / pageSize) > 1 && (
+          <Pagination
+            count={Math.ceil((data?.total || 0) / pageSize)}
+            defaultPage={page}
+            getPageLinkProps={(pageNumber: number) => ({
+              href: `#page-${pageNumber}`,
+              onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                setPage(pageNumber);
+              },
+            })}
+          />
+        )}
+      </TableLoader>
     </div>
   );
 };

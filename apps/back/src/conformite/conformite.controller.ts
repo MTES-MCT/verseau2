@@ -32,7 +32,8 @@ export class ConformiteController {
     const response = await this.conformiteService.listConformiteSteu({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       year: query.year,
-      trancheObligationRfa: query.trancheObligationRfa,
+      ouvrageDepollutionCode: query.ouvrageDepollutionCode,
+      trancheObligationRfa: query.trancheObligationRfa, // TODO : remove trancheObligationRfa ?
       impact: query.impact,
       page: query.page,
       pageSize: query.pageSize,
@@ -52,7 +53,8 @@ export class ConformiteController {
     const response = await this.conformiteService.listConformiteScl({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       year: query.year,
-      trancheObligationRfa: query.trancheObligationRfa,
+      systemeCollecteCode: query.systemeCollecteCode,
+      trancheObligationRfa: query.trancheObligationRfa, // TODO : remove trancheObligationRfa ?
       impact: query.impact,
       page: query.page,
       pageSize: query.pageSize,

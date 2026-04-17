@@ -4,6 +4,8 @@ import type { ConformiteSclDto, ConformiteSteuDetailDto, ConformiteSteuDto } fro
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../test.helper';
 import { useConformiteScl, useConformiteSteu, useDetailBilanScl, useDetailBilanSteu } from '../../hooks/useConformite';
+import { useAsyncOuvragesSearch } from '../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../hooks/useAsyncSystemesCollecteSearch';
 import ConformiteDashboard from './ConformiteDashboard';
 
 vi.mock('../../hooks/useConformite', () => ({
@@ -13,10 +15,20 @@ vi.mock('../../hooks/useConformite', () => ({
   useDetailBilanScl: vi.fn(),
 }));
 
+vi.mock('../../hooks/useAsyncOuvragesSearch', () => ({
+  useAsyncOuvragesSearch: vi.fn(),
+}));
+
+vi.mock('../../hooks/useAsyncSystemesCollecteSearch', () => ({
+  useAsyncSystemesCollecteSearch: vi.fn(),
+}));
+
 const mockUseConformiteSteu = vi.mocked(useConformiteSteu);
 const mockUseConformiteScl = vi.mocked(useConformiteScl);
 const mockUseDetailBilanSteu = vi.mocked(useDetailBilanSteu);
 const mockUseDetailBilanScl = vi.mocked(useDetailBilanScl);
+const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
+const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 
 const emptySteuResult = {
   data: { data: [], total: 0, page: 1, pageSize: 20 },
@@ -106,6 +118,24 @@ function renderPage() {
   return renderWithQueryClient(<ConformiteDashboard />);
 }
 
+async function selectAutocompleteOption(inputLabel: RegExp, optionLabel: RegExp) {
+  fireEvent.focus(screen.getByRole('combobox', { name: inputLabel }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('option', { name: optionLabel })).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole('option', { name: optionLabel }));
+}
+
+async function selectStation() {
+  await selectAutocompleteOption(/station/i, /station alpha/i);
+}
+
+async function selectSystemeCollecte() {
+  await selectAutocompleteOption(/système de collecte/i, /collecteur beta/i);
+}
+
 describe('ConformiteDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -130,6 +160,14 @@ describe('ConformiteDashboard', () => {
     mockUseConformiteScl.mockReturnValue(emptySclResult as unknown as ReturnType<typeof useConformiteScl>);
     mockUseDetailBilanSteu.mockReturnValue(emptySteuDetailResult as unknown as ReturnType<typeof useDetailBilanSteu>);
     mockUseDetailBilanScl.mockReturnValue(emptySclDetailResult as unknown as ReturnType<typeof useDetailBilanScl>);
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station Alpha' }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUseAsyncSystemesCollecteSearch.mockReturnValue({
+      data: [{ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Collecteur Beta' }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useAsyncSystemesCollecteSearch>);
 
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -139,7 +177,7 @@ describe('ConformiteDashboard', () => {
     });
   });
 
-  it('affiche le tableau STEU par défaut', () => {
+  it('affiche le tableau STEU par défaut', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 20 },
@@ -150,6 +188,8 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+
+    await selectStation();
 
     // Assert
     expect(screen.getByRole('columnheader', { name: /code sandre/i })).toBeInTheDocument();
@@ -177,6 +217,7 @@ describe('ConformiteDashboard', () => {
 
     // Act
     fireEvent.click(screen.getByRole('radio', { name: /scl/i }));
+    await selectSystemeCollecte();
 
     // Assert
     expect(screen.getByRole('columnheader', { name: /type/i })).toBeInTheDocument();
@@ -196,6 +237,7 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+    await selectStation();
     const yearSelect = screen.getByLabelText(/année/i);
     fireEvent.change(yearSelect, { target: { value: String(CURRENT_CONFORMITE_YEAR) } });
 
@@ -206,7 +248,7 @@ describe('ConformiteDashboard', () => {
 
     await waitFor(() => {
       expect(mockUseConformiteSteu).toHaveBeenLastCalledWith(
-        expect.objectContaining({ year: CURRENT_CONFORMITE_YEAR }),
+        expect.objectContaining({ year: CURRENT_CONFORMITE_YEAR, ouvrageDepollutionCode: 'STEU001' }),
         true,
       );
     });
@@ -241,6 +283,7 @@ describe('ConformiteDashboard', () => {
         }) as unknown as ReturnType<typeof useDetailBilanSteu>,
     );
     renderPage();
+    await selectStation();
 
     // Act
     fireEvent.click(screen.getAllByRole('button', { name: /voir le détail/i })[0]);
@@ -283,6 +326,7 @@ describe('ConformiteDashboard', () => {
       error: null,
     } as unknown as ReturnType<typeof useDetailBilanSteu>);
     renderPage();
+    await selectStation();
 
     // Act
     fireEvent.click(screen.getByRole('button', { name: /voir le détail/i }));
@@ -305,7 +349,7 @@ describe('ConformiteDashboard', () => {
     expect(screen.getByText(/les informations du tableau ont été copiées dans le presse-papiers/i)).toBeInTheDocument();
   });
 
-  it('affiche l’état de chargement', () => {
+  it('affiche l’état de chargement', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: undefined,
@@ -316,12 +360,13 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+    await selectStation();
 
     // Assert
     expect(screen.getByText(/chargement des données/i)).toBeInTheDocument();
   });
 
-  it('affiche une alerte en cas d’erreur', () => {
+  it('affiche une alerte en cas d’erreur', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: undefined,
@@ -332,13 +377,14 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+    await selectStation();
 
     // Assert
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText(/erreur réseau/i)).toBeInTheDocument();
   });
 
-  it('affiche le message vide quand total vaut 0', () => {
+  it('affiche le message vide quand total vaut 0', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: { data: [], total: 0, page: 1, pageSize: 20 },
@@ -349,12 +395,13 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+    await selectStation();
 
     // Assert
     expect(screen.getByText(/aucun résultat trouvé/i)).toBeInTheDocument();
   });
 
-  it('affiche la pagination quand total dépasse la page', () => {
+  it('affiche la pagination quand total dépasse la page', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: {
@@ -372,12 +419,13 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+    await selectStation();
 
     // Assert
     expect(screen.getByRole('navigation', { name: /pagination/i })).toBeInTheDocument();
   });
 
-  it('masque la pagination quand total tient sur une page', () => {
+  it('masque la pagination quand total tient sur une page', async () => {
     // Arrange
     mockUseConformiteSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 5, page: 1, pageSize: 20 },
@@ -388,6 +436,7 @@ describe('ConformiteDashboard', () => {
 
     // Act
     renderPage();
+    await selectStation();
 
     // Assert
     expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();

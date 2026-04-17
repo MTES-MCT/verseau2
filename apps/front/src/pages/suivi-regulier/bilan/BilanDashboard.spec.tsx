@@ -5,32 +5,38 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
 import { useBilanScl, useBilanSteu } from '../../../hooks/useBilan';
 import { BilanDashboard } from './BilanDashboard';
-import { useOuvrages } from '../../../hooks/useOuvrages';
-import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
+import { useBilanFilters } from '../../../hooks/useBilanFilters';
 
 vi.mock('../../../hooks/useBilan', () => ({
   useBilanSteu: vi.fn(),
   useBilanScl: vi.fn(),
 }));
 
-vi.mock('../../../hooks/useOuvrages', () => ({
-  useOuvrages: vi.fn(),
+vi.mock('../../../hooks/useAsyncOuvragesSearch', () => ({
+  useAsyncOuvragesSearch: vi.fn(),
 }));
 
-vi.mock('../../../hooks/useSystemesCollecte', () => ({
-  useSystemesCollecte: vi.fn(),
+vi.mock('../../../hooks/useAsyncSystemesCollecteSearch', () => ({
+  useAsyncSystemesCollecteSearch: vi.fn(),
 }));
 
 vi.mock('../../../hooks/usePointsMesure', () => ({
   usePointsMesure: vi.fn(),
 }));
 
+vi.mock('../../../hooks/useBilanFilters', () => ({
+  useBilanFilters: vi.fn(),
+}));
+
 const mockUseBilanSteu = vi.mocked(useBilanSteu);
 const mockUseBilanScl = vi.mocked(useBilanScl);
-const mockUseOuvrages = vi.mocked(useOuvrages);
-const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
+const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
+const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
+const mockUseBilanFilters = vi.mocked(useBilanFilters);
 
 const emptySteuResult = {
   data: { data: [], total: 0, page: 1, pageSize: 10 },
@@ -73,6 +79,26 @@ const makeSclRow = (overrides: Partial<BilanSclDto> = {}): BilanSclDto => ({
   ...overrides,
 });
 
+const mockUpdateFilter = vi.fn();
+const mockSetPage = vi.fn();
+
+function defaultFilters(overrides = {}) {
+  return {
+    filters: {
+      mode: 'steu' as const,
+      year: CURRENT_BILAN_YEAR,
+      ouvrageDepollutionCode: 'STEU001',
+      systemeCollecteCode: '',
+      pointMesureId: '',
+      statut: '' as const,
+    },
+    updateFilter: mockUpdateFilter,
+    page: 1,
+    setPage: mockSetPage,
+    ...overrides,
+  };
+}
+
 function renderPage() {
   return renderWithQueryClient(<BilanDashboard />);
 }
@@ -81,18 +107,19 @@ describe('BilanDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    mockUseBilanFilters.mockReturnValue(defaultFilters());
     mockUseBilanSteu.mockReturnValue(
       emptySteuResult as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>,
     );
     mockUseBilanScl.mockReturnValue(
       emptySclResult as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>,
     );
-    mockUseOuvrages.mockReturnValue({ data: [], isLoading: false } as Partial<
-      ReturnType<typeof useOuvrages>
-    > as ReturnType<typeof useOuvrages>);
-    mockUseSystemesCollecte.mockReturnValue({ data: [], isLoading: false } as Partial<
-      ReturnType<typeof useSystemesCollecte>
-    > as ReturnType<typeof useSystemesCollecte>);
+    mockUseAsyncOuvragesSearch.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useAsyncOuvragesSearch>
+    > as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUseAsyncSystemesCollecteSearch.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useAsyncSystemesCollecteSearch>
+    > as ReturnType<typeof useAsyncSystemesCollecteSearch>);
     mockUsePointsMesure.mockReturnValue({ data: [], isLoading: false } as Partial<
       ReturnType<typeof usePointsMesure>
     > as ReturnType<typeof usePointsMesure>);
@@ -111,20 +138,47 @@ describe('BilanDashboard', () => {
   });
 
   it('change les colonnes quand on bascule vers SCL', () => {
-    mockUseBilanSteu.mockReturnValue({
-      data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
-    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+    mockUseBilanFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_BILAN_YEAR,
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: 'SCL001',
+          pointMesureId: '',
+          statut: '',
+        },
+      }),
+    );
     mockUseBilanScl.mockReturnValue({
       data: { data: [makeSclRow()], total: 1, page: 1, pageSize: 10 },
     } as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>);
 
     renderPage();
 
-    fireEvent.click(screen.getByRole('radio', { name: /scl/i }));
-
     expect(screen.getByRole('columnheader', { name: /point de mesure/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /volume déversé/i })).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: /bilan écarté par le spe/i })).not.toBeInTheDocument();
+  });
+
+  it('désactive les filtres dépendants tant qu’aucun ouvrage SCL n’est sélectionné', () => {
+    mockUseBilanFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_BILAN_YEAR,
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: '',
+          pointMesureId: '',
+          statut: '',
+        },
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByLabelText(/point de mesures/i)).toBeDisabled();
+    expect(screen.getByLabelText(/statut/i)).toBeDisabled();
   });
 
   it('affiche uniquement N et N-1 dans le filtre année', async () => {
