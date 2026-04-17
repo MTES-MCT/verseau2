@@ -5,22 +5,26 @@ import { LoggerService } from '@shared/logger/logger.service';
 export class TypeOrmLogger implements Logger {
   private readonly logger = new LoggerService('TypeORM');
 
+  private formatQuery(query: string): string {
+    return query.replace(/\s+/g, ' ').trim();
+  }
+
   logQuery(query: string, parameters?: any[]) {
     this.logger.debug(
-      `Query: ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters)?.substring(0, 200) : ''}`,
+      `Query: ${this.formatQuery(query.substring(0, 600))}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters)?.substring(0, 100) + '...' : ''}`,
     );
-    // this.logger.debug(`Query: ${query.substring(0, 120)}`);
+    // this.logger.debug(`Query: ${this.formatQuery(query).substring(0, 120)}`);
   }
 
   logQueryError(error: string, query: string, parameters?: any[]) {
     this.logger.error(
-      `Query Error: ${error} -- Query: ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
+      `Query Error: ${error} -- Query: ${this.formatQuery(query)}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
     );
   }
 
   logQuerySlow(time: number, query: string, parameters?: any[]) {
     this.logger.warn(
-      `Query Slow (${time}ms): ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
+      `Query Slow (${time}ms): ${this.formatQuery(query)}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
     );
   }
 
