@@ -218,7 +218,7 @@ export const EvenementDashboard = () => {
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
             <SelectAutocomplete
               label="Point de mesures"
-              hintText={'\b'}
+              hintText={<br />}
               placeholder="Rechercher un point de mesure"
               options={pointMesureOptions}
               value={filters.pointMesureId || null}
@@ -249,7 +249,7 @@ export const EvenementDashboard = () => {
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
             <SelectAutocomplete
               label="Point de mesures"
-              hintText={'\b'}
+              hintText={<br />}
               disabled={!hasOuvrageSelected}
               placeholder="Rechercher un point de mesure"
               options={pointMesureOptions}

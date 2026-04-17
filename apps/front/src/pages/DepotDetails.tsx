@@ -197,7 +197,7 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
               <SelectAutocomplete
                 label="Point de mesure"
-                hintText={'\b'}
+                hintText={<br />}
                 placeholder={
                   !form.selectedOuvrageCode
                     ? isScl
@@ -217,7 +217,7 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
               <SelectAutocomplete
                 label="Paramètre"
-                hintText={'\b'}
+                hintText={<br />}
                 placeholder={
                   form.selectedPmoCdn === null
                     ? 'Sélectionnez un point'

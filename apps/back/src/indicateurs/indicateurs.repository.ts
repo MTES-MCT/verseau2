@@ -109,6 +109,7 @@ LEFT JOIN roseau.sclconf sclconf ON sclconf.scl_cdn = scl.scl_cdn AND sclconf.sc
 WHERE RTRIM(steu.steu_sandre_cda) IN (${placeholders})
     `;
 
+    // TODO : faire une seule query pour données et count
     const countQuery = `SELECT COUNT(*)::int AS total FROM (${baseQuery}) indicateurs`;
     const dataQuery = `${baseQuery} ORDER BY nom_steu ASC NULLS LAST, code_sandre_steu ASC LIMIT $${limitParam} OFFSET $${offsetParam}`;
 
