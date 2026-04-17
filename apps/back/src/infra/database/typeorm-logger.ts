@@ -7,7 +7,7 @@ export class TypeOrmLogger implements Logger {
 
   logQuery(query: string, parameters?: any[]) {
     this.logger.debug(
-      `Query: ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
+      `Query: ${query}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters)?.substring(0, 200) : ''}`,
     );
     // this.logger.debug(`Query: ${query.substring(0, 120)}`);
   }
