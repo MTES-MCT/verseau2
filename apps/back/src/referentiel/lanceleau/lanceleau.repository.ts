@@ -90,7 +90,7 @@ export class LanceleauRepository implements LanceleauGateway {
     const ag = await this.agRepository
       .createQueryBuilder('ag')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
-      .where('oc.mail = :email', { email })
+      .where('TRIM(oc.mail) = :email', { email: email.trim() })
       .getOne();
 
     if (!ag) return null;
@@ -143,7 +143,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .select('itv.itv_rfa', 'itvRfa')
       .innerJoin(AgEntity, 'ag', 'ag.itv_cdn = itv.itv_cdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
-      .where('oc.mail = :email', { email })
+      .where('TRIM(oc.mail) = :email', { email: email.trim() })
       .getRawOne<{ itvRfa: string | null }>();
     return row?.itvRfa ?? null;
   }
