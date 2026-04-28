@@ -343,6 +343,11 @@ export class MasaProvider {
     return this.roseauEvenementGateway.findEvenementTypes();
   }
 
+  // ---------------------------------------------------------------------------
+  // Bilans — Tableau de bord des bilans STEU et SCL
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
+
   // path: /api/bilans/steu
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
     return this.roseauBilanGateway.findBilanSteu(filters);
@@ -371,6 +376,11 @@ export class MasaProvider {
   ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }> {
     return this.roseauTransmissionGateway.findTransmissionASRetardScl(filters);
   }
+
+  // ---------------------------------------------------------------------------
+  // Points de mesure — Récupération par systèmes de collecte
+  // TODO: Remplacer par appel à l'API MASA quand disponible
+  // ---------------------------------------------------------------------------
 
   // path: /api/points-mesure/by-systemes-collecte
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
@@ -428,6 +438,7 @@ export class MasaProvider {
     return mapSteuRefsToSteuWithName(await this.roseauGateway.findSteusBySandreCdas(sandreCdas));
   }
 
+  // path: /api/steu/with-noms/by-codes-sandre/search
   async findSteuWithNamesBySandreCdasAndLabel(
     sandreCdas: string[],
     search: string,
@@ -447,6 +458,7 @@ export class MasaProvider {
     return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdas(sandreCdas));
   }
 
+  // path: /api/systemes-collecte/with-noms/by-codes-sandre/search
   async findSclWithNamesBySandreCdasAndLabel(sandreCdas: string[], search: string, limit = 20): Promise<SclWithName[]> {
     return mapSclRefsToSclWithName(await this.roseauGateway.findSclsBySandreCdasAndLabel(sandreCdas, search, limit));
   }
@@ -476,21 +488,19 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Mesures — Finalités (nomenclature tlref rfa=17) pour le dropdown de sélection
+  // Nomenclatures — Récupération d'une nomenclature par son code RFA
+  // path: /api/nomenclatures/:rfa
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // path: /api/nomenclatures/finalites
   async findFinalites(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_17');
   }
 
-  // path: /api/nomenclatures/statuts
   async findStatuts(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_20');
   }
 
-  // path: /api/nomenclatures/qualifications
   async findQualifications(): Promise<NomenclatureItem[]> {
     return this.roseauGateway.findNomenclatureByRfa('LREF_18');
   }
