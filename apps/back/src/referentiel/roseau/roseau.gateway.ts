@@ -17,10 +17,8 @@ import {
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findSteusBySandreCdas(sandreCdas: string[]): Promise<SteuRef[]>;
-  findSteusBySandreCdasAndLabel(sandreCdas: string[], search: string, limit?: number): Promise<SteuRef[]>;
-  findSclsBySandreCdas(sandreCdas: string[]): Promise<SclRef[]>;
-  findSclsBySandreCdasAndLabel(sandreCdas: string[], search: string, limit?: number): Promise<SclRef[]>;
+  findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]>;
+  findSclsBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SclRef[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
   checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>>;
   checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>>;

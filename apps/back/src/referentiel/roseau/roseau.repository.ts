@@ -64,13 +64,25 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
-  async findSteusBySandreCdas(sandreCdas: string[]): Promise<SteuRef[]> {
+  async findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]> {
     if (sandreCdas.length === 0) return [];
 
-    const rows = await this.steuRepository
+    const query = this.steuRepository
       .createQueryBuilder('steu')
-      .where('steu.steu_sandre_cda = ANY(:sandreCdas)', { sandreCdas })
-      .getMany();
+      .where('steu.steu_sandre_cda = ANY(:sandreCdas)', { sandreCdas });
+
+    if (search?.trim()) {
+      const normalizedSearch = `%${search.trim().toLowerCase()}%`;
+      query
+        .andWhere("(LOWER(steu.steu_sandre_cda) LIKE :search OR LOWER(COALESCE(steu.steu_nom_lb, '')) LIKE :search)", {
+          search: normalizedSearch,
+        })
+        .orderBy('steu.steu_nom_lb', 'ASC', 'NULLS LAST')
+        .addOrderBy('steu.steu_sandre_cda', 'ASC')
+        .limit(limit ?? 20);
+    }
+
+    const rows = await query.getMany();
 
     return rows.map((s) => ({
       ouvrageDepollutionCode: s.steuSandreCda,
@@ -79,57 +91,25 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findSteusBySandreCdasAndLabel(sandreCdas: string[], search: string, limit = 20): Promise<SteuRef[]> {
+  async findSclsBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SclRef[]> {
     if (sandreCdas.length === 0) return [];
 
-    const normalizedSearch = `%${search.trim().toLowerCase()}%`;
-    const rows = await this.steuRepository
-      .createQueryBuilder('steu')
-      .where('steu.steu_sandre_cda = ANY(:sandreCdas)', { sandreCdas })
-      .andWhere("(LOWER(steu.steu_sandre_cda) LIKE :search OR LOWER(COALESCE(steu.steu_nom_lb, '')) LIKE :search)", {
-        search: normalizedSearch,
-      })
-      .orderBy('steu.steu_nom_lb', 'ASC', 'NULLS LAST')
-      .addOrderBy('steu.steu_sandre_cda', 'ASC')
-      .limit(limit)
-      .getMany();
-
-    return rows.map((s) => ({
-      ouvrageDepollutionCode: s.steuSandreCda,
-      ouvrageDepollutionId: s.steuCdn,
-      ouvrageDepollutionNom: s.steuNomLb ?? null,
-    }));
-  }
-
-  async findSclsBySandreCdas(sandreCdas: string[]): Promise<SclRef[]> {
-    if (sandreCdas.length === 0) return [];
-
-    const rows = await this.sclRepository
+    const query = this.sclRepository
       .createQueryBuilder('scl')
-      .where('scl.scl_sandre_cda = ANY(:sandreCdas)', { sandreCdas })
-      .getMany();
+      .where('scl.scl_sandre_cda = ANY(:sandreCdas)', { sandreCdas });
 
-    return rows.map((scl) => ({
-      systemeCollecteCode: scl.sclSandreCda,
-      systemeCollecteId: scl.sclCdn,
-      systemeCollecteNom: scl.sclLb ?? null,
-    }));
-  }
+    if (search?.trim()) {
+      const normalizedSearch = `%${search.trim().toLowerCase()}%`;
+      query
+        .andWhere("(LOWER(scl.scl_sandre_cda) LIKE :search OR LOWER(COALESCE(scl.scl_lb, '')) LIKE :search)", {
+          search: normalizedSearch,
+        })
+        .orderBy('scl.scl_lb', 'ASC', 'NULLS LAST')
+        .addOrderBy('scl.scl_sandre_cda', 'ASC')
+        .limit(limit ?? 20);
+    }
 
-  async findSclsBySandreCdasAndLabel(sandreCdas: string[], search: string, limit = 20): Promise<SclRef[]> {
-    if (sandreCdas.length === 0) return [];
-
-    const normalizedSearch = `%${search.trim().toLowerCase()}%`;
-    const rows = await this.sclRepository
-      .createQueryBuilder('scl')
-      .where('scl.scl_sandre_cda = ANY(:sandreCdas)', { sandreCdas })
-      .andWhere("(LOWER(scl.scl_sandre_cda) LIKE :search OR LOWER(COALESCE(scl.scl_lb, '')) LIKE :search)", {
-        search: normalizedSearch,
-      })
-      .orderBy('scl.scl_lb', 'ASC', 'NULLS LAST')
-      .addOrderBy('scl.scl_sandre_cda', 'ASC')
-      .limit(limit)
-      .getMany();
+    const rows = await query.getMany();
 
     return rows.map((scl) => ({
       systemeCollecteCode: scl.sclSandreCda,
