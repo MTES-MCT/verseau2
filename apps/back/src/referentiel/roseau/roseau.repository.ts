@@ -85,9 +85,9 @@ export class RoseauRepository implements RoseauGateway {
     const rows = await query.getMany();
 
     return rows.map((s) => ({
-      ouvrageDepollutionCode: s.steuSandreCda,
+      ouvrageDepollutionCode: s.steuSandreCda?.trim() ?? '',
       ouvrageDepollutionId: s.steuCdn,
-      ouvrageDepollutionNom: s.steuNomLb ?? null,
+      ouvrageDepollutionNom: s.steuNomLb?.trim() ?? null,
     }));
   }
 
@@ -112,9 +112,9 @@ export class RoseauRepository implements RoseauGateway {
     const rows = await query.getMany();
 
     return rows.map((scl) => ({
-      systemeCollecteCode: scl.sclSandreCda,
+      systemeCollecteCode: scl.sclSandreCda?.trim() ?? '',
       systemeCollecteId: scl.sclCdn,
-      systemeCollecteNom: scl.sclLb ?? null,
+      systemeCollecteNom: scl.sclLb?.trim() ?? null,
     }));
   }
 
@@ -391,14 +391,14 @@ export class RoseauRepository implements RoseauGateway {
       .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
       .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
       .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
-      .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+      .where('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
 
     if (ouvrageType === 'scl') {
-      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').andWhere('scl.scl_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });
     } else {
-      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').andWhere('steu.steu_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });
     }
