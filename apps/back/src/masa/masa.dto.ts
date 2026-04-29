@@ -46,6 +46,7 @@ export interface EvenementSclFilters extends PaginationQuery {
 export interface BilanSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
+  parametreCodes: string[];
   sortBy?: BilanSteuSortByValue;
 }
 

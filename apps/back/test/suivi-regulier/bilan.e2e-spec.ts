@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { ApiModule } from '../../src/api/api.module';
 import { PGBOSS } from '../../src/infra/queue/queue';
 import { InfraModule } from '@infra/infra.module';
+import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
 import { initTestContainerImports } from '../init/initTestContainer';
 import { getPostgresConnectionUri, startPostgresContainer } from '../testcontainer.config';
@@ -151,6 +152,19 @@ describe('BilanController (e2e)', () => {
       expect(mockMasaProvider.findBilanSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
         year: currentYear,
+        parametreCodes: [
+          CodeParametre.DBO5,
+          CodeParametre.DCO,
+          CodeParametre.MES,
+          CodeParametre.NGL,
+          CodeParametre.N_NH4,
+          CodeParametre.NTK,
+          CodeParametre.NO2,
+          CodeParametre.NO3,
+          CodeParametre.pH,
+          CodeParametre.Temperature,
+          CodeParametre.Ptot,
+        ].map(String),
         page: 1,
         pageSize: 20,
       });
