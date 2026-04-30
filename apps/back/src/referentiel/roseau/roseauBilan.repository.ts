@@ -8,6 +8,11 @@ interface BilanSteuRawRow {
   steu_cdn: number;
   ouvrage_depollution_code: string;
   ouvrage_depollution_nom: string | null;
+  date_mise_en_service: Date | string | null;
+  exploitant_nom: string | null;
+  moa_nom: string | null;
+  exploitant_siret: string | null;
+  moa_siret: string | null;
   date: Date | string;
   parametre_nom: string | null;
   bilan_spe_a: string;
@@ -66,7 +71,6 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     const steuArrayParam = addParam(ouvrageDepollutionIds);
     const allowedParamCodesParam = addParam(filters.parametreCodes);
     const whereClauses = [
-      `steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))`,
       `resj.resj_mes_dt >= ${startDate}`,
       `resj.resj_mes_dt <= ${endDate}`,
       `(resj.resj_jok_in = '2' OR resj.resj_aok_in = '2')`,
@@ -74,11 +78,61 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     ];
 
     const baseQuery = `
-      WITH base_data AS (
+      WITH selected_steu_data AS (
         SELECT
           steu.steu_cdn AS steu_cdn,
           RTRIM(steu.steu_sandre_cda) AS ouvrage_depollution_code,
           steu.steu_nom_lb AS ouvrage_depollution_nom,
+          steu.steu_serv_en_mise_dt::date AS date_mise_en_service,
+          exploitant.exploitant_nom AS exploitant_nom,
+          maitre_ouvrage.maitre_ouvrage_nom AS moa_nom,
+          exploitant.exploitant_siret AS exploitant_siret,
+          maitre_ouvrage.maitre_ouvrage_siret AS moa_siret
+        FROM roseau.steu steu
+        LEFT JOIN LATERAL (
+          SELECT
+            string_agg(link.intervenant_nom, ' / ' ORDER BY link.intervenant_nom) AS exploitant_nom,
+            string_agg(link.intervenant_siret, ' / ' ORDER BY link.intervenant_siret) AS exploitant_siret
+          FROM (
+            SELECT DISTINCT
+              COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+              NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+            FROM roseau.cxnadm exp
+            JOIN lanceleau.itv itv ON itv.itv_cdn = exp.steu_itv_cdn
+            WHERE exp.exp_steu_cdn = steu.steu_cdn
+              AND exp.steu_itv_cdn IS NOT NULL
+              AND (exp.cxnadm_creation_dt IS NULL OR exp.cxnadm_creation_dt <= ${startDate}::date)
+              AND (exp.cxnadm_retrait_dt IS NULL OR exp.cxnadm_retrait_dt > ${endDate}::date)
+          ) link
+        ) exploitant ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            string_agg(link.intervenant_nom, ' / ' ORDER BY link.intervenant_nom) AS maitre_ouvrage_nom,
+            string_agg(link.intervenant_siret, ' / ' ORDER BY link.intervenant_siret) AS maitre_ouvrage_siret
+          FROM (
+            SELECT DISTINCT
+              COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+              NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+            FROM roseau.cxnadm moa
+            JOIN lanceleau.itv itv ON itv.itv_cdn = moa.steu_itv_cdn
+            WHERE moa.mo_steu_cdn = steu.steu_cdn
+              AND moa.steu_itv_cdn IS NOT NULL
+              AND (moa.cxnadm_creation_dt IS NULL OR moa.cxnadm_creation_dt <= ${startDate}::date)
+              AND (moa.cxnadm_retrait_dt IS NULL OR moa.cxnadm_retrait_dt > ${endDate}::date)
+          ) link
+        ) maitre_ouvrage ON true
+        WHERE steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))
+      ),
+      base_data AS (
+        SELECT
+          steu_data.steu_cdn AS steu_cdn,
+          steu_data.ouvrage_depollution_code AS ouvrage_depollution_code,
+          steu_data.ouvrage_depollution_nom AS ouvrage_depollution_nom,
+          steu_data.date_mise_en_service AS date_mise_en_service,
+          steu_data.exploitant_nom AS exploitant_nom,
+          steu_data.moa_nom AS moa_nom,
+          steu_data.exploitant_siret AS exploitant_siret,
+          steu_data.moa_siret AS moa_siret,
           resj.resj_mes_dt::date AS date,
           par.par_court_nom_lb AS parametre_nom,
           resj.resj_aok_in AS bilan_spe_a, 
@@ -94,7 +148,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
           resj.resj_jok_in AS prise_en_compte_j_code,
           resj.resj_aok_in AS prise_en_compte_a_code
         FROM roseau.resj resj
-        JOIN roseau.steu steu ON steu.steu_cdn = resj.steu_cdn
+        JOIN selected_steu_data steu_data ON steu_data.steu_cdn = resj.steu_cdn
         JOIN lanceleau.par par ON par.par_rfa = resj.par_rfa
         LEFT JOIN roseau.tlref t17 ON t17.tlref_cdn = resj.tlref_17_cdn
         WHERE ${whereClauses.join(' AND ')}
@@ -114,10 +168,15 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
 
     const rows = await this.dataSource.query<BilanSteuRawRow[]>(
       `${baseQuery}
-       SELECT
+        SELECT
           steu_cdn,
           ouvrage_depollution_code,
           ouvrage_depollution_nom,
+          date_mise_en_service,
+          exploitant_nom,
+          moa_nom,
+          exploitant_siret,
+          moa_siret,
           bilan_spe_a,
           date,
           parametre_nom,
@@ -136,6 +195,11 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         steuCdn: row.steu_cdn,
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
         ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
+        dateMiseEnService: toISODateOrNull(row.date_mise_en_service),
+        exploitantNom: row.exploitant_nom?.trim() ?? null,
+        moaNom: row.moa_nom?.trim() ?? null,
+        exploitantSiret: row.exploitant_siret?.trim() ?? null,
+        moaSiret: row.moa_siret?.trim() ?? null,
         bilanEcarteParSpe: row.bilan_spe_a === '2',
         date: toISODateOrNull(row.date) ?? '',
         parametreNom: row.parametre_nom?.trim() ?? null,

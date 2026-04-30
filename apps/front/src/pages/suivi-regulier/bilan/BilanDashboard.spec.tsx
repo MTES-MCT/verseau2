@@ -56,6 +56,11 @@ const makeSteuRow = (overrides: Partial<BilanSteuDto> = {}): BilanSteuDto => ({
   steuCdn: 101,
   ouvrageDepollutionCode: 'STEU001',
   ouvrageDepollutionNom: 'Station Alpha',
+  dateMiseEnService: '2000-01-01',
+  exploitantNom: 'Exploitant Alpha',
+  moaNom: 'MOA Alpha',
+  exploitantSiret: '12345678901234',
+  moaSiret: '43210987654321',
   bilanEcarteParSpe: false,
   date: '2024-01-01',
   parametreNom: 'DBO5',
@@ -133,8 +138,37 @@ describe('BilanDashboard', () => {
     renderPage();
 
     expect(screen.getByRole('columnheader', { name: /code sandre/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /^nom$/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /date de mise en service/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /exploitant \/ moa/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /siret établissement/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /bilan écarté par le spe/i })).toBeInTheDocument();
+    expect(screen.getByText('Exploitant Alpha / MOA Alpha')).toBeInTheDocument();
+    expect(screen.getByText('12345678901234 / 43210987654321')).toBeInTheDocument();
+  });
+
+  it('affiche une seule valeur quand exploitant et moa sont identiques', () => {
+    mockUseBilanSteu.mockReturnValue({
+      data: {
+        data: [
+          makeSteuRow({
+            exploitantNom: 'Syndicat Alpha',
+            moaNom: 'Syndicat Alpha',
+            exploitantSiret: '11111111111111',
+            moaSiret: '11111111111111',
+          }),
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+      },
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+
+    renderPage();
+
+    expect(screen.getByText('Syndicat Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('Syndicat Alpha / Syndicat Alpha')).not.toBeInTheDocument();
+    expect(screen.getByText('11111111111111')).toBeInTheDocument();
+    expect(screen.queryByText('11111111111111 / 11111111111111')).not.toBeInTheDocument();
   });
 
   it('change les colonnes quand on bascule vers SCL', () => {
