@@ -35,7 +35,11 @@ export interface RoseauGateway {
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
   findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]>;
-  findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
+  findPointsMesureByOuvrage(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
+  ): Promise<PointMesure[]>;
   findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,

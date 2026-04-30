@@ -8,7 +8,7 @@ import {
   listStatuts,
   listQualifications,
 } from '@lib/dossier';
-import type { RouteQuery, OuvrageTypeValue } from '@lib/dossier';
+import type { RouteQuery, OuvrageTypeValue, TypePointMesureValue } from '@lib/dossier';
 import { apiCall } from './apiClient';
 
 export async function fetchMesures(query: RouteQuery<typeof listMesures>) {
@@ -31,8 +31,14 @@ export async function searchSystemesCollecte(search: string) {
   return apiCall(listSystemesCollecte, { query: { search } });
 }
 
-export async function fetchPointsMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string) {
-  return apiCall(listPointsMesure, { query: { ouvrageType, ouvrageCode } });
+export async function fetchPointsMesure(
+  ouvrageType: OuvrageTypeValue,
+  ouvrageCode: string,
+  typePoint: TypePointMesureValue = 'tous',
+) {
+  return apiCall(listPointsMesure, {
+    query: { ouvrageType, ouvrageCode, typePoint },
+  });
 }
 
 export async function fetchParametresMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string, pmoCdn: number) {

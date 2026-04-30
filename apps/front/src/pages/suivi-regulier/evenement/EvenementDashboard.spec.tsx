@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { CURRENT_EVENEMENT_YEAR } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
@@ -55,6 +55,7 @@ function defaultFilters(overrides = {}) {
       mode: 'steu' as const,
       year: CURRENT_EVENEMENT_YEAR,
       typeEvenementCode: '',
+      typePointMesure: 'tous' as const,
       pointMesureId: '',
       ouvrageDepollutionCode: 'STEU001',
       systemeCollecteCode: '',
@@ -98,6 +99,7 @@ describe('EvenementDashboard', () => {
           mode: 'scl',
           year: CURRENT_EVENEMENT_YEAR,
           typeEvenementCode: '',
+          typePointMesure: 'tous' as const,
           pointMesureId: '',
           ouvrageDepollutionCode: '',
           systemeCollecteCode: '',
@@ -118,6 +120,7 @@ describe('EvenementDashboard', () => {
           mode: 'steu',
           year: CURRENT_EVENEMENT_YEAR,
           typeEvenementCode: '',
+          typePointMesure: 'tous' as const,
           pointMesureId: '12',
           ouvrageDepollutionCode: 'STEU001',
           systemeCollecteCode: '',
@@ -128,5 +131,15 @@ describe('EvenementDashboard', () => {
     renderWithQueryClient(<EvenementDashboard />);
 
     expect(mockUseEvenementSteu).toHaveBeenLastCalledWith(expect.objectContaining({ pointMesureId: 12 }), true);
+  });
+
+  it('affiche les filtres type de point et point de mesures dans le bloc filtres avancés', () => {
+    renderWithQueryClient(<EvenementDashboard />);
+
+    const advancedFilters = screen.getByRole('region', { name: /filtres avancés/i });
+
+    expect(within(advancedFilters).getByLabelText(/type de point/i)).toBeInTheDocument();
+    expect(within(advancedFilters).getByLabelText(/point de mesures/i)).toBeInTheDocument();
+    expect(within(advancedFilters).queryByLabelText(/type d'événement/i)).not.toBeInTheDocument();
   });
 });

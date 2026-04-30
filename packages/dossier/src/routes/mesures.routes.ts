@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { PaginatedMesuresResponseSchema } from '../mesure/mesure.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
+import { TypePointMesure } from '../shared/typePointMesure';
 
 /** Allow-list of sortable columns for the mesures list endpoint. */
 export const MesuresSortBy = z.enum(['date', 'parametreCode', 'valeur', 'statut']);
@@ -65,6 +66,7 @@ export const listPointsMesure = {
   query: z.object({
     ouvrageType: OuvrageType.default('steu'),
     ouvrageCode: z.string(),
+    typePoint: TypePointMesure.default('tous'),
   }),
   response: z.array(
     z.object({

@@ -468,8 +468,12 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // route: GET /api/ouvrages/:type/:ouvrageCode/points-mesure
-  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
-    return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
+  async findPointsMesureByOuvrage(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
+  ): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode, filters);
   }
 
   // ---------------------------------------------------------------------------

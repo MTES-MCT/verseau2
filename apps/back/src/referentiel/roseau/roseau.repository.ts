@@ -352,7 +352,11 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
+  async findPointsMesureByOuvrage(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
+  ): Promise<PointMesure[]> {
     const qb = this.pmoRepository
       .createQueryBuilder('pmo')
       .select('pmo.pmo_cdn', 'pmo_cdn')
@@ -367,6 +371,13 @@ export class RoseauRepository implements RoseauGateway {
       qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });
+    }
+
+    if (filters?.localisationCodes && filters.localisationCodes.length > 0) {
+      qb.innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn').andWhere(
+        't16.tlref_elt_cda IN (:...localisationCodes)',
+        { localisationCodes: filters.localisationCodes },
+      );
     }
 
     qb.orderBy('pmo.pmo_no', 'ASC');
