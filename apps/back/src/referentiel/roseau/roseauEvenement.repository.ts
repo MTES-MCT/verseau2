@@ -42,7 +42,7 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
     const rows = await this.tlrefRepository
       .createQueryBuilder('tlref')
       .where('tlref.trl_rfa = :trlRfa', { trlRfa: 'LREF_46' })
-      .andWhere('tlref.tlref_elt_cda IN (:...codes)', { codes: ['1', '2', '3', '4'] })
+      .andWhere('tlref.tlref_elt_cda IN (:...codes)', { codes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'] })
       .orderBy('tlref.tlref_elt_cda', 'ASC')
       .getMany();
 
