@@ -221,6 +221,7 @@ export interface PointMesure {
   pointMesureId: number;
   pointMesureNumero: string;
   pointMesureLibelle: string | null;
+  pointMesureLocalisationGlobale: string | null;
 }
 
 /** Paramètre — utilisé pour le dropdown de sélection */

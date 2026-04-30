@@ -13,6 +13,7 @@ import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesureFilters } from '../hooks/useMesureFilters';
 import { buildMesureTableRows } from '../helper/mesureTableData';
 import { formatOption } from '../helper/optionsFormatter';
+import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
 import { useState } from 'react';
@@ -69,12 +70,10 @@ export function DepotDetailsPage() {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
 
-  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) =>
-    formatOption({
-      elementNomenclatureCode: String(option.pointMesureId),
-      elementNomenclatureLibelle: option.pointMesureLibelle,
-    }),
-  );
+  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) => ({
+    value: String(option.pointMesureId),
+    label: buildPointMesureLabel(option),
+  }));
 
   const parametresOptions: AutocompleteOption[] = parametres.map((option) =>
     formatOption({

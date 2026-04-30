@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { CURRENT_EVENEMENT_YEAR } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
@@ -141,5 +141,25 @@ describe('EvenementDashboard', () => {
     expect(within(advancedFilters).getByLabelText(/type de point/i)).toBeInTheDocument();
     expect(within(advancedFilters).getByLabelText(/point de mesures/i)).toBeInTheDocument();
     expect(within(advancedFilters).queryByLabelText(/type d'événement/i)).not.toBeInTheDocument();
+  });
+
+  it('préfixe les options de point de mesure avec la localisation globale', () => {
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+    } as Partial<ReturnType<typeof usePointsMesure>> as ReturnType<typeof usePointsMesure>);
+
+    renderWithQueryClient(<EvenementDashboard />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesures/i }));
+
+    expect(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i })).toBeInTheDocument();
   });
 });

@@ -24,6 +24,7 @@ import {
   buildBilanSclTableRows,
 } from '../../../helper/bilanTableData';
 import { TableLoader } from '../../../components/common/TableLoader';
+import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
@@ -60,7 +61,7 @@ export const BilanDashboard = () => {
   const hasOuvrageSelected = !!currentOuvrageValue;
   const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
     value: p.pointMesureId.toString(),
-    label: `${p.pointMesureNumero} - ${p.pointMesureLibelle ?? ''}`.trim().replace(/ -$/, ''),
+    label: buildPointMesureLabel(p),
   }));
 
   const handleOuvrageChange = (value: string | null) => {

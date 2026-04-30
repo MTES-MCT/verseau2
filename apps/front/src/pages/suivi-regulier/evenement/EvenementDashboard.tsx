@@ -17,6 +17,7 @@ import { SortableHeader } from '../../../components/SortableHeader';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { TableLoader } from '../../../components/common/TableLoader';
+import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
@@ -28,7 +29,11 @@ export const EvenementDashboard = () => {
   const { data: types } = useEvenementTypes();
   const pointsMesureOuvrageType = isScl ? 'scl' : 'steu';
   const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : filters.ouvrageDepollutionCode || null;
-  const { data: pmos = [] } = usePointsMesure(pointsMesureOuvrageType, pointsMesureOuvrageCode, filters.typePointMesure);
+  const { data: pmos = [] } = usePointsMesure(
+    pointsMesureOuvrageType,
+    pointsMesureOuvrageCode,
+    filters.typePointMesure,
+  );
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
@@ -55,7 +60,7 @@ export const EvenementDashboard = () => {
   const hasOuvrageSelected = !!currentOuvrageValue;
   const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
     value: p.pointMesureId.toString(),
-    label: `${p.pointMesureNumero} - ${p.pointMesureLibelle ?? ''}`.trim().replace(/ -$/, ''),
+    label: buildPointMesureLabel(p),
   }));
 
   const handleOuvrageChange = (value: string | null) => {

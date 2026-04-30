@@ -361,7 +361,9 @@ export class RoseauRepository implements RoseauGateway {
       .createQueryBuilder('pmo')
       .select('pmo.pmo_cdn', 'pmo_cdn')
       .addSelect('pmo.pmo_no', 'pmo_no')
-      .addSelect('pmo.pmo_lb', 'pmo_lb');
+      .addSelect('pmo.pmo_lb', 'pmo_lb')
+      .leftJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+      .addSelect('t16.tlref_elt_cda', 'localisation_globale');
 
     if (ouvrageType === 'scl') {
       qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
@@ -374,19 +376,22 @@ export class RoseauRepository implements RoseauGateway {
     }
 
     if (filters?.localisationCodes && filters.localisationCodes.length > 0) {
-      qb.innerJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn').andWhere(
-        't16.tlref_elt_cda IN (:...localisationCodes)',
-        { localisationCodes: filters.localisationCodes },
-      );
+      qb.andWhere('t16.tlref_elt_cda IN (:...localisationCodes)', { localisationCodes: filters.localisationCodes });
     }
 
     qb.orderBy('pmo.pmo_no', 'ASC');
 
-    const rows = await qb.getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+    const rows = await qb.getRawMany<{
+      pmo_cdn: number;
+      pmo_no: string;
+      pmo_lb: string | null;
+      localisation_globale: string | null;
+    }>();
     return rows.map((r) => ({
       pointMesureId: r.pmo_cdn,
       pointMesureNumero: r.pmo_no?.trim() ?? '',
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
+      pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
     }));
   }
 
@@ -431,15 +436,23 @@ export class RoseauRepository implements RoseauGateway {
       .select('pmo.pmo_cdn', 'pmo_cdn')
       .addSelect('pmo.pmo_no', 'pmo_no')
       .addSelect('pmo.pmo_lb', 'pmo_lb')
+      .leftJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+      .addSelect('t16.tlref_elt_cda', 'localisation_globale')
       .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
       .where('scl.scl_cdn IN (:...systemeCollecteIds)', { systemeCollecteIds })
       .orderBy('pmo.pmo_no', 'ASC')
-      .getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+      .getRawMany<{
+        pmo_cdn: number;
+        pmo_no: string;
+        pmo_lb: string | null;
+        localisation_globale: string | null;
+      }>();
 
     return rows.map((r) => ({
       pointMesureId: r.pmo_cdn,
       pointMesureNumero: r.pmo_no?.trim() ?? '',
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
+      pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
     }));
   }
 

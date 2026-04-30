@@ -226,4 +226,36 @@ describe('BilanDashboard', () => {
 
     expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();
   });
+
+  it('préfixe les options de point de mesure avec la localisation globale', () => {
+    mockUseBilanFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_BILAN_YEAR,
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: 'SCL001',
+          pointMesureId: '',
+          statut: '',
+        },
+      }),
+    );
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+    } as Partial<ReturnType<typeof usePointsMesure>> as ReturnType<typeof usePointsMesure>);
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesures/i }));
+
+    expect(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i })).toBeInTheDocument();
+  });
 });

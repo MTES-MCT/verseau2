@@ -73,6 +73,7 @@ export const listPointsMesure = {
       pointMesureId: z.number(),
       pointMesureNumero: z.string(),
       pointMesureLibelle: z.string().nullable(),
+      pointMesureLocalisationGlobale: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;
