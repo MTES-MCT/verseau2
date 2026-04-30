@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { CURRENT_EVENEMENT_YEAR, type EvenementSteuSortByValue, type EvenementSclSortByValue } from '@lib/dossier';
+import {
+  CURRENT_EVENEMENT_YEAR,
+  type EvenementSteuSortByValue,
+  type EvenementSclSortByValue,
+  type TypePointMesureValue,
+} from '@lib/dossier';
 
 export type SortByValue = EvenementSteuSortByValue | EvenementSclSortByValue;
 
@@ -7,6 +12,7 @@ export interface FilterState {
   mode: 'steu' | 'scl';
   year: number;
   typeEvenementCode: string;
+  typePointMesure: TypePointMesureValue;
   pointMesureId: string;
   ouvrageDepollutionCode: string;
   systemeCollecteCode: string;
@@ -19,6 +25,7 @@ export const useEvenementFilters = () => {
     mode: 'steu',
     year: CURRENT_EVENEMENT_YEAR,
     typeEvenementCode: '',
+    typePointMesure: 'tous',
     pointMesureId: '',
     ouvrageDepollutionCode: '',
     systemeCollecteCode: '',
@@ -36,8 +43,11 @@ export const useEvenementFilters = () => {
       if (newFilters.mode === 'steu') {
         updated.pointMesureId = '';
         updated.systemeCollecteCode = '';
+        updated.typePointMesure = 'tous';
       } else if (newFilters.mode === 'scl') {
         updated.ouvrageDepollutionCode = '';
+        updated.pointMesureId = '';
+        updated.typePointMesure = 'tous';
       }
       return updated;
     });

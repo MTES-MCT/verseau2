@@ -3,10 +3,12 @@ import { EvenementSteuSortByValue, EvenementSclSortByValue, PaginationQuery } fr
 import { MasaProvider } from '@masa/masa.provider';
 import type { EvenementSteuFilters, EvenementSclFilters } from '@masa/masa.dto';
 
+const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
+
 export interface ListEvenementSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
-  typeEvenementCode?: string;
+  typeEvenementCode?: string | null;
   ouvrageDepollutionCode?: string;
   pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
@@ -15,7 +17,7 @@ export interface ListEvenementSteuOptions extends PaginationQuery {
 export interface ListEvenementSclOptions extends PaginationQuery {
   authorizedSclCdas: string[];
   year: number;
-  typeEvenementCode?: string;
+  typeEvenementCode?: string | null;
   systemeCollecteCode?: string;
   pointMesureId?: number;
   sortBy?: EvenementSclSortByValue;
@@ -52,7 +54,7 @@ export class EvenementService {
       year,
       page,
       pageSize,
-      ...(typeEvenementCode ? { typeEvenementCode } : {}),
+      typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
       ...(pointMesureId ? { pointMesureId } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
@@ -88,7 +90,7 @@ export class EvenementService {
       year,
       page,
       pageSize,
-      ...(typeEvenementCode ? { typeEvenementCode } : {}),
+      typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
       ...(pointMesureId ? { pointMesureId } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
@@ -117,5 +119,13 @@ export class EvenementService {
     if (authorizedSclCdas.length === 0) return [];
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
     return [...new Set(scls.map((s) => s.systemeCollecteId))];
+  }
+
+  private normalizeTypeEvenementCodes(typeEvenementCode?: string | null): string[] {
+    if (!typeEvenementCode) {
+      return [...DEFAULT_TYPE_EVENEMENT_CODES];
+    }
+
+    return [typeEvenementCode];
   }
 }

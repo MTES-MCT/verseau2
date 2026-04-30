@@ -140,6 +140,7 @@ export class MesuresService {
     authorizedSclCdas: string[],
     ouvrageType: OuvrageTypeValue,
     ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
   ): Promise<PointMesure[]> {
     if (ouvrageType === 'scl') {
       if (!authorizedSclCdas.includes(ouvrageCode)) return [];
@@ -147,7 +148,7 @@ export class MesuresService {
       if (!authorizedSteuCdas.includes(ouvrageCode)) return [];
     }
 
-    return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
+    return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode, filters);
   }
 
   @TraceCalls(LOG_LEVELS[2])

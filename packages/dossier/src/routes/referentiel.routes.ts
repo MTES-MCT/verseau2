@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { OuvrageType } from './mesures.routes';
+import { TypePointMesure } from '../shared/typePointMesure';
 
-/** Type de point de mesure : réglementaire (A1–A8), logique (R1, S1–S17) ou tous. */
-export const TypePointMesure = z.enum(['reglementaire', 'logique', 'tous']);
-export type TypePointMesureValue = z.infer<typeof TypePointMesure>;
+export { TypePointMesure, type TypePointMesureValue } from '../shared/typePointMesure';
 
 // GET /referentiel/codes-to-parametres - Convert numeric codes to parametre names
 export const codesToParametres = {

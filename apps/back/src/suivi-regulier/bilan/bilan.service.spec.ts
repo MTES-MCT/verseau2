@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MasaProvider } from '@masa/masa.provider';
+import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { BilanService } from './bilan.service';
 
 describe('BilanService', () => {
@@ -62,6 +63,19 @@ describe('BilanService', () => {
       expect(masaProviderMock.findBilanSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [123],
         year: 2024,
+        parametreCodes: [
+          CodeParametre.DBO5,
+          CodeParametre.DCO,
+          CodeParametre.MES,
+          CodeParametre.NGL,
+          CodeParametre.N_NH4,
+          CodeParametre.NTK,
+          CodeParametre.NO2,
+          CodeParametre.NO3,
+          CodeParametre.pH,
+          CodeParametre.Temperature,
+          CodeParametre.Ptot,
+        ].map(String),
         page: 1,
         pageSize: 10,
       });

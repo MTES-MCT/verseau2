@@ -34,6 +34,7 @@ describe('MesuresController', () => {
     const mockMesuresService: jest.Mocked<Partial<MesuresService>> = {
       listMesures: jest.fn(),
       listOuvrages: jest.fn(),
+      listPointsMesure: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -144,6 +145,41 @@ describe('MesuresController', () => {
       await controller.listOuvrages(makeRequest(['STEU001'], []), { search: 'sta' });
 
       expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001'], 'sta');
+    });
+  });
+
+  describe('listPointsMesure', () => {
+    it('traduit le type de point en filtres de localisation avant délégation au service', async () => {
+      mesuresService.listPointsMesure.mockResolvedValue([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
+
+      const result = await controller.listPointsMesure(makeRequest(['STEU001'], []), {
+        ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        typePoint: 'reglementaire',
+      });
+
+      expect(mesuresService.listPointsMesure).toHaveBeenCalledWith(
+        ['STEU001'],
+        [],
+        'steu',
+        'STEU001',
+        expect.objectContaining({ localisationCodes: expect.arrayContaining(['A1', 'A3', 'A8']) }),
+      );
+      expect(result).toEqual([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
     });
   });
 });

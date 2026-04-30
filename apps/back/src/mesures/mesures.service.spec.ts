@@ -315,6 +315,31 @@ describe('MesuresService', () => {
     });
   });
 
+  describe('listPointsMesure', () => {
+    it('retourne les points de mesure avec la localisation globale quand l’ouvrage est autorisé', async () => {
+      masaProvider.findPointsMesureByOuvrage.mockResolvedValue([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
+
+      const result = await service.listPointsMesure(['STEU001'], [], 'steu', 'STEU001');
+
+      expect(masaProvider.findPointsMesureByOuvrage).toHaveBeenCalledWith('steu', 'STEU001', undefined);
+      expect(result).toEqual([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
+    });
+  });
+
   describe('listStatuts', () => {
     it('delegates to masaProvider.findStatuts', async () => {
       const items = [makeNomenclatureItem('A', 'Donnée brute'), makeNomenclatureItem('B', 'Pré-qualification')];

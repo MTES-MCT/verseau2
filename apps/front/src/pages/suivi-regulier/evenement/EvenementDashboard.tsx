@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
-import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue } from '@lib/dossier';
+import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue, TypePointMesureValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -17,6 +17,7 @@ import { SortableHeader } from '../../../components/SortableHeader';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { TableLoader } from '../../../components/common/TableLoader';
+import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
@@ -28,7 +29,11 @@ export const EvenementDashboard = () => {
   const { data: types } = useEvenementTypes();
   const pointsMesureOuvrageType = isScl ? 'scl' : 'steu';
   const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : filters.ouvrageDepollutionCode || null;
-  const { data: pmos = [] } = usePointsMesure(pointsMesureOuvrageType, pointsMesureOuvrageCode);
+  const { data: pmos = [] } = usePointsMesure(
+    pointsMesureOuvrageType,
+    pointsMesureOuvrageCode,
+    filters.typePointMesure,
+  );
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
@@ -55,23 +60,28 @@ export const EvenementDashboard = () => {
   const hasOuvrageSelected = !!currentOuvrageValue;
   const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
     value: p.pointMesureId.toString(),
-    label: `${p.pointMesureNumero} - ${p.pointMesureLibelle ?? ''}`.trim().replace(/ -$/, ''),
+    label: buildPointMesureLabel(p),
   }));
 
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
     if (isScl) {
       setSclSearch(newVal);
-      updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
+      updateFilter({ systemeCollecteCode: newVal, pointMesureId: '', typePointMesure: 'tous' });
     } else {
       setOuvrageSearch(newVal);
-      updateFilter({ ouvrageDepollutionCode: newVal, pointMesureId: '' });
+      updateFilter({ ouvrageDepollutionCode: newVal, pointMesureId: '', typePointMesure: 'tous' });
     }
   };
 
   const handlePointMesureChange = (value: string | null) => {
     const newVal = value ?? '';
     updateFilter({ pointMesureId: newVal });
+  };
+
+  const handleTypePointMesureChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const newVal = e.target.value as TypePointMesureValue;
+    updateFilter({ typePointMesure: newVal, pointMesureId: '' });
   };
 
   useEffect(() => {
@@ -214,19 +224,6 @@ export const EvenementDashboard = () => {
             onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
-        {!isScl && (
-          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
-            <SelectAutocomplete
-              label="Point de mesures"
-              hintText={<br />}
-              placeholder="Rechercher un point de mesure"
-              options={pointMesureOptions}
-              value={filters.pointMesureId || null}
-              onChange={handlePointMesureChange}
-              disabled={!hasOuvrageSelected}
-            />
-          </div>
-        )}
         <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
           <Select
             label="Type d'événement"
@@ -245,20 +242,41 @@ export const EvenementDashboard = () => {
             ))}
           </Select>
         </div>
-        {filters.mode === 'scl' && (
-          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
+      </div>
+
+      <h2 id="evenement-filtres-avances-title" className={fr.cx('fr-h6', 'fr-mb-2w')} style={{ textAlign: 'left' }}>
+        Filtres avancés
+      </h2>
+      <section aria-labelledby="evenement-filtres-avances-title" className={fr.cx('fr-mb-4w')}>
+        <div className="fr-grid-row fr-grid-row--gutters">
+          <div className="fr-col-12 fr-col-lg-3 fr-col-xl-2">
+            <Select
+              label="Type de point"
+              hint={<br />}
+              disabled={!hasOuvrageSelected}
+              nativeSelectProps={{
+                value: filters.typePointMesure,
+                onChange: handleTypePointMesureChange,
+              }}
+            >
+              <option value="tous">Tous</option>
+              <option value="reglementaire">Réglementaire (A/M)</option>
+              <option value="logique">Logique (R/S)</option>
+            </Select>
+          </div>
+          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-4">
             <SelectAutocomplete
               label="Point de mesures"
               hintText={<br />}
-              disabled={!hasOuvrageSelected}
               placeholder="Rechercher un point de mesure"
               options={pointMesureOptions}
               value={filters.pointMesureId || null}
               onChange={handlePointMesureChange}
+              disabled={!hasOuvrageSelected}
             />
           </div>
-        )}
-      </div>
+        </div>
+      </section>
 
       <TableLoader
         isLoading={isLoading && hasOuvrageSelected}

@@ -85,9 +85,9 @@ export class RoseauRepository implements RoseauGateway {
     const rows = await query.getMany();
 
     return rows.map((s) => ({
-      ouvrageDepollutionCode: s.steuSandreCda,
+      ouvrageDepollutionCode: s.steuSandreCda?.trim() ?? '',
       ouvrageDepollutionId: s.steuCdn,
-      ouvrageDepollutionNom: s.steuNomLb ?? null,
+      ouvrageDepollutionNom: s.steuNomLb?.trim() ?? null,
     }));
   }
 
@@ -112,9 +112,9 @@ export class RoseauRepository implements RoseauGateway {
     const rows = await query.getMany();
 
     return rows.map((scl) => ({
-      systemeCollecteCode: scl.sclSandreCda,
+      systemeCollecteCode: scl.sclSandreCda?.trim() ?? '',
       systemeCollecteId: scl.sclCdn,
-      systemeCollecteNom: scl.sclLb ?? null,
+      systemeCollecteNom: scl.sclLb?.trim() ?? null,
     }));
   }
 
@@ -352,12 +352,18 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
-  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
+  async findPointsMesureByOuvrage(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
+  ): Promise<PointMesure[]> {
     const qb = this.pmoRepository
       .createQueryBuilder('pmo')
       .select('pmo.pmo_cdn', 'pmo_cdn')
       .addSelect('pmo.pmo_no', 'pmo_no')
-      .addSelect('pmo.pmo_lb', 'pmo_lb');
+      .addSelect('pmo.pmo_lb', 'pmo_lb')
+      .leftJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+      .addSelect('t16.tlref_elt_cda', 'localisation_globale');
 
     if (ouvrageType === 'scl') {
       qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
@@ -369,13 +375,23 @@ export class RoseauRepository implements RoseauGateway {
       });
     }
 
+    if (filters?.localisationCodes && filters.localisationCodes.length > 0) {
+      qb.andWhere('t16.tlref_elt_cda IN (:...localisationCodes)', { localisationCodes: filters.localisationCodes });
+    }
+
     qb.orderBy('pmo.pmo_no', 'ASC');
 
-    const rows = await qb.getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+    const rows = await qb.getRawMany<{
+      pmo_cdn: number;
+      pmo_no: string;
+      pmo_lb: string | null;
+      localisation_globale: string | null;
+    }>();
     return rows.map((r) => ({
       pointMesureId: r.pmo_cdn,
       pointMesureNumero: r.pmo_no?.trim() ?? '',
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
+      pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
     }));
   }
 
@@ -391,14 +407,14 @@ export class RoseauRepository implements RoseauGateway {
       .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
       .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
       .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
-      .andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+      .where('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
 
     if (ouvrageType === 'scl') {
-      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').where('scl.scl_sandre_cda = :ouvrageCode', {
+      qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').andWhere('scl.scl_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });
     } else {
-      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').where('steu.steu_sandre_cda = :ouvrageCode', {
+      qb.innerJoin(SteuEntity, 'steu', 'steu.steu_cdn = pmo.steu_cdn').andWhere('steu.steu_sandre_cda = :ouvrageCode', {
         ouvrageCode,
       });
     }
@@ -420,15 +436,23 @@ export class RoseauRepository implements RoseauGateway {
       .select('pmo.pmo_cdn', 'pmo_cdn')
       .addSelect('pmo.pmo_no', 'pmo_no')
       .addSelect('pmo.pmo_lb', 'pmo_lb')
+      .leftJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
+      .addSelect('t16.tlref_elt_cda', 'localisation_globale')
       .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
       .where('scl.scl_cdn IN (:...systemeCollecteIds)', { systemeCollecteIds })
       .orderBy('pmo.pmo_no', 'ASC')
-      .getRawMany<{ pmo_cdn: number; pmo_no: string; pmo_lb: string | null }>();
+      .getRawMany<{
+        pmo_cdn: number;
+        pmo_no: string;
+        pmo_lb: string | null;
+        localisation_globale: string | null;
+      }>();
 
     return rows.map((r) => ({
       pointMesureId: r.pmo_cdn,
       pointMesureNumero: r.pmo_no?.trim() ?? '',
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
+      pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
     }));
   }
 

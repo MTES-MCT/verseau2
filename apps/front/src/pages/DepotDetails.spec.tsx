@@ -1,4 +1,4 @@
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepotDetailsPage } from './DepotDetails';
 import { renderWithQueryClient } from '../test.helper';
@@ -172,6 +172,39 @@ describe('DepotDetailsPage', () => {
 
     expect(screen.getByRole('option', { name: /Station A/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Station B/i })).toBeInTheDocument();
+  });
+
+  it('préfixe les options de point de mesure avec la localisation globale', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof usePointsMesure>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /point de mesure/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesure/i }));
+
+    expect(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i })).toBeInTheDocument();
   });
 
   it('shows loading state while data is loading', () => {

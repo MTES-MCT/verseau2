@@ -2,7 +2,22 @@ import { Injectable, LOG_LEVELS } from '@nestjs/common';
 import { BilanSteuSortByValue, BilanSclSortByValue, PaginationQuery } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
+import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+
+const ALLOWED_BILAN_STEU_PARAMETRE_CODES: string[] = [
+  CodeParametre.DBO5,
+  CodeParametre.DCO,
+  CodeParametre.MES,
+  CodeParametre.NGL,
+  CodeParametre.N_NH4,
+  CodeParametre.NTK,
+  CodeParametre.NO2,
+  CodeParametre.NO3,
+  CodeParametre.pH,
+  CodeParametre.Temperature,
+  CodeParametre.Ptot,
+].map(String);
 
 export interface ListBilanSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -41,6 +56,7 @@ export class BilanService {
     const filters: BilanSteuFilters = {
       ouvrageDepollutionIds,
       year,
+      parametreCodes: ALLOWED_BILAN_STEU_PARAMETRE_CODES,
       page,
       pageSize,
       ...(sortBy ? { sortBy } : {}),

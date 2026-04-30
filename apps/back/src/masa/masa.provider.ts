@@ -307,7 +307,7 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Événements — Tableau de bord des événements 1, 2, 3, 4
+  // Événements — Tableau de bord des événements
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
@@ -468,8 +468,12 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // route: GET /api/ouvrages/:type/:ouvrageCode/points-mesure
-  async findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]> {
-    return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
+  async findPointsMesureByOuvrage(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
+  ): Promise<PointMesure[]> {
+    return this.roseauGateway.findPointsMesureByOuvrage(ouvrageType, ouvrageCode, filters);
   }
 
   // ---------------------------------------------------------------------------

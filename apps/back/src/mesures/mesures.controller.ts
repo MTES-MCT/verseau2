@@ -14,6 +14,7 @@ import {
   listStatuts,
   listQualifications,
 } from '@lib/dossier';
+import { toLocalisationCodes } from '@masa/toMasa.mapper';
 import { MesuresService } from './mesures.service';
 
 @Controller('mesures')
@@ -71,11 +72,13 @@ export class MesuresController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(listPointsMesure['query'])) query: RouteQuery<typeof listPointsMesure>,
   ): Promise<RouteResponse<typeof listPointsMesure>> {
+    const localisationCodes = toLocalisationCodes(query.typePoint);
     return this.mesuresService.listPointsMesure(
       req.authorizedSteuCdas!,
       req.authorizedSclCdas!,
       query.ouvrageType,
       query.ouvrageCode,
+      { localisationCodes },
     );
   }
 

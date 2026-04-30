@@ -55,8 +55,8 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean | number[]> = [];
-    const addParam = (value: number | string | boolean | number[]) => {
+    const queryParams: Array<number | string | boolean | number[] | string[]> = [];
+    const addParam = (value: number | string | boolean | number[] | string[]) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
@@ -64,11 +64,13 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     const startDate = addParam(`${year}-01-01`);
     const endDate = addParam(`${year}-12-31`);
     const steuArrayParam = addParam(ouvrageDepollutionIds);
+    const allowedParamCodesParam = addParam(filters.parametreCodes);
     const whereClauses = [
       `steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))`,
       `resj.resj_mes_dt >= ${startDate}`,
       `resj.resj_mes_dt <= ${endDate}`,
       `(resj.resj_jok_in = '2' OR resj.resj_aok_in = '2')`,
+      `resj.par_rfa IN (SELECT unnest(${allowedParamCodesParam}::text[]))`,
     ];
 
     const baseQuery = `

@@ -28,7 +28,7 @@ import {
 export interface EvenementSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
-  typeEvenementCode?: string;
+  typeEvenementCodes: string[];
   pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
 }
@@ -37,7 +37,7 @@ export interface EvenementSteuFilters extends PaginationQuery {
 export interface EvenementSclFilters extends PaginationQuery {
   systemeCollecteIds: number[];
   year: number;
-  typeEvenementCode?: string;
+  typeEvenementCodes: string[];
   pointMesureId?: number;
   sortBy?: EvenementSclSortByValue;
 }
@@ -46,6 +46,7 @@ export interface EvenementSclFilters extends PaginationQuery {
 export interface BilanSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
   year: number;
+  parametreCodes: string[];
   sortBy?: BilanSteuSortByValue;
 }
 
@@ -220,6 +221,7 @@ export interface PointMesure {
   pointMesureId: number;
   pointMesureNumero: string;
   pointMesureLibelle: string | null;
+  pointMesureLocalisationGlobale: string | null;
 }
 
 /** Paramètre — utilisé pour le dropdown de sélection */
