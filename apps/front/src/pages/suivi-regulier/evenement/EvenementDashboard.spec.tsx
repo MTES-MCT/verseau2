@@ -143,6 +143,15 @@ describe('EvenementDashboard', () => {
     expect(within(advancedFilters).queryByLabelText(/type d'événement/i)).not.toBeInTheDocument();
   });
 
+  it('affiche des libellés de type de point cohérents avec le filtrage backend', () => {
+    renderWithQueryClient(<EvenementDashboard />);
+
+    const typePointSelect = screen.getByLabelText(/type de point/i);
+
+    expect(within(typePointSelect).getByRole('option', { name: /réglementaire \(a\/m\)/i })).toBeInTheDocument();
+    expect(within(typePointSelect).getByRole('option', { name: /logique \(r\/s\)/i })).toBeInTheDocument();
+  });
+
   it('préfixe les options de point de mesure avec la localisation globale', () => {
     mockUsePointsMesure.mockReturnValue({
       data: [

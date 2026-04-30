@@ -1,6 +1,6 @@
 import type { TypePointMesureValue } from '@lib/dossier';
 
-/** Codes de localisation réglementaires (A1 à A8) */
+/** Codes de localisation réglementaires (A1 à A8, M1 à M3) */
 const LOCALISATION_CODES_REGLEMENTAIRE = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'M1', 'M2', 'M3'];
 
 /** Codes de localisation logiques (R1, S1 à S17) */

@@ -260,8 +260,8 @@ export const EvenementDashboard = () => {
               }}
             >
               <option value="tous">Tous</option>
-              <option value="reglementaire">Réglementaire (A)</option>
-              <option value="logique">Logique (S)</option>
+              <option value="reglementaire">Réglementaire (A/M)</option>
+              <option value="logique">Logique (R/S)</option>
             </Select>
           </div>
           <div className="fr-col-12 fr-col-lg-6 fr-col-xl-4">
