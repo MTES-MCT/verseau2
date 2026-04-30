@@ -53,7 +53,7 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
   }
 
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, year, page, pageSize, typeEvenementCodes } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -82,15 +82,12 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
 
     const yearPlaceholder = addParam(year);
     const steuPlaceholders = ouvrageDepollutionIds.map((cdn) => addParam(cdn)).join(', ');
+    const typeEvenementPlaceholders = typeEvenementCodes.map((code) => addParam(code)).join(', ');
     const whereClauses = [
       `steu.steu_cdn IN (${steuPlaceholders})`,
       `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
-      `t46.tlref_elt_cda IN ('1','2','3','4')`,
+      `t46.tlref_elt_cda IN (${typeEvenementPlaceholders})`,
     ];
-
-    if (filters.typeEvenementCode) {
-      whereClauses.push(`t46.tlref_elt_cda = ${addParam(filters.typeEvenementCode)}`);
-    }
 
     if (filters.pointMesureId) {
       whereClauses.push(`evo.pmo_cdn = ${addParam(filters.pointMesureId)}`);
@@ -151,7 +148,7 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
   }
 
   async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, page, pageSize } = filters;
+    const { systemeCollecteIds, year, page, pageSize, typeEvenementCodes } = filters;
 
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
@@ -181,15 +178,12 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
 
     const yearPlaceholder = addParam(year);
     const sclPlaceholders = systemeCollecteIds.map((cdn) => addParam(cdn)).join(', ');
+    const typeEvenementPlaceholders = typeEvenementCodes.map((code) => addParam(code)).join(', ');
     const whereClauses = [
       `scl.scl_cdn IN (${sclPlaceholders})`,
       `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
-      `t46.tlref_elt_cda IN ('1','2','3','4')`,
+      `t46.tlref_elt_cda IN (${typeEvenementPlaceholders})`,
     ];
-
-    if (filters.typeEvenementCode) {
-      whereClauses.push(`t46.tlref_elt_cda = ${addParam(filters.typeEvenementCode)}`);
-    }
 
     if (filters.pointMesureId) {
       whereClauses.push(`pmo.pmo_cdn = ${addParam(filters.pointMesureId)}`);

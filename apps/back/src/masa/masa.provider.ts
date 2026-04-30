@@ -307,7 +307,7 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Événements — Tableau de bord des événements 1, 2, 3, 4
+  // Événements — Tableau de bord des événements
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 

@@ -17,6 +17,8 @@ import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { MasaProvider } from '@masa/masa.provider';
 
+const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
 const mockUser = (
   overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
 ): import('@authentication/authentication').AuthenticatedUser => ({
@@ -150,6 +152,7 @@ describe('EvenementController (e2e)', () => {
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
         year: currentYear,
+        typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
         page: 1,
         pageSize: 20,
       });
@@ -212,10 +215,46 @@ describe('EvenementController (e2e)', () => {
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
         year: currentYear,
+        typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
         page: 1,
         pageSize: 20,
         sortBy: 'date',
         sortOrder: 'DESC',
+      });
+    });
+
+    it('passes a selected event type as a single-item array', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      mockMasaProvider.findIntervenantById.mockResolvedValue({
+        intervenantId: 1,
+        intervenantSiret: 'SIRET_TEST',
+      });
+      mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU_TEST_001',
+          systemeCollecteCode: 'SCL_TEST_001',
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+      mockMasaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionId: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
+      ]);
+      mockMasaProvider.findEvenementSteu.mockResolvedValue({ data: [], total: 0 });
+
+      await request(app.getHttpServer())
+        .get(`/suivi-regulier/evenement/steu?year=${currentYear}&typeEvenementCode=3`)
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
+        ouvrageDepollutionIds: [10],
+        year: currentYear,
+        typeEvenementCodes: ['3'],
+        page: 1,
+        pageSize: 20,
       });
     });
 
@@ -322,6 +361,7 @@ describe('EvenementController (e2e)', () => {
       expect(mockMasaProvider.findEvenementScl).toHaveBeenCalledWith({
         systemeCollecteIds: [20],
         year: currentYear,
+        typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
         page: 1,
         pageSize: 20,
       });
