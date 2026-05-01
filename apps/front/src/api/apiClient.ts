@@ -1,11 +1,10 @@
 import { authService } from '../services/auth.service';
+import { APP_HOME_PATH, API_BASE_URL } from '../appConfig';
 import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
 import { buildRoutePath } from '@lib/dossier';
 
 // Re-export buildRoutePath for convenience
 export { buildRoutePath };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export class ApiError extends Error {
   status: number;
@@ -42,7 +41,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     } catch {
       // Refresh failed, redirect to login
       authService.clearSession();
-      window.location.href = '/';
+      window.location.href = APP_HOME_PATH;
       throw new ApiError('Session expired', 401, 'Unauthorized');
     }
   }
