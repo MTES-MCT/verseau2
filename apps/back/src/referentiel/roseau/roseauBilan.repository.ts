@@ -101,8 +101,8 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
             JOIN lanceleau.itv itv ON itv.itv_cdn = exp.steu_itv_cdn
             WHERE exp.exp_steu_cdn = steu.steu_cdn
               AND exp.steu_itv_cdn IS NOT NULL
-              AND (exp.cxnadm_creation_dt IS NULL OR exp.cxnadm_creation_dt <= ${startDate}::date)
-              AND (exp.cxnadm_retrait_dt IS NULL OR exp.cxnadm_retrait_dt > ${endDate}::date)
+              AND (exp.cxnadm_creation_dt IS NULL OR exp.cxnadm_creation_dt <= ${endDate}::date)
+              AND (exp.cxnadm_retrait_dt IS NULL OR exp.cxnadm_retrait_dt > ${startDate}::date)
           ) link
         ) exploitant ON true
         LEFT JOIN LATERAL (
@@ -117,8 +117,8 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
             JOIN lanceleau.itv itv ON itv.itv_cdn = moa.steu_itv_cdn
             WHERE moa.mo_steu_cdn = steu.steu_cdn
               AND moa.steu_itv_cdn IS NOT NULL
-              AND (moa.cxnadm_creation_dt IS NULL OR moa.cxnadm_creation_dt <= ${startDate}::date)
-              AND (moa.cxnadm_retrait_dt IS NULL OR moa.cxnadm_retrait_dt > ${endDate}::date)
+              AND (moa.cxnadm_creation_dt IS NULL OR moa.cxnadm_creation_dt <= ${endDate}::date)
+              AND (moa.cxnadm_retrait_dt IS NULL OR moa.cxnadm_retrait_dt > ${startDate}::date)
           ) link
         ) maitre_ouvrage ON true
         WHERE steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))
