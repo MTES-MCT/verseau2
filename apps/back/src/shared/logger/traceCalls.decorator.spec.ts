@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import { ClsServiceManager } from 'nestjs-cls';
 import { LoggerService } from './logger.service';
 import { TraceCalls } from './traceCalls.decorator';

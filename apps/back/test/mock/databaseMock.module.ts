@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Global, Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 

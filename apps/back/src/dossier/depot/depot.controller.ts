@@ -142,11 +142,12 @@ export class DepotController {
       );
       return { authorized: true };
     } catch (error) {
-      this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${error.message as string}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${errorMessage}`);
       return {
         authorized: false,
         errorCode:
-          error.message === DepotError.FLUX_QUALIFIE_INTERDIT
+          errorMessage === (DepotError.FLUX_QUALIFIE_INTERDIT as string)
             ? DepotError.FLUX_QUALIFIE_INTERDIT
             : DepotError.DROITS_INSUFFISANTS,
       };
