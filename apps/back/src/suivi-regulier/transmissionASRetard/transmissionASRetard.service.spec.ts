@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransmissionASRetardService } from './transmissionASRetard.service';
 import { MasaProvider } from '@masa/masa.provider';

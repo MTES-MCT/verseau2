@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
 import type { MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
@@ -118,18 +118,17 @@ export function useMesureFilters() {
     });
   }
 
-  useEffect(() => {
-    if (form.ouvrageType === 'scl') {
-      setOuvrageSearch('');
-      setSclSearch(form.selectedOuvrageCode);
-      return;
+  function updateForm(field: Exclude<keyof FilterState, 'selectedPmoCdn' | 'ouvrageType'>, value: string) {
+    if (field === 'selectedOuvrageCode') {
+      if (form.ouvrageType === 'scl') {
+        setOuvrageSearch('');
+        setSclSearch(value);
+      } else {
+        setSclSearch('');
+        setOuvrageSearch(value);
+      }
     }
 
-    setSclSearch('');
-    setOuvrageSearch(form.selectedOuvrageCode);
-  }, [form.ouvrageType, form.selectedOuvrageCode]);
-
-  function updateForm(field: Exclude<keyof FilterState, 'selectedPmoCdn' | 'ouvrageType'>, value: string) {
     setForm((f) => {
       // Cascade: changement d'ouvrage → reset PMO + paramètre
       if (field === 'selectedOuvrageCode') {

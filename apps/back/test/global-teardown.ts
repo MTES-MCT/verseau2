@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import * as fs from 'fs';
 import * as path from 'path';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
 import * as dotenv from 'dotenv';
 import path from 'path';
 
@@ -93,7 +94,6 @@ describe('IndicateursController (e2e) - Caching', () => {
   });
 
   it('/indicateurs/steu (GET) - should NOT share cache between different users', async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await
     const spy = jest
       .spyOn(indicateursService, 'getIndicateursSteu')
       .mockImplementation(async (cerbereId, page, pageSize) => {
@@ -106,7 +106,6 @@ describe('IndicateursController (e2e) - Caching', () => {
       });
 
     // Mock different users for different tokens
-    // eslint-disable-next-line @typescript-eslint/require-await
     jest.spyOn(authService, 'validateToken').mockImplementation(async (token) => {
       const baseUser = {
         cerbereId: 'default',

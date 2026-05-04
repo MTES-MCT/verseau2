@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { MasaProvider } from '@masa/masa.provider';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
