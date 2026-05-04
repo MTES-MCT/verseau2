@@ -24,6 +24,7 @@ export enum QueueName {
   controle_sandre_upload = 'controle_sandre_upload',
   controle_sandre_poll = 'controle_sandre_poll',
   process_after_masa_webhook = 'process_after_masa_webhook',
+  diffusion_rapport = 'diffusion_rapport',
 }
 
 export interface QueueOptions {

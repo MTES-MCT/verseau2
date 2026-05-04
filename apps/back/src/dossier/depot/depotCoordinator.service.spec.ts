@@ -142,7 +142,7 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
       });
-      expect(queueService.send).not.toHaveBeenCalled();
+      expect(queueService.send).toHaveBeenCalledWith(QueueName.diffusion_rapport, { depotId });
     });
 
     it('should fail the depot if Controle Sandre fails', async () => {
@@ -164,7 +164,7 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
       });
-      expect(queueService.send).not.toHaveBeenCalled();
+      expect(queueService.send).toHaveBeenCalledWith(QueueName.diffusion_rapport, { depotId });
     });
 
     it('should prioritize V1 failure over Sandre failure if both fail', async () => {

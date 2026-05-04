@@ -17,7 +17,7 @@ const COLORS = {
 
 @Injectable()
 export class RapportPdfGeneratorService {
-  async generateReport(masa: MasaModel, depot: DepotModel, controlesV2: ControleModelWithoutDepot[]): Promise<Buffer> {
+  async generateReport(depot: DepotModel, controlesV2: ControleModelWithoutDepot[], masa?: MasaModel): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50, bufferPages: true, autoFirstPage: false });
       const chunks: Buffer[] = [];
@@ -38,7 +38,9 @@ export class RapportPdfGeneratorService {
 
       this.drawHeader(doc, depot, masa);
 
-      this.drawMasaReport(doc, masa);
+      if (masa) {
+        this.drawMasaReport(doc, masa);
+      }
 
       if (controlesV2 && controlesV2.length > 0) {
         this.drawControlsV2(doc, controlesV2);
@@ -51,7 +53,7 @@ export class RapportPdfGeneratorService {
     });
   }
 
-  private drawHeader(doc: PDFKit.PDFDocument, depot: DepotModel, masa: MasaModel) {
+  private drawHeader(doc: PDFKit.PDFDocument, depot: DepotModel, masa?: MasaModel) {
     doc.font('Helvetica-Bold').fontSize(24).fillColor(COLORS.PRIMARY).text('Rapport de Traitement', { align: 'left' });
     doc.font('Helvetica');
 
@@ -65,7 +67,7 @@ export class RapportPdfGeneratorService {
     doc.fillColor(COLORS.TEXT).text(depot.id, 120, startY);
 
     doc.fillColor(COLORS.SECONDARY).text('Date:', 300, startY);
-    const dateStr = masa.createdAt
+    const dateStr = masa?.createdAt
       ? new Date(masa.createdAt).toLocaleString('fr-FR')
       : new Date().toLocaleString('fr-FR');
     doc.fillColor(COLORS.TEXT).text(dateStr, 350, startY);

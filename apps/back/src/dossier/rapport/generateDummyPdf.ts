@@ -264,7 +264,7 @@ async function generateDummyPdf() {
 
   try {
     console.log('Generating PDF...');
-    const buffer = await service.generateReport(masa, depot, controlesV2);
+    const buffer = await service.generateReport(depot, controlesV2, masa);
 
     const outputFilename = 'dummy_report.pdf';
     const outputPath = path.join(__dirname, outputFilename);

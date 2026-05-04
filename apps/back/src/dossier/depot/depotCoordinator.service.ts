@@ -73,6 +73,10 @@ export class DepotCoordinatorService {
         status: DepotStatus.REJETE,
         step: failedStep,
       });
+
+      await this.queueService.send(QueueName.diffusion_rapport, {
+        depotId,
+      });
     }
   }
 }

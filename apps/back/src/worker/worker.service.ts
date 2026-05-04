@@ -10,6 +10,7 @@ import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcess
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreUploadProcessorService } from './controleSandre/controle-sandre-upload.processor.service';
 import { ControleSandrePollProcessorService } from './controleSandre/controle-sandre-poll.processor.service';
+import { DiffusionRapportProcessorService } from './diffusionRapport/diffusionRapportProcessor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import { EmailProvider } from '@notification/email.provider';
 
@@ -23,6 +24,7 @@ export class WorkerService implements OnModuleInit {
     [QueueName.controle_sandre_upload]: { batchSize: 1 },
     [QueueName.controle_sandre_poll]: { batchSize: 1 },
     [QueueName.process_after_masa_webhook]: { batchSize: 3 },
+    [QueueName.diffusion_rapport]: { batchSize: 3 },
   };
 
   constructor(
@@ -33,6 +35,7 @@ export class WorkerService implements OnModuleInit {
     private readonly controleSandreUploadProcessorService: ControleSandreUploadProcessorService,
     private readonly controleSandrePollProcessorService: ControleSandrePollProcessorService,
     private readonly masaProcessorService: MasaWebhookProcessorService,
+    private readonly diffusionRapportProcessorService: DiffusionRapportProcessorService,
     @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
     private readonly cls: ClsService<CustomClsStore>,
     private readonly logger: LoggerService,
@@ -179,6 +182,27 @@ export class WorkerService implements OnModuleInit {
                   return await this.masaProcessorService.process(job.data);
                 } catch (error) {
                   this.logger.error('After MASA webhook processing failed', {
+                    jobId: job.id,
+                    error: error instanceof Error ? error.message : (error as string),
+                    stack: error instanceof Error ? error.stack : undefined,
+                  });
+                  throw error;
+                }
+              });
+            },
+          );
+          break;
+        case QueueName.diffusion_rapport:
+          await this.queueService.work<{ depotId: string; masaId?: string; correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                this.logger.log('Processing diffusion rapport jobId', job.id);
+                try {
+                  return await this.diffusionRapportProcessorService.process(job.data);
+                } catch (error) {
+                  this.logger.error('Diffusion rapport processing failed', {
                     jobId: job.id,
                     error: error instanceof Error ? error.message : (error as string),
                     stack: error instanceof Error ? error.stack : undefined,
