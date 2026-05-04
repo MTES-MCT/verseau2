@@ -3,8 +3,17 @@ import react from '@vitejs/plugin-react';
 
 import path from 'node:path';
 
+const normalizeViteBasePath = (basePath: string | undefined) => {
+  if (!basePath || basePath === '/') {
+    return '/';
+  }
+
+  return `/${basePath.replace(/^\/+|\/+$/g, '')}/`;
+};
+
 // https://vite.dev/config/
 export default defineConfig({
+  base: normalizeViteBasePath(process.env.VITE_BASE_PATH),
   plugins: [react()],
   resolve: {
     alias: {

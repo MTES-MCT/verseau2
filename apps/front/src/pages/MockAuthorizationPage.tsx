@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { authService } from '../services/auth.service';
 import { useAuth } from '../hooks/useAuth';
 import { AppRoutes } from '../routes';
@@ -88,9 +88,9 @@ export default function MockAuthorizationPage() {
 
                 {/* Lien retour */}
                 <div className="fr-mt-4w" style={{ textAlign: 'center' }}>
-                  <a href="/" className="fr-link fr-icon-arrow-left-line fr-link--icon-left">
+                  <Link to={AppRoutes.HOME} className="fr-link fr-icon-arrow-left-line fr-link--icon-left">
                     Retour à l'accueil
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>

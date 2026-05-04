@@ -1,6 +1,5 @@
+import { API_BASE_URL } from '../appConfig';
 import type { AuthenticatedUser, AuthenticatedUserWithIntervenant } from '../types/auth.types';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 /** Only the access-token expiration timestamp needs to live in localStorage.
  *  The actual tokens are stored as httpOnly cookies by the backend. */
