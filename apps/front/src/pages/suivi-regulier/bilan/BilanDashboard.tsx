@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import type { BilanSteuSortByValue, BilanSclSortByValue } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useBilanFilters';
 import type { ReactNode } from 'react';
@@ -80,21 +80,11 @@ export const BilanDashboard = () => {
     updateFilter({ pointMesureId: newVal });
   };
 
-  useEffect(() => {
-    if (isScl) {
-      setOuvrageSearch('');
-      return;
-    }
-    setOuvrageSearch(filters.ouvrageDepollutionCode);
-  }, [filters.ouvrageDepollutionCode, isScl]);
-
-  useEffect(() => {
-    if (!isScl) {
-      setSclSearch('');
-      return;
-    }
-    setSclSearch(filters.systemeCollecteCode);
-  }, [filters.systemeCollecteCode, isScl]);
+  const handleModeChange = (mode: 'steu' | 'scl') => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateFilter({ mode });
+  };
 
   const steuQuery = {
     page,
@@ -176,14 +166,14 @@ export const BilanDashboard = () => {
                 label: 'STEU',
                 nativeInputProps: {
                   checked: filters.mode === 'steu',
-                  onChange: () => updateFilter({ mode: 'steu' }),
+                  onChange: () => handleModeChange('steu'),
                 },
               },
               {
                 label: 'SCL',
                 nativeInputProps: {
                   checked: filters.mode === 'scl',
-                  onChange: () => updateFilter({ mode: 'scl' }),
+                  onChange: () => handleModeChange('scl'),
                 },
               },
             ]}

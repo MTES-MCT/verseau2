@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
 import type { OuvrageTypeValue, TypePointMesureValue } from '@lib/dossier';
 import { useSystemesCollecte } from './useSystemesCollecte';
@@ -32,10 +32,6 @@ export function useReferentielFilters() {
 
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
-
-  useEffect(() => {
-    setOuvrageSearch(form.selectedOuvrageCode);
-  }, [form.selectedOuvrageCode]);
 
   function toTypePoint(reglementaire: boolean, logique: boolean): TypePointMesureValue {
     if (reglementaire && !logique) {
@@ -87,6 +83,10 @@ export function useReferentielFilters() {
   }
 
   function updateForm(field: Exclude<keyof FilterState, 'ouvrageType' | 'reglementaire' | 'logique'>, value: string) {
+    if (field === 'selectedOuvrageCode') {
+      setOuvrageSearch(value);
+    }
+
     setForm((f) => {
       if (field === 'selectedOuvrageCode') {
         if (value) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import type { TransmissionASRetardSteuSortByValue, TransmissionASRetardSclSortByValue } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useTransmissionASRetardFilters';
 import type { ReactNode } from 'react';
@@ -66,21 +66,11 @@ export const TransmissionASRetardDashboard = () => {
     updateFilter({ ouvrageCode: newVal });
   };
 
-  useEffect(() => {
-    if (isScl) {
-      setOuvrageSearch('');
-      return;
-    }
-    setOuvrageSearch(filters.ouvrageCode);
-  }, [filters.ouvrageCode, isScl]);
-
-  useEffect(() => {
-    if (!isScl) {
-      setSclSearch('');
-      return;
-    }
-    setSclSearch(filters.ouvrageCode);
-  }, [filters.ouvrageCode, isScl]);
+  const handleModeChange = (mode: 'steu' | 'scl') => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateFilter({ mode });
+  };
 
   const handleSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
@@ -184,14 +174,14 @@ export const TransmissionASRetardDashboard = () => {
                 label: 'STEU',
                 nativeInputProps: {
                   checked: filters.mode === 'steu',
-                  onChange: () => updateFilter({ mode: 'steu' }),
+                  onChange: () => handleModeChange('steu'),
                 },
               },
               {
                 label: 'SCL',
                 nativeInputProps: {
                   checked: filters.mode === 'scl',
-                  onChange: () => updateFilter({ mode: 'scl' }),
+                  onChange: () => handleModeChange('scl'),
                 },
               },
             ]}

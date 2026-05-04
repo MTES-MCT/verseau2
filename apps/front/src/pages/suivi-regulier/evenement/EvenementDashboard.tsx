@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue, TypePointMesureValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
@@ -84,21 +84,11 @@ export const EvenementDashboard = () => {
     updateFilter({ typePointMesure: newVal, pointMesureId: '' });
   };
 
-  useEffect(() => {
-    if (isScl) {
-      setOuvrageSearch('');
-      return;
-    }
-    setOuvrageSearch(filters.ouvrageDepollutionCode);
-  }, [filters.ouvrageDepollutionCode, isScl]);
-
-  useEffect(() => {
-    if (!isScl) {
-      setSclSearch('');
-      return;
-    }
-    setSclSearch(filters.systemeCollecteCode);
-  }, [filters.systemeCollecteCode, isScl]);
+  const handleModeChange = (mode: 'steu' | 'scl') => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateFilter({ mode, typeEvenementCode: '' });
+  };
 
   const steuQuery = {
     page,
@@ -184,14 +174,14 @@ export const EvenementDashboard = () => {
                 label: 'STEU',
                 nativeInputProps: {
                   checked: filters.mode === 'steu',
-                  onChange: () => updateFilter({ mode: 'steu', typeEvenementCode: '' }),
+                  onChange: () => handleModeChange('steu'),
                 },
               },
               {
                 label: 'SCL',
                 nativeInputProps: {
                   checked: filters.mode === 'scl',
-                  onChange: () => updateFilter({ mode: 'scl', typeEvenementCode: '' }),
+                  onChange: () => handleModeChange('scl'),
                 },
               },
             ]}
