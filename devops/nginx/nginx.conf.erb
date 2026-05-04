@@ -1,43 +1,22 @@
-daemon off;
-worker_processes auto;
+client_max_body_size 100m;
 
-events {
-    worker_connections 1024;
+# ── Verseau ──
+location /verseau/ {
+    proxy_pass <%= ENV['VERSEAU_UPSTREAM_URL'] %>/;
+    proxy_set_header Host <%= ENV['VERSEAU_UPSTREAM_HOST'] %>;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Prefix /verseau;
+    proxy_ssl_server_name on;
 }
 
-http {
-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                    '$status $body_bytes_sent "$http_referer" '
-                    '"$http_user_agent" "$http_x_forwarded_for"';
+# Redirect /verseau (sans trailing slash) -> /verseau/
+location = /verseau {
+    return 308 /verseau/;
+}
 
-    access_log /dev/stdout main;
-    error_log /dev/stderr;
-
-    client_max_body_size 100m;
-
-    server {
-        listen <%= ENV['PORT'] %>;
-        server_name saineau.beta.gouv.fr;
-
-        # ── Verseau ──
-        location /verseau/ {
-            proxy_pass <%= ENV['VERSEAU_UPSTREAM_URL'] %>/;
-            proxy_set_header Host <%= ENV['VERSEAU_UPSTREAM_HOST'] %>;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header X-Forwarded-Prefix /verseau;
-            proxy_ssl_server_name on;
-        }
-
-        # Redirect /verseau (sans trailing slash) → /verseau/
-        location = /verseau {
-            return 308 /verseau/;
-        }
-
-        # ── Page d'accueil ──
-        location = / {
-            return 302 /verseau/;
-        }
-    }
+# ── Page d'accueil ──
+location = / {
+    return 302 /verseau/;
 }
