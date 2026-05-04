@@ -81,7 +81,7 @@ export class RapportPdfGeneratorService {
     doc.moveDown(2);
   }
 
-  private drawStatistics(doc: PDFKit.PDFDocument, total: number, success: number, warning: number, rate: number) {
+  private drawStatistics(doc: PDFKit.PDFDocument, total: number, success: number, failed: number, rate: number) {
     const boxTop = doc.y;
     const boxHeight = 70;
 
@@ -95,11 +95,11 @@ export class RapportPdfGeneratorService {
     this.drawStatItem(doc, 'Succès', success.toString(), 50 + quarter, centerY, COLORS.SUCCESS);
     this.drawStatItem(
       doc,
-      'Avertissements',
-      warning.toString(),
+      'Échecs / Avertissements',
+      failed.toString(),
       50 + quarter * 2,
       centerY,
-      warning > 0 ? COLORS.WARNING : COLORS.TEXT,
+      failed > 0 ? COLORS.WARNING : COLORS.TEXT,
     );
     this.drawStatItem(doc, 'Taux de succès', `${rate}%`, 50 + quarter * 3, centerY);
 
@@ -164,9 +164,10 @@ export class RapportPdfGeneratorService {
       (c) => c.evenementType !== EvenementType.AVERTISSEMENT && c.evenementType !== EvenementType.ERREUR,
     );
     const warningControls = controls.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT);
+    const errorControls = controls.filter((c) => c.evenementType === EvenementType.ERREUR);
     const successRate = totalControls > 0 ? Math.round((successControls.length / totalControls) * 100) : 0;
-    const failedControls = warningControls;
-    this.drawStatistics(doc, totalControls, successControls.length, warningControls.length, successRate);
+    const failedControls = [...errorControls, ...warningControls];
+    this.drawStatistics(doc, totalControls, successControls.length, failedControls.length, successRate);
 
     // Success Summary
     if (successControls.length > 0) {
@@ -186,33 +187,36 @@ export class RapportPdfGeneratorService {
       doc.moveDown(2);
     }
 
-    // Warnings Detail
+    // Warnings & Errors Detail
     if (failedControls.length > 0) {
-      const groupedWarnings: Record<string, ControleModelWithoutDepot[]> = {};
+      const groupedFailures: Record<string, ControleModelWithoutDepot[]> = {};
       failedControls.forEach((c) => {
-        if (!groupedWarnings[c.name]) {
-          groupedWarnings[c.name] = [];
+        if (!groupedFailures[c.name]) {
+          groupedFailures[c.name] = [];
         }
-        groupedWarnings[c.name].push(c);
+        groupedFailures[c.name].push(c);
       });
 
-      Object.keys(groupedWarnings).forEach((controlName) => {
+      Object.keys(groupedFailures).forEach((controlName) => {
         if (doc.y > doc.page.height - 100) doc.addPage();
 
-        const group = groupedWarnings[controlName];
+        const group = groupedFailures[controlName];
 
-        doc
-          .font('Helvetica-Bold')
-          .fillColor(COLORS.WARNING)
-          .fontSize(11)
-          .text(`${controlName} (${group.length} avertissements)`);
+        const hasErrors = group.some((c) => c.evenementType === EvenementType.ERREUR);
+        const titleColor = hasErrors ? '#dc2626' : COLORS.WARNING; // Red for errors, Orange for warnings
+
+        doc.font('Helvetica-Bold').fillColor(titleColor).fontSize(11).text(`${controlName} (${group.length} retours)`);
         doc.font('Helvetica');
         doc.moveDown(0.3);
 
         group.forEach((c) => {
           if (doc.y > doc.page.height - 50) doc.addPage();
           const msg = buildMessage(c.error, c.errorParams || []);
-          doc.fillColor(COLORS.TEXT).fontSize(8).text(`• ${msg}`, { indent: 20 });
+          const isError = c.evenementType === EvenementType.ERREUR;
+          const prefix = isError ? '[ERREUR]' : '[AVERTISSEMENT]';
+          const itemColor = isError ? '#dc2626' : COLORS.TEXT;
+
+          doc.fillColor(itemColor).fontSize(8).text(`• ${prefix} ${msg}`, { indent: 20 });
         });
         doc.moveDown(1);
       });
