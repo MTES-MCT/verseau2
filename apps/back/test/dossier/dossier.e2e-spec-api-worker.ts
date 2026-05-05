@@ -28,6 +28,7 @@ import { DepotStatus, DepotStep, ControleStatus, ControleSandreStatus, ErrorCode
 import { QueueGateway, PGBOSS, QueueName, Queue } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
+import { NotificationGateway } from '@notification/notification.gateway';
 import { ApiModule } from '../../src/api/api.module';
 import { InfraModule } from '@infra/infra.module';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
@@ -41,8 +42,8 @@ import { clearReferentielData, createReferentielDataset } from '../createReferen
 import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../userWithDroitsDataset.helper';
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 
-// Import shared mocks for S3 and SFTP only
-import { S3TestMock, SftpTestMock } from '../mock/shared-mocks';
+// Import shared mocks for infrastructure dependencies
+import { S3TestMock, SftpTestMock, NotificationGatewayTestMock } from '../mock/shared-mocks';
 import { DepotError } from '@dossier/depot/depotError';
 import { clearDepots } from '../depot.helper';
 import { clearControles } from '../controle.helper';
@@ -89,6 +90,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   let pgboss: PgBoss;
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
+  let notificationMock: NotificationGatewayTestMock;
 
   // Test user data matching AuthenticationMockService.getMockUser()
   // itvRfa (SIRET) is required to pass DroitsDepotService.validateDroits()
@@ -148,6 +150,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
     s3Mock = new S3TestMock();
     sftpMock = new SftpTestMock();
+    notificationMock = new NotificationGatewayTestMock();
 
     // Create real PgBoss instance
     pgboss = new PgBoss({
@@ -187,6 +190,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
       .useValue(s3Mock)
       .overrideProvider(Sftp)
       .useValue(sftpMock)
+      .overrideProvider(NotificationGateway)
+      .useValue(notificationMock)
       .overrideProvider(LoggerService)
       .useValue(loggerValueMock)
       .overrideProvider(ConfigService)
@@ -222,11 +227,13 @@ describe('Dossier E2E - Real Queue Processing', () => {
     // Reset mocks
     s3Mock.reset();
     sftpMock.reset();
+    notificationMock.reset();
+
+    await clearControles(dataSource);
 
     // Clear and reseed user data
     await clearUserWithDroits(dataSource);
     await seedUserWithDroits(dataSource, TEST_USER);
-    await clearControles(dataSource);
     await clearDepots(dataSource);
     // await clearReferentielData(dataSource);
     // await createReferentielDataset(dataSource);
@@ -370,5 +377,90 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const technicalErrors = controles.filter((c) => c.error === ErrorCode.E2_999);
       expect(technicalErrors.length).toBe(0);
     }, 12000);
+
+    it('should generate and send rapport for a rejected depot', async () => {
+      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRights), {
+          filename: 'rejected-depot-rapport.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await waitForJobCompletion(dataSource, QueueName.process_file, depotId, {
+        timeoutMs: 6000,
+        pollIntervalMs: 200,
+      });
+
+      const [metierResult, sandreUploadResult] = await Promise.all([
+        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+      ]);
+
+      let sandrePollResult: { status: string } = { status: 'timeout' };
+      const sandrePollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
+      if (sandrePollJobs.length > 0) {
+        sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        });
+      }
+
+      expect(metierResult.status).toBe('completed');
+      expect(sandreUploadResult.status).toBe('completed');
+      expect(['completed', 'timeout']).toContain(sandrePollResult.status);
+
+      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+
+      expect(diffusionRapportResult.status).toBe('completed');
+
+      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
+        where: { id: depotId },
+      });
+
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
+      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.SUCCESS);
+      expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
+      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+
+      const pdfUpload = s3Mock.uploads.find((upload) => upload.key === finalDepot.rapportPath);
+      expect(pdfUpload).toBeDefined();
+      expect(pdfUpload?.contentType).toBe('application/pdf');
+      expect(finalDepot.rapportPath ? s3Mock.hasFile(finalDepot.rapportPath) : false).toBe(true);
+
+      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
+      expect(notificationMock.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Rapport de rejet du dépôt',
+          depotId,
+          nomOriginalFichier: 'rejected-depot-rapport.xml',
+          prenom: TEST_USER.prenom,
+          nom: TEST_USER.nom,
+          to: [{ email: TEST_USER.email, name: `${TEST_USER.prenom} ${TEST_USER.nom}` }],
+          attachments: [
+            expect.objectContaining({
+              fileName: `rapport-${depotId}.pdf`,
+            }),
+          ],
+        }),
+        2,
+      );
+    }, 15000);
   });
 });
