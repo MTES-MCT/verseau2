@@ -17,14 +17,14 @@ import { EmailProvider } from '@notification/email.provider';
 @Injectable()
 export class WorkerService implements OnModuleInit {
   private readonly queueConfig: Record<QueueName, QueueOptions> = {
-    [QueueName.process_file]: { batchSize: 5 },
-    [QueueName.email]: { batchSize: 10 },
-    [QueueName.send_to_sftp]: { batchSize: 5 },
-    [QueueName.controle_metier]: { batchSize: 5 },
+    [QueueName.process_file]: { batchSize: 1 },
+    [QueueName.email]: { batchSize: 1 },
+    [QueueName.send_to_sftp]: { batchSize: 1 },
+    [QueueName.controle_metier]: { batchSize: 1 },
     [QueueName.controle_sandre_upload]: { batchSize: 1 },
     [QueueName.controle_sandre_poll]: { batchSize: 1 },
-    [QueueName.process_after_masa_webhook]: { batchSize: 3 },
-    [QueueName.diffusion_rapport]: { batchSize: 3 },
+    [QueueName.process_after_masa_webhook]: { batchSize: 1 },
+    [QueueName.diffusion_rapport]: { batchSize: 1 },
   };
 
   constructor(
