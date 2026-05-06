@@ -39,7 +39,13 @@ import { WorkerModule } from '@worker/worker.module';
 
 import { startPostgresContainer, getPostgresConnectionUri } from '../testcontainer.config';
 import { initTestContainerImports } from '../init/initTestContainer';
-import { clearReferentielData, createReferentielDataset, seedScl, seedSteu, seedTlref } from '../createReferentielDataset';
+import {
+  clearReferentielData,
+  createReferentielDataset,
+  seedScl,
+  seedSteu,
+  seedTlref,
+} from '../createReferentielDataset';
 import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../userWithDroitsDataset.helper';
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 

@@ -108,14 +108,16 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
         ],
         depotId: depot.id,
         nomOriginalFichier: depot.nomOriginalFichier,
-        statut: masa?.statut,
-        numeroDepotVerseau1: masa?.numeroDepotVerseau1,
+        ...(masa && {
+          statut: masa.statut,
+          numeroDepotVerseau1: masa.numeroDepotVerseau1,
+        }),
         prenom: user.prenom,
         nom: user.nom,
       },
       EmailTemplate.RAPPORT,
     );
-    this.logger.log('Email sent to déposant', { email: user.email });
+    this.logger.log('Job email added - to déposant', { email: user.email });
     await this.depotGateway.updateDepot(depot.id, {
       step: DepotStep.SEND_EMAIL_TO_DEPOSANT,
     });
