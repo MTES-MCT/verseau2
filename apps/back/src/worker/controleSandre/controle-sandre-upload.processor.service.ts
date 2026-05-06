@@ -4,9 +4,10 @@ import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, ControleSandreStatus } from '@lib/dossier';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
+import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 
 @Injectable()
 export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
@@ -14,6 +15,7 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
     @Inject(S3) private readonly s3: S3,
     private readonly sandreService: SandreService,
     private readonly depotService: DepotService,
+    private readonly depotCoordinatorService: DepotCoordinatorService,
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly logger: LoggerService,
   ) {
@@ -57,10 +59,10 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
     } catch (error) {
       this.logger.error(`Depot ${depotId} - SANDRE upload failed`, error);
       await this.depotService.update(depotId, {
-        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
+        controleSandreStatus: ControleSandreStatus.FAILED,
       });
-      throw error;
+      await this.depotCoordinatorService.checkControlesCompletion(depotId);
     }
   }
 }

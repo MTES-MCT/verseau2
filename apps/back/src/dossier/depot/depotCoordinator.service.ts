@@ -5,6 +5,13 @@ import type { Queue } from '@queue/queue';
 import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 
+/**
+ * Ce service a pour rôle d'orchestrer la suite du traitement d'un dépôt une fois les contrôles terminés.
+ * Étant donné que les contrôles métier (V1/V2) et les contrôles SANDRE s'exécutent de manière asynchrone et en parallèle,
+ * ce coordinateur vérifie si les deux flux sont achevés.
+ * - Si les deux contrôles réussissent, il déclenche l'envoi vers le SFTP de l'Agence de l'Eau.
+ * - Si l'un des deux échoue (erreur métier, erreur SANDRE ou erreur technique), il passe le dépôt en statut REJETE et déclenche l'envoi du rapport d'erreur.
+ */
 @Injectable()
 export class DepotCoordinatorService {
   private readonly logger = new LoggerService(DepotCoordinatorService.name);
@@ -32,23 +39,23 @@ export class DepotCoordinatorService {
       return;
     }
 
-    const v1Complete: boolean = Boolean(depot.controleStatus && depot.controleStatus !== ControleStatus.PENDING);
+    const v1V2Complete: boolean = Boolean(depot.controleStatus && depot.controleStatus !== ControleStatus.PENDING);
     const sandreComplete: boolean = Boolean(
       depot.controleSandreStatus && depot.controleSandreStatus !== ControleSandreStatus.PENDING,
     );
 
-    if (!v1Complete || !sandreComplete) {
+    if (!v1V2Complete || !sandreComplete) {
       this.logger.log(`Depot ${depotId} - Controls not yet complete`, {
-        controleV1Status: depot.controleStatus ?? null,
+        controleV1V2Status: depot.controleStatus ?? null,
         controleSandreStatus: depot.controleSandreStatus ?? null,
       });
       return;
     }
 
-    const v1Success: boolean = depot.controleStatus === ControleStatus.SUCCESS;
+    const v1V2Success: boolean = depot.controleStatus === ControleStatus.SUCCESS;
     const sandreSuccess: boolean = depot.controleSandreStatus === ControleSandreStatus.SUCCESS;
 
-    if (v1Success && sandreSuccess) {
+    if (v1V2Success && sandreSuccess) {
       this.logger.log(`Depot ${depotId} - Both controls succeeded, dispatching to SFTP`);
       await this.depotService.update(depotId, {
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
@@ -61,7 +68,7 @@ export class DepotCoordinatorService {
         filePath: depot.path ?? '',
       });
     } else {
-      const failedStep: DepotStep = !v1Success ? DepotStep.CONTROLE_FAILED : DepotStep.CONTROLE_SANDRE_FAILED;
+      const failedStep: DepotStep = !v1V2Success ? DepotStep.CONTROLE_FAILED : DepotStep.CONTROLE_SANDRE_FAILED;
 
       this.logger.error(`Depot ${depotId} - Control failed`, {
         controleV1Status: depot.controleStatus ?? null,

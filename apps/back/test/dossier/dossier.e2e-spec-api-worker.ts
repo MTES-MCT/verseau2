@@ -29,6 +29,7 @@ import { QueueGateway, PGBOSS, QueueName, Queue } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { NotificationGateway } from '@notification/notification.gateway';
+import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { ApiModule } from '../../src/api/api.module';
 import { InfraModule } from '@infra/infra.module';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
@@ -38,7 +39,7 @@ import { WorkerModule } from '@worker/worker.module';
 
 import { startPostgresContainer, getPostgresConnectionUri } from '../testcontainer.config';
 import { initTestContainerImports } from '../init/initTestContainer';
-import { clearReferentielData, createReferentielDataset } from '../createReferentielDataset';
+import { clearReferentielData, createReferentielDataset, seedScl, seedSteu, seedTlref } from '../createReferentielDataset';
 import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../userWithDroitsDataset.helper';
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 
@@ -91,6 +92,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
   let notificationMock: NotificationGatewayTestMock;
+  let sandreService: SandreService;
 
   // Test user data matching AuthenticationMockService.getMockUser()
   // itvRfa (SIRET) is required to pass DroitsDepotService.validateDroits()
@@ -106,6 +108,13 @@ describe('Dossier E2E - Real Queue Processing', () => {
   // STEU and SCL codes used in test XMLs - must match VSteuSclItv entries
   const TEST_STEU_CODE = 'TEST_STEU_001';
   const TEST_SCL_CODE = 'TEST_SCL_001';
+  const SANDRE_FAILED_STEU_CODE = 'TEST_STEU_SANDRE_FAIL_001';
+  const SANDRE_FAILED_SCL_CODE = 'TEST_SCL_SANDRE_FAIL_001';
+
+  type ConfigurableSandreMock = SandreService & {
+    defaultBehavior?: 'conformant' | 'non-conformant' | 'random';
+    clearValidationResults?: () => void;
+  };
 
   // Minimal valid XML with OuvrageDepollution and SystemeCollecte for rights validation
   const validXmlWithRights = `<?xml version="1.0" encoding="UTF-8"?>
@@ -140,6 +149,10 @@ describe('Dossier E2E - Real Queue Processing', () => {
         <LbSystemeCollecte>Systeme Collecte Test</LbSystemeCollecte>
     </SystemeCollecte>
 </FctAssain>`;
+
+  const validXmlWithRightsAndMetierSuccess = validXmlWithRights
+    .replaceAll(TEST_STEU_CODE, SANDRE_FAILED_STEU_CODE)
+    .replaceAll(TEST_SCL_CODE, SANDRE_FAILED_SCL_CODE);
 
   beforeAll(async () => {
     await startPostgresContainer({ new: true });
@@ -218,6 +231,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    sandreService = moduleFixture.get(SandreService);
 
     // Create referential data schemas and tables
     await createReferentielDataset(dataSource);
@@ -228,6 +242,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
     s3Mock.reset();
     sftpMock.reset();
     notificationMock.reset();
+    (sandreService as ConfigurableSandreMock).defaultBehavior = 'conformant';
+    (sandreService as ConfigurableSandreMock).clearValidationResults?.();
 
     await clearControles(dataSource);
 
@@ -450,6 +466,107 @@ describe('Dossier E2E - Real Queue Processing', () => {
           subject: 'Rapport de rejet du dépôt',
           depotId,
           nomOriginalFichier: 'rejected-depot-rapport.xml',
+          prenom: TEST_USER.prenom,
+          nom: TEST_USER.nom,
+          to: [{ email: TEST_USER.email, name: `${TEST_USER.prenom} ${TEST_USER.nom}` }],
+          attachments: [
+            expect.objectContaining({
+              fileName: `rapport-${depotId}.pdf`,
+            }),
+          ],
+        }),
+        2,
+      );
+    }, 15000);
+
+    it('should generate and send rapport when controle v1 and v2 pass but sandre fails', async () => {
+      await seedVSteuSclItv(dataSource, SANDRE_FAILED_STEU_CODE, SANDRE_FAILED_SCL_CODE, TEST_USER.itvRfa);
+      await seedSteu(dataSource, 101, SANDRE_FAILED_STEU_CODE, { steuEncoursAn: 2024 });
+      await seedScl(dataSource, 101, SANDRE_FAILED_SCL_CODE, 'Systeme Collecte Test');
+      await seedTlref(dataSource, 101, 'LREF_01', '4', 'Type ouvrage test');
+
+      (sandreService as ConfigurableSandreMock).defaultBehavior = 'non-conformant';
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRightsAndMetierSuccess), {
+          filename: 'sandre-failed-rapport.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await waitForJobCompletion(dataSource, QueueName.process_file, depotId, {
+        timeoutMs: 6000,
+        pollIntervalMs: 200,
+      });
+
+      const [metierResult, sandreUploadResult, sandrePollResult] = await Promise.all([
+        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+      ]);
+
+      expect(metierResult.status).toBe('completed');
+      expect(sandreUploadResult.status).toBe('completed');
+      expect(sandrePollResult.status).toBe('completed');
+
+      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+
+      expect(diffusionRapportResult.status).toBe('completed');
+
+      const sftpJobs = await getJobsForDepot(dataSource, QueueName.send_to_sftp, depotId);
+      expect(sftpJobs).toHaveLength(0);
+
+      const controles = await dataSource.getRepository(ControleEntity).find({
+        where: { depotId },
+      });
+
+      expect(controles.length).toBeGreaterThan(0);
+      expect(
+        controles
+          .filter((controle) => !controle.success)
+          .map((controle) => [controle.name, controle.error, controle.evenementType]),
+      ).toEqual([]);
+
+      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
+        where: { id: depotId },
+      });
+
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+      expect(finalDepot.controleStatus).toBe(ControleStatus.SUCCESS);
+      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.FAILED);
+      expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
+      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+
+      expect(controles.every((controle) => controle.success)).toBe(true);
+
+      const pdfUpload = s3Mock.uploads.find((upload) => upload.key === finalDepot.rapportPath);
+      expect(pdfUpload).toBeDefined();
+      expect(pdfUpload?.contentType).toBe('application/pdf');
+      expect(finalDepot.rapportPath ? s3Mock.hasFile(finalDepot.rapportPath) : false).toBe(true);
+
+      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
+      expect(notificationMock.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Rapport de rejet du dépôt',
+          depotId,
+          nomOriginalFichier: 'sandre-failed-rapport.xml',
           prenom: TEST_USER.prenom,
           nom: TEST_USER.nom,
           to: [{ email: TEST_USER.email, name: `${TEST_USER.prenom} ${TEST_USER.nom}` }],

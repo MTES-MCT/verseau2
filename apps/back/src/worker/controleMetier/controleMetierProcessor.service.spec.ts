@@ -104,9 +104,10 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
     );
 
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
-      status: DepotStatus.REJETE,
       step: DepotStep.CONTROLE_FAILED,
       controleStatus: ControleStatus.FAILED,
     });
+
+    expect(mockDepotCoordinatorService.checkControlesCompletion).toHaveBeenCalledWith(depotId);
   });
 });

@@ -69,7 +69,6 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
           // Mark as failed due to timeout
           await this.depotService.update(depotId, {
-            status: DepotStatus.REJETE,
             step: DepotStep.CONTROLE_SANDRE_FAILED,
             controleSandreStatus: ControleSandreStatus.FAILED,
           });
@@ -124,7 +123,6 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
         step: isConformant ? DepotStep.CONTROLE_SANDRE_COMPLETED : DepotStep.CONTROLE_SANDRE_FAILED,
         etapeMetier: isConformant ? EtapeMetier.SCENARIO_SANDRE : EtapeMetier.CONTROLE_METIER,
-        ...(isConformant ? {} : { status: DepotStatus.REJETE }),
       });
 
       // Check if both controls are complete and coordinate next step
@@ -155,12 +153,11 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
       // Max attempts reached, mark as failed
       await this.depotService.update(depotId, {
-        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
       });
 
-      throw error;
+      await this.depotCoordinatorService.checkControlesCompletion(depotId);
     }
   }
 }
