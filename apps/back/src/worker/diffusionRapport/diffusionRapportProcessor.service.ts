@@ -43,6 +43,10 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
         throw new Error(`Depot not found: ${depotId}`);
       }
 
+      if (!depot.path) {
+        throw new Error(`No XML file path for depot: ${depotId}`);
+      }
+
       let masa: MasaModel | null | undefined;
       if (masaId) {
         masa = await this.masaGateway.findById(masaId);
@@ -68,10 +72,6 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       // 4. Send email to déposant
       await this.sendEmailToDeposant(depot, pdfBuffer, masa ?? undefined);
-
-      if (!depot.path) {
-        throw new Error(`No XML file path for depot: ${depotId}`);
-      }
 
       this.logger.log(`Diffusion rapport processing completed`, { depotId, masaId });
     } catch (error) {
