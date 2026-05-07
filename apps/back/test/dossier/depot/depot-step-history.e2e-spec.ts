@@ -5,6 +5,7 @@ import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
+import { DepotError } from '@dossier/depot/depotError';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { MasaEntity } from '@dossier/masa/masa.entity';
@@ -122,13 +123,13 @@ describe('DepotRepository - Step History Integration Tests', () => {
       // Mettre à jour d'autres champs sans toucher au step
       await depotGateway.updateDepot(depot.id, {
         status: DepotStatus.REJETE,
-        error: 'Test error',
+        error: DepotError.UPLOAD_FAILED,
       });
 
       const updated = await depotGateway.findDepotById(depot.id);
       expect(updated?.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
       expect(updated?.status).toBe(DepotStatus.REJETE);
-      expect(updated?.error).toBe('Test error');
+      expect(updated?.error).toBe(DepotError.UPLOAD_FAILED);
       expect(updated?.stepHistory).toEqual([DepotStep.PENDING, DepotStep.CONTROLE_IN_PROGRESS]);
     });
 
@@ -143,13 +144,13 @@ describe('DepotRepository - Step History Integration Tests', () => {
       await depotGateway.updateDepot(depot.id, {
         step: DepotStep.CONTROLE_FAILED,
         status: DepotStatus.REJETE,
-        error: 'Validation failed',
+        error: DepotError.CONTROLE_METIER_FAILED,
       });
 
       const updated = await depotGateway.findDepotById(depot.id);
       expect(updated?.step).toBe(DepotStep.CONTROLE_FAILED);
       expect(updated?.status).toBe(DepotStatus.REJETE);
-      expect(updated?.error).toBe('Validation failed');
+      expect(updated?.error).toBe(DepotError.CONTROLE_METIER_FAILED);
       expect(updated?.stepHistory).toEqual([DepotStep.PENDING, DepotStep.CONTROLE_FAILED]);
     });
 
@@ -222,7 +223,7 @@ describe('DepotRepository - Step History Integration Tests', () => {
       await depotGateway.updateDepot(depot.id, {
         step: DepotStep.CONTROLE_FAILED,
         status: DepotStatus.REJETE,
-        error: 'Contrôle échoué',
+        error: DepotError.CONTROLE_METIER_FAILED,
       });
 
       const failed = await depotGateway.findDepotById(depot.id);
