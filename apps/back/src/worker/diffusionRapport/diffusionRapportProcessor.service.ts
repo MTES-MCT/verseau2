@@ -12,6 +12,7 @@ import { MasaModel } from '@dossier/masa/masa.model';
 import { DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
+import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
 
 interface DiffusionRapportProcessorData {
   depotId: string;
@@ -25,6 +26,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
     @Inject(NotificationGateway) private readonly notificationService: NotificationGateway,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
+    @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     @Inject(S3) private readonly s3: S3,
     @Inject(Sftp) private readonly sftpService: Sftp,
     private readonly pdfGenerator: RapportPdfGeneratorService,
@@ -57,8 +59,9 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       // 1. Generate PDF report
       const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);
+      const reponsesSandre = await this.reponseSandreGateway.findByDepotId(depotId);
       this.logger.log(`Generating PDF report`, { depotId, masaId });
-      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controlesV2, masa ?? undefined);
+      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controlesV2, masa ?? undefined, reponsesSandre);
 
       // 2. Upload PDF to S3
       const pdfPath = `rapports/${depotId}/rapport.pdf`;

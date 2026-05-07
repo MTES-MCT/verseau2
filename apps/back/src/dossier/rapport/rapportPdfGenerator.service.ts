@@ -3,7 +3,8 @@ import PDFDocument from 'pdfkit';
 import { MasaModel } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '@dossier/controle/controle.model';
-import { buildMessage, ControleDescription, EvenementType } from '@lib/dossier';
+import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
+import { buildMessage, ControleDescription, EvenementType, SandreAcceptationStatus } from '@lib/dossier';
 
 const COLORS = {
   PRIMARY: '#2563eb', // Blue
@@ -17,7 +18,12 @@ const COLORS = {
 
 @Injectable()
 export class RapportPdfGeneratorService {
-  async generateReport(depot: DepotModel, controlesV2: ControleModelWithoutDepot[], masa?: MasaModel): Promise<Buffer> {
+  async generateReport(
+    depot: DepotModel,
+    controlesV2: ControleModelWithoutDepot[],
+    masa?: MasaModel,
+    reponsesSandre?: ReponseSandreModel[],
+  ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50, bufferPages: true, autoFirstPage: false });
       const chunks: Buffer[] = [];
@@ -44,6 +50,10 @@ export class RapportPdfGeneratorService {
 
       if (controlesV2 && controlesV2.length > 0) {
         this.drawControlsV2(doc, controlesV2);
+      }
+
+      if (reponsesSandre && reponsesSandre.length > 0) {
+        this.drawSandreReport(doc, reponsesSandre);
       }
 
       // 5. Footer
@@ -220,6 +230,50 @@ export class RapportPdfGeneratorService {
         });
         doc.moveDown(1);
       });
+    }
+  }
+
+  private drawSandreReport(doc: PDFKit.PDFDocument, reponsesSandre: ReponseSandreModel[]) {
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .fillColor(COLORS.PRIMARY)
+      .text('Résultats des contrôles SANDRE', 50, doc.y, { underline: false });
+    doc.font('Helvetica');
+    doc.moveDown(1);
+
+    const reponse = reponsesSandre[reponsesSandre.length - 1]; // get the latest one
+    if (!reponse) return;
+
+    let statusText = 'En attente / En cours';
+    if (reponse.acceptationStatus === SandreAcceptationStatus.CONFORMANT) {
+      statusText = 'Conforme';
+    } else if (reponse.acceptationStatus === SandreAcceptationStatus.NON_CONFORMANT) {
+      statusText = 'Non conforme';
+    }
+
+    doc.fontSize(10).fillColor(COLORS.TEXT).text(`Statut SANDRE: ${statusText}`);
+    doc.moveDown(0.5);
+
+    if (reponse.errors && reponse.errors.length > 0) {
+      doc.font('Helvetica-Bold').fillColor('#dc2626').fontSize(11).text(`Erreurs (${reponse.errors.length} retours)`);
+      doc.font('Helvetica');
+      doc.moveDown(0.3);
+
+      reponse.errors.forEach((err) => {
+        if (doc.y > doc.page.height - 50) doc.addPage();
+
+        let msg = err.message || err.code || 'Erreur inconnue';
+        if (err.location) {
+          msg += ` (Location: ${err.location})`;
+        }
+        if (err.ligne && err.colonne) {
+          msg += ` (Ligne: ${err.ligne}, Colonne: ${err.colonne})`;
+        }
+
+        doc.fillColor('#dc2626').fontSize(8).text(`• [ERREUR] ${msg}`, { indent: 20 });
+      });
+      doc.moveDown(1);
     }
   }
 

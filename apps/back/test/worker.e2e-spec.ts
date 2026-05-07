@@ -22,6 +22,8 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseSandre.entity';
+import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
+import { ReponseSandreRepository } from '@dossier/controle/technique/sandre/reponseSandre.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
@@ -88,6 +90,8 @@ describe('Worker Service (e2e)', () => {
         { provide: UserService, useClass: UserServiceTestMock },
         DepotService,
         DepotRepository,
+        ReponseSandreRepository,
+        { provide: ReponseSandreGateway, useExisting: ReponseSandreRepository },
         { provide: DepotGateway, useExisting: DepotRepository },
         { provide: NotificationGateway, useValue: notificationMock },
         { provide: MasaGateway, useValue: masaGatewayMock },

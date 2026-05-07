@@ -10,7 +10,7 @@ import { LoggerService } from '@shared/logger/logger.service';
  * Étant donné que les contrôles métier (V1/V2) et les contrôles SANDRE s'exécutent de manière asynchrone et en parallèle,
  * ce coordinateur vérifie si les deux flux sont achevés.
  * - Si les deux contrôles réussissent, il déclenche l'envoi vers le SFTP de l'Agence de l'Eau.
- * - Si l'un des deux échoue (erreur métier, erreur SANDRE ou erreur technique), il passe le dépôt en statut REJETE et déclenche l'envoi du rapport d'erreur.
+ * - Si l'un des deux échoue (erreur métier, erreur SANDRE), il passe le dépôt en statut REJETE et déclenche l'envoi du rapport d'erreur. Les erreurs techniques ne déclenchent pas de rapport.
  */
 @Injectable()
 export class DepotCoordinatorService {

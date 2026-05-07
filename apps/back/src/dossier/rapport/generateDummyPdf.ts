@@ -2,7 +2,16 @@ import { RapportPdfGeneratorService } from './rapportPdfGenerator.service';
 import { MasaModel, MasaStatus } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '../controle/controle.model';
-import { DepotStep, DepotStatus, ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
+import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
+import {
+  DepotStep,
+  DepotStatus,
+  ControleName,
+  ControleType,
+  ErrorCode,
+  EvenementType,
+  SandreAcceptationStatus,
+} from '@lib/dossier';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -262,9 +271,50 @@ async function generateDummyPdf() {
     },
   ];
 
+  const reponsesSandreSuccess: ReponseSandreModel[] = [
+    {
+      id: 'res_123',
+      jeton: 'jeton_xyz',
+      acceptationStatus: SandreAcceptationStatus.CONFORMANT,
+      isConformant: true,
+      codeScenario: 'SCENARIO_1',
+      versionScenario: '1.0',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  const reponsesSandreRejected: ReponseSandreModel[] = [
+    {
+      id: 'res_456',
+      jeton: 'jeton_abc',
+      acceptationStatus: SandreAcceptationStatus.NON_CONFORMANT,
+      isConformant: false,
+      codeScenario: 'SCENARIO_1',
+      versionScenario: '1.0',
+      errors: [
+        {
+          code: 'ERR_001',
+          message: 'Balise <Test> inattendue',
+          ligne: '12',
+          colonne: '5',
+          location: '/Racine/Test',
+        },
+        {
+          code: 'ERR_002',
+          message: 'Attribut manquant: ref',
+          ligne: '15',
+          colonne: '2',
+        },
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
   try {
     console.log('Generating PDF for successful scenario (with MASA)...');
-    const bufferSuccess = await service.generateReport(depot, controlesV2, masa);
+    const bufferSuccess = await service.generateReport(depot, controlesV2, masa, reponsesSandreSuccess);
     const outputPathSuccess = path.join(__dirname, 'dummy_report_success.pdf');
     fs.writeFileSync(outputPathSuccess, bufferSuccess);
     console.log(`✅ Success PDF generated at: ${outputPathSuccess}`);
@@ -292,7 +342,12 @@ async function generateDummyPdf() {
       },
     ];
 
-    const bufferRejected = await service.generateReport(depotRejected, controlesV2Rejected, undefined);
+    const bufferRejected = await service.generateReport(
+      depotRejected,
+      controlesV2Rejected,
+      undefined,
+      reponsesSandreRejected,
+    );
     const outputPathRejected = path.join(__dirname, 'dummy_report_rejected.pdf');
     fs.writeFileSync(outputPathRejected, bufferRejected);
     console.log(`✅ Rejected PDF generated at: ${outputPathRejected}`);
