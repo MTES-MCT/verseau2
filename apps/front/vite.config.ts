@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    server: {
+      host: true, // Listens on all addresses
+      allowedHosts: ['host.docker.internal'], // Allows the docker container to connect
+    },
     base: normalizeViteBasePath(env.VITE_BASE_PATH),
     plugins: [
       react(),
