@@ -24,7 +24,11 @@ import cookieParser from 'cookie-parser';
 import { PgBoss } from 'pg-boss';
 
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import { DepotStatus, DepotStep, ControleStatus, ControleSandreStatus, ErrorCode } from '@lib/dossier';
+import { DepotStatus, DepotStep, ControleStatus, ControleSandreStatus, ErrorCode, ControleName, ControleType, EvenementType, MasaStatus } from '@lib/dossier';
+import { ControleGateway } from '@dossier/controle/controle.gateway';
+import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
+import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
+import { MasaService } from '@dossier/masa/masa.service';
 import { QueueGateway, PGBOSS, QueueName, Queue } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
@@ -36,6 +40,10 @@ import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { WorkerModule } from '@worker/worker.module';
+import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
+import { ControleMetierProcessorService } from '@worker/controleMetier/controleMetierProcessor.service';
+import { ControleSandreUploadProcessorService } from '@worker/controleSandre/controle-sandre-upload.processor.service';
+import { ControleSandrePollProcessorService } from '@worker/controleSandre/controle-sandre-poll.processor.service';
 
 import { startPostgresContainer, getPostgresConnectionUri } from '../testcontainer.config';
 import { initTestContainerImports } from '../init/initTestContainer';
@@ -217,10 +225,12 @@ describe('Dossier E2E - Real Queue Processing', () => {
       .useValue({
         get: (key: string) => {
           if (key === 'DATABASE_URL') return connectionUri;
+          if (key === 'MASA_API_KEY') return 'private-token';
           return process.env[key] ?? null;
         },
         getOrThrow: (key: string) => {
           if (key === 'DATABASE_URL') return connectionUri;
+          if (key === 'MASA_API_KEY') return 'private-token';
           const val = process.env[key];
           if (!val) throw new Error(`Config key ${key} missing`);
           return val;
@@ -584,6 +594,199 @@ describe('Dossier E2E - Real Queue Processing', () => {
         }),
         2,
       );
+    }, 15000);
+
+    it('should pass controls with avertissements, enqueue sftp, and generate rapport on masa webhook', async () => {
+      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+
+      const v2Service = app.get(ControleMetierV2Service);
+      const v1Service = app.get(ControleV1Service);
+      const controleGateway = app.get(ControleGateway);
+
+      const spyV1 = jest.spyOn(v1Service, 'execute').mockResolvedValue([]);
+      const spyV2 = jest.spyOn(v2Service, 'execute').mockImplementation(async (depotId) => {
+        const ctl = await controleGateway.createControle({
+          name: ControleName.CTL039,
+          type: ControleType.CONTROLE_V2,
+          success: true,
+          evenementType: EvenementType.AVERTISSEMENT,
+          error: ErrorCode.E2_039,
+          errorParams: ['o1', 'l1', 'd1', 's1', 'v1', 'v2', 'r1'],
+          depotId,
+        });
+        return [ctl];
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRights), {
+          filename: 'avertissement-test.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await waitForJobCompletion(dataSource, QueueName.process_file, depotId, {
+        timeoutMs: 6000,
+        pollIntervalMs: 200,
+      });
+
+      const [metierResult, sandreUploadResult, sandrePollResult] = await Promise.all([
+        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        }),
+      ]);
+
+      expect(metierResult.status).toBe('completed');
+      expect(sandreUploadResult.status).toBe('completed');
+      expect(['completed', 'timeout']).toContain(sandrePollResult.status);
+
+      // Wait for SFTP
+      const sftpResult = await waitForJobCompletion(dataSource, QueueName.send_to_sftp, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(sftpResult.status).toBe('completed');
+
+      const intermediateDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
+        where: { id: depotId },
+      });
+
+      expect(intermediateDepot.controleStatus).toBe(ControleStatus.SUCCESS);
+      expect(intermediateDepot.step).toBe(DepotStep.SFTP_COMPLETED);
+
+      // Simulate MASA webhook directly via service to bypass guards
+      const masaService = app.get(MasaService);
+      await masaService.processRetourAgentVerseau({
+        versau2DepotId: depotId,
+        numeroDepotVerseau1: 'V1-WARN-123',
+        statut: MasaStatus.INTEGRATION_PARTIELLE,
+        rapport: 'Integ avec avertissements',
+      });
+
+      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(diffusionRapportResult.status).toBe('completed');
+
+      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
+        where: { id: depotId },
+      });
+
+      expect(finalDepot.status).toBe(DepotStatus.INTEGRE_PARTIELLEMENT);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+
+      spyV1.mockRestore();
+      spyV2.mockRestore();
+    }, 20000);
+
+    it('should not enqueue diffusion_rapport when fileProcessor has a technical error', async () => {
+      const fileProcessorService = app.get(FileProcessorService);
+      const spy = jest.spyOn(fileProcessorService, 'process').mockRejectedValue(new Error('Technical error in fileProcessor'));
+
+      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRights), {
+          filename: 'tech-error.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
+      expect(diffusionRapportJobs).toHaveLength(0);
+      spy.mockRestore();
+    }, 15000);
+
+    it('should not enqueue diffusion_rapport when controleMetier has a technical error', async () => {
+      const controleMetierService = app.get(ControleMetierProcessorService);
+      const spy = jest.spyOn(controleMetierService, 'process').mockRejectedValue(new Error('Technical error in controleMetier'));
+
+      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRights), {
+          filename: 'tech-error-metier.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
+      expect(diffusionRapportJobs).toHaveLength(0);
+      spy.mockRestore();
+    }, 15000);
+
+    it('should not enqueue diffusion_rapport when sandre uploading has a technical error', async () => {
+      const sandreUploadService = app.get(ControleSandreUploadProcessorService);
+      const spy = jest.spyOn(sandreUploadService, 'process').mockRejectedValue(new Error('Technical error in sandreUpload'));
+
+      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRights), {
+          filename: 'tech-error-sandre-upload.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
+      expect(diffusionRapportJobs).toHaveLength(0);
+      spy.mockRestore();
+    }, 15000);
+
+    it('should not enqueue diffusion_rapport when sandre polling has a technical error', async () => {
+      const sandrePollService = app.get(ControleSandrePollProcessorService);
+      const spy = jest.spyOn(sandrePollService, 'process').mockRejectedValue(new Error('Technical error in sandrePoll'));
+
+      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+
+      const response = await request(app.getHttpServer())
+        .post('/depot/upload')
+        .set('Cookie', ['access_token=test-token'])
+        .attach('file', Buffer.from(validXmlWithRights), {
+          filename: 'tech-error-sandre-poll.xml',
+          contentType: 'application/xml',
+        })
+        .expect(201);
+
+      const depotId = (response.body as { id: string }).id;
+
+      await new Promise((resolve) => setTimeout(resolve, 6000));
+
+      const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
+      expect(diffusionRapportJobs).toHaveLength(0);
+      spy.mockRestore();
     }, 15000);
   });
 });

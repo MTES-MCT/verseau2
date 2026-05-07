@@ -59,5 +59,6 @@ export async function seedDepotFull(dataSource: DataSource, data: DepotSeedData)
  */
 export async function clearDepots(dataSource: DataSource): Promise<void> {
   await clearControles(dataSource);
+  await dataSource.query(`DELETE FROM masa`);
   await dataSource.query(`DELETE FROM depot`);
 }
