@@ -3,7 +3,8 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, ControleSandreStatus, EtapeMetier, SandreAcceptationStatus } from '@lib/dossier';
+import { DepotStep, ControleSandreStatus, EtapeMetier, SandreAcceptationStatus } from '@lib/dossier';
+import { DepotError } from '@dossier/depot/depotError';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
@@ -71,6 +72,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
           await this.depotService.update(depotId, {
             step: DepotStep.CONTROLE_SANDRE_FAILED,
             controleSandreStatus: ControleSandreStatus.FAILED,
+            error: DepotError.SANDRE_POLL_TIMEOUT,
           });
 
           await this.depotCoordinatorService.checkControlesCompletion(depotId);
@@ -155,6 +157,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
       await this.depotService.update(depotId, {
         step: DepotStep.CONTROLE_SANDRE_FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
+        error: DepotError.SANDRE_POLL_FAILED,
       });
 
       await this.depotCoordinatorService.checkControlesCompletion(depotId);

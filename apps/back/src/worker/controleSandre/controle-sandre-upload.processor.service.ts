@@ -5,6 +5,7 @@ import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, ControleSandreStatus } from '@lib/dossier';
+import { DepotError } from '@dossier/depot/depotError';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
@@ -61,6 +62,7 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
       await this.depotService.update(depotId, {
         step: DepotStep.CONTROLE_SANDRE_FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
+        error: DepotError.SANDRE_UPLOAD_FAILED,
       });
       await this.depotCoordinatorService.checkControlesCompletion(depotId);
     }

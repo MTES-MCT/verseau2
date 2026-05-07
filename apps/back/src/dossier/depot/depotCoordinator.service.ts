@@ -81,9 +81,15 @@ export class DepotCoordinatorService {
         step: failedStep,
       });
 
-      await this.queueService.send(QueueName.diffusion_rapport, {
-        depotId,
-      });
+      if (!depot.error) {
+        await this.queueService.send(QueueName.diffusion_rapport, {
+          depotId,
+        });
+      } else {
+        this.logger.log(`Depot ${depotId} - Technical error detected, skipping diffusion_rapport`, {
+          error: depot.error,
+        });
+      }
     }
   }
 }

@@ -8,15 +8,8 @@ import { DepotService } from '@dossier/depot/depot.service';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { S3 } from '@s3/s3';
-import {
-  ControleName,
-  ControleType,
-  ErrorCode,
-  EvenementType,
-  DepotStatus,
-  DepotStep,
-  ControleStatus,
-} from '@lib/dossier';
+import { DepotError } from '@dossier/depot/depotError';
+import { ControleName, ControleType, ErrorCode, EvenementType, ControleStatus, DepotStep } from '@lib/dossier';
 import { SharedModule } from '@shared/shared.module';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 
@@ -106,6 +99,7 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       step: DepotStep.CONTROLE_FAILED,
       controleStatus: ControleStatus.FAILED,
+      error: DepotError.CONTROLE_METIER_FAILED,
     });
 
     expect(mockDepotCoordinatorService.checkControlesCompletion).toHaveBeenCalledWith(depotId);

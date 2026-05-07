@@ -22,7 +22,7 @@ describe('WorkerService', () => {
     } as unknown as Queue;
 
     const cls = {
-      runWith: jest.fn((_store: CustomClsStore, callback: () => Promise<unknown> | unknown) => callback()),
+      runWith: jest.fn((_store: CustomClsStore, callback: () => unknown) => callback()),
     } as unknown as ClsService<CustomClsStore>;
 
     const logger = {
