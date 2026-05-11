@@ -336,11 +336,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
         await waitFor(
           async () => {
             const depot = await findDepotOrFail(depotId);
-            return (
-              depot.status === DepotStatus.REJETE &&
-              depot.step === DepotStep.UPLOADING_TO_S3 &&
-              depot.error === DepotError.UPLOAD_FAILED
-            );
+            return depot.step === DepotStep.UPLOADING_TO_S3 && depot.error === DepotError.UPLOAD_FAILED;
           },
           {
             timeoutMs: 6000,
@@ -350,7 +346,6 @@ describe('Dossier E2E - Real Queue Processing', () => {
         );
 
         const finalDepot = await findDepotOrFail(depotId);
-        expect(finalDepot.status).toBe(DepotStatus.REJETE);
         expect(finalDepot.step).toBe(DepotStep.UPLOADING_TO_S3);
         expect(finalDepot.error).toBe(DepotError.UPLOAD_FAILED);
         expect(finalDepot.path).toBeNull();
@@ -362,7 +357,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       }
     }, 12000);
 
-    it('should reject depot when process_file enqueue fails', async () => {
+    it('should not generate or send report when process_file enqueue fails', async () => {
       const queueService = app.get<Queue>(QueueGateway);
       const originalSend = queueService.send.bind(queueService);
       const queueSpy = jest.spyOn(queueService, 'send').mockImplementation(async (name: string, data?: object) => {
@@ -380,12 +375,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
         await waitFor(
           async () => {
             const depot = await findDepotOrFail(depotId);
-            return (
-              depot.status === DepotStatus.REJETE &&
-              depot.step === DepotStep.CONTROLE_FAILED &&
-              depot.error === DepotError.ENQUEUE_FAILED &&
-              depot.path === expectedPath
-            );
+            return depot.error === DepotError.ENQUEUE_FAILED && depot.path === expectedPath;
           },
           {
             timeoutMs: 6000,
@@ -395,12 +385,10 @@ describe('Dossier E2E - Real Queue Processing', () => {
         );
 
         const finalDepot = await findDepotOrFail(depotId);
-        expect(finalDepot.status).toBe(DepotStatus.REJETE);
-        expect(finalDepot.step).toBe(DepotStep.CONTROLE_FAILED);
         expect(finalDepot.error).toBe(DepotError.ENQUEUE_FAILED);
         expect(finalDepot.path).toBe(expectedPath);
         expect(s3Mock.hasFile(expectedPath)).toBe(true);
-
+        expect(notificationMock.sendEmail).not.toHaveBeenCalled();
         const processFileJobs = await getJobsForDepot(dataSource, QueueName.process_file, depotId);
         expect(processFileJobs).toHaveLength(0);
       } finally {
@@ -733,7 +721,6 @@ describe('Dossier E2E - Real Queue Processing', () => {
         async () => {
           const depot = await findDepotOrFail(depotId);
           return (
-            depot.status === DepotStatus.REJETE &&
             depot.step === DepotStep.SFTP_FAILED &&
             depot.controleStatus === ControleStatus.SUCCESS &&
             depot.controleSandreStatus === ControleSandreStatus.SUCCESS
@@ -747,7 +734,6 @@ describe('Dossier E2E - Real Queue Processing', () => {
       );
 
       const finalDepot = await findDepotOrFail(depotId);
-      expect(finalDepot.status).toBe(DepotStatus.REJETE);
       expect(finalDepot.step).toBe(DepotStep.SFTP_FAILED);
       expect(finalDepot.controleStatus).toBe(ControleStatus.SUCCESS);
       expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.SUCCESS);
