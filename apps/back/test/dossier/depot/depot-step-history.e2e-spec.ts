@@ -144,13 +144,13 @@ describe('DepotRepository - Step History Integration Tests', () => {
       await depotGateway.updateDepot(depot.id, {
         step: DepotStep.CONTROLE_FAILED,
         status: DepotStatus.REJETE,
-        error: DepotError.CONTROLE_METIER_FAILED,
+        error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
       });
 
       const updated = await depotGateway.findDepotById(depot.id);
       expect(updated?.step).toBe(DepotStep.CONTROLE_FAILED);
       expect(updated?.status).toBe(DepotStatus.REJETE);
-      expect(updated?.error).toBe(DepotError.CONTROLE_METIER_FAILED);
+      expect(updated?.error).toBe(DepotError.CONTROLE_METIER_TECHNICAL_FAILURE);
       expect(updated?.stepHistory).toEqual([DepotStep.PENDING, DepotStep.CONTROLE_FAILED]);
     });
 
@@ -223,7 +223,7 @@ describe('DepotRepository - Step History Integration Tests', () => {
       await depotGateway.updateDepot(depot.id, {
         step: DepotStep.CONTROLE_FAILED,
         status: DepotStatus.REJETE,
-        error: DepotError.CONTROLE_METIER_FAILED,
+        error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
       });
 
       const failed = await depotGateway.findDepotById(depot.id);

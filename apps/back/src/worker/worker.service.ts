@@ -131,12 +131,16 @@ export class WorkerService implements OnModuleInit {
         case QueueName.controle_sandre_upload:
           await this.queueService.work<{ depotId: string; filePath: string; correlationId?: string }>(
             queueName,
-            options,
+            { ...options, includeMetadata: true },
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
                 this.logger.log('Processing SANDRE upload jobId', job.id);
                 try {
-                  return await this.controleSandreUploadProcessorService.process(job.data);
+                  return await this.controleSandreUploadProcessorService.process({
+                    ...job.data,
+                    retryCount: job.retryCount,
+                    retryLimit: job.retryLimit,
+                  });
                 } catch (error) {
                   this.logger.error('SANDRE upload job processing failed', {
                     jobId: job.id,

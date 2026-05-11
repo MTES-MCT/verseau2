@@ -14,6 +14,8 @@ export interface QueueJob<TData = object> {
   id: string;
   name: string;
   data: TData;
+  retryLimit?: number;
+  retryCount?: number;
 }
 
 export enum QueueName {
@@ -29,6 +31,7 @@ export enum QueueName {
 
 export interface QueueOptions {
   batchSize: number;
+  includeMetadata?: boolean;
 }
 
 export const QueueGateway = Symbol('QUEUE');

@@ -53,7 +53,9 @@ describe('WorkerService', () => {
     expect(work).toHaveBeenCalledTimes(Object.values(QueueName).length);
 
     for (const queueName of Object.values(QueueName)) {
-      expect(work).toHaveBeenCalledWith(queueName, { batchSize: 1 }, expect.any(Function));
+      const expectedOptions =
+        queueName === QueueName.controle_sandre_upload ? { batchSize: 1, includeMetadata: true } : { batchSize: 1 };
+      expect(work).toHaveBeenCalledWith(queueName, expectedOptions, expect.any(Function));
     }
   });
 });

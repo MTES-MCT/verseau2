@@ -92,7 +92,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       await this.depotService.update(depotId, {
         step: DepotStep.CONTROLE_FAILED,
         controleStatus: ControleStatus.FAILED,
-        error: DepotError.CONTROLE_METIER_FAILED,
+        error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
       });
 
       await this.depotCoordinatorService.checkControlesCompletion(depotId);
