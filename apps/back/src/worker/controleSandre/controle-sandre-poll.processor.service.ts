@@ -3,14 +3,15 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, ControleSandreStatus, EtapeMetier, SandreAcceptationStatus } from '@lib/dossier';
+import { DepotStep, ControleSandreStatus, EtapeMetier, SandreAcceptationStatus } from '@lib/dossier';
+import { DepotError } from '@dossier/depot/depotError';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { mapSandreErrors } from '@dossier/controle/technique/sandre/sandre.mapper';
 
-const POLL_INTERVAL_SECONDS = 30;
+const POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
 const MAX_ATTEMPTS = 240; // 240 * 30s = 2 hours
 
 @Injectable()
@@ -69,9 +70,9 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
           // Mark as failed due to timeout
           await this.depotService.update(depotId, {
-            status: DepotStatus.REJETE,
             step: DepotStep.CONTROLE_SANDRE_FAILED,
             controleSandreStatus: ControleSandreStatus.FAILED,
+            error: DepotError.SANDRE_POLL_TIMEOUT,
           });
 
           await this.depotCoordinatorService.checkControlesCompletion(depotId);
@@ -124,7 +125,6 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
         step: isConformant ? DepotStep.CONTROLE_SANDRE_COMPLETED : DepotStep.CONTROLE_SANDRE_FAILED,
         etapeMetier: isConformant ? EtapeMetier.SCENARIO_SANDRE : EtapeMetier.CONTROLE_METIER,
-        ...(isConformant ? {} : { status: DepotStatus.REJETE }),
       });
 
       // Check if both controls are complete and coordinate next step
@@ -135,7 +135,8 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
       });
     } catch (error) {
-      this.logger.error(`Depot ${depotId} - SANDRE poll failed`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Depot ${depotId} - SANDRE poll failed`, errorMessage);
 
       // If we haven't exhausted attempts, re-enqueue
       if (attemptCount < MAX_ATTEMPTS) {
@@ -155,12 +156,12 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
       // Max attempts reached, mark as failed
       await this.depotService.update(depotId, {
-        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
+        error: DepotError.SANDRE_POLL_FAILED,
       });
 
-      throw error;
+      await this.depotCoordinatorService.checkControlesCompletion(depotId);
     }
   }
 }

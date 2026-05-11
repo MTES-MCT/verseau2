@@ -389,3 +389,36 @@ export class ConfigServiceTestMock {
     };
   }
 }
+
+/**
+ * Mock for NotificationGateway.
+ */
+export class NotificationGatewayTestMock {
+  sendEmail = jest.fn().mockResolvedValue(undefined);
+
+  reset(): void {
+    this.sendEmail.mockClear().mockResolvedValue(undefined);
+  }
+}
+
+/**
+ * Mock for MasaGateway.
+ */
+export class MasaGatewayTestMock {
+  findById = jest.fn().mockResolvedValue(null);
+
+  reset(): void {
+    this.findById.mockClear().mockResolvedValue(null);
+  }
+}
+
+/**
+ * Mock for ControleGateway.
+ */
+export class ControleGatewayTestMock {
+  findControlesV2ByDepotId = jest.fn().mockResolvedValue([]);
+
+  reset(): void {
+    this.findControlesV2ByDepotId.mockClear().mockResolvedValue([]);
+  }
+}

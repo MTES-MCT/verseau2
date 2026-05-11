@@ -3,7 +3,8 @@ import PDFDocument from 'pdfkit';
 import { MasaModel } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '@dossier/controle/controle.model';
-import { buildMessage, ControleDescription, EvenementType } from '@lib/dossier';
+import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
+import { buildMessage, ControleDescription, EvenementType, SandreAcceptationStatus } from '@lib/dossier';
 
 const COLORS = {
   PRIMARY: '#2563eb', // Blue
@@ -17,7 +18,12 @@ const COLORS = {
 
 @Injectable()
 export class RapportPdfGeneratorService {
-  async generateReport(masa: MasaModel, depot: DepotModel, controlesV2: ControleModelWithoutDepot[]): Promise<Buffer> {
+  async generateReport(
+    depot: DepotModel,
+    controlesV2: ControleModelWithoutDepot[],
+    masa?: MasaModel,
+    reponsesSandre?: ReponseSandreModel[],
+  ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50, bufferPages: true, autoFirstPage: false });
       const chunks: Buffer[] = [];
@@ -38,10 +44,16 @@ export class RapportPdfGeneratorService {
 
       this.drawHeader(doc, depot, masa);
 
-      this.drawMasaReport(doc, masa);
+      if (masa) {
+        this.drawMasaReport(doc, masa);
+      }
 
       if (controlesV2 && controlesV2.length > 0) {
         this.drawControlsV2(doc, controlesV2);
+      }
+
+      if (reponsesSandre && reponsesSandre.length > 0) {
+        this.drawSandreReport(doc, reponsesSandre);
       }
 
       // 5. Footer
@@ -51,7 +63,7 @@ export class RapportPdfGeneratorService {
     });
   }
 
-  private drawHeader(doc: PDFKit.PDFDocument, depot: DepotModel, masa: MasaModel) {
+  private drawHeader(doc: PDFKit.PDFDocument, depot: DepotModel, masa?: MasaModel) {
     doc.font('Helvetica-Bold').fontSize(24).fillColor(COLORS.PRIMARY).text('Rapport de Traitement', { align: 'left' });
     doc.font('Helvetica');
 
@@ -65,7 +77,7 @@ export class RapportPdfGeneratorService {
     doc.fillColor(COLORS.TEXT).text(depot.id, 120, startY);
 
     doc.fillColor(COLORS.SECONDARY).text('Date:', 300, startY);
-    const dateStr = masa.createdAt
+    const dateStr = masa?.createdAt
       ? new Date(masa.createdAt).toLocaleString('fr-FR')
       : new Date().toLocaleString('fr-FR');
     doc.fillColor(COLORS.TEXT).text(dateStr, 350, startY);
@@ -79,7 +91,7 @@ export class RapportPdfGeneratorService {
     doc.moveDown(2);
   }
 
-  private drawStatistics(doc: PDFKit.PDFDocument, total: number, success: number, warning: number, rate: number) {
+  private drawStatistics(doc: PDFKit.PDFDocument, total: number, success: number, failed: number, rate: number) {
     const boxTop = doc.y;
     const boxHeight = 70;
 
@@ -93,11 +105,11 @@ export class RapportPdfGeneratorService {
     this.drawStatItem(doc, 'Succès', success.toString(), 50 + quarter, centerY, COLORS.SUCCESS);
     this.drawStatItem(
       doc,
-      'Avertissements',
-      warning.toString(),
+      'Échecs / Avertissements',
+      failed.toString(),
       50 + quarter * 2,
       centerY,
-      warning > 0 ? COLORS.WARNING : COLORS.TEXT,
+      failed > 0 ? COLORS.WARNING : COLORS.TEXT,
     );
     this.drawStatItem(doc, 'Taux de succès', `${rate}%`, 50 + quarter * 3, centerY);
 
@@ -162,9 +174,10 @@ export class RapportPdfGeneratorService {
       (c) => c.evenementType !== EvenementType.AVERTISSEMENT && c.evenementType !== EvenementType.ERREUR,
     );
     const warningControls = controls.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT);
+    const errorControls = controls.filter((c) => c.evenementType === EvenementType.ERREUR);
     const successRate = totalControls > 0 ? Math.round((successControls.length / totalControls) * 100) : 0;
-    const failedControls = warningControls;
-    this.drawStatistics(doc, totalControls, successControls.length, warningControls.length, successRate);
+    const failedControls = [...errorControls, ...warningControls];
+    this.drawStatistics(doc, totalControls, successControls.length, failedControls.length, successRate);
 
     // Success Summary
     if (successControls.length > 0) {
@@ -184,36 +197,83 @@ export class RapportPdfGeneratorService {
       doc.moveDown(2);
     }
 
-    // Warnings Detail
+    // Warnings & Errors Detail
     if (failedControls.length > 0) {
-      const groupedWarnings: Record<string, ControleModelWithoutDepot[]> = {};
+      const groupedFailures: Record<string, ControleModelWithoutDepot[]> = {};
       failedControls.forEach((c) => {
-        if (!groupedWarnings[c.name]) {
-          groupedWarnings[c.name] = [];
+        if (!groupedFailures[c.name]) {
+          groupedFailures[c.name] = [];
         }
-        groupedWarnings[c.name].push(c);
+        groupedFailures[c.name].push(c);
       });
 
-      Object.keys(groupedWarnings).forEach((controlName) => {
+      Object.keys(groupedFailures).forEach((controlName) => {
         if (doc.y > doc.page.height - 100) doc.addPage();
 
-        const group = groupedWarnings[controlName];
+        const group = groupedFailures[controlName];
 
-        doc
-          .font('Helvetica-Bold')
-          .fillColor(COLORS.WARNING)
-          .fontSize(11)
-          .text(`${controlName} (${group.length} avertissements)`);
+        const hasErrors = group.some((c) => c.evenementType === EvenementType.ERREUR);
+        const titleColor = hasErrors ? '#dc2626' : COLORS.WARNING; // Red for errors, Orange for warnings
+
+        doc.font('Helvetica-Bold').fillColor(titleColor).fontSize(11).text(`${controlName} (${group.length} retours)`);
         doc.font('Helvetica');
         doc.moveDown(0.3);
 
         group.forEach((c) => {
           if (doc.y > doc.page.height - 50) doc.addPage();
           const msg = buildMessage(c.error, c.errorParams || []);
-          doc.fillColor(COLORS.TEXT).fontSize(8).text(`• ${msg}`, { indent: 20 });
+          const isError = c.evenementType === EvenementType.ERREUR;
+          const prefix = isError ? '[ERREUR]' : '[AVERTISSEMENT]';
+          const itemColor = isError ? '#dc2626' : COLORS.TEXT;
+
+          doc.fillColor(itemColor).fontSize(8).text(`• ${prefix} ${msg}`, { indent: 20 });
         });
         doc.moveDown(1);
       });
+    }
+  }
+
+  private drawSandreReport(doc: PDFKit.PDFDocument, reponsesSandre: ReponseSandreModel[]) {
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .fillColor(COLORS.PRIMARY)
+      .text('Résultats des contrôles SANDRE', 50, doc.y, { underline: false });
+    doc.font('Helvetica');
+    doc.moveDown(1);
+
+    const reponse = reponsesSandre[reponsesSandre.length - 1]; // get the latest one
+    if (!reponse) return;
+
+    let statusText = 'En attente / En cours';
+    if (reponse.acceptationStatus === SandreAcceptationStatus.CONFORMANT) {
+      statusText = 'Conforme';
+    } else if (reponse.acceptationStatus === SandreAcceptationStatus.NON_CONFORMANT) {
+      statusText = 'Non conforme';
+    }
+
+    doc.fontSize(10).fillColor(COLORS.TEXT).text(`Statut SANDRE: ${statusText}`);
+    doc.moveDown(0.5);
+
+    if (reponse.errors && reponse.errors.length > 0) {
+      doc.font('Helvetica-Bold').fillColor('#dc2626').fontSize(11).text(`Erreurs (${reponse.errors.length} retours)`);
+      doc.font('Helvetica');
+      doc.moveDown(0.3);
+
+      reponse.errors.forEach((err) => {
+        if (doc.y > doc.page.height - 50) doc.addPage();
+
+        let msg = err.message || err.code || 'Erreur inconnue';
+        if (err.location) {
+          msg += ` (Location: ${err.location})`;
+        }
+        if (err.ligne && err.colonne) {
+          msg += ` (Ligne: ${err.ligne}, Colonne: ${err.colonne})`;
+        }
+
+        doc.fillColor('#dc2626').fontSize(8).text(`• [ERREUR] ${msg}`, { indent: 20 });
+      });
+      doc.moveDown(1);
     }
   }
 

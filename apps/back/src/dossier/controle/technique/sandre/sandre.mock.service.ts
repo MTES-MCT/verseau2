@@ -97,15 +97,11 @@ export class SandreMockService {
       acceptationStatus,
     });
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          jeton,
-          lienAcquittement: `http://mock.sandre.eaufrance.fr/acquittement/${jeton}`,
-          lienCertificat: `http://mock.sandre.eaufrance.fr/certificat/${jeton}`,
-        });
-      }, 100); // Simulate async delay
-    });
+    return {
+      jeton,
+      lienAcquittement: `http://mock.sandre.eaufrance.fr/acquittement/${jeton}`,
+      lienCertificat: `http://mock.sandre.eaufrance.fr/certificat/${jeton}`,
+    };
   }
 
   /**
@@ -209,11 +205,7 @@ export class SandreMockService {
       },
     };
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(mockResult);
-      }, 100); // Simulate async delay
-    });
+    return mockResult;
   }
 
   /**

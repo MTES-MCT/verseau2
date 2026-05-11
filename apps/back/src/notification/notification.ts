@@ -18,8 +18,8 @@ export interface EmailWithMessage extends EmailParams {
 export interface EmailRapportParams extends EmailParams {
   depotId: string;
   nomOriginalFichier: string;
-  statut: string;
-  numeroDepotVerseau1: string | null;
+  statut?: string;
+  numeroDepotVerseau1?: string | null;
   prenom: string;
   nom: string;
 }
