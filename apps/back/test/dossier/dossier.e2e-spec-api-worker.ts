@@ -320,12 +320,14 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const originalSend = queueService.send.bind(queueService);
       const queueSpy = jest
         .spyOn(queueService, 'send')
-        .mockImplementation(async (name: string, data?: object, options) => {
+        .mockImplementation(async (name: string, options, data?: object) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
           if (name === QueueName.process_file) {
             throw new Error('Queue send failed');
           }
 
-          return await originalSend(name, data, options);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return await originalSend(name, options, data);
         });
 
       try {

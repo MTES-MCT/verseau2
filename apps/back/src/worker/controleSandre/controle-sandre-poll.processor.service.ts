@@ -135,7 +135,8 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
       });
     } catch (error) {
-      this.logger.error(`Depot ${depotId} - SANDRE poll failed`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Depot ${depotId} - SANDRE poll failed`, errorMessage);
 
       // If we haven't exhausted attempts, re-enqueue
       if (attemptCount < MAX_ATTEMPTS) {
