@@ -11,7 +11,7 @@ import type { Queue } from '@queue/queue';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { mapSandreErrors } from '@dossier/controle/technique/sandre/sandre.mapper';
 
-const POLL_INTERVAL_SECONDS = 30;
+const POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
 const MAX_ATTEMPTS = 240; // 240 * 30s = 2 hours
 
 @Injectable()

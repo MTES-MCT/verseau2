@@ -8,6 +8,8 @@ import { DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 
+const SANDRE_POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
+
 @Injectable()
 export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
   constructor(
@@ -45,12 +47,12 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
         jeton: tokenResponse.jeton,
       });
 
-      // Enqueue the poll job with startAfter: 30 seconds
+      // Keep the production delay by default, but allow faster polling in tests.
       this.logger.log(`Depot ${depotId} - Enqueuing poll job`, { jeton: tokenResponse.jeton });
       await this.queueService.send(
         QueueName.controle_sandre_poll,
         { depotId, jeton: tokenResponse.jeton, attemptCount: 0 },
-        { startAfter: 30 }, // Start after 30 seconds
+        { startAfter: SANDRE_POLL_INTERVAL_SECONDS },
       );
 
       this.logger.log(`Depot ${depotId} - Upload job completed`);

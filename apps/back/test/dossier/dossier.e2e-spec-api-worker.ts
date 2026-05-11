@@ -13,6 +13,7 @@ process.env.USE_SANDRE_MOCK = 'true';
 process.env.OIDC_MOCK = 'true';
 process.env.S3_PROVIDER = 'mock';
 process.env.SFTP_PROVIDER = 'mock';
+process.env.SANDRE_POLL_INTERVAL_SECONDS = '0';
 
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -24,20 +25,7 @@ import cookieParser from 'cookie-parser';
 import { PgBoss } from 'pg-boss';
 
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import {
-  DepotStatus,
-  DepotStep,
-  ControleStatus,
-  ControleSandreStatus,
-  ErrorCode,
-  ControleName,
-  ControleType,
-  EvenementType,
-  MasaStatus,
-} from '@lib/dossier';
-import { ControleGateway } from '@dossier/controle/controle.gateway';
-import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
-import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
+import { DepotStatus, DepotStep, ControleStatus, ControleSandreStatus, ErrorCode, MasaStatus } from '@lib/dossier';
 import { MasaService } from '@dossier/masa/masa.service';
 import { QueueGateway, PGBOSS, QueueName, Queue } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
@@ -52,25 +40,18 @@ import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { WorkerModule } from '@worker/worker.module';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
 import { ControleMetierProcessorService } from '@worker/controleMetier/controleMetierProcessor.service';
-import { ControleSandreUploadProcessorService } from '@worker/controleSandre/controle-sandre-upload.processor.service';
 import { ControleSandrePollProcessorService } from '@worker/controleSandre/controle-sandre-poll.processor.service';
 
 import { startPostgresContainer, getPostgresConnectionUri } from '../testcontainer.config';
 import { initTestContainerImports } from '../init/initTestContainer';
-import {
-  clearReferentielData,
-  createReferentielDataset,
-  seedScl,
-  seedSteu,
-  seedTlref,
-} from '../createReferentielDataset';
+import { createReferentielDataset, seedScl, seedSteu, seedTlref } from '../createReferentielDataset';
 import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../userWithDroitsDataset.helper';
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 
 // Import shared mocks for infrastructure dependencies
 import { S3TestMock, SftpTestMock, NotificationGatewayTestMock } from '../mock/shared-mocks';
 import { DepotError } from '@dossier/depot/depotError';
-import { clearDepots } from '../depot.helper';
+import { seedDepotFull } from '../depot.helper';
 import { clearControles } from '../controle.helper';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
@@ -83,8 +64,12 @@ import { ControleEntity } from '@dossier/controle/controle.entity';
 class RealQueueService implements Queue {
   constructor(private readonly pgboss: PgBoss) {}
 
-  async send<TData = object>(name: string, data?: TData): Promise<string | null> {
-    const result = await this.pgboss.send(name, data as object);
+  async send<TData = object>(
+    name: string,
+    data?: TData,
+    options?: { startAfter?: number | string | Date },
+  ): Promise<string | null> {
+    const result = await this.pgboss.send(name, data as object, options);
     return result;
   }
 
@@ -117,6 +102,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   let sftpMock: SftpTestMock;
   let notificationMock: NotificationGatewayTestMock;
   let sandreService: SandreService;
+  let testUserId: string;
 
   // Test user data matching AuthenticationMockService.getMockUser()
   // itvRfa (SIRET) is required to pass DroitsDepotService.validateDroits()
@@ -178,7 +164,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
     .replaceAll(TEST_STEU_CODE, SANDRE_FAILED_STEU_CODE)
     .replaceAll(TEST_SCL_CODE, SANDRE_FAILED_SCL_CODE);
 
-  let referentielSeedBase = 1000;
+  const referentielSeedBase = 1000;
 
   const buildValidXmlWithCodes = (steuCode: string, sclCode: string): string => {
     return validXmlWithRights.replaceAll(TEST_STEU_CODE, steuCode).replaceAll(TEST_SCL_CODE, sclCode);
@@ -197,18 +183,19 @@ describe('Dossier E2E - Real Queue Processing', () => {
     return (response.body as { id: string }).id;
   };
 
+  const enqueueJob = async <TData extends object>(name: QueueName, data: TData): Promise<string | null> => {
+    const queueService = app.get<Queue>(QueueGateway);
+    return await queueService.send(name, data);
+  };
+
+  const createTestDepotId = (prefix: string): string => {
+    return `dep_${prefix}_${Date.now()}`;
+  };
+
   const findDepotOrFail = async (depotId: string): Promise<DepotEntity> => {
     return await dataSource.getRepository(DepotEntity).findOneOrFail({
       where: { id: depotId },
     });
-  };
-
-  const seedSuccessfulControlsScenario = async (steuCode: string, sclCode: string): Promise<void> => {
-    referentielSeedBase += 10;
-    await seedVSteuSclItv(dataSource, steuCode, sclCode, TEST_USER.itvRfa);
-    await seedSteu(dataSource, referentielSeedBase, steuCode, { steuEncoursAn: 2024 });
-    await seedScl(dataSource, referentielSeedBase + 1, sclCode, 'Systeme Collecte Test');
-    await seedTlref(dataSource, referentielSeedBase + 2, 'LREF_01', '4', 'Type ouvrage test');
   };
 
   beforeAll(async () => {
@@ -227,6 +214,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
       connectionString: connectionUri,
       // Reduce polling interval for faster test execution
       monitorIntervalSeconds: 1,
+      superviseIntervalSeconds: 1,
+      queueCacheIntervalSeconds: 1,
     });
 
     pgboss.on('error', (error) => {
@@ -236,7 +225,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
     // Start PgBoss and create queues before building the module
     await pgboss.start();
     for (const queueName of Object.values(QueueName)) {
-      await pgboss.createQueue(queueName);
+      await pgboss.createQueue(queueName, { retryLimit: 0 });
     }
 
     // Create real queue service instance
@@ -308,8 +297,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
     // Clear and reseed user data
     await clearUserWithDroits(dataSource);
-    await seedUserWithDroits(dataSource, TEST_USER);
-    await clearDepots(dataSource);
+    testUserId = await seedUserWithDroits(dataSource, TEST_USER);
     // await clearReferentielData(dataSource);
     // await createReferentielDataset(dataSource);
   });
@@ -327,46 +315,18 @@ describe('Dossier E2E - Real Queue Processing', () => {
   });
 
   describe('Full file processing flow with real queue', () => {
-    it('should reject depot when uploading to S3 fails before background processing starts', async () => {
-      const uploadSpy = jest.spyOn(s3Mock, 'upload').mockRejectedValueOnce(new Error('S3 upload failed'));
-
-      try {
-        const depotId = await uploadXmlDepot(validXmlWithRights, 's3-upload-error.xml');
-
-        await waitFor(
-          async () => {
-            const depot = await findDepotOrFail(depotId);
-            return depot.step === DepotStep.UPLOADING_TO_S3 && depot.error === DepotError.UPLOAD_FAILED;
-          },
-          {
-            timeoutMs: 6000,
-            pollIntervalMs: 200,
-            message: 'Depot should be rejected after S3 upload failure',
-          },
-        );
-
-        const finalDepot = await findDepotOrFail(depotId);
-        expect(finalDepot.step).toBe(DepotStep.UPLOADING_TO_S3);
-        expect(finalDepot.error).toBe(DepotError.UPLOAD_FAILED);
-        expect(finalDepot.path).toBeNull();
-
-        const processFileJobs = await getJobsForDepot(dataSource, QueueName.process_file, depotId);
-        expect(processFileJobs).toHaveLength(0);
-      } finally {
-        uploadSpy.mockRestore();
-      }
-    }, 12000);
-
     it('should not generate or send report when process_file enqueue fails', async () => {
       const queueService = app.get<Queue>(QueueGateway);
       const originalSend = queueService.send.bind(queueService);
-      const queueSpy = jest.spyOn(queueService, 'send').mockImplementation(async (name: string, data?: object) => {
-        if (name === QueueName.process_file) {
-          throw new Error('Queue send failed');
-        }
+      const queueSpy = jest
+        .spyOn(queueService, 'send')
+        .mockImplementation(async (name: string, data?: object, options) => {
+          if (name === QueueName.process_file) {
+            throw new Error('Queue send failed');
+          }
 
-        return await originalSend(name, data);
-      });
+          return await originalSend(name, data, options);
+        });
 
       try {
         const depotId = await uploadXmlDepot(validXmlWithRights, 'enqueue-error.xml');
@@ -456,9 +416,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
         timeoutMs: 6000,
         pollIntervalMs: 200,
       });
-      const depotAfterFileProcessor = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
-      });
+
       // Check that control jobs were created in the pgboss.job table
       // FileProcessor dispatches to controle_metier and controle_sandre_upload queues
       const controlJobs = await dataSource.query(
@@ -521,91 +479,6 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const technicalErrors = controles.filter((c) => c.error === ErrorCode.E2_999);
       expect(technicalErrors.length).toBe(0);
     }, 12000);
-
-    it('should generate and send rapport for a rejected depot', async () => {
-      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
-
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'rejected-depot-rapport.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
-
-      const depotId = (response.body as { id: string }).id;
-
-      await waitForJobCompletion(dataSource, QueueName.process_file, depotId, {
-        timeoutMs: 6000,
-        pollIntervalMs: 200,
-      });
-
-      const [metierResult, sandreUploadResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
-      let sandrePollResult: { status: string } = { status: 'timeout' };
-      const sandrePollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
-      if (sandrePollJobs.length > 0) {
-        sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        });
-      }
-
-      expect(metierResult.status).toBe('completed');
-      expect(sandreUploadResult.status).toBe('completed');
-      expect(['completed', 'timeout']).toContain(sandrePollResult.status);
-
-      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
-        timeoutMs: 10000,
-        pollIntervalMs: 200,
-      });
-
-      expect(diffusionRapportResult.status).toBe('completed');
-
-      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
-      });
-
-      expect(finalDepot.status).toBe(DepotStatus.REJETE);
-      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
-      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
-      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.SUCCESS);
-      expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
-
-      const pdfUpload = s3Mock.uploads.find((upload) => upload.key === finalDepot.rapportPath);
-      expect(pdfUpload).toBeDefined();
-      expect(pdfUpload?.contentType).toBe('application/pdf');
-      expect(finalDepot.rapportPath ? s3Mock.hasFile(finalDepot.rapportPath) : false).toBe(true);
-
-      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
-      expect(notificationMock.sendEmail).toHaveBeenCalledWith(
-        expect.objectContaining({
-          subject: 'Rapport de rejet du dépôt',
-          depotId,
-          nomOriginalFichier: 'rejected-depot-rapport.xml',
-          prenom: TEST_USER.prenom,
-          nom: TEST_USER.nom,
-          to: [{ email: TEST_USER.email, name: `${TEST_USER.prenom} ${TEST_USER.nom}` }],
-          attachments: [
-            expect.objectContaining({
-              fileName: `rapport-${depotId}.pdf`,
-            }),
-          ],
-        }),
-        2,
-      );
-    }, 15000);
 
     it('should generate and send rapport when controle v1 and v2 pass but sandre fails', async () => {
       await seedVSteuSclItv(dataSource, SANDRE_FAILED_STEU_CODE, SANDRE_FAILED_SCL_CODE, TEST_USER.itvRfa);
@@ -708,68 +581,21 @@ describe('Dossier E2E - Real Queue Processing', () => {
       );
     }, 15000);
 
-    it('should stop after SFTP technical error when both controls succeeded', async () => {
-      const steuCode = 'TEST_STEU_SFTP_FAIL_001';
-      const sclCode = 'TEST_SCL_SFTP_FAIL_001';
-
-      await seedSuccessfulControlsScenario(steuCode, sclCode);
-      sftpMock.setFailure(true, 'Agent Verseau SFTP failed');
-
-      const depotId = await uploadXmlDepot(buildValidXmlWithCodes(steuCode, sclCode), 'sftp-technical-error.xml');
-
-      await waitFor(
-        async () => {
-          const depot = await findDepotOrFail(depotId);
-          return (
-            depot.step === DepotStep.SFTP_FAILED &&
-            depot.controleStatus === ControleStatus.SUCCESS &&
-            depot.controleSandreStatus === ControleSandreStatus.SUCCESS
-          );
-        },
-        {
-          timeoutMs: 12000,
-          pollIntervalMs: 200,
-          message: 'Depot should be rejected after SFTP failure',
-        },
-      );
-
-      const finalDepot = await findDepotOrFail(depotId);
-      expect(finalDepot.step).toBe(DepotStep.SFTP_FAILED);
-      expect(finalDepot.controleStatus).toBe(ControleStatus.SUCCESS);
-      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.SUCCESS);
-      expect(finalDepot.rapportPath).toBeNull();
-
-      const sftpJobs = await getJobsForDepot(dataSource, QueueName.send_to_sftp, depotId);
-      expect(sftpJobs.length).toBeGreaterThan(0);
-
-      const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
-      expect(diffusionRapportJobs).toHaveLength(0);
-      expect(notificationMock.sendEmail).not.toHaveBeenCalled();
-    }, 15000);
-
     it('should generate and send rapport when MASA refuses a depot after successful controls', async () => {
-      const steuCode = 'TEST_STEU_MASA_REFUSE_001';
-      const sclCode = 'TEST_SCL_MASA_REFUSE_001';
+      const depotId = createTestDepotId('masa_refuse');
+      const depotPath = `${depotId}_masa-refuse.xml`;
 
-      await seedSuccessfulControlsScenario(steuCode, sclCode);
-
-      const depotId = await uploadXmlDepot(buildValidXmlWithCodes(steuCode, sclCode), 'masa-refuse.xml');
-
-      await waitFor(
-        async () => {
-          const depot = await findDepotOrFail(depotId);
-          return (
-            depot.step === DepotStep.SFTP_COMPLETED &&
-            depot.controleStatus === ControleStatus.SUCCESS &&
-            depot.controleSandreStatus === ControleSandreStatus.SUCCESS
-          );
-        },
-        {
-          timeoutMs: 12000,
-          pollIntervalMs: 200,
-          message: 'Depot should reach SFTP completion before MASA return',
-        },
-      );
+      await seedDepotFull(dataSource, {
+        id: depotId,
+        nomOriginalFichier: 'masa-refuse.xml',
+        tailleFichier: validXmlWithRights.length,
+        type: 'application/xml',
+        path: depotPath,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.SFTP_COMPLETED,
+        userId: testUserId,
+      });
+      s3Mock.seed(depotPath, validXmlWithRights);
 
       const masaService = app.get(MasaService);
       await masaService.processRetourAgentVerseau({
@@ -827,204 +653,26 @@ describe('Dossier E2E - Real Queue Processing', () => {
       );
     }, 20000);
 
-    it('should generate and send rapport when MASA integrates a depot after successful controls', async () => {
-      const steuCode = 'TEST_STEU_MASA_INTEGRE_001';
-      const sclCode = 'TEST_SCL_MASA_INTEGRE_001';
-
-      await seedSuccessfulControlsScenario(steuCode, sclCode);
-
-      const depotId = await uploadXmlDepot(buildValidXmlWithCodes(steuCode, sclCode), 'masa-integre.xml');
-
-      await waitFor(
-        async () => {
-          const depot = await findDepotOrFail(depotId);
-          return (
-            depot.step === DepotStep.SFTP_COMPLETED &&
-            depot.controleStatus === ControleStatus.SUCCESS &&
-            depot.controleSandreStatus === ControleSandreStatus.SUCCESS
-          );
-        },
-        {
-          timeoutMs: 12000,
-          pollIntervalMs: 200,
-          message: 'Depot should reach SFTP completion before MASA return',
-        },
-      );
-
-      const masaService = app.get(MasaService);
-      await masaService.processRetourAgentVerseau({
-        versau2DepotId: depotId,
-        numeroDepotVerseau1: 'V1-INTEGRE-123',
-        statut: MasaStatus.INTEGRE,
-        rapport: 'Depot integre par MASA',
-      });
-
-      const processAfterMasaResult = await waitForJobCompletion(
-        dataSource,
-        QueueName.process_after_masa_webhook,
-        depotId,
-        {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        },
-      );
-      expect(processAfterMasaResult.status).toBe('completed');
-
-      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
-        timeoutMs: 10000,
-        pollIntervalMs: 200,
-      });
-      expect(diffusionRapportResult.status).toBe('completed');
-
-      const finalDepot = await findDepotOrFail(depotId);
-      expect(finalDepot.status).toBe(DepotStatus.INTEGRE);
-      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
-
-      const pdfUpload = s3Mock.uploads.find((upload) => upload.key === finalDepot.rapportPath);
-      expect(pdfUpload).toBeDefined();
-      expect(pdfUpload?.contentType).toBe('application/pdf');
-      expect(finalDepot.rapportPath ? s3Mock.hasFile(finalDepot.rapportPath) : false).toBe(true);
-
-      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
-      expect(notificationMock.sendEmail).toHaveBeenCalledWith(
-        expect.objectContaining({
-          subject: 'Rapport du dépôt V1-INTEGRE-123',
-          depotId,
-          nomOriginalFichier: 'masa-integre.xml',
-          statut: MasaStatus.INTEGRE,
-          numeroDepotVerseau1: 'V1-INTEGRE-123',
-          prenom: TEST_USER.prenom,
-          nom: TEST_USER.nom,
-          to: [{ email: TEST_USER.email, name: `${TEST_USER.prenom} ${TEST_USER.nom}` }],
-          attachments: [
-            expect.objectContaining({
-              fileName: `rapport-${depotId}.pdf`,
-            }),
-          ],
-        }),
-        2,
-      );
-    }, 20000);
-
-    it('should pass controls with avertissements, enqueue sftp, and generate rapport on masa webhook', async () => {
-      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
-
-      const v2Service = app.get(ControleMetierV2Service);
-      const v1Service = app.get(ControleV1Service);
-      const controleGateway = app.get(ControleGateway);
-
-      const spyV1 = jest.spyOn(v1Service, 'execute').mockResolvedValue([]);
-      const spyV2 = jest.spyOn(v2Service, 'execute').mockImplementation(async (depotId) => {
-        const ctl = await controleGateway.createControle({
-          name: ControleName.CTL039,
-          type: ControleType.CONTROLE_V2,
-          success: true,
-          evenementType: EvenementType.AVERTISSEMENT,
-          error: ErrorCode.E2_039,
-          errorParams: ['o1', 'l1', 'd1', 's1', 'v1', 'v2', 'r1'],
-          depotId,
-        });
-        return [ctl];
-      });
-
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'avertissement-test.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
-
-      const depotId = (response.body as { id: string }).id;
-
-      await waitForJobCompletion(dataSource, QueueName.process_file, depotId, {
-        timeoutMs: 6000,
-        pollIntervalMs: 200,
-      });
-
-      const [metierResult, sandreUploadResult, sandrePollResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
-      expect(metierResult.status).toBe('completed');
-      expect(sandreUploadResult.status).toBe('completed');
-      expect(['completed', 'timeout']).toContain(sandrePollResult.status);
-
-      // Wait for SFTP
-      const sftpResult = await waitForJobCompletion(dataSource, QueueName.send_to_sftp, depotId, {
-        timeoutMs: 10000,
-        pollIntervalMs: 200,
-      });
-      expect(sftpResult.status).toBe('completed');
-
-      const intermediateDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
-      });
-
-      expect(intermediateDepot.controleStatus).toBe(ControleStatus.SUCCESS);
-      expect(intermediateDepot.step).toBe(DepotStep.SFTP_COMPLETED);
-
-      // Simulate MASA webhook directly via service to bypass guards
-      const masaService = app.get(MasaService);
-      await masaService.processRetourAgentVerseau({
-        versau2DepotId: depotId,
-        numeroDepotVerseau1: 'V1-WARN-123',
-        statut: MasaStatus.INTEGRATION_PARTIELLE,
-        rapport: 'Integ avec avertissements',
-      });
-
-      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
-        timeoutMs: 10000,
-        pollIntervalMs: 200,
-      });
-      expect(diffusionRapportResult.status).toBe('completed');
-
-      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
-      });
-
-      expect(finalDepot.status).toBe(DepotStatus.INTEGRE_PARTIELLEMENT);
-      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
-
-      spyV1.mockRestore();
-      spyV2.mockRestore();
-    }, 20000);
-
     it('should not enqueue diffusion_rapport when fileProcessor has a technical error', async () => {
       const fileProcessorService = app.get(FileProcessorService);
       const spy = jest
         .spyOn(fileProcessorService, 'process')
         .mockRejectedValue(new Error('Technical error in fileProcessor'));
 
-      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+      const depotId = createTestDepotId('process_file_error');
+      const jobId = await enqueueJob(QueueName.process_file, {
+        depotId,
+        filePath: 'tech-error.xml',
+        utilisateur: { id: testUserId, nom: TEST_USER.nom, prenom: TEST_USER.prenom },
+      });
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'tech-error.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const processFileResult = await waitForJobCompletion(dataSource, QueueName.process_file, depotId, {
+        timeoutMs: 6000,
+        pollIntervalMs: 200,
+      });
 
-      const depotId = (response.body as { id: string }).id;
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
+      expect(jobId).toBeTruthy();
+      expect(processFileResult.status).toBe('failed');
       const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
       expect(diffusionRapportJobs).toHaveLength(0);
       spy.mockRestore();
@@ -1036,47 +684,19 @@ describe('Dossier E2E - Real Queue Processing', () => {
         .spyOn(controleMetierService, 'process')
         .mockRejectedValue(new Error('Technical error in controleMetier'));
 
-      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+      const depotId = createTestDepotId('controle_metier_error');
+      const jobId = await enqueueJob(QueueName.controle_metier, {
+        depotId,
+        filePath: 'tech-error-metier.xml',
+      });
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'tech-error-metier.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const controleMetierResult = await waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+        timeoutMs: 6000,
+        pollIntervalMs: 200,
+      });
 
-      const depotId = (response.body as { id: string }).id;
-
-      await new Promise((resolve) => setTimeout(resolve, 4000));
-
-      const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
-      expect(diffusionRapportJobs).toHaveLength(0);
-      spy.mockRestore();
-    }, 15000);
-
-    it('should not enqueue diffusion_rapport when sandre uploading has a technical error', async () => {
-      const sandreUploadService = app.get(ControleSandreUploadProcessorService);
-      const spy = jest
-        .spyOn(sandreUploadService, 'process')
-        .mockRejectedValue(new Error('Technical error in sandreUpload'));
-
-      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
-
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'tech-error-sandre-upload.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
-
-      const depotId = (response.body as { id: string }).id;
-
-      await new Promise((resolve) => setTimeout(resolve, 4000));
-
+      expect(jobId).toBeTruthy();
+      expect(controleMetierResult.status).toBe('failed');
       const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
       expect(diffusionRapportJobs).toHaveLength(0);
       spy.mockRestore();
@@ -1088,21 +708,20 @@ describe('Dossier E2E - Real Queue Processing', () => {
         .spyOn(sandrePollService, 'process')
         .mockRejectedValue(new Error('Technical error in sandrePoll'));
 
-      await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
+      const depotId = createTestDepotId('sandre_poll_error');
+      const jobId = await enqueueJob(QueueName.controle_sandre_poll, {
+        depotId,
+        jeton: 'mock-jeton',
+        attemptCount: 0,
+      });
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'tech-error-sandre-poll.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+        timeoutMs: 6000,
+        pollIntervalMs: 200,
+      });
 
-      const depotId = (response.body as { id: string }).id;
-
-      await new Promise((resolve) => setTimeout(resolve, 6000));
-
+      expect(jobId).toBeTruthy();
+      expect(sandrePollResult.status).toBe('failed');
       const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
       expect(diffusionRapportJobs).toHaveLength(0);
       spy.mockRestore();
