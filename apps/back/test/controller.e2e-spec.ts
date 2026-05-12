@@ -158,7 +158,12 @@ describe('Controller (e2e) - Unauthorized', () => {
       const response = await request(app.getHttpServer())
         .post('/webhook/masa/agent-verseau')
         .set('x-api-key', 'private-token')
-        .send({ versau2DepotId: 'dep_test_001', numeroDepotVerseau1: '1234567890', statut: 'INTEGRE', rapport: 'test' })
+        .send({
+          verseau2DepotId: 'dep_test_001',
+          numeroDepotVerseau1: '1234567890',
+          statut: 'INTEGRE',
+          rapport: 'test',
+        })
         .expect(201);
       return response;
     });

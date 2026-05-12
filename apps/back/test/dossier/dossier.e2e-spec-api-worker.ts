@@ -601,7 +601,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
       const masaService = app.get(MasaService);
       await masaService.processRetourAgentVerseau({
-        versau2DepotId: depotId,
+        verseau2DepotId: depotId,
         numeroDepotVerseau1: 'V1-REFUSE-123',
         statut: MasaStatus.REFUSE,
         rapport: 'Depot refuse par MASA',
