@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MasaGateway } from './masa.gateway';
-import { MasaWebhookPayloadDto } from './masa.model';
+import { type MasaWebhookPayloadDto } from './masa.schema';
 import { DepotGateway } from '../depot/depot.gateway';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
@@ -18,19 +18,19 @@ export class MasaService {
   }
 
   async processRetourAgentVerseau(payload: MasaWebhookPayloadDto) {
-    const depot = await this.depotGateway.findDepotById(payload.versau2DepotId);
+    const depot = await this.depotGateway.findDepotById(payload.verseau2DepotId);
     if (!depot) {
       throw new Error('Depot not found');
     }
 
-    const existingMasa = await this.masaGateway.findByDepotId(payload.versau2DepotId);
+    const existingMasa = await this.masaGateway.findByDepotId(payload.verseau2DepotId);
     if (existingMasa) {
-      this.logger.warn('MASA return already processed', { depotId: payload.versau2DepotId });
+      this.logger.warn('MASA return already processed', { depotId: payload.verseau2DepotId });
       return existingMasa;
     }
 
     const masaData = await this.masaGateway.saveMasaRetour({
-      depotId: payload.versau2DepotId,
+      depotId: payload.verseau2DepotId,
       numeroDepotVerseau1: payload.numeroDepotVerseau1,
       statut: payload.statut,
       rapport: payload.rapport,
@@ -38,12 +38,12 @@ export class MasaService {
 
     await this.queueService.send(QueueName.process_after_masa_webhook, {
       masaId: masaData.id,
-      depotId: payload.versau2DepotId,
+      depotId: payload.verseau2DepotId,
     });
 
     this.logger.log('MASA return saved and job enqueued', {
       masaId: masaData.id,
-      depotId: payload.versau2DepotId,
+      depotId: payload.verseau2DepotId,
     });
 
     return masaData;
