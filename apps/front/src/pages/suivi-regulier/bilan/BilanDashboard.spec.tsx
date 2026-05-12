@@ -174,7 +174,7 @@ describe('BilanDashboard', () => {
     expect(screen.getByText('01/01/2000')).toBeInTheDocument();
   });
 
-  it('affiche une seule valeur quand exploitant et moa sont identiques', () => {
+  it('affiche les deux valeurs quand exploitant et moa sont identiques', () => {
     mockUseBilanSteu.mockReturnValue({
       data: {
         data: [
