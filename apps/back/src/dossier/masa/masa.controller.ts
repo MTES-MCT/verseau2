@@ -1,11 +1,10 @@
 import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { MasaService } from './masa.service';
-import { MasaWebhookPayloadDto } from './masa.model';
 import { MasaApiKeyGuard } from './masaApiKey.guard';
 import { MasaIpGuard } from './masaIp.guard';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
-import { masaPayloadSchema } from './masa.schema';
+import { masaPayloadSchema, type MasaWebhookPayloadDto } from './masa.schema';
 
 @Controller('webhook/masa')
 @SkipThrottle()
