@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { OuvrageType } from './mesures.routes';
 import { TypePointMesure } from '../shared/typePointMesure';
+import { SclDetailDtoSchema, SteuDetailDtoSchema } from '../referentiel/referentiel.dto';
 
 export { TypePointMesure, type TypePointMesureValue } from '../shared/typePointMesure';
 
@@ -48,4 +49,22 @@ export const listPointsMesureReferentiel = {
   response: z.object({
     points: z.array(PointMesureReferentielSchema),
   }),
+} as const satisfies RouteDefinition;
+
+export const getSteuDetail = {
+  method: 'GET',
+  path: '/referentiel/steu/:ouvrageDepollutionCode/detail',
+  params: z.object({
+    ouvrageDepollutionCode: z.string(),
+  }),
+  response: SteuDetailDtoSchema.nullable(),
+} as const satisfies RouteDefinition;
+
+export const getSclDetail = {
+  method: 'GET',
+  path: '/referentiel/scl/:systemeCollecteCode/detail',
+  params: z.object({
+    systemeCollecteCode: z.string(),
+  }),
+  response: SclDetailDtoSchema.nullable(),
 } as const satisfies RouteDefinition;

@@ -24,3 +24,4 @@ export * from './routes/bilan.routes';
 export * from './transmission-as-retard/transmissionASRetard.dto';
 export * from './routes/transmissionASRetard.routes';
 export * from './shared/pagination.schema';
+export * from './referentiel/referentiel.dto';

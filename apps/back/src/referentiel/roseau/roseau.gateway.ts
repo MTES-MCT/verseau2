@@ -2,6 +2,8 @@ import { SteuEntity } from './entities/steu.entity';
 import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import {
+  SclDetailRow,
+  SteuDetailRow,
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
@@ -40,6 +42,8 @@ export interface RoseauGateway {
     ouvrageCode: string,
     filters?: { localisationCodes?: string[] },
   ): Promise<PointMesure[]>;
+  findSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null>;
+  findSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null>;
   findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,

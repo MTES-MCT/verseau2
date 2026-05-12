@@ -53,12 +53,6 @@ describe('BilanService', () => {
           {
             steuCdn: 123,
             ouvrageDepollutionCode: 'STEU1',
-            ouvrageDepollutionNom: 'Station 1',
-            dateMiseEnService: '2000-01-01',
-            exploitantNom: 'Exploitant 1',
-            moaNom: 'MOA 1',
-            exploitantSiret: '12345678901234',
-            moaSiret: '43210987654321',
             bilanEcarteParSpe: false,
             date: '2024-01-01',
             parametreNom: 'DBO5',

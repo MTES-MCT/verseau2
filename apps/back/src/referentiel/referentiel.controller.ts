@@ -1,6 +1,6 @@
-import { Controller, ForbiddenException, Get, Query, Req, UseGuards } from '@nestjs/common';
-import type { RouteQuery, RouteResponse } from '@lib/dossier';
-import { codesToParametres, listPointsMesureReferentiel } from '@lib/dossier';
+import { Controller, ForbiddenException, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import type { RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
+import { codesToParametres, getSclDetail, getSteuDetail, listPointsMesureReferentiel } from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
@@ -53,5 +53,33 @@ export class ReferentielController {
     });
 
     return { points };
+  }
+
+  @Get('steu/:ouvrageDepollutionCode/detail')
+  @UseGuards(MeGuard, HasUserAccessToOuvragesGuard)
+  async getBilanSteuDetail(
+    @Req() req: CustomRequest,
+    @Param(new ZodValidationPipe(getSteuDetail['params']))
+    params: RouteParams<typeof getSteuDetail>,
+  ): Promise<RouteResponse<typeof getSteuDetail>> {
+    if (!req.authorizedSteuCdas?.includes(params.ouvrageDepollutionCode)) {
+      return null;
+    }
+
+    return this.masaProvider.findBilanSteuDetail(params.ouvrageDepollutionCode);
+  }
+
+  @Get('scl/:systemeCollecteCode/detail')
+  @UseGuards(MeGuard, HasUserAccessToOuvragesGuard)
+  async getBilanSclDetail(
+    @Req() req: CustomRequest,
+    @Param(new ZodValidationPipe(getSclDetail['params']))
+    params: RouteParams<typeof getSclDetail>,
+  ): Promise<RouteResponse<typeof getSclDetail>> {
+    if (!req.authorizedSclCdas?.includes(params.systemeCollecteCode)) {
+      return null;
+    }
+
+    return this.masaProvider.findBilanSclDetail(params.systemeCollecteCode);
   }
 }

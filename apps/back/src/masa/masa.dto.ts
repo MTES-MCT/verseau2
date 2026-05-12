@@ -1,7 +1,9 @@
 /** CTL052 — Concentration moyenne annuelle N-1 pour un STEU et un paramètre donné */
 import {
+  BilanSclDetailDto,
   BilanSclDto,
   BilanSclSortByValue,
+  BilanSteuDetailDto,
   BilanSteuDto,
   BilanSteuSortByValue,
   TransmissionASRetardSclDto,
@@ -92,6 +94,10 @@ export type BilanSteuRow = BilanSteuDto;
 
 /** Une ligne de bilan SCL */
 export type BilanSclRow = BilanSclDto;
+
+export type SteuDetailRow = BilanSteuDetailDto;
+
+export type SclDetailRow = BilanSclDetailDto;
 
 /** Une ligne d'événement STEU */
 export type EvenementSteuRow = EvenementSteuDto;

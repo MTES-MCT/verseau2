@@ -35,6 +35,8 @@ import {
   BilanSclFilters,
   BilanSteuRow,
   BilanSclRow,
+  SteuDetailRow,
+  SclDetailRow,
   TransmissionASRetardSclFilters,
   TransmissionASRetardSteuFilters,
   TransmissionASRetardSclRow,
@@ -339,6 +341,14 @@ export class MasaProvider {
   // route: POST /api/systemes-collecte/bilans
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
     return this.roseauBilanGateway.findBilanScl(filters);
+  }
+
+  async findBilanSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null> {
+    return this.roseauGateway.findSteuDetail(ouvrageDepollutionCode);
+  }
+
+  async findBilanSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null> {
+    return this.roseauGateway.findSclDetail(systemeCollecteCode);
   }
 
   // ---------------------------------------------------------------------------

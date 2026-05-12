@@ -1,5 +1,8 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { listBilanScl as listBilanSclRoute, listBilanSteu as listBilanSteuRoute } from '@lib/dossier';
+import {
+  listBilanScl as listBilanSclRoute,
+  listBilanSteu as listBilanSteuRoute,
+} from '@lib/dossier';
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
 import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';

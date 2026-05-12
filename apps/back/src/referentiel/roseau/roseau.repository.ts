@@ -18,6 +18,8 @@ import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
 import {
+  SclDetailRow,
+  SteuDetailRow,
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
@@ -29,7 +31,17 @@ import {
   SclRef,
   SteuRef,
 } from '@masa/masa.dto';
+import { toISODateOrNull } from '@lib/shared';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
+
+interface OuvrageRawDetailRow {
+  code: string;
+  date_mise_en_service?: Date | string | null;
+  exploitant_nom: string | null;
+  moa_nom: string | null;
+  exploitant_siret: string | null;
+  moa_siret: string | null;
+}
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -393,6 +405,127 @@ export class RoseauRepository implements RoseauGateway {
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
       pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
     }));
+  }
+
+  async findSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null> {
+    const rows = await this.steuRepository.query<OuvrageRawDetailRow[]>(
+      `
+        SELECT
+          RTRIM(steu.steu_sandre_cda) AS code,
+          steu.steu_serv_en_mise_dt::date AS date_mise_en_service,
+          exploitant.exploitant_nom AS exploitant_nom,
+          maitre_ouvrage.maitre_ouvrage_nom AS moa_nom,
+          exploitant.exploitant_siret AS exploitant_siret,
+          maitre_ouvrage.maitre_ouvrage_siret AS moa_siret
+        FROM roseau.steu steu
+        LEFT JOIN LATERAL (
+          SELECT
+            string_agg(link.intervenant_nom, ' / ' ORDER BY link.intervenant_nom) AS exploitant_nom,
+            string_agg(link.intervenant_siret, ' / ' ORDER BY link.intervenant_siret) AS exploitant_siret
+          FROM (
+            SELECT DISTINCT
+              COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+              NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+            FROM roseau.cxnadm exp
+            JOIN lanceleau.itv itv ON itv.itv_cdn = exp.steu_itv_cdn
+            WHERE exp.exp_steu_cdn = steu.steu_cdn
+              AND exp.steu_itv_cdn IS NOT NULL
+              AND exp.cxnadm_retrait_dt IS NULL
+          ) link
+        ) exploitant ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            string_agg(link.intervenant_nom, ' / ' ORDER BY link.intervenant_nom) AS maitre_ouvrage_nom,
+            string_agg(link.intervenant_siret, ' / ' ORDER BY link.intervenant_siret) AS maitre_ouvrage_siret
+          FROM (
+            SELECT DISTINCT
+              COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+              NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+            FROM roseau.cxnadm moa
+            JOIN lanceleau.itv itv ON itv.itv_cdn = moa.steu_itv_cdn
+            WHERE moa.mo_steu_cdn = steu.steu_cdn
+              AND moa.steu_itv_cdn IS NOT NULL
+              AND moa.cxnadm_retrait_dt IS NULL
+          ) link
+        ) maitre_ouvrage ON true
+        WHERE RTRIM(steu.steu_sandre_cda) = $1
+      `,
+      [ouvrageDepollutionCode],
+    );
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return {
+      ouvrageDepollutionCode: row.code?.trim() ?? '',
+      dateMiseEnService: toISODateOrNull(row.date_mise_en_service ?? null) ?? null,
+      exploitantNom: row.exploitant_nom?.trim() ?? null,
+      moaNom: row.moa_nom?.trim() ?? null,
+      exploitantSiret: row.exploitant_siret?.trim() ?? null,
+      moaSiret: row.moa_siret?.trim() ?? null,
+    };
+  }
+
+  async findSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null> {
+    const rows = await this.sclRepository.query<OuvrageRawDetailRow[]>(
+      `
+        SELECT
+          RTRIM(scl.scl_sandre_cda) AS code,
+          exploitant.exploitant_nom AS exploitant_nom,
+          maitre_ouvrage.maitre_ouvrage_nom AS moa_nom,
+          exploitant.exploitant_siret AS exploitant_siret,
+          maitre_ouvrage.maitre_ouvrage_siret AS moa_siret
+        FROM roseau.scl scl
+        LEFT JOIN roseau.steu steu ON steu.steu_cdn = scl.steu_cdn
+        LEFT JOIN LATERAL (
+          SELECT
+            string_agg(link.intervenant_nom, ' / ' ORDER BY link.intervenant_nom) AS exploitant_nom,
+            string_agg(link.intervenant_siret, ' / ' ORDER BY link.intervenant_siret) AS exploitant_siret
+          FROM (
+            SELECT DISTINCT
+              COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+              NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+            FROM roseau.cxnadm exp
+            JOIN lanceleau.itv itv ON itv.itv_cdn = exp.steu_itv_cdn
+            WHERE exp.exp_steu_cdn = steu.steu_cdn
+              AND exp.steu_itv_cdn IS NOT NULL
+              AND exp.cxnadm_retrait_dt IS NULL
+          ) link
+        ) exploitant ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            string_agg(link.intervenant_nom, ' / ' ORDER BY link.intervenant_nom) AS maitre_ouvrage_nom,
+            string_agg(link.intervenant_siret, ' / ' ORDER BY link.intervenant_siret) AS maitre_ouvrage_siret
+          FROM (
+            SELECT DISTINCT
+              COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+              NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+            FROM roseau.cxnadm moa
+            JOIN lanceleau.itv itv ON itv.itv_cdn = moa.steu_itv_cdn
+            WHERE moa.mo_steu_cdn = steu.steu_cdn
+              AND moa.steu_itv_cdn IS NOT NULL
+              AND moa.cxnadm_retrait_dt IS NULL
+          ) link
+        ) maitre_ouvrage ON true
+        WHERE RTRIM(scl.scl_sandre_cda) = $1
+      `,
+      [systemeCollecteCode],
+    );
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return {
+      systemeCollecteCode: row.code?.trim() ?? '',
+      exploitantNom: row.exploitant_nom?.trim() ?? null,
+      moaNom: row.moa_nom?.trim() ?? null,
+      exploitantSiret: row.exploitant_siret?.trim() ?? null,
+      moaSiret: row.moa_siret?.trim() ?? null,
+    };
   }
 
   async findParametresByOuvrageAndPmo(

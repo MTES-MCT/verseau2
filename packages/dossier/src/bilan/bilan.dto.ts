@@ -4,12 +4,6 @@ import { createPaginatedResponseSchema } from '../shared/pagination.schema';
 export const BilanSteuDtoSchema = z.object({
   steuCdn: z.number(),
   ouvrageDepollutionCode: z.string(),
-  ouvrageDepollutionNom: z.string().nullable(),
-  dateMiseEnService: z.string().nullable(),
-  exploitantNom: z.string().nullable(),
-  moaNom: z.string().nullable(),
-  exploitantSiret: z.string().nullable(),
-  moaSiret: z.string().nullable(),
   bilanEcarteParSpe: z.boolean(),
   date: z.string(),
   parametreNom: z.string().nullable(),
