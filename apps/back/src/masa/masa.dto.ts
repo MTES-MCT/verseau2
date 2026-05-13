@@ -93,6 +93,25 @@ export type BilanSteuRow = BilanSteuDto;
 /** Une ligne de bilan SCL */
 export type BilanSclRow = BilanSclDto;
 
+export type OuvrageIntervenantRole = 'exploitant' | 'maitre_ouvrage';
+
+export interface OuvrageIntervenantRow {
+  role: OuvrageIntervenantRole;
+  intervenantNom: string | null;
+  intervenantSiret: string | null;
+}
+
+export interface SteuDetailRow {
+  ouvrageDepollutionCode: string;
+  dateMiseEnService: string | null;
+  intervenants: OuvrageIntervenantRow[];
+}
+
+export interface SclDetailRow {
+  systemeCollecteCode: string;
+  intervenants: OuvrageIntervenantRow[];
+}
+
 /** Une ligne d'événement STEU */
 export type EvenementSteuRow = EvenementSteuDto;
 

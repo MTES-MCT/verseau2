@@ -18,6 +18,9 @@ import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
 import {
+  SclDetailRow,
+  SteuDetailRow,
+  type OuvrageIntervenantRole,
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
@@ -29,7 +32,21 @@ import {
   SclRef,
   SteuRef,
 } from '@masa/masa.dto';
+import { toISODateOrNull } from '@lib/shared';
 import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
+
+interface OuvrageRawDetailRow {
+  code: string;
+  date_mise_en_service?: Date | string | null;
+  role: OuvrageIntervenantRole;
+  intervenant_nom: string | null;
+  intervenant_siret: string | null;
+}
+
+function trimToNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
 
 @Injectable()
 export class RoseauRepository implements RoseauGateway {
@@ -393,6 +410,124 @@ export class RoseauRepository implements RoseauGateway {
       pointMesureLibelle: r.pmo_lb?.trim() ?? null,
       pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
     }));
+  }
+
+  async findSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null> {
+    const rows = await this.steuRepository.query<OuvrageRawDetailRow[]>(
+      `
+        WITH target AS (
+          SELECT
+            steu.steu_cdn,
+            RTRIM(steu.steu_sandre_cda) AS code,
+            steu.steu_serv_en_mise_dt::date AS date_mise_en_service
+          FROM roseau.steu steu
+          WHERE RTRIM(steu.steu_sandre_cda) = BTRIM($1)
+        )
+        SELECT DISTINCT
+          target.code,
+          target.date_mise_en_service,
+          'exploitant' AS role,
+          COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+          NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+        FROM target
+        LEFT JOIN roseau.cxnadm cx
+          ON cx.exp_steu_cdn = target.steu_cdn
+         AND cx.steu_itv_cdn IS NOT NULL
+         AND cx.cxnadm_retrait_dt IS NULL
+        LEFT JOIN lanceleau.itv itv
+          ON itv.itv_cdn = cx.steu_itv_cdn
+        UNION ALL
+        SELECT DISTINCT
+          target.code,
+          target.date_mise_en_service,
+          'maitre_ouvrage' AS role,
+          COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+          NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+        FROM target
+        LEFT JOIN roseau.cxnadm cx
+          ON cx.mo_steu_cdn = target.steu_cdn
+         AND cx.steu_itv_cdn IS NOT NULL
+         AND cx.cxnadm_retrait_dt IS NULL
+        LEFT JOIN lanceleau.itv itv
+          ON itv.itv_cdn = cx.steu_itv_cdn
+        ORDER BY role, intervenant_nom NULLS LAST, intervenant_siret NULLS LAST
+      `,
+      [ouvrageDepollutionCode],
+    );
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return {
+      ouvrageDepollutionCode: row.code?.trim() ?? '',
+      dateMiseEnService: toISODateOrNull(row.date_mise_en_service ?? null) ?? null,
+      intervenants: rows
+        .map((detailRow) => ({
+          role: detailRow.role,
+          intervenantNom: trimToNull(detailRow.intervenant_nom),
+          intervenantSiret: trimToNull(detailRow.intervenant_siret),
+        }))
+        .filter((intervenant) => intervenant.intervenantNom !== null || intervenant.intervenantSiret !== null),
+    };
+  }
+
+  async findSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null> {
+    const rows = await this.sclRepository.query<OuvrageRawDetailRow[]>(
+      `
+        WITH target AS (
+          SELECT
+            scl.scl_cdn,
+            RTRIM(scl.scl_sandre_cda) AS code
+          FROM roseau.scl scl
+          WHERE RTRIM(scl.scl_sandre_cda) = BTRIM($1)
+        )
+        SELECT DISTINCT
+          target.code,
+          'exploitant' AS role,
+          COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+          NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+        FROM target
+        LEFT JOIN roseau.cxnadm cx
+          ON cx.exp_scl_cdn = target.scl_cdn
+         AND cx.scl_itv_cdn IS NOT NULL
+         AND cx.cxnadm_retrait_dt IS NULL
+        LEFT JOIN lanceleau.itv itv
+          ON itv.itv_cdn = cx.scl_itv_cdn
+        UNION ALL
+        SELECT DISTINCT
+          target.code,
+          'maitre_ouvrage' AS role,
+          COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
+          NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
+        FROM target
+        LEFT JOIN roseau.cxnadm cx
+          ON cx.mo_scl_cdn = target.scl_cdn
+         AND cx.scl_itv_cdn IS NOT NULL
+         AND cx.cxnadm_retrait_dt IS NULL
+        LEFT JOIN lanceleau.itv itv
+          ON itv.itv_cdn = cx.scl_itv_cdn
+        ORDER BY role, intervenant_nom NULLS LAST, intervenant_siret NULLS LAST
+      `,
+      [systemeCollecteCode],
+    );
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return {
+      systemeCollecteCode: row.code?.trim() ?? '',
+      intervenants: rows
+        .map((detailRow) => ({
+          role: detailRow.role,
+          intervenantNom: trimToNull(detailRow.intervenant_nom),
+          intervenantSiret: trimToNull(detailRow.intervenant_siret),
+        }))
+        .filter((intervenant) => intervenant.intervenantNom !== null || intervenant.intervenantSiret !== null),
+    };
   }
 
   async findParametresByOuvrageAndPmo(

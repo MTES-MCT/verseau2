@@ -1,4 +1,9 @@
-import { BilanSclFilters, BilanSclRow, BilanSteuFilters, BilanSteuRow } from '@masa/masa.dto';
+import {
+  BilanSclFilters,
+  BilanSclRow,
+  BilanSteuFilters,
+  BilanSteuRow,
+} from '@masa/masa.dto';
 
 export interface RoseauBilanGateway {
   findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }>;

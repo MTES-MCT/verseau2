@@ -3,7 +3,7 @@ import { CURRENT_BILAN_YEAR } from '@lib/dossier';
 import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
-import { useBilanScl, useBilanSteu } from '../../../hooks/useBilan';
+import { useBilanScl, useBilanSclDetail, useBilanSteu, useBilanSteuDetail } from '../../../hooks/useBilan';
 import { BilanDashboard } from './BilanDashboard';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
@@ -13,6 +13,8 @@ import { useBilanFilters } from '../../../hooks/useBilanFilters';
 vi.mock('../../../hooks/useBilan', () => ({
   useBilanSteu: vi.fn(),
   useBilanScl: vi.fn(),
+  useBilanSteuDetail: vi.fn(),
+  useBilanSclDetail: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useAsyncOuvragesSearch', () => ({
@@ -33,6 +35,8 @@ vi.mock('../../../hooks/useBilanFilters', () => ({
 
 const mockUseBilanSteu = vi.mocked(useBilanSteu);
 const mockUseBilanScl = vi.mocked(useBilanScl);
+const mockUseBilanSteuDetail = vi.mocked(useBilanSteuDetail);
+const mockUseBilanSclDetail = vi.mocked(useBilanSclDetail);
 const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
 const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
@@ -52,10 +56,16 @@ const emptySclResult = {
   error: null,
 };
 
+const emptyDetailResult = {
+  data: undefined,
+  isLoading: false,
+  isFetching: false,
+  error: null,
+};
+
 const makeSteuRow = (overrides: Partial<BilanSteuDto> = {}): BilanSteuDto => ({
   steuCdn: 101,
   ouvrageDepollutionCode: 'STEU001',
-  ouvrageDepollutionNom: 'Station Alpha',
   bilanEcarteParSpe: false,
   date: '2024-01-01',
   parametreNom: 'DBO5',
@@ -114,6 +124,12 @@ describe('BilanDashboard', () => {
     mockUseBilanScl.mockReturnValue(
       emptySclResult as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>,
     );
+    mockUseBilanSteuDetail.mockReturnValue(
+      emptyDetailResult as Partial<ReturnType<typeof useBilanSteuDetail>> as ReturnType<typeof useBilanSteuDetail>,
+    );
+    mockUseBilanSclDetail.mockReturnValue(
+      emptyDetailResult as Partial<ReturnType<typeof useBilanSclDetail>> as ReturnType<typeof useBilanSclDetail>,
+    );
     mockUseAsyncOuvragesSearch.mockReturnValue({ data: [], isLoading: false } as Partial<
       ReturnType<typeof useAsyncOuvragesSearch>
     > as ReturnType<typeof useAsyncOuvragesSearch>);
@@ -129,12 +145,62 @@ describe('BilanDashboard', () => {
     mockUseBilanSteu.mockReturnValue({
       data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
     } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+    mockUseBilanSteuDetail.mockReturnValue({
+      data: {
+        ouvrageDepollutionCode: 'STEU001',
+        dateMiseEnService: '2000-01-01',
+        exploitants: [{ intervenantNom: 'Exploitant Alpha', intervenantSiret: '12345678901234' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA Alpha', intervenantSiret: '43210987654321' }],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    } as Partial<ReturnType<typeof useBilanSteuDetail>> as ReturnType<typeof useBilanSteuDetail>);
 
     renderPage();
 
-    expect(screen.getByRole('columnheader', { name: /code sandre/i })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /^nom$/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /bilan écarté par le spe/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /code sandre/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /date de mise en service/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /exploitant \/ moa/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /siret établissement/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/informations de l'ouvrage/i)).toBeInTheDocument();
+    expect(screen.getByText(/code sandre :/i)).toBeInTheDocument();
+    expect(screen.getByText('STEU001')).toBeInTheDocument();
+    expect(screen.getByText('Exploitant Alpha / MOA Alpha')).toBeInTheDocument();
+    expect(screen.getByText('12345678901234 / 43210987654321')).toBeInTheDocument();
+    expect(screen.getByText('01/01/2000')).toBeInTheDocument();
+  });
+
+  it('affiche les deux valeurs quand exploitant et moa sont identiques', () => {
+    mockUseBilanSteu.mockReturnValue({
+      data: {
+        data: [
+          makeSteuRow({
+            ouvrageDepollutionCode: 'STEU001',
+          }),
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+      },
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+    mockUseBilanSteuDetail.mockReturnValue({
+      data: {
+        ouvrageDepollutionCode: 'STEU001',
+        dateMiseEnService: '2000-01-01',
+        exploitants: [{ intervenantNom: 'Syndicat Alpha', intervenantSiret: '11111111111111' }],
+        maitresOuvrage: [{ intervenantNom: 'Syndicat Alpha', intervenantSiret: '11111111111111' }],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    } as Partial<ReturnType<typeof useBilanSteuDetail>> as ReturnType<typeof useBilanSteuDetail>);
+
+    renderPage();
+
+    expect(screen.getByText('Syndicat Alpha / Syndicat Alpha')).toBeInTheDocument();
+    expect(screen.getByText('11111111111111 / 11111111111111')).toBeInTheDocument();
   });
 
   it('change les colonnes quand on bascule vers SCL', () => {
@@ -153,12 +219,26 @@ describe('BilanDashboard', () => {
     mockUseBilanScl.mockReturnValue({
       data: { data: [makeSclRow()], total: 1, page: 1, pageSize: 10 },
     } as Partial<ReturnType<typeof useBilanScl>> as ReturnType<typeof useBilanScl>);
+    mockUseBilanSclDetail.mockReturnValue({
+      data: {
+        systemeCollecteCode: 'SCL001',
+        exploitants: [{ intervenantNom: 'Exploitant Beta', intervenantSiret: '11111111111111' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA Beta', intervenantSiret: '22222222222222' }],
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    } as Partial<ReturnType<typeof useBilanSclDetail>> as ReturnType<typeof useBilanSclDetail>);
 
     renderPage();
 
     expect(screen.getByRole('columnheader', { name: /point de mesure/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: /volume déversé/i })).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: /bilan écarté par le spe/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /code sandre/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Exploitant Beta / MOA Beta')).toBeInTheDocument();
+    expect(screen.queryByText(/date de mise en service/i)).not.toBeInTheDocument();
+    expect(screen.getByText('SCL001')).toBeInTheDocument();
   });
 
   it('désactive les filtres dépendants tant qu’aucun ouvrage SCL n’est sélectionné', () => {

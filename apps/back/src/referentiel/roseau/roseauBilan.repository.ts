@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { BilanSclFilters, BilanSclRow, BilanSteuFilters, BilanSteuRow } from '@masa/masa.dto';
-import { toISODateOrNull } from '@lib/shared';
 import { RoseauBilanGateway } from './roseauBilan.gateway';
+import { toISODateOrNull } from '@lib/shared';
 
 interface BilanSteuRawRow {
   steu_cdn: number;
   ouvrage_depollution_code: string;
-  ouvrage_depollution_nom: string | null;
   date: Date | string;
   parametre_nom: string | null;
   bilan_spe_a: string;
@@ -46,7 +45,6 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     const sortMap: Record<NonNullable<BilanSteuFilters['sortBy']>, string> = {
       date: 'date',
       ouvrageDepollutionCode: 'ouvrage_depollution_code',
-      ouvrageDepollutionNom: 'ouvrage_depollution_nom',
       parametreNom: 'parametre_nom',
     };
 
@@ -66,7 +64,6 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     const steuArrayParam = addParam(ouvrageDepollutionIds);
     const allowedParamCodesParam = addParam(filters.parametreCodes);
     const whereClauses = [
-      `steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))`,
       `resj.resj_mes_dt >= ${startDate}`,
       `resj.resj_mes_dt <= ${endDate}`,
       `(resj.resj_jok_in = '2' OR resj.resj_aok_in = '2')`,
@@ -78,7 +75,6 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         SELECT
           steu.steu_cdn AS steu_cdn,
           RTRIM(steu.steu_sandre_cda) AS ouvrage_depollution_code,
-          steu.steu_nom_lb AS ouvrage_depollution_nom,
           resj.resj_mes_dt::date AS date,
           par.par_court_nom_lb AS parametre_nom,
           resj.resj_aok_in AS bilan_spe_a, 
@@ -98,6 +94,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         JOIN lanceleau.par par ON par.par_rfa = resj.par_rfa
         LEFT JOIN roseau.tlref t17 ON t17.tlref_cdn = resj.tlref_17_cdn
         WHERE ${whereClauses.join(' AND ')}
+          AND steu.steu_cdn IN (SELECT unnest(${steuArrayParam}::int[]))
       )
     `;
 
@@ -114,10 +111,9 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
 
     const rows = await this.dataSource.query<BilanSteuRawRow[]>(
       `${baseQuery}
-       SELECT
+        SELECT
           steu_cdn,
           ouvrage_depollution_code,
-          ouvrage_depollution_nom,
           bilan_spe_a,
           date,
           parametre_nom,
@@ -135,7 +131,6 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
       data: rows.map((row) => ({
         steuCdn: row.steu_cdn,
         ouvrageDepollutionCode: row.ouvrage_depollution_code?.trim() ?? '',
-        ouvrageDepollutionNom: row.ouvrage_depollution_nom?.trim() ?? null,
         bilanEcarteParSpe: row.bilan_spe_a === '2',
         date: toISODateOrNull(row.date) ?? '',
         parametreNom: row.parametre_nom?.trim() ?? null,

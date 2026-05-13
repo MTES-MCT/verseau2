@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 
 export function buildBilanSteuTableHeaders(): string[] {
-  return ['Code Sandre', 'Nom', 'Bilan écarté par le SPE (A)', 'Date', 'Paramètre', 'HCNF', 'Evt', 'Finalité'];
+  return ['Bilan écarté par le SPE (A)', 'Date', 'Paramètre', 'HCNF', 'Evt', 'Finalité'];
 }
 
 function renderBooleanBadge(value: boolean, trueLabel: string, falseLabel: string): ReactNode {
@@ -17,8 +17,6 @@ function renderBooleanBadge(value: boolean, trueLabel: string, falseLabel: strin
 
 export function buildBilanSteuTableRows(bilanList: BilanSteuDto[]): ReactNode[][] {
   return bilanList.map((bilan) => [
-    bilan.ouvrageDepollutionCode,
-    bilan.ouvrageDepollutionNom ?? '-',
     renderBooleanBadge(bilan.bilanEcarteParSpe, 'Oui', 'Non'),
     formatDate(bilan.date),
     bilan.parametreNom ?? '-',
@@ -29,20 +27,11 @@ export function buildBilanSteuTableRows(bilanList: BilanSteuDto[]): ReactNode[][
 }
 
 export function buildBilanSclTableHeaders(): string[] {
-  return [
-    'Code Sandre',
-    'Nom',
-    'Point de mesure',
-    'Date',
-    'Volume déversé (m³)',
-    'Temps de déversement (h)',
-    'Statut (TP ou TS)',
-  ];
+  return ['Nom', 'Point de mesure', 'Date', 'Volume déversé (m³)', 'Temps de déversement (h)', 'Statut (TP ou TS)'];
 }
 
 export function buildBilanSclTableRows(bilanList: BilanSclDto[]): ReactNode[][] {
   return bilanList.map((bilan) => [
-    bilan.systemeCollecteCode,
     bilan.systemeCollecteNom ?? '-',
     bilan.pointMesureNumero ?? '-',
     formatDate(bilan.date),

@@ -33,17 +33,21 @@ const mockMasaProvider = {
   findVSteuSclItvByItvRfa: jest.fn(),
   findSteuBatchBySandreCdas: jest.fn(),
   findBilanSteu: jest.fn(),
+  findBilanSteuDetail: jest.fn(),
   findSclBatchBySandreCdas: jest.fn(),
   findBilanScl: jest.fn(),
+  findBilanSclDetail: jest.fn(),
 } as unknown as jest.Mocked<
   Pick<
     MasaProvider,
     | 'findIntervenantById'
     | 'findVSteuSclItvByItvRfa'
-    | 'findSteuBatchBySandreCdas'
-    | 'findBilanSteu'
-    | 'findSclBatchBySandreCdas'
-    | 'findBilanScl'
+      | 'findSteuBatchBySandreCdas'
+      | 'findBilanSteu'
+      | 'findBilanSteuDetail'
+      | 'findSclBatchBySandreCdas'
+      | 'findBilanScl'
+      | 'findBilanSclDetail'
   >
 >;
 
@@ -118,7 +122,6 @@ describe('BilanController (e2e)', () => {
           {
             steuCdn: 10,
             ouvrageDepollutionCode: 'STEU_TEST_001',
-            ouvrageDepollutionNom: 'Station test 1',
             bilanEcarteParSpe: true,
             date: `${currentYear}-01-01`,
             parametreNom: 'DBO5',
@@ -142,7 +145,6 @@ describe('BilanController (e2e)', () => {
         data: [
           {
             ouvrageDepollutionCode: 'STEU_TEST_001',
-            ouvrageDepollutionNom: 'Station test 1',
             bilanEcarteParSpe: true,
             parametreNom: 'DBO5',
           },
@@ -167,6 +169,46 @@ describe('BilanController (e2e)', () => {
         ].map(String),
         page: 1,
         pageSize: 20,
+      });
+    });
+  });
+
+  describe('GET /referentiel/steu/:ouvrageDepollutionCode/detail', () => {
+    it('returns detail bilan STEU', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      mockMasaProvider.findIntervenantById.mockResolvedValue({
+        intervenantId: 1,
+        intervenantSiret: 'SIRET_TEST',
+      });
+      mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU_TEST_001',
+          systemeCollecteCode: 'SCL_TEST_001',
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+      mockMasaProvider.findBilanSteuDetail.mockResolvedValue({
+        ouvrageDepollutionCode: 'STEU_TEST_001',
+        dateMiseEnService: '2000-01-01',
+        intervenants: [
+          { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },
+          { role: 'maitre_ouvrage', intervenantNom: 'MOA test', intervenantSiret: '43210987654321' },
+        ],
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/referentiel/steu/STEU_TEST_001/detail')
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        ouvrageDepollutionCode: 'STEU_TEST_001',
+        dateMiseEnService: '2000-01-01',
+        exploitants: [{ intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA test', intervenantSiret: '43210987654321' }],
       });
     });
   });
@@ -241,6 +283,44 @@ describe('BilanController (e2e)', () => {
         year: currentYear,
         page: 1,
         pageSize: 20,
+      });
+    });
+  });
+
+  describe('GET /referentiel/scl/:systemeCollecteCode/detail', () => {
+    it('returns detail bilan SCL', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      mockMasaProvider.findIntervenantById.mockResolvedValue({
+        intervenantId: 1,
+        intervenantSiret: 'SIRET_TEST',
+      });
+      mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU_TEST_001',
+          systemeCollecteCode: 'SCL_TEST_001',
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+      mockMasaProvider.findBilanSclDetail.mockResolvedValue({
+        systemeCollecteCode: 'SCL_TEST_001',
+        intervenants: [
+          { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },
+          { role: 'maitre_ouvrage', intervenantNom: 'MOA test', intervenantSiret: '43210987654321' },
+        ],
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/referentiel/scl/SCL_TEST_001/detail')
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        systemeCollecteCode: 'SCL_TEST_001',
+        exploitants: [{ intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA test', intervenantSiret: '43210987654321' }],
       });
     });
   });

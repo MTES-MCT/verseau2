@@ -49,7 +49,18 @@ describe('BilanService', () => {
     it('calls masaProvider with resolved cdns', async () => {
       (masaProviderMock.findSteuBatchBySandreCdas as any).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
       (masaProviderMock.findBilanSteu as any).mockResolvedValue({
-        data: [{ steuCdn: 123, ouvrageDepollutionCode: 'STEU1' }],
+        data: [
+          {
+            steuCdn: 123,
+            ouvrageDepollutionCode: 'STEU1',
+            bilanEcarteParSpe: false,
+            date: '2024-01-01',
+            parametreNom: 'DBO5',
+            hcnf: 'Non',
+            evt: 'Non',
+            finalite: 'Autosurveillance',
+          },
+        ],
         total: 1,
       });
 

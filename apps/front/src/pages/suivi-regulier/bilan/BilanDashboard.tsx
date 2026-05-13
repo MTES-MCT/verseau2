@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
-import type { BilanSteuSortByValue, BilanSclSortByValue } from '@lib/dossier';
+import type { BilanSteuSortByValue, BilanSclSortByValue, IntervenantDetailDto } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useBilanFilters';
 import type { ReactNode } from 'react';
 import { CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR } from '@lib/dossier';
@@ -8,7 +8,7 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { useBilanSteu, useBilanScl } from '../../../hooks/useBilan';
+import { useBilanSteu, useBilanScl, useBilanSteuDetail, useBilanSclDetail } from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
@@ -25,6 +25,28 @@ import {
 } from '../../../helper/bilanTableData';
 import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
+
+function formatInfoDate(value: string | null | undefined) {
+  if (!value) {
+    return '-';
+  }
+
+  const [year, month, day] = value.split('-');
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return `${day}/${month}/${year}`;
+}
+
+function formatIntervenants(intervenants: IntervenantDetailDto[], key: 'intervenantNom' | 'intervenantSiret'): string {
+  return (
+    intervenants
+      .map((intervenant) => intervenant[key])
+      .filter(Boolean)
+      .join(' / ') || '-'
+  );
+}
 
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
@@ -116,6 +138,14 @@ export const BilanDashboard = () => {
     isLoading: sclLoading,
     isFetching: sclFetching,
   } = useBilanScl(sclQuery, filters.mode === 'scl' && hasOuvrageSelected);
+  const { data: steuDetail } = useBilanSteuDetail(
+    isScl ? null : filters.ouvrageDepollutionCode || null,
+    !isScl && hasOuvrageSelected,
+  );
+  const { data: sclDetail } = useBilanSclDetail(
+    isScl ? filters.systemeCollecteCode || null : null,
+    isScl && hasOuvrageSelected,
+  );
 
   const data = filters.mode === 'steu' ? steuData : sclData;
   const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
@@ -128,6 +158,16 @@ export const BilanDashboard = () => {
   const tableData = isScl ? buildBilanSclTableRows(sclData?.data || []) : buildBilanSteuTableRows(steuData?.data || []);
 
   const headers = isScl ? buildBilanSclTableHeaders() : buildBilanSteuTableHeaders();
+  const detail = isScl ? sclDetail : steuDetail;
+  const codeSandreLabel = detail
+    ? 'ouvrageDepollutionCode' in detail
+      ? detail.ouvrageDepollutionCode
+      : detail.systemeCollecteCode
+    : '-';
+  const detailIntervenants = detail ? [...detail.exploitants, ...detail.maitresOuvrage] : [];
+  const exploitantMoaLabel = formatIntervenants(detailIntervenants, 'intervenantNom');
+  const siretLabel = formatIntervenants(detailIntervenants, 'intervenantSiret');
+  const steuMiseEnServiceLabel = !isScl ? formatInfoDate(steuDetail?.dateMiseEnService ?? null) : '-';
 
   // replace "Date" with SortableHeader
   const dateIndex = headers.indexOf('Date');
@@ -238,6 +278,30 @@ export const BilanDashboard = () => {
           </>
         )}
       </div>
+
+      {hasOuvrageSelected && detail && (
+        <div className="fr-grid-row fr-grid-row--gutters fr-mb-3w">
+          <div className="fr-col-12">
+            <div className="fr-callout fr-callout--blue-ecume">
+              <h2 className="fr-callout__title">Informations de l'ouvrage</h2>
+              <p className="fr-mb-1v">
+                <strong>Code Sandre :</strong> {codeSandreLabel}
+              </p>
+              {!isScl && (
+                <p className="fr-mb-1v">
+                  <strong>Date de mise en service :</strong> {steuMiseEnServiceLabel}
+                </p>
+              )}
+              <p className="fr-mb-1v">
+                <strong>Exploitant / MOA :</strong> {exploitantMoaLabel}
+              </p>
+              <p className="fr-mb-0">
+                <strong>SIRET :</strong> {siretLabel}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <TableLoader
         isLoading={isLoading && hasOuvrageSelected}

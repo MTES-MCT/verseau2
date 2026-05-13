@@ -8,7 +8,7 @@ import {
 } from '../bilan/bilan.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 
-export const BilanSteuSortBy = z.enum(['date', 'ouvrageDepollutionCode', 'ouvrageDepollutionNom', 'parametreNom']);
+export const BilanSteuSortBy = z.enum(['date', 'ouvrageDepollutionCode', 'parametreNom']);
 export type BilanSteuSortByValue = z.infer<typeof BilanSteuSortBy>;
 
 export const BilanSclSortBy = z.enum(['date', 'systemeCollecteCode', 'pointMesureNumero', 'statut']);
