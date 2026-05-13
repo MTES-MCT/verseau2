@@ -149,10 +149,8 @@ describe('BilanDashboard', () => {
       data: {
         ouvrageDepollutionCode: 'STEU001',
         dateMiseEnService: '2000-01-01',
-        exploitantNom: 'Exploitant Alpha',
-        moaNom: 'MOA Alpha',
-        exploitantSiret: '12345678901234',
-        moaSiret: '43210987654321',
+        exploitants: [{ intervenantNom: 'Exploitant Alpha', intervenantSiret: '12345678901234' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA Alpha', intervenantSiret: '43210987654321' }],
       },
       isLoading: false,
       isFetching: false,
@@ -191,10 +189,8 @@ describe('BilanDashboard', () => {
       data: {
         ouvrageDepollutionCode: 'STEU001',
         dateMiseEnService: '2000-01-01',
-        exploitantNom: 'Syndicat Alpha',
-        moaNom: 'Syndicat Alpha',
-        exploitantSiret: '11111111111111',
-        moaSiret: '11111111111111',
+        exploitants: [{ intervenantNom: 'Syndicat Alpha', intervenantSiret: '11111111111111' }],
+        maitresOuvrage: [{ intervenantNom: 'Syndicat Alpha', intervenantSiret: '11111111111111' }],
       },
       isLoading: false,
       isFetching: false,
@@ -226,10 +222,8 @@ describe('BilanDashboard', () => {
     mockUseBilanSclDetail.mockReturnValue({
       data: {
         systemeCollecteCode: 'SCL001',
-        exploitantNom: 'Exploitant Beta',
-        moaNom: 'MOA Beta',
-        exploitantSiret: '11111111111111',
-        moaSiret: '22222222222222',
+        exploitants: [{ intervenantNom: 'Exploitant Beta', intervenantSiret: '11111111111111' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA Beta', intervenantSiret: '22222222222222' }],
       },
       isLoading: false,
       isFetching: false,

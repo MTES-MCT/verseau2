@@ -193,10 +193,10 @@ describe('BilanController (e2e)', () => {
       mockMasaProvider.findBilanSteuDetail.mockResolvedValue({
         ouvrageDepollutionCode: 'STEU_TEST_001',
         dateMiseEnService: '2000-01-01',
-        exploitantNom: 'Exploitant test',
-        moaNom: 'MOA test',
-        exploitantSiret: '12345678901234',
-        moaSiret: '43210987654321',
+        intervenants: [
+          { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },
+          { role: 'maitre_ouvrage', intervenantNom: 'MOA test', intervenantSiret: '43210987654321' },
+        ],
       });
 
       const response = await request(app.getHttpServer())
@@ -207,10 +207,8 @@ describe('BilanController (e2e)', () => {
       expect(response.body).toMatchObject({
         ouvrageDepollutionCode: 'STEU_TEST_001',
         dateMiseEnService: '2000-01-01',
-        exploitantNom: 'Exploitant test',
-        moaNom: 'MOA test',
-        exploitantSiret: '12345678901234',
-        moaSiret: '43210987654321',
+        exploitants: [{ intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA test', intervenantSiret: '43210987654321' }],
       });
     });
   });
@@ -308,10 +306,10 @@ describe('BilanController (e2e)', () => {
       ]);
       mockMasaProvider.findBilanSclDetail.mockResolvedValue({
         systemeCollecteCode: 'SCL_TEST_001',
-        exploitantNom: 'Exploitant test',
-        moaNom: 'MOA test',
-        exploitantSiret: '12345678901234',
-        moaSiret: '43210987654321',
+        intervenants: [
+          { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },
+          { role: 'maitre_ouvrage', intervenantNom: 'MOA test', intervenantSiret: '43210987654321' },
+        ],
       });
 
       const response = await request(app.getHttpServer())
@@ -321,10 +319,8 @@ describe('BilanController (e2e)', () => {
 
       expect(response.body).toMatchObject({
         systemeCollecteCode: 'SCL_TEST_001',
-        exploitantNom: 'Exploitant test',
-        moaNom: 'MOA test',
-        exploitantSiret: '12345678901234',
-        moaSiret: '43210987654321',
+        exploitants: [{ intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' }],
+        maitresOuvrage: [{ intervenantNom: 'MOA test', intervenantSiret: '43210987654321' }],
       });
     });
   });

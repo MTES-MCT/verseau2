@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
-import type { BilanSteuSortByValue, BilanSclSortByValue } from '@lib/dossier';
+import type { BilanSteuSortByValue, BilanSclSortByValue, IntervenantDetailDto } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useBilanFilters';
 import type { ReactNode } from 'react';
 import { CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR } from '@lib/dossier';
@@ -8,6 +8,8 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+// impoer Highlight
+import { Highlight } from '@codegouvfr/react-dsfr/Highlight';
 import { useBilanSteu, useBilanScl, useBilanSteuDetail, useBilanSclDetail } from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
@@ -37,6 +39,15 @@ function formatInfoDate(value: string | null | undefined) {
   }
 
   return `${day}/${month}/${year}`;
+}
+
+function formatIntervenants(intervenants: IntervenantDetailDto[], key: 'intervenantNom' | 'intervenantSiret'): string {
+  return (
+    intervenants
+      .map((intervenant) => intervenant[key])
+      .filter(Boolean)
+      .join(' / ') || '-'
+  );
 }
 
 export const BilanDashboard = () => {
@@ -155,8 +166,9 @@ export const BilanDashboard = () => {
       ? detail.ouvrageDepollutionCode
       : detail.systemeCollecteCode
     : '-';
-  const exploitantMoaLabel = detail ? [detail.exploitantNom, detail.moaNom].filter(Boolean).join(' / ') || '-' : '-';
-  const siretLabel = detail ? [detail.exploitantSiret, detail.moaSiret].filter(Boolean).join(' / ') || '-' : '-';
+  const detailIntervenants = detail ? [...detail.exploitants, ...detail.maitresOuvrage] : [];
+  const exploitantMoaLabel = formatIntervenants(detailIntervenants, 'intervenantNom');
+  const siretLabel = formatIntervenants(detailIntervenants, 'intervenantSiret');
   const steuMiseEnServiceLabel = !isScl ? formatInfoDate(steuDetail?.dateMiseEnService ?? null) : '-';
 
   // replace "Date" with SortableHeader

@@ -1,5 +1,5 @@
 import { Controller, ForbiddenException, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
-import type { RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
+import type { IntervenantDetailDto, RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
 import { codesToParametres, getSclDetail, getSteuDetail, listPointsMesureReferentiel } from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { MeGuard } from '@authentication/me.guard';
@@ -8,6 +8,7 @@ import type { CustomRequest } from '@shared/constants/customRequest';
 import { MasaProvider } from '@masa/masa.provider';
 import { toLocalisationCodes } from '@masa/toMasa.mapper';
 import { ParametreGateway } from './parametre/parametre.gateway';
+import { toSclDetailResponse, toSteuDetailResponse } from './referentiel.mapper';
 
 @Controller('referentiel')
 export class ReferentielController {
@@ -66,7 +67,12 @@ export class ReferentielController {
       return null;
     }
 
-    return this.masaProvider.findBilanSteuDetail(params.ouvrageDepollutionCode);
+    const detail = await this.masaProvider.findBilanSteuDetail(params.ouvrageDepollutionCode);
+    if (!detail) {
+      return null;
+    }
+
+    return toSteuDetailResponse(detail);
   }
 
   @Get('scl/:systemeCollecteCode/detail')
@@ -80,6 +86,11 @@ export class ReferentielController {
       return null;
     }
 
-    return this.masaProvider.findBilanSclDetail(params.systemeCollecteCode);
+    const detail = await this.masaProvider.findBilanSclDetail(params.systemeCollecteCode);
+    if (!detail) {
+      return null;
+    }
+
+    return toSclDetailResponse(detail);
   }
 }

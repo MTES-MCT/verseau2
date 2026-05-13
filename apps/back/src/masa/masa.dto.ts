@@ -22,8 +22,6 @@ import {
   OuvrageTypeValue,
   PaginationQuery,
   TrancheObligationRfa,
-  SteuDetailDto,
-  SclDetailDto,
 } from '@lib/dossier';
 
 /** Filtres pour la recherche d'événements STEU */
@@ -95,9 +93,24 @@ export type BilanSteuRow = BilanSteuDto;
 /** Une ligne de bilan SCL */
 export type BilanSclRow = BilanSclDto;
 
-export type SteuDetailRow = SteuDetailDto;
+export type OuvrageIntervenantRole = 'exploitant' | 'maitre_ouvrage';
 
-export type SclDetailRow = SclDetailDto;
+export interface OuvrageIntervenantRow {
+  role: OuvrageIntervenantRole;
+  intervenantNom: string | null;
+  intervenantSiret: string | null;
+}
+
+export interface SteuDetailRow {
+  ouvrageDepollutionCode: string;
+  dateMiseEnService: string | null;
+  intervenants: OuvrageIntervenantRow[];
+}
+
+export interface SclDetailRow {
+  systemeCollecteCode: string;
+  intervenants: OuvrageIntervenantRow[];
+}
 
 /** Une ligne d'événement STEU */
 export type EvenementSteuRow = EvenementSteuDto;
