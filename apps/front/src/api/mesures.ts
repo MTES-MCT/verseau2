@@ -1,4 +1,5 @@
 import {
+  exportMesures,
   listMesures,
   listOuvrages,
   listSystemesCollecte,
@@ -9,7 +10,7 @@ import {
   listQualifications,
 } from '@lib/dossier';
 import type { RouteQuery, OuvrageTypeValue, TypePointMesureValue } from '@lib/dossier';
-import { apiCall } from './apiClient';
+import { apiCall, apiDownloadFile, buildRoutePath } from './apiClient';
 
 export async function fetchMesures(query: RouteQuery<typeof listMesures>) {
   return apiCall(listMesures, { query });
@@ -55,4 +56,8 @@ export async function fetchStatuts() {
 
 export async function fetchQualifications() {
   return apiCall(listQualifications);
+}
+
+export async function downloadMesuresExport(query: RouteQuery<typeof exportMesures>) {
+  return apiDownloadFile(buildRoutePath(exportMesures, { query }), 'text/csv');
 }

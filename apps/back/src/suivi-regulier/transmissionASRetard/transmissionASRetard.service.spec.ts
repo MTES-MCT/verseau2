@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
 import { Test, TestingModule } from '@nestjs/testing';
+import { CsvGenerator } from '@lib/shared';
 import { TransmissionASRetardService } from './transmissionASRetard.service';
 import { MasaProvider } from '@masa/masa.provider';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 
 describe('TransmissionASRetardService', () => {
   let service: TransmissionASRetardService;
@@ -11,6 +13,7 @@ describe('TransmissionASRetardService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransmissionASRetardService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: {
@@ -19,6 +22,10 @@ describe('TransmissionASRetardService', () => {
             findSteuBatchBySandreCdas: jest.fn(),
             findSclBatchBySandreCdas: jest.fn(),
           },
+        },
+        {
+          provide: CsvGenerator,
+          useValue: { generate: jest.fn() },
         },
       ],
     }).compile();

@@ -45,6 +45,12 @@ export const listTransmissionASRetardSteu = {
   response: PaginatedTransmissionASRetardSteuResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportTransmissionASRetardSteu = {
+  method: 'GET',
+  path: '/suivi-regulier/transmission-as-retard/steu/export',
+  query: listTransmissionASRetardSteu.query,
+} as const satisfies RouteDefinition;
+
 export const listTransmissionASRetardScl = {
   method: 'GET',
   path: '/suivi-regulier/transmission-as-retard/scl',
@@ -55,4 +61,10 @@ export const listTransmissionASRetardScl = {
     })
     .extend(createPaginationQuerySchema(TransmissionASRetardSclSortBy).shape),
   response: PaginatedTransmissionASRetardSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportTransmissionASRetardScl = {
+  method: 'GET',
+  path: '/suivi-regulier/transmission-as-retard/scl/export',
+  query: listTransmissionASRetardScl.query,
 } as const satisfies RouteDefinition;

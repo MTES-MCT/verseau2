@@ -28,6 +28,8 @@ import {
 } from '../../helper/conformiteTableData';
 import { useConformiteFilters } from '../../hooks/useConformiteFilters';
 import { TableLoader } from '../../components/common/TableLoader';
+import { useCsvExportDownload } from '../../hooks/useCsvExportDownload';
+import { downloadConformiteSclExport, downloadConformiteSteuExport } from '../../api/conformite';
 
 type ConformiteSteuRow = ConformiteSteuDto;
 
@@ -279,6 +281,48 @@ export function ConformiteDashboard() {
   const total = data?.total ?? 0;
   const firstResult = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const lastResult = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
+  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } =
+    useCsvExportDownload(downloadConformiteSteuExport);
+  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(downloadConformiteSclExport);
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && total > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(
+        {
+          year: Number(form.year),
+          ...(form.ouvrageCode ? { systemeCollecteCode: form.ouvrageCode } : {}),
+          ...(form.trancheObligationRfa ? { trancheObligationRfa: form.trancheObligationRfa } : {}),
+          ...(form.impact ? { impact: form.impact } : {}),
+          ...(form.sortBy ? { sortBy: form.sortBy as ConformiteSclSortByValue } : {}),
+          ...(form.sortOrder ? { sortOrder: form.sortOrder } : {}),
+          page,
+          pageSize: PAGE_SIZE,
+        },
+        `conformite-scl-${form.year}.csv`,
+      );
+      return;
+    }
+
+    void downloadSteuCsv(
+      {
+        year: Number(form.year),
+        ...(form.ouvrageCode ? { ouvrageDepollutionCode: form.ouvrageCode } : {}),
+        ...(form.trancheObligationRfa ? { trancheObligationRfa: form.trancheObligationRfa } : {}),
+        ...(form.impact ? { impact: form.impact } : {}),
+        ...(form.sortBy ? { sortBy: form.sortBy as ConformiteSteuSortByValue } : {}),
+        ...(form.sortOrder ? { sortOrder: form.sortOrder } : {}),
+        page,
+        pageSize: PAGE_SIZE,
+      },
+      `conformite-steu-${form.year}.csv`,
+    );
+  };
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -292,6 +336,11 @@ export function ConformiteDashboard() {
       <div className={fr.cx('fr-grid-row', 'fr-grid-row--middle', 'fr-grid-row--gutters', 'fr-mb-2w')}>
         <div className={fr.cx('fr-col-12', 'fr-col-md')}>
           <h1 className={fr.cx('fr-mb-0')}>Tableau de bord conformité</h1>
+        </div>
+        <div className="fr-col-12" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
         </div>
       </div>
       <div className={fr.cx('fr-mb-3w')}>

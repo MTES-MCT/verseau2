@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
+import { CsvGenerator } from '@lib/shared';
 import { MesuresService } from './mesures.service';
 import { MasaProvider } from '@masa/masa.provider';
 import type { MesureRow } from '@masa/masa.dto';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 
 const makeMesureRow = (): MesureRow => ({
   ouvrageDepollutionCode: 'STEU001',
@@ -49,9 +51,14 @@ describe('MesuresService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MesuresService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: mockMasaProvider,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: { generate: jest.fn() },
         },
       ],
     }).compile();

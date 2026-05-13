@@ -1,9 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { EvenementSteuSortByValue, EvenementSclSortByValue, PaginationQuery } from '@lib/dossier';
+import type { EvenementSclDto, EvenementSteuDto } from '@lib/dossier';
+import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { EvenementSteuFilters, EvenementSclFilters } from '@masa/masa.dto';
+import { formatNullable, formatPrisEnCompte } from '@shared/csv/csvFormatters';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 
 const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
+
+const EVENEMENT_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<EvenementSteuDto>> = [
+  { header: 'Pris en compte', value: (row) => formatPrisEnCompte(row.prisEnCompte) },
+  { header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
+  { header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
+  { header: 'Date', value: (row) => formatDate(row.date) },
+  {
+    header: "Type d'événement",
+    value: (row) => `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
+  },
+  { header: 'Finalité', value: (row) => formatNullable(row.finalite) },
+  { header: 'Commentaire', value: (row) => formatNullable(row.commentaire) },
+];
+
+const EVENEMENT_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<EvenementSclDto>> = [
+  { header: 'Pris en compte', value: (row) => formatPrisEnCompte(row.prisEnCompte) },
+  { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
+  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
+  { header: 'Date', value: (row) => formatDate(row.date) },
+  {
+    header: "Type d'événement",
+    value: (row) => `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
+  },
+  { header: 'Finalité', value: (row) => formatNullable(row.finalite) },
+  { header: 'Commentaire', value: (row) => formatNullable(row.commentaire) },
+  {
+    header: 'Point de mesures',
+    value: (row) => `${row.pointMesureNumero} - ${row.pointMesureLibelle ?? '-'}`,
+  },
+];
 
 export interface ListEvenementSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -25,7 +60,11 @@ export interface ListEvenementSclOptions extends PaginationQuery {
 
 @Injectable()
 export class EvenementService {
-  constructor(private readonly masaProvider: MasaProvider) {}
+  constructor(
+    private readonly masaProvider: MasaProvider,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+  ) {}
 
   async listEvenementSteu(options: ListEvenementSteuOptions) {
     const {
@@ -48,7 +87,9 @@ export class EvenementService {
     }
 
     const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(cdasToQuery);
-    if (ouvrageDepollutionIds.length === 0) return { data: [], total: 0, page, pageSize };
+    if (ouvrageDepollutionIds.length === 0) {
+      return { data: [], total: 0, page, pageSize };
+    }
     const filters: EvenementSteuFilters = {
       ouvrageDepollutionIds,
       year,
@@ -61,6 +102,19 @@ export class EvenementService {
     };
     const result = await this.masaProvider.findEvenementSteu(filters);
     return { ...result, page, pageSize };
+  }
+
+  async exportEvenementSteuCsv(options: ListEvenementSteuOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filters = await this.buildEvenementSteuFilters(options, page, pageSize);
+      if (!filters) {
+        return { data: [], total: 0 };
+      }
+
+      return this.masaProvider.findEvenementSteu(filters);
+    });
+
+    return this.csvGenerator.generate(EVENEMENT_STEU_CSV_COLUMNS, rows);
   }
 
   async listEvenementScl(options: ListEvenementSclOptions) {
@@ -84,7 +138,9 @@ export class EvenementService {
     }
 
     const systemeCollecteIds = await this.resolveAuthorizedSclCdns(cdasToQuery);
-    if (systemeCollecteIds.length === 0) return { data: [], total: 0, page, pageSize };
+    if (systemeCollecteIds.length === 0) {
+      return { data: [], total: 0, page, pageSize };
+    }
     const filters: EvenementSclFilters = {
       systemeCollecteIds,
       year,
@@ -97,6 +153,19 @@ export class EvenementService {
     };
     const result = await this.masaProvider.findEvenementScl(filters);
     return { ...result, page, pageSize };
+  }
+
+  async exportEvenementSclCsv(options: ListEvenementSclOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filters = await this.buildEvenementSclFilters(options, page, pageSize);
+      if (!filters) {
+        return { data: [], total: 0 };
+      }
+
+      return this.masaProvider.findEvenementScl(filters);
+    });
+
+    return this.csvGenerator.generate(EVENEMENT_SCL_CSV_COLUMNS, rows);
   }
 
   async listEvenementTypes() {
@@ -127,5 +196,69 @@ export class EvenementService {
     }
 
     return [typeEvenementCode];
+  }
+
+  private async buildEvenementSteuFilters(
+    options: ListEvenementSteuOptions,
+    page: number,
+    pageSize: number,
+  ): Promise<EvenementSteuFilters | null> {
+    const { authorizedSteuCdas, year, typeEvenementCode, ouvrageDepollutionCode, pointMesureId, sortBy, sortOrder } =
+      options;
+    const cdasToQuery = ouvrageDepollutionCode
+      ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
+      : authorizedSteuCdas;
+
+    if (cdasToQuery.length === 0 && ouvrageDepollutionCode) {
+      return null;
+    }
+
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(cdasToQuery);
+    if (ouvrageDepollutionIds.length === 0) {
+      return null;
+    }
+
+    return {
+      ouvrageDepollutionIds,
+      year,
+      page,
+      pageSize,
+      typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
+      ...(pointMesureId ? { pointMesureId } : {}),
+      ...(sortBy ? { sortBy } : {}),
+      ...(sortOrder ? { sortOrder } : {}),
+    };
+  }
+
+  private async buildEvenementSclFilters(
+    options: ListEvenementSclOptions,
+    page: number,
+    pageSize: number,
+  ): Promise<EvenementSclFilters | null> {
+    const { authorizedSclCdas, year, typeEvenementCode, systemeCollecteCode, pointMesureId, sortBy, sortOrder } =
+      options;
+    const cdasToQuery = systemeCollecteCode
+      ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
+      : authorizedSclCdas;
+
+    if (cdasToQuery.length === 0 && systemeCollecteCode) {
+      return null;
+    }
+
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(cdasToQuery);
+    if (systemeCollecteIds.length === 0) {
+      return null;
+    }
+
+    return {
+      systemeCollecteIds,
+      year,
+      page,
+      pageSize,
+      typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
+      ...(pointMesureId ? { pointMesureId } : {}),
+      ...(sortBy ? { sortBy } : {}),
+      ...(sortOrder ? { sortOrder } : {}),
+    };
   }
 }

@@ -9,6 +9,7 @@ jest.mock('@shared/logger/traceCalls.decorator', () => ({
 }));
 
 import { ConformiteService } from './conformite.service';
+import { CsvGenerator } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -16,6 +17,7 @@ import type {
   ConformiteSteuDetailRow,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 
 const makeConformiteSteuRow = (): ConformiteSteuRow => ({
@@ -124,6 +126,7 @@ describe('ConformiteService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConformiteService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: mockMasaProvider,
@@ -131,6 +134,10 @@ describe('ConformiteService', () => {
         {
           provide: LoggerService,
           useValue: logger,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: { generate: jest.fn() },
         },
       ],
     }).compile();

@@ -153,6 +153,8 @@ export function useMesureFilters() {
 
   return {
     form,
+    submitted,
+    hasSearched,
     updateForm,
     updateOuvrageType,
     updateSelectedPmo,

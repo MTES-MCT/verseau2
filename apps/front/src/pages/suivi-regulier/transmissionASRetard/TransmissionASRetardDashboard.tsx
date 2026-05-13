@@ -8,6 +8,7 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useTransmissionASRetardSteu, useTransmissionASRetardScl } from '../../../hooks/useTransmissionASRetard';
 import { useTransmissionASRetardFilters } from '../../../hooks/useTransmissionASRetardFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
@@ -22,6 +23,11 @@ import {
   buildTransmissionASRetardSclTableRows,
 } from '../../../helper/transmissionASRetardTableData';
 import { TableLoader } from '../../../components/common/TableLoader';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import {
+  downloadTransmissionASRetardSclExport,
+  downloadTransmissionASRetardSteuExport,
+} from '../../../api/transmissionASRetard';
 
 export const TransmissionASRetardDashboard = () => {
   const { filters, updateFilter, page, setPage } = useTransmissionASRetardFilters();
@@ -108,6 +114,12 @@ export const TransmissionASRetardDashboard = () => {
   const data = isScl ? sclData : steuData;
   const isLoading = isScl ? sclLoading : steuLoading;
   const isFetching = isScl ? sclFetching : steuFetching;
+  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } = useCsvExportDownload(
+    downloadTransmissionASRetardSteuExport,
+  );
+  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(
+    downloadTransmissionASRetardSclExport,
+  );
 
   const tableData = isScl
     ? buildTransmissionASRetardSclTableRows(sclData?.data || [])
@@ -152,6 +164,21 @@ export const TransmissionASRetardDashboard = () => {
   });
 
   const title = isScl ? 'Transmission AS des SCL en retard' : 'Transmission AS des STEU en retard';
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(sclQuery, `transmission-as-retard-scl-${filters.year}.csv`);
+      return;
+    }
+
+    void downloadSteuCsv(steuQuery, `transmission-as-retard-steu-${filters.year}.csv`);
+  };
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -162,6 +189,12 @@ export const TransmissionASRetardDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>{title}</h1>
+
+      <div className={fr.cx('fr-mb-2w')}>
+        <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+          Exporter CSV
+        </Button>
+      </div>
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">

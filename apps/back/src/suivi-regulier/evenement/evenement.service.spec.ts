@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CsvGenerator } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { EvenementService } from './evenement.service';
 
 const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -19,9 +21,14 @@ describe('EvenementService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EvenementService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: masaProviderMock,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: { generate: jest.fn() },
         },
       ],
     }).compile();

@@ -1,5 +1,7 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
 import {
+  exportEvenementScl as exportEvenementSclRoute,
+  exportEvenementSteu as exportEvenementSteuRoute,
   listEvenementScl as listEvenementSclRoute,
   listEvenementSteu as listEvenementSteuRoute,
   listEvenementTypes as listEvenementTypesRoute,
@@ -8,8 +10,10 @@ import {
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
 import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
+import { sendCsvResponse } from '@shared/csv/csvResponse';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
+import type { Response } from 'express';
 import { EvenementService } from './evenement.service';
 
 @Controller('suivi-regulier/evenement')
@@ -30,6 +34,22 @@ export class EvenementController {
     });
   }
 
+  @Get('steu/export')
+  @UseGuards(HasUserAccessToOuvragesGuard)
+  async exportEvenementSteu(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(exportEvenementSteuRoute['query']))
+    query: RouteQuery<typeof exportEvenementSteuRoute>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.evenementService.exportEvenementSteuCsv({
+      authorizedSteuCdas: req.authorizedSteuCdas!,
+      ...query,
+    });
+
+    sendCsvResponse(res, `evenement-steu-${query.year}.csv`, csv);
+  }
+
   @Get('scl')
   @UseGuards(HasUserAccessToOuvragesGuard)
   async listEvenementScl(
@@ -41,6 +61,22 @@ export class EvenementController {
       authorizedSclCdas: req.authorizedSclCdas!,
       ...query,
     });
+  }
+
+  @Get('scl/export')
+  @UseGuards(HasUserAccessToOuvragesGuard)
+  async exportEvenementScl(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(exportEvenementSclRoute['query']))
+    query: RouteQuery<typeof exportEvenementSclRoute>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.evenementService.exportEvenementSclCsv({
+      authorizedSclCdas: req.authorizedSclCdas!,
+      ...query,
+    });
+
+    sendCsvResponse(res, `evenement-scl-${query.year}.csv`, csv);
   }
 
   @Get('types')

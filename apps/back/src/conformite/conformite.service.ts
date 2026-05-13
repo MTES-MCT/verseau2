@@ -1,10 +1,12 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
   ConformiteSclSortByValue,
   ConformiteSteuSortByValue,
   PaginationQuery,
   TrancheObligationRfa,
 } from '@lib/dossier';
+import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -14,8 +16,11 @@ import type {
   ConformiteSteuFilters,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
+import { formatConformite, formatImpact, formatNullable } from '@shared/csv/csvFormatters';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+import { toConformiteSclDto, toConformiteSteuDto } from './conformite.mapper';
 
 type PaginatedConformiteSteuRows = {
   data: ConformiteSteuRow[];
@@ -30,6 +35,34 @@ type PaginatedConformiteSclRows = {
   page: number;
   pageSize: number;
 };
+
+const CONFORMITE_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<import('@lib/dossier').ConformiteSteuDto>> = [
+  { header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
+  { header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
+  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
+  { header: 'Capacité nominale (EH)', value: (row) => formatNullable(row.capaciteNominaleEH) },
+  { header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
+  { header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
+  {
+    header: 'Conformité réglementaire',
+    value: (row) => formatConformite(row.conformiteLocaleProvisoire),
+  },
+  { header: 'Synthèse des changements', value: (row) => formatImpact(row.impactConformite) },
+];
+
+const CONFORMITE_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<import('@lib/dossier').ConformiteSclDto>> = [
+  { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
+  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
+  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
+  { header: 'Type', value: (row) => formatNullable(row.typeScl) },
+  { header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
+  { header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
+  {
+    header: 'Conformité réglementaire temps pluie',
+    value: (row) => formatConformite(row.conformiteLocaleTempsPluieProvisoire),
+  },
+  { header: 'Synthèse des changements', value: (row) => formatImpact(row.impactConformite) },
+];
 
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -54,6 +87,8 @@ export class ConformiteService {
   constructor(
     private readonly masaProvider: MasaProvider,
     private readonly logger: LoggerService,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
   ) {
     this.logger.setContext(ConformiteService.name);
   }
@@ -99,6 +134,16 @@ export class ConformiteService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
+  async exportConformiteSteuCsv(options: ListConformiteSteuOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listConformiteSteu({ ...options, page, pageSize });
+      return { data: result.data.map(toConformiteSteuDto), total: result.total };
+    });
+
+    return this.csvGenerator.generate(CONFORMITE_STEU_CSV_COLUMNS, rows);
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
     const {
       authorizedSteuCdas,
@@ -136,6 +181,16 @@ export class ConformiteService {
     const { data, total } = await this.masaProvider.findConformiteScl(filters);
 
     return { data, total, page, pageSize };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async exportConformiteSclCsv(options: ListConformiteSclOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listConformiteScl({ ...options, page, pageSize });
+      return { data: result.data.map(toConformiteSclDto), total: result.total };
+    });
+
+    return this.csvGenerator.generate(CONFORMITE_SCL_CSV_COLUMNS, rows);
   }
 
   @TraceCalls(LOG_LEVELS[2])

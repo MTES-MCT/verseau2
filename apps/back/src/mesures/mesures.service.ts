@@ -1,6 +1,14 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
-import { PaginatedMesuresResponse, PaginationQuery, MesuresSortByValue, type OuvrageTypeValue } from '@lib/dossier';
+import {
+  PaginatedMesuresResponse,
+  PaginationQuery,
+  MesuresSortByValue,
+  type OuvrageTypeValue,
+  type MesureDto,
+} from '@lib/dossier';
+import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { formatDate } from '@lib/shared';
 import {
   MesureFilters,
   SteuWithName,
@@ -9,7 +17,37 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
+import { formatNullable } from '@shared/csv/csvFormatters';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+
+const MESURES_CSV_COLUMNS: ReadonlyArray<CsvColumn<MesureDto>> = [
+  { header: 'Date', value: (row) => formatDate(row.prelevementDate) },
+  {
+    header: 'Point de mesure',
+    value: (row) => {
+      const parts: string[] = [];
+      if (row.pointMesureLibelle) {
+        parts.push(row.pointMesureLibelle);
+      }
+      if (row.pointMesureNumero) {
+        parts.push(`n°${row.pointMesureNumero}`);
+      }
+      if (row.pointAgenceEauNumero) {
+        parts.push(`(${row.pointAgenceEauNumero})`);
+      }
+
+      return parts.join(' ') || '-';
+    },
+  },
+  { header: 'Localisation', value: (row) => formatNullable(row.pointMesureLocalisationCode) },
+  { header: 'Paramètre', value: (row) => row.parametreNomCourt ?? row.parametreAnalyseCode },
+  { header: 'Valeur', value: (row) => formatNullable(row.resultatAnalyseValeur) },
+  { header: 'Unité', value: (row) => formatNullable(row.uniteMesureSymbole) },
+  { header: 'Qualification', value: (row) => formatNullable(row.resultatAnalyseQualification) },
+  { header: 'Finalité', value: (row) => formatNullable(row.analyseFinalite) },
+  { header: 'Statut', value: (row) => formatNullable(row.resultatAnalyseStatut) },
+];
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
@@ -30,7 +68,11 @@ export interface ListMesuresOptions extends PaginationQuery {
 
 @Injectable()
 export class MesuresService {
-  constructor(private readonly masaProvider: MasaProvider) {}
+  constructor(
+    private readonly masaProvider: MasaProvider,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+  ) {}
 
   @TraceCalls(LOG_LEVELS[2])
   async listMesures(options: ListMesuresOptions): Promise<PaginatedMesuresResponse> {
@@ -102,6 +144,16 @@ export class MesuresService {
       page: rest.page,
       pageSize: rest.pageSize,
     };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async exportMesuresCsv(options: ListMesuresOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listMesures({ ...options, page, pageSize });
+      return { data: result.data, total: result.total };
+    });
+
+    return this.csvGenerator.generate(MESURES_CSV_COLUMNS, rows);
   }
 
   @TraceCalls(LOG_LEVELS[2])

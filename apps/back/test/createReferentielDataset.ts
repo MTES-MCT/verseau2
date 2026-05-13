@@ -380,7 +380,6 @@ export async function createVerseauTables(dataSource: DataSource): Promise<void>
       ae_itv_rfa VARCHAR
     )
   `);
-
 }
 
 export async function createReferentielDataset(dataSource: DataSource): Promise<void> {
@@ -457,14 +456,7 @@ export async function seedCxnadm(
     INSERT INTO roseau.cxnadm (cxnadm_cdn, mo_steu_cdn, steu_itv_cdn, exp_steu_cdn, cxnadm_creation_dt, cxnadm_retrait_dt)
     VALUES ($1, $2, $3, $4, $5, $6)
   `,
-    [
-      cxnadmCdn,
-      moSteuCdn,
-      steuItvCdn,
-      expSteuCdn ?? null,
-      options?.creationDt ?? null,
-      options?.retraitDt ?? null,
-    ],
+    [cxnadmCdn, moSteuCdn, steuItvCdn, expSteuCdn ?? null, options?.creationDt ?? null, options?.retraitDt ?? null],
   );
 }
 

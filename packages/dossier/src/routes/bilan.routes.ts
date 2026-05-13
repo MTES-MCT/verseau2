@@ -31,6 +31,12 @@ export const listBilanSteu = {
   response: PaginatedBilanSteuResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportBilanSteu = {
+  method: 'GET',
+  path: '/suivi-regulier/bilan/steu/export',
+  query: listBilanSteu.query,
+} as const satisfies RouteDefinition;
+
 export const listBilanScl = {
   method: 'GET',
   path: '/suivi-regulier/bilan/scl',
@@ -43,4 +49,10 @@ export const listBilanScl = {
     })
     .extend(createPaginationQuerySchema(BilanSclSortBy).shape),
   response: PaginatedBilanSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportBilanScl = {
+  method: 'GET',
+  path: '/suivi-regulier/bilan/scl/export',
+  query: listBilanScl.query,
 } as const satisfies RouteDefinition;

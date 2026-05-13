@@ -1,8 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { TransmissionASRetardSteuSortByValue, TransmissionASRetardSclSortByValue, PaginationQuery } from '@lib/dossier';
+import type { TransmissionASRetardSclDto, TransmissionASRetardSteuDto } from '@lib/dossier';
+import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { TransmissionASRetardSteuFilters, TransmissionASRetardSclFilters } from '@masa/masa.dto';
+import { formatNullable, formatRetard } from '@shared/csv/csvFormatters';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { mapTransmissionASRetardSteuRowToDto, mapTransmissionASRetardSclRowToDto } from './transmissionASRetard.mapper';
+
+const TRANSMISSION_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<TransmissionASRetardSteuDto>> = [
+  { header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
+  { header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
+  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
+  { header: 'Capacité nominale (EH)', value: (row) => formatNullable(row.capaciteNominaleEH) },
+  { header: 'Nb fichiers AS reçus', value: (row) => formatNullable(row.nbFichiersAsRecus) },
+  {
+    header: 'Date dernier fichier reçu',
+    value: (row) => (row.dateDernierFichierRecu ? formatDate(row.dateDernierFichierRecu) : '-'),
+  },
+  { header: 'Période début', value: (row) => (row.dateDebutPeriode ? formatDate(row.dateDebutPeriode) : '-') },
+  { header: 'Période fin', value: (row) => (row.dateFinPeriode ? formatDate(row.dateFinPeriode) : '-') },
+  {
+    header: 'Date attendue',
+    value: (row) => (row.dateMesureSuivanteAttendue ? formatDate(row.dateMesureSuivanteAttendue) : '-'),
+  },
+  { header: 'Nb jours de retard', value: (row) => formatRetard(row.nbJoursRetard) },
+];
+
+const TRANSMISSION_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<TransmissionASRetardSclDto>> = [
+  { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
+  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
+  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
+  { header: 'Capacité nominale (EH)', value: (row) => formatNullable(row.capaciteNominaleEH) },
+  { header: 'Nb fichiers AS reçus', value: (row) => formatNullable(row.nbFichiersAsRecus) },
+  {
+    header: 'Date dernier fichier reçu',
+    value: (row) => (row.dateDernierFichierRecu ? formatDate(row.dateDernierFichierRecu) : '-'),
+  },
+  { header: 'Période début', value: (row) => (row.dateDebutPeriode ? formatDate(row.dateDebutPeriode) : '-') },
+  { header: 'Période fin', value: (row) => (row.dateFinPeriode ? formatDate(row.dateFinPeriode) : '-') },
+  {
+    header: 'Date attendue',
+    value: (row) => (row.dateMesureSuivanteAttendue ? formatDate(row.dateMesureSuivanteAttendue) : '-'),
+  },
+  { header: 'Nb jours de retard', value: (row) => formatRetard(row.nbJoursRetard) },
+];
 
 export interface ListTransmissionASRetardSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -20,7 +63,11 @@ export interface ListTransmissionASRetardSclOptions extends PaginationQuery {
 
 @Injectable()
 export class TransmissionASRetardService {
-  constructor(private readonly masaProvider: MasaProvider) {}
+  constructor(
+    private readonly masaProvider: MasaProvider,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+  ) {}
 
   async listTransmissionASRetardSteu(options: ListTransmissionASRetardSteuOptions) {
     const { authorizedSteuCdas, year, ouvrageDepollutionCode, page, pageSize, sortBy, sortOrder } = options;
@@ -50,6 +97,20 @@ export class TransmissionASRetardService {
       page,
       pageSize,
     };
+  }
+
+  async exportTransmissionASRetardSteuCsv(options: ListTransmissionASRetardSteuOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filters = await this.buildTransmissionSteuFilters(options, page, pageSize);
+      if (!filters) {
+        return { data: [], total: 0 };
+      }
+
+      const result = await this.masaProvider.findTransmissionASRetardSteu(filters);
+      return { data: result.data.map(mapTransmissionASRetardSteuRowToDto), total: result.total };
+    });
+
+    return this.csvGenerator.generate(TRANSMISSION_STEU_CSV_COLUMNS, rows);
   }
 
   async listTransmissionASRetardScl(options: ListTransmissionASRetardSclOptions) {
@@ -82,6 +143,20 @@ export class TransmissionASRetardService {
     };
   }
 
+  async exportTransmissionASRetardSclCsv(options: ListTransmissionASRetardSclOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filters = await this.buildTransmissionSclFilters(options, page, pageSize);
+      if (!filters) {
+        return { data: [], total: 0 };
+      }
+
+      const result = await this.masaProvider.findTransmissionASRetardScl(filters);
+      return { data: result.data.map(mapTransmissionASRetardSclRowToDto), total: result.total };
+    });
+
+    return this.csvGenerator.generate(TRANSMISSION_SCL_CSV_COLUMNS, rows);
+  }
+
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
     if (authorizedSteuCdas.length === 0) return [];
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
@@ -92,5 +167,63 @@ export class TransmissionASRetardService {
     if (authorizedSclCdas.length === 0) return [];
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
     return [...new Set(scls.map((s) => s.systemeCollecteId))];
+  }
+
+  private async buildTransmissionSteuFilters(
+    options: ListTransmissionASRetardSteuOptions,
+    page: number,
+    pageSize: number,
+  ): Promise<TransmissionASRetardSteuFilters | null> {
+    const { authorizedSteuCdas, year, ouvrageDepollutionCode, sortBy, sortOrder } = options;
+    const cdasToQuery = ouvrageDepollutionCode
+      ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
+      : authorizedSteuCdas;
+
+    if (cdasToQuery.length === 0 && ouvrageDepollutionCode) {
+      return null;
+    }
+
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(cdasToQuery);
+    if (ouvrageDepollutionIds.length === 0) {
+      return null;
+    }
+
+    return {
+      ouvrageDepollutionIds,
+      year,
+      page,
+      pageSize,
+      ...(sortBy ? { sortBy } : {}),
+      ...(sortOrder ? { sortOrder } : {}),
+    };
+  }
+
+  private async buildTransmissionSclFilters(
+    options: ListTransmissionASRetardSclOptions,
+    page: number,
+    pageSize: number,
+  ): Promise<TransmissionASRetardSclFilters | null> {
+    const { authorizedSclCdas, year, systemeCollecteCode, sortBy, sortOrder } = options;
+    const cdasToQuery = systemeCollecteCode
+      ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
+      : authorizedSclCdas;
+
+    if (cdasToQuery.length === 0 && systemeCollecteCode) {
+      return null;
+    }
+
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(cdasToQuery);
+    if (systemeCollecteIds.length === 0) {
+      return null;
+    }
+
+    return {
+      systemeCollecteIds,
+      year,
+      page,
+      pageSize,
+      ...(sortBy ? { sortBy } : {}),
+      ...(sortOrder ? { sortOrder } : {}),
+    };
   }
 }

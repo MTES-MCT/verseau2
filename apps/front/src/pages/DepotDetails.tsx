@@ -17,6 +17,8 @@ import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
 import { useState } from 'react';
+import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
+import { downloadMesuresExport } from '../api/mesures';
 
 export function DepotDetailsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -54,7 +56,10 @@ export function DepotDetailsPage() {
     totalPages,
     PAGE_SIZE,
     advancedFilterCount,
+    submitted,
+    hasSearched,
   } = useMesureFilters();
+  const { download: downloadCsv, isLoading: isExportLoading } = useCsvExportDownload(downloadMesuresExport);
 
   const isScl = form.ouvrageType === 'scl';
 
@@ -136,6 +141,39 @@ export function DepotDetailsPage() {
     );
   });
 
+  const canExport = hasSearched && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    void downloadCsv(
+      {
+        ouvrageType: submitted.ouvrageType,
+        ...(submitted.ouvrageType === 'scl'
+          ? submitted.selectedOuvrageCode
+            ? { sclSandreCdas: [submitted.selectedOuvrageCode] }
+            : {}
+          : submitted.selectedOuvrageCode
+            ? { steuSandreCdas: [submitted.selectedOuvrageCode] }
+            : {}),
+        ...(submitted.selectedPmoCdn !== null ? { pmoCdn: submitted.selectedPmoCdn } : {}),
+        ...(submitted.selectedParametre ? { parametreCode: submitted.selectedParametre } : {}),
+        ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
+        ...(submitted.dateFin ? { dateFin: submitted.dateFin } : {}),
+        ...(submitted.finalite ? { finalite: submitted.finalite } : {}),
+        ...(submitted.statut ? { statut: submitted.statut } : {}),
+        ...(submitted.qualification ? { qualification: submitted.qualification } : {}),
+        ...(submitted.sortBy ? { sortBy: submitted.sortBy } : {}),
+        ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
+        page,
+        pageSize: PAGE_SIZE,
+      },
+      `mesures-${submitted.ouvrageType}.csv`,
+    );
+  };
+
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
       <Notice
@@ -145,6 +183,12 @@ export function DepotDetailsPage() {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>Détail des mesures déposées</h1>
+
+      <div className={fr.cx('fr-mb-2w')}>
+        <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+          Exporter CSV
+        </Button>
+      </div>
 
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>

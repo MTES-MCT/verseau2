@@ -8,6 +8,7 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useBilanSteu, useBilanScl, useBilanSteuDetail, useBilanSclDetail } from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
@@ -25,6 +26,8 @@ import {
 } from '../../../helper/bilanTableData';
 import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import { downloadBilanSclExport, downloadBilanSteuExport } from '../../../api/bilan';
 
 function formatInfoDate(value: string | null | undefined) {
   if (!value) {
@@ -50,7 +53,7 @@ function formatIntervenants(intervenants: IntervenantDetailDto[], key: 'interven
 
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
-  const pageSize = 10;
+  const pageSize = 500;
   const [ouvrageSearch, setOuvrageSearch] = useState('');
   const [sclSearch, setSclSearch] = useState('');
 
@@ -150,9 +153,27 @@ export const BilanDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
   const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
   const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
+  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } = useCsvExportDownload(downloadBilanSteuExport);
+  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(downloadBilanSclExport);
 
   const handleDateSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
+  };
+
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(sclQuery, `bilan-scl-${filters.year}.csv`);
+      return;
+    }
+
+    void downloadSteuCsv(steuQuery, `bilan-steu-${filters.year}.csv`);
   };
 
   const tableData = isScl ? buildBilanSclTableRows(sclData?.data || []) : buildBilanSteuTableRows(steuData?.data || []);
@@ -194,6 +215,12 @@ export const BilanDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>Tableau de bord bilans</h1>
+
+      <div className={fr.cx('fr-mb-2w')}>
+        <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+          Exporter CSV
+        </Button>
+      </div>
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">

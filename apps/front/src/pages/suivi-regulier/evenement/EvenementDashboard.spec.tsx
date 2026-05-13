@@ -8,6 +8,7 @@ import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesC
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
 import { EvenementDashboard } from './EvenementDashboard';
+import * as evenementApi from '../../../api/evenement';
 
 vi.mock('../../../hooks/useEvenement', () => ({
   useEvenementSteu: vi.fn(),
@@ -31,6 +32,15 @@ vi.mock('../../../hooks/useEvenementFilters', () => ({
   useEvenementFilters: vi.fn(),
 }));
 
+vi.mock('../../../api/evenement', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/evenement')>('../../../api/evenement');
+  return {
+    ...actual,
+    downloadEvenementSteuExport: vi.fn(),
+    downloadEvenementSclExport: vi.fn(),
+  };
+});
+
 const mockUseEvenementSteu = vi.mocked(useEvenementSteu);
 const mockUseEvenementScl = vi.mocked(useEvenementScl);
 const mockUseEvenementTypes = vi.mocked(useEvenementTypes);
@@ -38,6 +48,7 @@ const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
 const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseEvenementFilters = vi.mocked(useEvenementFilters);
+const mockDownloadEvenementSteuExport = vi.mocked(evenementApi.downloadEvenementSteuExport);
 
 const mockUpdateFilter = vi.fn();
 const mockSetPage = vi.fn();
@@ -170,5 +181,38 @@ describe('EvenementDashboard', () => {
     fireEvent.click(screen.getByRole('combobox', { name: /point de mesures/i }));
 
     expect(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i })).toBeInTheDocument();
+  });
+
+  it('exporte les événements avec les filtres affichés', async () => {
+    mockDownloadEvenementSteuExport.mockResolvedValue({ blob: new Blob(['csv']), filename: 'evenement.csv' });
+    mockUseEvenementSteu.mockReturnValue({
+      data: {
+        data: [
+          {
+            prisEnCompte: true,
+            date: '2024-01-01',
+            ouvrageDepollutionCode: 'STEU001',
+            ouvrageDepollutionNom: 'Station',
+            typeEvenementCode: '1',
+            typeEvenementLibelle: 'Alerte',
+            finalite: null,
+            commentaire: null,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    } as Partial<ReturnType<typeof useEvenementSteu>> as ReturnType<typeof useEvenementSteu>);
+
+    renderWithQueryClient(<EvenementDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
+
+    expect(mockDownloadEvenementSteuExport).toHaveBeenCalledWith(
+      expect.objectContaining({ year: CURRENT_EVENEMENT_YEAR, ouvrageDepollutionCode: 'STEU001' }),
+    );
   });
 });

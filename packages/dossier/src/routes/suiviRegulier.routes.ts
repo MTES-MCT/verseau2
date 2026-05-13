@@ -39,6 +39,12 @@ export const listEvenementSteu = {
   response: PaginatedEvenementSteuResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportEvenementSteu = {
+  method: 'GET',
+  path: '/suivi-regulier/evenement/steu/export',
+  query: listEvenementSteu.query,
+} as const satisfies RouteDefinition;
+
 export const listEvenementScl = {
   method: 'GET',
   path: '/suivi-regulier/evenement/scl',
@@ -51,6 +57,12 @@ export const listEvenementScl = {
     })
     .extend(createPaginationQuerySchema(EvenementSclSortBy).shape),
   response: PaginatedEvenementSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportEvenementScl = {
+  method: 'GET',
+  path: '/suivi-regulier/evenement/scl/export',
+  query: listEvenementScl.query,
 } as const satisfies RouteDefinition;
 
 export const listEvenementTypes = {

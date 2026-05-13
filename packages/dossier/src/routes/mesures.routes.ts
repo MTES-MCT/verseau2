@@ -32,6 +32,12 @@ export const listMesures = {
   response: PaginatedMesuresResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportMesures = {
+  method: 'GET',
+  path: '/mesures/export',
+  query: listMesures.query,
+} as const satisfies RouteDefinition;
+
 export const listOuvrages = {
   method: 'GET',
   path: '/mesures/ouvrages',

@@ -2,6 +2,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepotDetailsPage } from './DepotDetails';
 import { renderWithQueryClient } from '../test.helper';
+import * as mesuresApi from '../api/mesures';
 
 // Mock all hooks used by useMesureFilters
 vi.mock('../hooks/useMesures', () => ({
@@ -29,6 +30,14 @@ vi.mock('../hooks/useQualifications', () => ({
   useQualifications: vi.fn(),
 }));
 
+vi.mock('../api/mesures', async () => {
+  const actual = await vi.importActual<typeof import('../api/mesures')>('../api/mesures');
+  return {
+    ...actual,
+    downloadMesuresExport: vi.fn(),
+  };
+});
+
 import { useMesures } from '../hooks/useMesures';
 import { useAsyncOuvragesSearch } from '../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../hooks/useAsyncSystemesCollecteSearch';
@@ -46,6 +55,7 @@ const mockUseParametresMesure = vi.mocked(useParametresMesure);
 const mockUseFinalites = vi.mocked(useFinalites);
 const mockUseStatuts = vi.mocked(useStatuts);
 const mockUseQualifications = vi.mocked(useQualifications);
+void mesuresApi;
 
 const emptyNomenclatureResult = {
   data: [],
@@ -217,6 +227,12 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/chargement des mesures/i)).toBeInTheDocument();
+  });
+
+  it('désactive l’export tant qu’aucune recherche n’a été lancée', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeDisabled();
   });
 
   it('shows error alert when fetch fails', () => {

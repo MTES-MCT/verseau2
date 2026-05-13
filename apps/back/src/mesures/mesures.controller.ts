@@ -1,10 +1,12 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
+import { sendCsvResponse } from '@shared/csv/csvResponse';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
 import {
+  exportMesures,
   listMesures,
   listOuvrages,
   listSystemesCollecte,
@@ -15,6 +17,7 @@ import {
   listQualifications,
 } from '@lib/dossier';
 import { toLocalisationCodes } from '@masa/toMasa.mapper';
+import type { Response } from 'express';
 import { MesuresService } from './mesures.service';
 
 @Controller('mesures')
@@ -46,6 +49,35 @@ export class MesuresController {
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     });
+  }
+
+  @Get('export')
+  @UseGuards(HasUserAccessToOuvragesGuard)
+  async exportMesures(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(exportMesures['query'])) query: RouteQuery<typeof exportMesures>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.mesuresService.exportMesuresCsv({
+      authorizedSteuCdas: req.authorizedSteuCdas!,
+      authorizedSclCdas: req.authorizedSclCdas!,
+      ouvrageType: query.ouvrageType,
+      ouvrageDepollutionCodes: query.steuSandreCdas,
+      systemeCollecteCodes: query.sclSandreCdas,
+      pmoCdn: query.pmoCdn,
+      dateDebut: query.dateDebut,
+      dateFin: query.dateFin,
+      parametreCode: query.parametreCode,
+      qualification: query.qualification,
+      statut: query.statut,
+      finalite: query.finalite,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
+
+    sendCsvResponse(res, `mesures-${query.ouvrageType}.csv`, csv);
   }
 
   @Get('ouvrages')
