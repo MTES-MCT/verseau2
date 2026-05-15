@@ -1,12 +1,16 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
-import { BilanSteuSortByValue, BilanSclSortByValue, PaginationQuery } from '@lib/dossier';
+import {
+  bilanSclPropertyToHeaderMapper,
+  BilanSteuSortByValue,
+  BilanSclSortByValue,
+  PaginationQuery,
+  bilanSteuPropertyToHeaderMapper,
+} from '@lib/dossier';
 import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn } from '@lib/shared';
-import { formatDate } from '@lib/shared';
+import { CsvGenerator, type CsvColumn, formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
-import { formatBooleanToOuiNon, formatNullable } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
@@ -23,27 +27,6 @@ const ALLOWED_BILAN_STEU_PARAMETRE_CODES: string[] = [
   CodeParametre.Temperature,
   CodeParametre.Ptot,
 ].map(String);
-
-const BILAN_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<BilanSteuDto>> = [
-  {
-    header: 'Bilan écarté par le SPE (A)',
-    value: (row) => formatBooleanToOuiNon(row.bilanEcarteParSpe),
-  },
-  { header: 'Date', value: (row) => formatDate(row.date) },
-  { header: 'Paramètre', value: (row) => formatNullable(row.parametreNom) },
-  { header: 'HCNF', value: (row) => formatNullable(row.hcnf) },
-  { header: 'Evt', value: (row) => formatNullable(row.evt) },
-  { header: 'Finalité', value: (row) => formatNullable(row.finalite) },
-];
-
-const BILAN_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<BilanSclDto>> = [
-  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
-  { header: 'Point de mesure', value: (row) => formatNullable(row.pointMesureNumero) },
-  { header: 'Date', value: (row) => formatDate(row.date) },
-  { header: 'Volume déversé (m³)', value: (row) => formatNullable(row.volumeDeverse) },
-  { header: 'Temps de déversement (h)', value: (row) => formatNullable(row.tempsDeversement) },
-  { header: 'Statut (TP ou TS)', value: (row) => formatNullable(row.statut) },
-];
 
 export interface ListBilanSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -104,7 +87,7 @@ export class BilanService {
       return this.masaProvider.findBilanSteu(filters);
     });
 
-    return this.csvGenerator.generate(BILAN_STEU_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(bilanSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<BilanSteuDto>>, rows);
   }
 
   @TraceCalls(LOG_LEVELS[2])
@@ -118,7 +101,7 @@ export class BilanService {
       return this.masaProvider.findBilanScl(filters);
     });
 
-    return this.csvGenerator.generate(BILAN_SCL_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(bilanSclPropertyToHeaderMapper as ReadonlyArray<CsvColumn<BilanSclDto>>, rows);
   }
 
   private async buildBilanSteuFilters(

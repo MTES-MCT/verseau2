@@ -1,12 +1,14 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
   ConformiteSclSortByValue,
+  type ConformiteSclDto,
+  type ConformiteSteuDto,
   ConformiteSteuSortByValue,
   PaginationQuery,
   TrancheObligationRfa,
+  conformiteSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn } from '@lib/shared';
-import { formatDate } from '@lib/shared';
+import { CsvGenerator, type CsvColumn, formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -36,21 +38,7 @@ type PaginatedConformiteSclRows = {
   pageSize: number;
 };
 
-const CONFORMITE_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<import('@lib/dossier').ConformiteSteuDto>> = [
-  { header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
-  { header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
-  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
-  { header: 'Capacité nominale (EH)', value: (row) => formatNullable(row.capaciteNominaleEH) },
-  { header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
-  { header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
-  {
-    header: 'Conformité réglementaire',
-    value: (row) => formatConformite(row.conformiteLocaleProvisoire),
-  },
-  { header: 'Synthèse des changements', value: (row) => formatImpact(row.impactConformite) },
-];
-
-const CONFORMITE_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<import('@lib/dossier').ConformiteSclDto>> = [
+const CONFORMITE_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<ConformiteSclDto>> = [
   { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
   { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
   { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
@@ -140,7 +128,10 @@ export class ConformiteService {
       return { data: result.data.map(toConformiteSteuDto), total: result.total };
     });
 
-    return this.csvGenerator.generate(CONFORMITE_STEU_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(
+      conformiteSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<ConformiteSteuDto>>,
+      rows,
+    );
   }
 
   @TraceCalls(LOG_LEVELS[2])

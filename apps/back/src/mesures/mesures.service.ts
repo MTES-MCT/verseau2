@@ -1,14 +1,14 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import {
+  type MesureDto,
   PaginatedMesuresResponse,
   PaginationQuery,
   MesuresSortByValue,
   type OuvrageTypeValue,
-  type MesureDto,
+  mesurePropertyToHeaderMapper,
 } from '@lib/dossier';
 import { CsvGenerator, type CsvColumn } from '@lib/shared';
-import { formatDate } from '@lib/shared';
 import {
   MesureFilters,
   SteuWithName,
@@ -17,37 +17,8 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
-import { formatNullable } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
-
-const MESURES_CSV_COLUMNS: ReadonlyArray<CsvColumn<MesureDto>> = [
-  { header: 'Date', value: (row) => formatDate(row.prelevementDate) },
-  {
-    header: 'Point de mesure',
-    value: (row) => {
-      const parts: string[] = [];
-      if (row.pointMesureLibelle) {
-        parts.push(row.pointMesureLibelle);
-      }
-      if (row.pointMesureNumero) {
-        parts.push(`n°${row.pointMesureNumero}`);
-      }
-      if (row.pointAgenceEauNumero) {
-        parts.push(`(${row.pointAgenceEauNumero})`);
-      }
-
-      return parts.join(' ') || '-';
-    },
-  },
-  { header: 'Localisation', value: (row) => formatNullable(row.pointMesureLocalisationCode) },
-  { header: 'Paramètre', value: (row) => row.parametreNomCourt ?? row.parametreAnalyseCode },
-  { header: 'Valeur', value: (row) => formatNullable(row.resultatAnalyseValeur) },
-  { header: 'Unité', value: (row) => formatNullable(row.uniteMesureSymbole) },
-  { header: 'Qualification', value: (row) => formatNullable(row.resultatAnalyseQualification) },
-  { header: 'Finalité', value: (row) => formatNullable(row.analyseFinalite) },
-  { header: 'Statut', value: (row) => formatNullable(row.resultatAnalyseStatut) },
-];
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
@@ -153,7 +124,7 @@ export class MesuresService {
       return { data: result.data, total: result.total };
     });
 
-    return this.csvGenerator.generate(MESURES_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(mesurePropertyToHeaderMapper as ReadonlyArray<CsvColumn<MesureDto>>, rows);
   }
 
   @TraceCalls(LOG_LEVELS[2])
