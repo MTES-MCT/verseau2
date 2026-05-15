@@ -57,9 +57,15 @@ export function DepotDetailsPage() {
     PAGE_SIZE,
     advancedFilterCount,
     submitted,
+    submittedQuery,
     hasSearched,
   } = useMesureFilters();
-  const { download: downloadCsv, isLoading: isExportLoading } = useCsvExportDownload(downloadMesuresExport);
+  const {
+    download: downloadCsv,
+    isLoading: isExportLoading,
+    downloadError,
+    setDownloadError,
+  } = useCsvExportDownload(downloadMesuresExport);
 
   const isScl = form.ouvrageType === 'scl';
 
@@ -148,30 +154,7 @@ export function DepotDetailsPage() {
       return;
     }
 
-    void downloadCsv(
-      {
-        ouvrageType: submitted.ouvrageType,
-        ...(submitted.ouvrageType === 'scl'
-          ? submitted.selectedOuvrageCode
-            ? { sclSandreCdas: [submitted.selectedOuvrageCode] }
-            : {}
-          : submitted.selectedOuvrageCode
-            ? { steuSandreCdas: [submitted.selectedOuvrageCode] }
-            : {}),
-        ...(submitted.selectedPmoCdn !== null ? { pmoCdn: submitted.selectedPmoCdn } : {}),
-        ...(submitted.selectedParametre ? { parametreCode: submitted.selectedParametre } : {}),
-        ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
-        ...(submitted.dateFin ? { dateFin: submitted.dateFin } : {}),
-        ...(submitted.finalite ? { finalite: submitted.finalite } : {}),
-        ...(submitted.statut ? { statut: submitted.statut } : {}),
-        ...(submitted.qualification ? { qualification: submitted.qualification } : {}),
-        ...(submitted.sortBy ? { sortBy: submitted.sortBy } : {}),
-        ...(submitted.sortOrder ? { sortOrder: submitted.sortOrder } : {}),
-        page,
-        pageSize: PAGE_SIZE,
-      },
-      `mesures-${submitted.ouvrageType}.csv`,
-    );
+    void downloadCsv(submittedQuery, `mesures-${submitted.ouvrageType}.csv`);
   };
 
   return (
@@ -364,6 +347,17 @@ export function DepotDetailsPage() {
           severity="error"
           title="Erreur"
           description="Une erreur est survenue lors du chargement des mesures."
+          className={fr.cx('fr-mb-4w')}
+        />
+      )}
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
           className={fr.cx('fr-mb-4w')}
         />
       )}
