@@ -6,11 +6,11 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import type {
-  ConformiteSclDto,
-  ConformiteSclSortByValue,
-  ConformiteSteuDto,
-  ConformiteSteuSortByValue,
+import {
+  type ConformiteSclDto,
+  type ConformiteSclSortByValue,
+  type ConformiteSteuDto,
+  type ConformiteSteuSortByValue,
 } from '@lib/dossier';
 import { getPreviousSunday } from '@lib/shared';
 import { useMemo, useState, type MouseEvent } from 'react';
@@ -38,36 +38,6 @@ type ConformiteSclRow = ConformiteSclDto;
 type ConformiteDashboardDetailEntry = ConformiteDetailEntry & {
   key: string;
 };
-
-type ColumnConfig<TSortBy extends string> = {
-  label: string;
-  field: TSortBy | null;
-};
-
-const STEU_COLUMNS: ColumnConfig<ConformiteSteuSortByValue>[] = [
-  { label: 'Code Sandre', field: 'ouvrageDepollutionCode' },
-  { label: 'Nom', field: 'ouvrageDepollutionNom' },
-  { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
-  { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
-  { label: 'Début période', field: null },
-  { label: 'Fin période', field: null },
-  { label: 'Conformité réglementaire', field: 'conformiteLocaleProvisoire' },
-  { label: 'Synthèse des changements', field: null },
-];
-
-const SCL_COLUMNS: ColumnConfig<ConformiteSclSortByValue>[] = [
-  { label: 'Code Sandre', field: 'systemeCollecteCode' },
-  { label: 'Nom', field: 'systemeCollecteNom' },
-  { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
-  { label: 'Type', field: 'typeScl' },
-  { label: 'Début période', field: null },
-  { label: 'Fin période', field: null },
-  { label: 'Conformité réglementaire temps pluie', field: 'conformiteLocaleTempsPluieProvisoire' },
-  { label: 'Synthèse des changements', field: null },
-];
-
-const STEU_HEADER_LABELS = buildConformiteSteuTableHeaders();
-const SCL_HEADER_LABELS = buildConformiteSclTableHeaders();
 
 function getSteuDetailKey(steuCdn: number) {
   return `steu-${steuCdn}`;
@@ -142,17 +112,24 @@ export function ConformiteDashboard() {
   const headers = useMemo(() => {
     if (mode === 'steu') {
       return [
-        ...STEU_COLUMNS.map((column, index) => {
-          const label = STEU_HEADER_LABELS[index] ?? column.label;
-          if (!column.field) {
-            return label;
+        ...buildConformiteSteuTableHeaders().map((header) => {
+          if (
+            ![
+              'ouvrageDepollutionCode',
+              'ouvrageDepollutionNom',
+              'trancheObligationLibelle',
+              'capaciteNominaleEH',
+              'conformiteLocaleProvisoire',
+            ].includes(header.property)
+          ) {
+            return header.label;
           }
 
           return (
             <SortableHeader
-              key={column.field}
-              label={label}
-              field={column.field}
+              key={header.property}
+              label={header.label}
+              field={header.property as ConformiteSteuSortByValue}
               sortBy={form.sortBy as ConformiteSteuSortByValue | undefined}
               sortOrder={form.sortOrder}
               onSort={setSort as (nextSortBy: ConformiteSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
@@ -164,17 +141,24 @@ export function ConformiteDashboard() {
     }
 
     return [
-      ...SCL_COLUMNS.map((column, index) => {
-        const label = SCL_HEADER_LABELS[index] ?? column.label;
-        if (!column.field) {
-          return label;
+      ...buildConformiteSclTableHeaders().map((header) => {
+        if (
+          ![
+            'systemeCollecteCode',
+            'systemeCollecteNom',
+            'trancheObligationLibelle',
+            'typeScl',
+            'conformiteLocaleTempsPluieProvisoire',
+          ].includes(header.property)
+        ) {
+          return header.label;
         }
 
         return (
           <SortableHeader
-            key={column.field}
-            label={label}
-            field={column.field}
+            key={header.property}
+            label={header.label}
+            field={header.property as ConformiteSclSortByValue}
             sortBy={form.sortBy as ConformiteSclSortByValue | undefined}
             sortOrder={form.sortOrder}
             onSort={setSort as (nextSortBy: ConformiteSclSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}

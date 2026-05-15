@@ -1,7 +1,6 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
-import type { BilanSteuSortByValue, BilanSclSortByValue, IntervenantDetailDto } from '@lib/dossier';
+import { type BilanSteuSortByValue, type BilanSclSortByValue, type IntervenantDetailDto } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useBilanFilters';
-import type { ReactNode } from 'react';
 import { CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -19,10 +18,10 @@ import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
 import {
-  buildBilanSteuTableHeaders,
-  buildBilanSteuTableRows,
   buildBilanSclTableHeaders,
   buildBilanSclTableRows,
+  buildBilanSteuTableHeaders,
+  buildBilanSteuTableRows,
 } from '../../../helper/bilanTableData';
 import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
@@ -178,7 +177,43 @@ export const BilanDashboard = () => {
 
   const tableData = isScl ? buildBilanSclTableRows(sclData?.data || []) : buildBilanSteuTableRows(steuData?.data || []);
 
-  const headers = isScl ? buildBilanSclTableHeaders() : buildBilanSteuTableHeaders();
+  let headers;
+  if (isScl) {
+    headers = buildBilanSclTableHeaders().map((header) => {
+      if (header.property !== 'date') {
+        return header.label;
+      }
+
+      return (
+        <SortableHeader<BilanSclSortByValue>
+          key="date"
+          label={header.label}
+          field="date"
+          sortBy={filters.sortBy as BilanSclSortByValue | undefined}
+          sortOrder={filters.sortOrder}
+          onSort={handleDateSort as (nextSortBy: BilanSclSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+        />
+      );
+    });
+  } else {
+    headers = buildBilanSteuTableHeaders().map((header) => {
+      if (header.property !== 'date') {
+        return header.label;
+      }
+
+      return (
+        <SortableHeader<BilanSteuSortByValue>
+          key="date"
+          label={header.label}
+          field="date"
+          sortBy={filters.sortBy as BilanSteuSortByValue | undefined}
+          sortOrder={filters.sortOrder}
+          onSort={handleDateSort as (nextSortBy: BilanSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+        />
+      );
+    });
+  }
+
   const detail = isScl ? sclDetail : steuDetail;
   const codeSandreLabel = detail
     ? 'ouvrageDepollutionCode' in detail
@@ -189,22 +224,6 @@ export const BilanDashboard = () => {
   const exploitantMoaLabel = formatIntervenants(detailIntervenants, 'intervenantNom');
   const siretLabel = formatIntervenants(detailIntervenants, 'intervenantSiret');
   const steuMiseEnServiceLabel = !isScl ? formatInfoDate(steuDetail?.dateMiseEnService ?? null) : '-';
-
-  // replace "Date" with SortableHeader
-  const dateIndex = headers.indexOf('Date');
-  const finalHeaders: (string | ReactNode)[] = [...headers];
-  if (dateIndex !== -1) {
-    finalHeaders[dateIndex] = (
-      <SortableHeader<SortByValue>
-        key="date"
-        label="Date"
-        field="date"
-        sortBy={filters.sortBy}
-        sortOrder={filters.sortOrder}
-        onSort={handleDateSort}
-      />
-    );
-  }
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -334,7 +353,7 @@ export const BilanDashboard = () => {
             Exporter CSV
           </Button>
         </div>
-        <Table data={tableData} headers={finalHeaders} />
+        <Table data={tableData} headers={headers} />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
             count={Math.ceil((data?.total || 0) / pageSize)}

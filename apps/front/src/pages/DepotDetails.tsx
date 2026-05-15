@@ -11,7 +11,7 @@ import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
 import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesureFilters } from '../hooks/useMesureFilters';
-import { buildMesureTableRows } from '../helper/mesureTableData';
+import { buildMesureTableHeaders, buildMesureTableRows } from '../helper/mesureTableData';
 import { formatOption } from '../helper/optionsFormatter';
 import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
@@ -118,28 +118,24 @@ export function DepotDetailsPage() {
   const qualificationsOptions: AutocompleteOption[] = qualifications.map(formatOption);
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
+  const headers = buildMesureTableHeaders().map((header) => {
+    const sortFieldByProperty: Partial<Record<(typeof header)['property'], MesuresSortByValue>> = {
+      prelevementDate: 'date',
+      parametre: 'parametreCode',
+      resultatAnalyseValeur: 'valeur',
+      resultatAnalyseStatut: 'statut',
+    };
 
-  const columns: { label: string; field: MesuresSortByValue | null }[] = [
-    { label: 'Date', field: 'date' },
-    { label: 'Point de mesure', field: null },
-    { label: 'Localisation', field: null },
-    { label: 'Paramètre', field: 'parametreCode' },
-    { label: 'Valeur', field: 'valeur' },
-    { label: 'Unité', field: null },
-    { label: 'Qualification', field: null },
-    { label: 'Finalité', field: null },
-    { label: 'Statut', field: 'statut' },
-  ];
-
-  const headers = columns.map((col) => {
-    if (!col.field) {
-      return col.label;
+    const field = sortFieldByProperty[header.property];
+    if (!field) {
+      return header.label;
     }
 
     return (
       <SortableHeader<MesuresSortByValue>
-        label={col.label}
-        field={col.field}
+        key={field}
+        label={header.label}
+        field={field}
         sortBy={form.sortBy}
         sortOrder={form.sortOrder}
         onSort={setSort}

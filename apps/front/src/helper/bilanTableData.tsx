@@ -1,10 +1,34 @@
 import { formatDate } from '@lib/shared';
-import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
+import {
+  bilanSclPropertyToHeaderMapper,
+  bilanSteuPropertyToHeaderMapper,
+  type BilanSclDto,
+  type BilanSteuDto,
+} from '@lib/dossier';
 import type { ReactNode } from 'react';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 
-export function buildBilanSteuTableHeaders(): string[] {
-  return ['Bilan écarté par le SPE (A)', 'Date', 'Paramètre', 'HCNF', 'Evt', 'Finalité'];
+export type BilanTableHeaderDefinition = {
+  property: string;
+  label: string;
+};
+
+const BILAN_STEU_TABLE_HEADERS: BilanTableHeaderDefinition[] = bilanSteuPropertyToHeaderMapper.map(
+  ({ property, header }) => ({
+    property,
+    label: header,
+  }),
+);
+
+const BILAN_SCL_TABLE_HEADERS: BilanTableHeaderDefinition[] = bilanSclPropertyToHeaderMapper.map(
+  ({ property, header }) => ({
+    property,
+    label: header,
+  }),
+);
+
+export function buildBilanSteuTableHeaders(): BilanTableHeaderDefinition[] {
+  return BILAN_STEU_TABLE_HEADERS;
 }
 
 function renderBooleanBadge(value: boolean, trueLabel: string, falseLabel: string): ReactNode {
@@ -26,8 +50,8 @@ export function buildBilanSteuTableRows(bilanList: BilanSteuDto[]): ReactNode[][
   ]);
 }
 
-export function buildBilanSclTableHeaders(): string[] {
-  return ['Nom', 'Point de mesure', 'Date', 'Volume déversé (m³)', 'Temps de déversement (h)', 'Statut (TP ou TS)'];
+export function buildBilanSclTableHeaders(): BilanTableHeaderDefinition[] {
+  return BILAN_SCL_TABLE_HEADERS;
 }
 
 export function buildBilanSclTableRows(bilanList: BilanSclDto[]): ReactNode[][] {

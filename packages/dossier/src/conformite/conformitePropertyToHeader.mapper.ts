@@ -1,5 +1,5 @@
 import { formatDate, formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
-import { ConformiteProvisoire, conformiteProvisoireLabel, type ConformiteSteuDto } from './conformite.dto';
+import { ConformiteProvisoire, conformiteProvisoireLabel, type ConformiteSclDto, type ConformiteSteuDto } from './conformite.dto';
 
 function formatConformite(value: string | null): string {
   if (!value) {
@@ -36,6 +36,33 @@ export const conformiteSteuPropertyToHeaderMapper: PropertyToHeaderMapper<Confor
     property: 'conformiteLocaleProvisoire',
     header: 'Conformité réglementaire',
     value: (row) => formatConformite(row.conformiteLocaleProvisoire),
+  },
+  {
+    property: 'impactConformite',
+    header: 'Synthèse des changements',
+    value: (row) => formatImpact(row.impactConformite),
+  },
+];
+
+export const conformiteSclPropertyToHeaderMapper: PropertyToHeaderMapper<ConformiteSclDto> = [
+  { property: 'systemeCollecteCode', header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
+  { property: 'systemeCollecteNom', header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
+  {
+    property: 'trancheObligationLibelle',
+    header: "Tranche d'obligation (EH)",
+    value: (row) => formatNullable(row.trancheObligationLibelle),
+  },
+  {
+    property: 'typeScl',
+    header: 'Type',
+    value: (row) => formatNullable(row.typeScl),
+  },
+  { property: 'suiviDebutDate', header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
+  { property: 'suiviFinDate', header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
+  {
+    property: 'conformiteLocaleTempsPluieProvisoire',
+    header: 'Conformité réglementaire temps pluie',
+    value: (row) => formatConformite(row.conformiteLocaleTempsPluieProvisoire),
   },
   {
     property: 'impactConformite',

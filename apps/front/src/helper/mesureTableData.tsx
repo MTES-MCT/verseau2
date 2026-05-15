@@ -1,6 +1,22 @@
 import { formatDate } from '@lib/shared';
-import type { MesureDto } from '@lib/dossier';
+import { mesurePropertyToHeaderMapper, type MesureDto } from '@lib/dossier';
 import { QualificationBadge } from '../components/QualificationBadge';
+
+export type MesureTableHeaderDefinition = {
+  property: string;
+  label: string;
+};
+
+const MESURE_TABLE_HEADERS: MesureTableHeaderDefinition[] = mesurePropertyToHeaderMapper.map(
+  ({ property, header }) => ({
+    property,
+    label: header,
+  }),
+);
+
+export function buildMesureTableHeaders(): MesureTableHeaderDefinition[] {
+  return MESURE_TABLE_HEADERS;
+}
 
 export function buildPointDeMesure(mesure: MesureDto): string {
   const parts: string[] = [];
