@@ -185,12 +185,6 @@ export const EvenementDashboard = () => {
       />
       <h1>Tableau de bord événements</h1>
 
-      <div className={fr.cx('fr-mb-2w')}>
-        <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
-          Exporter CSV
-        </Button>
-      </div>
-
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
           <RadioButtons
@@ -301,6 +295,11 @@ export const EvenementDashboard = () => {
         isFetching={isFetching}
         hasOuvrageSelected={hasOuvrageSelected}
       >
+        <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
+        </div>
         <Table
           data={(data?.data || []).map(getTableData)}
           headers={[

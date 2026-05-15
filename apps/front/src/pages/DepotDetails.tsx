@@ -184,12 +184,6 @@ export function DepotDetailsPage() {
       />
       <h1>Détail des mesures déposées</h1>
 
-      <div className={fr.cx('fr-mb-2w')}>
-        <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
-          Exporter CSV
-        </Button>
-      </div>
-
       {/* Filters */}
       <div className={fr.cx('fr-mb-4w')}>
         {/* Zone A — Ouvrage (fieldset) */}
@@ -378,6 +372,16 @@ export function DepotDetailsPage() {
       {!isLoading && !error && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <>
+            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                priority="secondary"
+                onClick={handleExport}
+                disabled={!canExport || isExportLoading}
+              >
+                Exporter CSV
+              </Button>
+            </div>
             <Table
               caption="Liste des mesures d'autosurveillance"
               noCaption

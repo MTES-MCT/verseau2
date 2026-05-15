@@ -337,11 +337,6 @@ export function ConformiteDashboard() {
         <div className={fr.cx('fr-col-12', 'fr-col-md')}>
           <h1 className={fr.cx('fr-mb-0')}>Tableau de bord conformité</h1>
         </div>
-        <div className="fr-col-12" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
-            Exporter CSV
-          </Button>
-        </div>
       </div>
       <div className={fr.cx('fr-mb-3w')}>
         <div className={fr.cx('fr-grid-row', 'fr-grid-row--gutters', 'fr-mb-4w')}>
@@ -438,6 +433,16 @@ export function ConformiteDashboard() {
 
         {!error && total > 0 && (
           <>
+            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                priority="secondary"
+                onClick={handleExport}
+                disabled={!canExport || isExportLoading}
+              >
+                Exporter CSV
+              </Button>
+            </div>
             <Table
               headers={headers}
               data={tableData}

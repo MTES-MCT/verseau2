@@ -53,7 +53,7 @@ function formatIntervenants(intervenants: IntervenantDetailDto[], key: 'interven
 
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
-  const pageSize = 500;
+  const pageSize = 20;
   const [ouvrageSearch, setOuvrageSearch] = useState('');
   const [sclSearch, setSclSearch] = useState('');
 
@@ -216,12 +216,6 @@ export const BilanDashboard = () => {
       />
       <h1>Tableau de bord bilans</h1>
 
-      <div className={fr.cx('fr-mb-2w')}>
-        <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
-          Exporter CSV
-        </Button>
-      </div>
-
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
           <RadioButtons
@@ -335,6 +329,11 @@ export const BilanDashboard = () => {
         isFetching={isFetching}
         hasOuvrageSelected={hasOuvrageSelected}
       >
+        <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
+        </div>
         <Table data={tableData} headers={finalHeaders} />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
