@@ -25,6 +25,9 @@ describe('TransmissionASRetardDashboard', () => {
       </BrowserRouter>,
     );
     expect(screen.getByText(/Transmission AS des STEU en retard/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /veuillez sélectionner un ouvrage pour afficher les résultats/i,
+    );
+    expect(screen.queryByRole('button', { name: /exporter csv/i })).not.toBeInTheDocument();
   });
 });
