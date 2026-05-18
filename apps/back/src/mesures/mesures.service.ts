@@ -8,7 +8,7 @@ import {
   type OuvrageTypeValue,
   mesurePropertyToHeaderMapper,
 } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { CsvGenerator, formatDate } from '@lib/shared';
 import {
   MesureFilters,
   SteuWithName,
@@ -17,8 +17,28 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
+import { formatNullable } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+
+function buildPointDeMesure(mesure: MesureDto): string {
+  const parts: string[] = [];
+  if (mesure.pointMesureLibelle) {
+    parts.push(mesure.pointMesureLibelle);
+  }
+  if (mesure.pointMesureNumero) {
+    parts.push(`n°${mesure.pointMesureNumero}`);
+  }
+  if (mesure.pointAgenceEauNumero) {
+    parts.push(`(${mesure.pointAgenceEauNumero})`);
+  }
+
+  return parts.join(' ') || '-';
+}
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
@@ -124,7 +144,22 @@ export class MesuresService {
       return { data: result.data, total: result.total };
     });
 
-    return this.csvGenerator.generate(mesurePropertyToHeaderMapper as ReadonlyArray<CsvColumn<MesureDto>>, rows);
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      prelevementDate: formatDate(row.prelevementDate),
+      pointMesure: buildPointDeMesure(row),
+      pointMesureLocalisationCode: formatNullable(row.pointMesureLocalisationCode),
+      parametre: row.parametreNomCourt ?? row.parametreAnalyseCode,
+      resultatAnalyseValeur: formatNullable(row.resultatAnalyseValeur),
+      uniteMesureSymbole: formatNullable(row.uniteMesureSymbole),
+      resultatAnalyseQualification: formatNullable(row.resultatAnalyseQualification),
+      analyseFinalite: formatNullable(row.analyseFinalite),
+      resultatAnalyseStatut: formatNullable(row.resultatAnalyseStatut),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(mesurePropertyToHeaderMapper),
+      formattedRows,
+    );
   }
 
   @TraceCalls(LOG_LEVELS[2])

@@ -1,73 +1,24 @@
-import { formatDate } from '@lib/shared';
-import { formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
-import { ConformiteProvisoire, conformiteProvisoireLabel, type ConformiteSclDto, type ConformiteSteuDto } from './conformite.dto';
-
-function formatConformite(value: string | null): string {
-  if (!value) {
-    return '-';
-  }
-
-  if (Object.values(ConformiteProvisoire).includes(value as ConformiteProvisoire)) {
-    return conformiteProvisoireLabel[value as ConformiteProvisoire];
-  }
-
-  return value;
-}
-
-function formatImpact(value: boolean): string {
-  return value ? 'Avec impact' : 'Sans impact';
-}
+import type { PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
+import type { ConformiteSclDto, ConformiteSteuDto } from './conformite.dto';
 
 export const conformiteSteuPropertyToHeaderMapper: PropertyToHeaderMapper<ConformiteSteuDto> = [
-  { property: 'ouvrageDepollutionCode', header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
-  { property: 'ouvrageDepollutionNom', header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
-  {
-    property: 'trancheObligationLibelle',
-    header: "Tranche d'obligation (EH)",
-    value: (row) => formatNullable(row.trancheObligationLibelle),
-  },
-  {
-    property: 'capaciteNominaleEH',
-    header: 'Capacité nominale (EH)',
-    value: (row) => formatNullable(row.capaciteNominaleEH),
-  },
-  { property: 'suiviDebutDate', header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
-  { property: 'suiviFinDate', header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
-  {
-    property: 'conformiteLocaleProvisoire',
-    header: 'Conformité réglementaire',
-    value: (row) => formatConformite(row.conformiteLocaleProvisoire),
-  },
-  {
-    property: 'impactConformite',
-    header: 'Synthèse des changements',
-    value: (row) => formatImpact(row.impactConformite),
-  },
+  { property: 'ouvrageDepollutionCode', header: 'Code Sandre' },
+  { property: 'ouvrageDepollutionNom', header: 'Nom' },
+  { property: 'trancheObligationLibelle', header: "Tranche d'obligation (EH)" },
+  { property: 'capaciteNominaleEH', header: 'Capacité nominale (EH)' },
+  { property: 'suiviDebutDate', header: 'Début période' },
+  { property: 'suiviFinDate', header: 'Fin période' },
+  { property: 'conformiteLocaleProvisoire', header: 'Conformité réglementaire' },
+  { property: 'impactConformite', header: 'Synthèse des changements' },
 ];
 
 export const conformiteSclPropertyToHeaderMapper: PropertyToHeaderMapper<ConformiteSclDto> = [
-  { property: 'systemeCollecteCode', header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
-  { property: 'systemeCollecteNom', header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
-  {
-    property: 'trancheObligationLibelle',
-    header: "Tranche d'obligation (EH)",
-    value: (row) => formatNullable(row.trancheObligationLibelle),
-  },
-  {
-    property: 'typeScl',
-    header: 'Type',
-    value: (row) => formatNullable(row.typeScl),
-  },
-  { property: 'suiviDebutDate', header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
-  { property: 'suiviFinDate', header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
-  {
-    property: 'conformiteLocaleTempsPluieProvisoire',
-    header: 'Conformité réglementaire temps pluie',
-    value: (row) => formatConformite(row.conformiteLocaleTempsPluieProvisoire),
-  },
-  {
-    property: 'impactConformite',
-    header: 'Synthèse des changements',
-    value: (row) => formatImpact(row.impactConformite),
-  },
+  { property: 'systemeCollecteCode', header: 'Code Sandre' },
+  { property: 'systemeCollecteNom', header: 'Nom' },
+  { property: 'trancheObligationLibelle', header: "Tranche d'obligation (EH)" },
+  { property: 'typeScl', header: 'Type' },
+  { property: 'suiviDebutDate', header: 'Début période' },
+  { property: 'suiviFinDate', header: 'Fin période' },
+  { property: 'conformiteLocaleTempsPluieProvisoire', header: 'Conformité réglementaire temps pluie' },
+  { property: 'impactConformite', header: 'Synthèse des changements' },
 ];

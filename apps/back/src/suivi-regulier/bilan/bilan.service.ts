@@ -6,11 +6,15 @@ import {
   PaginationQuery,
   bilanSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
-import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { CsvGenerator, formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
+import { formatBooleanToOuiNon, formatNullable } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
@@ -87,7 +91,19 @@ export class BilanService {
       return this.masaProvider.findBilanSteu(filters);
     });
 
-    return this.csvGenerator.generate(bilanSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<BilanSteuDto>>, rows);
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      bilanEcarteParSpe: formatBooleanToOuiNon(row.bilanEcarteParSpe),
+      date: formatDate(row.date),
+      parametreNom: formatNullable(row.parametreNom),
+      hcnf: formatNullable(row.hcnf),
+      evt: formatNullable(row.evt),
+      finalite: formatNullable(row.finalite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(bilanSteuPropertyToHeaderMapper),
+      formattedRows,
+    );
   }
 
   @TraceCalls(LOG_LEVELS[2])
@@ -101,7 +117,19 @@ export class BilanService {
       return this.masaProvider.findBilanScl(filters);
     });
 
-    return this.csvGenerator.generate(bilanSclPropertyToHeaderMapper as ReadonlyArray<CsvColumn<BilanSclDto>>, rows);
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      pointMesureNumero: formatNullable(row.pointMesureNumero),
+      date: formatDate(row.date),
+      volumeDeverse: formatNullable(row.volumeDeverse),
+      tempsDeversement: formatNullable(row.tempsDeversement),
+      statut: formatNullable(row.statut),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(bilanSclPropertyToHeaderMapper),
+      formattedRows,
+    );
   }
 
   private async buildBilanSteuFilters(

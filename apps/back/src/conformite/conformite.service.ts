@@ -1,14 +1,13 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
   ConformiteSclSortByValue,
-  type ConformiteSclDto,
-  type ConformiteSteuDto,
+  conformiteSclPropertyToHeaderMapper,
   ConformiteSteuSortByValue,
   PaginationQuery,
   TrancheObligationRfa,
   conformiteSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn, formatDate } from '@lib/shared';
+import { CsvGenerator, formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -19,6 +18,10 @@ import type {
   ConformiteSteuRow,
 } from '@masa/masa.dto';
 import { formatConformite, formatImpact, formatNullable } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
@@ -37,20 +40,6 @@ type PaginatedConformiteSclRows = {
   page: number;
   pageSize: number;
 };
-
-const CONFORMITE_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<ConformiteSclDto>> = [
-  { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
-  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
-  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
-  { header: 'Type', value: (row) => formatNullable(row.typeScl) },
-  { header: 'Début période', value: (row) => formatDate(row.suiviDebutDate) },
-  { header: 'Fin période', value: (row) => formatDate(row.suiviFinDate) },
-  {
-    header: 'Conformité réglementaire temps pluie',
-    value: (row) => formatConformite(row.conformiteLocaleTempsPluieProvisoire),
-  },
-  { header: 'Synthèse des changements', value: (row) => formatImpact(row.impactConformite) },
-];
 
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -128,9 +117,20 @@ export class ConformiteService {
       return { data: result.data.map(toConformiteSteuDto), total: result.total };
     });
 
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+      ouvrageDepollutionNom: formatNullable(row.ouvrageDepollutionNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      capaciteNominaleEH: formatNullable(row.capaciteNominaleEH),
+      suiviDebutDate: formatDate(row.suiviDebutDate),
+      suiviFinDate: formatDate(row.suiviFinDate),
+      conformiteLocaleProvisoire: formatConformite(row.conformiteLocaleProvisoire),
+      impactConformite: formatImpact(row.impactConformite),
+    }));
+
     return this.csvGenerator.generate(
-      conformiteSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<ConformiteSteuDto>>,
-      rows,
+      buildCsvColumnsFromPropertyToHeaderMapper(conformiteSteuPropertyToHeaderMapper),
+      formattedRows,
     );
   }
 
@@ -181,7 +181,21 @@ export class ConformiteService {
       return { data: result.data.map(toConformiteSclDto), total: result.total };
     });
 
-    return this.csvGenerator.generate(CONFORMITE_SCL_CSV_COLUMNS, rows);
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      systemeCollecteCode: row.systemeCollecteCode,
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      typeScl: formatNullable(row.typeScl),
+      suiviDebutDate: formatDate(row.suiviDebutDate),
+      suiviFinDate: formatDate(row.suiviFinDate),
+      conformiteLocaleTempsPluieProvisoire: formatConformite(row.conformiteLocaleTempsPluieProvisoire),
+      impactConformite: formatImpact(row.impactConformite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(conformiteSclPropertyToHeaderMapper),
+      formattedRows,
+    );
   }
 
   @TraceCalls(LOG_LEVELS[2])

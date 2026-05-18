@@ -6,13 +6,25 @@ import {
   evenementSteuPropertyToHeaderMapper,
   evenementSclPropertyToHeaderMapper,
 } from '@lib/dossier';
-import type { EvenementSclDto, EvenementSteuDto } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { CsvGenerator, formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { EvenementSteuFilters, EvenementSclFilters } from '@masa/masa.dto';
+import { formatNullable, formatPrisEnCompte } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
 
 const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
+
+function formatTypeEvenement(row: { typeEvenementCode: string; typeEvenementLibelle: string }): string {
+  return `${row.typeEvenementCode}-${row.typeEvenementLibelle}`;
+}
+
+function formatPointMesure(row: { pointMesureNumero: string; pointMesureLibelle: string | null }): string {
+  return `${row.pointMesureNumero} - ${row.pointMesureLibelle ?? '-'}`;
+}
 
 export interface ListEvenementSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -88,9 +100,19 @@ export class EvenementService {
       return this.masaProvider.findEvenementSteu(filters);
     });
 
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      prisEnCompte: formatPrisEnCompte(row.prisEnCompte),
+      ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+      ouvrageDepollutionNom: formatNullable(row.ouvrageDepollutionNom),
+      date: formatDate(row.date),
+      typeEvenement: formatTypeEvenement(row),
+      finalite: formatNullable(row.finalite),
+      commentaire: formatNullable(row.commentaire),
+    }));
+
     return this.csvGenerator.generate(
-      evenementSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<EvenementSteuDto>>,
-      rows,
+      buildCsvColumnsFromPropertyToHeaderMapper(evenementSteuPropertyToHeaderMapper),
+      formattedRows,
     );
   }
 
@@ -142,9 +164,20 @@ export class EvenementService {
       return this.masaProvider.findEvenementScl(filters);
     });
 
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      prisEnCompte: formatPrisEnCompte(row.prisEnCompte),
+      systemeCollecteCode: row.systemeCollecteCode,
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      date: formatDate(row.date),
+      typeEvenement: formatTypeEvenement(row),
+      finalite: formatNullable(row.finalite),
+      commentaire: formatNullable(row.commentaire),
+      pointMesure: formatPointMesure(row),
+    }));
+
     return this.csvGenerator.generate(
-      evenementSclPropertyToHeaderMapper as ReadonlyArray<CsvColumn<EvenementSclDto>>,
-      rows,
+      buildCsvColumnsFromPropertyToHeaderMapper(evenementSclPropertyToHeaderMapper),
+      formattedRows,
     );
   }
 

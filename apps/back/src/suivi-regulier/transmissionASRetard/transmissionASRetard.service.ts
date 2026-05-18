@@ -6,10 +6,14 @@ import {
   transmissionASRetardSteuPropertyToHeaderMapper,
   transmissionASRetardSclPropertyToHeaderMapper,
 } from '@lib/dossier';
-import type { TransmissionASRetardSclDto, TransmissionASRetardSteuDto } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn } from '@lib/shared';
+import { CsvGenerator, formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { TransmissionASRetardSteuFilters, TransmissionASRetardSclFilters } from '@masa/masa.dto';
+import { formatNullable, formatRetard } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { mapTransmissionASRetardSteuRowToDto, mapTransmissionASRetardSclRowToDto } from './transmissionASRetard.mapper';
 
@@ -76,9 +80,22 @@ export class TransmissionASRetardService {
       return { data: result.data.map(mapTransmissionASRetardSteuRowToDto), total: result.total };
     });
 
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+      ouvrageDepollutionNom: formatNullable(row.ouvrageDepollutionNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      capaciteNominaleEH: formatNullable(row.capaciteNominaleEH),
+      nbFichiersAsRecus: formatNullable(row.nbFichiersAsRecus),
+      dateDernierFichierRecu: formatDate(row.dateDernierFichierRecu),
+      dateDebutPeriode: formatDate(row.dateDebutPeriode),
+      dateFinPeriode: formatDate(row.dateFinPeriode),
+      dateMesureSuivanteAttendue: formatDate(row.dateMesureSuivanteAttendue),
+      nbJoursRetard: formatRetard(row.nbJoursRetard),
+    }));
+
     return this.csvGenerator.generate(
-      transmissionASRetardSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<TransmissionASRetardSteuDto>>,
-      rows,
+      buildCsvColumnsFromPropertyToHeaderMapper(transmissionASRetardSteuPropertyToHeaderMapper),
+      formattedRows,
     );
   }
 
@@ -123,9 +140,22 @@ export class TransmissionASRetardService {
       return { data: result.data.map(mapTransmissionASRetardSclRowToDto), total: result.total };
     });
 
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      systemeCollecteCode: row.systemeCollecteCode,
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      capaciteNominaleEH: formatNullable(row.capaciteNominaleEH),
+      nbFichiersAsRecus: formatNullable(row.nbFichiersAsRecus),
+      dateDernierFichierRecu: formatDate(row.dateDernierFichierRecu),
+      dateDebutPeriode: formatDate(row.dateDebutPeriode),
+      dateFinPeriode: formatDate(row.dateFinPeriode),
+      dateMesureSuivanteAttendue: formatDate(row.dateMesureSuivanteAttendue),
+      nbJoursRetard: formatRetard(row.nbJoursRetard),
+    }));
+
     return this.csvGenerator.generate(
-      transmissionASRetardSclPropertyToHeaderMapper as ReadonlyArray<CsvColumn<TransmissionASRetardSclDto>>,
-      rows,
+      buildCsvColumnsFromPropertyToHeaderMapper(transmissionASRetardSclPropertyToHeaderMapper),
+      formattedRows,
     );
   }
 
