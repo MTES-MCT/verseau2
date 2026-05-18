@@ -1,5 +1,5 @@
 import { Controller, ForbiddenException, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
-import type { IntervenantDetailDto, RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
+import type { RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
 import { codesToParametres, getSclDetail, getSteuDetail, listPointsMesureReferentiel } from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { MeGuard } from '@authentication/me.guard';

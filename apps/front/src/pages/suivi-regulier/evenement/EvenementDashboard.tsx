@@ -2,10 +2,12 @@ import { useMemo, useState, type ChangeEvent } from 'react';
 import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue, TypePointMesureValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useEvenementSteu, useEvenementScl, useEvenementTypes } from '../../../hooks/useEvenement';
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
 import { renderPrisEnCompteBadge } from '../../../helper/evenementTableData';
@@ -18,6 +20,8 @@ import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import { downloadEvenementSclExport, downloadEvenementSteuExport } from '../../../api/evenement';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
@@ -126,6 +130,18 @@ export const EvenementDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
   const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
   const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadEvenementSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadEvenementSclExport);
 
   const getTableData = (row: EvenementSteuDto | EvenementSclDto) => {
     const codeSandre =
@@ -153,6 +169,24 @@ export const EvenementDashboard = () => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(sclQuery, `evenement-scl-${filters.year}.csv`);
+      return;
+    }
+
+    void downloadSteuCsv(steuQuery, `evenement-steu-${filters.year}.csv`);
+  };
+
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
       <Notice
@@ -162,6 +196,17 @@ export const EvenementDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>Tableau de bord événements</h1>
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
@@ -273,6 +318,11 @@ export const EvenementDashboard = () => {
         isFetching={isFetching}
         hasOuvrageSelected={hasOuvrageSelected}
       >
+        <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
+        </div>
         <Table
           data={(data?.data || []).map(getTableData)}
           headers={[

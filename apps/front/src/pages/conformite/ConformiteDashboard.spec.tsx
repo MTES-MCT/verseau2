@@ -7,6 +7,7 @@ import { useConformiteScl, useConformiteSteu, useDetailBilanScl, useDetailBilanS
 import { useAsyncOuvragesSearch } from '../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../hooks/useAsyncSystemesCollecteSearch';
 import ConformiteDashboard from './ConformiteDashboard';
+import * as conformiteApi from '../../api/conformite';
 
 vi.mock('../../hooks/useConformite', () => ({
   useConformiteSteu: vi.fn(),
@@ -23,12 +24,22 @@ vi.mock('../../hooks/useAsyncSystemesCollecteSearch', () => ({
   useAsyncSystemesCollecteSearch: vi.fn(),
 }));
 
+vi.mock('../../api/conformite', async () => {
+  const actual = await vi.importActual<typeof import('../../api/conformite')>('../../api/conformite');
+  return {
+    ...actual,
+    downloadConformiteSteuExport: vi.fn(),
+    downloadConformiteSclExport: vi.fn(),
+  };
+});
+
 const mockUseConformiteSteu = vi.mocked(useConformiteSteu);
 const mockUseConformiteScl = vi.mocked(useConformiteScl);
 const mockUseDetailBilanSteu = vi.mocked(useDetailBilanSteu);
 const mockUseDetailBilanScl = vi.mocked(useDetailBilanScl);
 const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
 const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
+const mockDownloadConformiteSteuExport = vi.mocked(conformiteApi.downloadConformiteSteuExport);
 
 const emptySteuResult = {
   data: { data: [], total: 0, page: 1, pageSize: 20 },
@@ -440,5 +451,34 @@ describe('ConformiteDashboard', () => {
 
     // Assert
     expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();
+  });
+
+  it('affiche le bouton export désactivé sans résultat', () => {
+    renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /veuillez sélectionner un ouvrage pour afficher les résultats/i,
+    );
+    expect(screen.queryByRole('button', { name: /exporter csv/i })).not.toBeInTheDocument();
+  });
+
+  it('exporte la conformité steu', async () => {
+    mockDownloadConformiteSteuExport.mockResolvedValue({ blob: new Blob(['csv']), filename: 'conformite.csv' });
+    mockUseConformiteSteu.mockReturnValue({
+      data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 20 },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    } as unknown as ReturnType<typeof useConformiteSteu>);
+
+    renderPage();
+    await selectStation();
+    fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
+
+    await waitFor(() => {
+      expect(mockDownloadConformiteSteuExport).toHaveBeenCalledWith(
+        expect.objectContaining({ year: Number(CURRENT_CONFORMITE_YEAR - 1), ouvrageDepollutionCode: 'STEU001' }),
+      );
+    });
   });
 });

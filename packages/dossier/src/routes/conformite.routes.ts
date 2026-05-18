@@ -69,6 +69,12 @@ export const listConformiteSteu = {
   response: PaginatedConformiteSteuResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportConformiteSteu = {
+  method: 'GET',
+  path: '/conformite/steu/export',
+  query: listConformiteSteu.query,
+} as const satisfies RouteDefinition;
+
 export const listConformiteScl = {
   method: 'GET',
   path: '/conformite/scl',
@@ -81,6 +87,12 @@ export const listConformiteScl = {
     })
     .extend(createPaginationQuerySchema(ConformiteSclSortBy).shape),
   response: PaginatedConformiteSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportConformiteScl = {
+  method: 'GET',
+  path: '/conformite/scl/export',
+  query: listConformiteScl.query,
 } as const satisfies RouteDefinition;
 
 export const getConformiteSteuDetail = {

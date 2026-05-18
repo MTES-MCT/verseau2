@@ -1,5 +1,7 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
 import {
+  exportConformiteScl as exportConformiteSclRoute,
+  exportConformiteSteu as exportConformiteSteuRoute,
   getConformiteSclDetail as getConformiteSclDetailRoute,
   getConformiteSteuDetail as getConformiteSteuDetailRoute,
   listConformiteScl as listConformiteSclRoute,
@@ -8,8 +10,10 @@ import {
 import type { RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
 import { MeGuard } from '@authentication/me.guard';
 import type { CustomRequest } from '@shared/constants/customRequest';
+import { sendCsvResponse } from '@shared/csv/csvResponse';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
+import type { Response } from 'express';
 import {
   toConformiteSclDetailDto,
   toPaginatedConformiteSclResponse,
@@ -44,6 +48,29 @@ export class ConformiteController {
     return toPaginatedConformiteSteuResponse(response);
   }
 
+  @Get('steu/export')
+  @UseGuards(HasUserAccessToOuvragesGuard)
+  async exportConformiteSteu(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(exportConformiteSteuRoute['query']))
+    query: RouteQuery<typeof exportConformiteSteuRoute>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.conformiteService.exportConformiteSteuCsv({
+      authorizedSteuCdas: req.authorizedSteuCdas!,
+      year: query.year,
+      ouvrageDepollutionCode: query.ouvrageDepollutionCode,
+      trancheObligationRfa: query.trancheObligationRfa,
+      impact: query.impact,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
+
+    sendCsvResponse(res, `conformite-steu-${query.year}.csv`, csv);
+  }
+
   @Get('scl')
   @UseGuards(HasUserAccessToOuvragesGuard)
   async listConformiteScl(
@@ -63,6 +90,29 @@ export class ConformiteController {
     });
 
     return toPaginatedConformiteSclResponse(response);
+  }
+
+  @Get('scl/export')
+  @UseGuards(HasUserAccessToOuvragesGuard)
+  async exportConformiteScl(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(exportConformiteSclRoute['query']))
+    query: RouteQuery<typeof exportConformiteSclRoute>,
+    @Res() res: Response,
+  ): Promise<void> {
+    const csv = await this.conformiteService.exportConformiteSclCsv({
+      authorizedSteuCdas: req.authorizedSteuCdas!,
+      year: query.year,
+      systemeCollecteCode: query.systemeCollecteCode,
+      trancheObligationRfa: query.trancheObligationRfa,
+      impact: query.impact,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
+
+    sendCsvResponse(res, `conformite-scl-${query.year}.csv`, csv);
   }
 
   @Get('steu/:steuCdn/detail')

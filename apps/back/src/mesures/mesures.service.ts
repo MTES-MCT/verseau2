@@ -1,6 +1,16 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
-import { PaginatedMesuresResponse, PaginationQuery, MesuresSortByValue, type OuvrageTypeValue } from '@lib/dossier';
+import {
+  buildPointDeMesure,
+  PaginatedMesuresResponse,
+  PaginationQuery,
+  MesuresSortByValue,
+  type OuvrageTypeValue,
+  mesurePropertyToHeaderMapper,
+} from '@lib/dossier';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import {
   MesureFilters,
   SteuWithName,
@@ -9,6 +19,12 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
+import { formatNullable } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListMesuresOptions extends PaginationQuery {
@@ -30,7 +46,11 @@ export interface ListMesuresOptions extends PaginationQuery {
 
 @Injectable()
 export class MesuresService {
-  constructor(private readonly masaProvider: MasaProvider) {}
+  constructor(
+    private readonly masaProvider: MasaProvider,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+  ) {}
 
   @TraceCalls(LOG_LEVELS[2])
   async listMesures(options: ListMesuresOptions): Promise<PaginatedMesuresResponse> {
@@ -102,6 +122,31 @@ export class MesuresService {
       page: rest.page,
       pageSize: rest.pageSize,
     };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async exportMesuresCsv(options: ListMesuresOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listMesures({ ...options, page, pageSize });
+      return { data: result.data, total: result.total };
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      prelevementDate: formatDate(row.prelevementDate),
+      pointMesure: buildPointDeMesure(row),
+      pointMesureLocalisationCode: formatNullable(row.pointMesureLocalisationCode),
+      parametre: row.parametreNomCourt ?? row.parametreAnalyseCode,
+      resultatAnalyseValeur: formatNullable(row.resultatAnalyseValeur),
+      uniteMesureSymbole: formatNullable(row.uniteMesureSymbole),
+      resultatAnalyseQualification: formatNullable(row.resultatAnalyseQualification),
+      analyseFinalite: formatNullable(row.analyseFinalite),
+      resultatAnalyseStatut: formatNullable(row.resultatAnalyseStatut),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(mesurePropertyToHeaderMapper),
+      formattedRows,
+    );
   }
 
   @TraceCalls(LOG_LEVELS[2])

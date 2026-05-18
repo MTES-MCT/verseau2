@@ -1,8 +1,23 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
-import { BilanSteuSortByValue, BilanSclSortByValue, PaginationQuery } from '@lib/dossier';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
+import {
+  bilanSclPropertyToHeaderMapper,
+  BilanSteuSortByValue,
+  BilanSclSortByValue,
+  PaginationQuery,
+  bilanSteuPropertyToHeaderMapper,
+} from '@lib/dossier';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
+import { formatBooleanToOuiNon, formatNullable } from '@shared/csv/csvFormatters';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 const ALLOWED_BILAN_STEU_PARAMETRE_CODES: string[] = [
@@ -37,23 +52,108 @@ export interface ListBilanSclOptions extends PaginationQuery {
 
 @Injectable()
 export class BilanService {
-  constructor(private readonly masaProvider: MasaProvider) {}
+  constructor(
+    private readonly masaProvider: MasaProvider,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+  ) {}
 
   @TraceCalls(LOG_LEVELS[2])
   async listBilanSteu(options: ListBilanSteuOptions) {
-    const { authorizedSteuCdas, year, ouvrageDepollutionCode, page, pageSize, sortBy, sortOrder } = options;
+    const { page, pageSize } = options;
+    const filters = await this.buildBilanSteuFilters(options, page, pageSize);
+    if (!filters) {
+      return { data: [], total: 0, page, pageSize };
+    }
+
+    const result = await this.masaProvider.findBilanSteu(filters);
+    return { ...result, page, pageSize };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async listBilanScl(options: ListBilanSclOptions) {
+    const { page, pageSize } = options;
+    const filters = await this.buildBilanSclFilters(options, page, pageSize);
+    if (!filters) {
+      return { data: [], total: 0, page, pageSize };
+    }
+
+    const result = await this.masaProvider.findBilanScl(filters);
+    return { ...result, page, pageSize };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async exportBilanSteuCsv(options: ListBilanSteuOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filters = await this.buildBilanSteuFilters(options, page, pageSize);
+      if (!filters) {
+        return { data: [], total: 0 };
+      }
+
+      return this.masaProvider.findBilanSteu(filters);
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      bilanEcarteParSpe: formatBooleanToOuiNon(row.bilanEcarteParSpe),
+      date: formatDate(row.date),
+      parametreNom: formatNullable(row.parametreNom),
+      hcnf: formatNullable(row.hcnf),
+      evt: formatNullable(row.evt),
+      finalite: formatNullable(row.finalite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(bilanSteuPropertyToHeaderMapper),
+      formattedRows,
+    );
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async exportBilanSclCsv(options: ListBilanSclOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filters = await this.buildBilanSclFilters(options, page, pageSize);
+      if (!filters) {
+        return { data: [], total: 0 };
+      }
+
+      return this.masaProvider.findBilanScl(filters);
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      pointMesureNumero: formatNullable(row.pointMesureNumero),
+      date: formatDate(row.date),
+      volumeDeverse: formatNullable(row.volumeDeverse),
+      tempsDeversement: formatNullable(row.tempsDeversement),
+      statut: formatNullable(row.statut),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(bilanSclPropertyToHeaderMapper),
+      formattedRows,
+    );
+  }
+
+  private async buildBilanSteuFilters(
+    options: ListBilanSteuOptions,
+    page: number,
+    pageSize: number,
+  ): Promise<BilanSteuFilters | null> {
+    const { authorizedSteuCdas, year, ouvrageDepollutionCode, sortBy, sortOrder } = options;
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
 
     if (cdasToQuery.length === 0 && ouvrageDepollutionCode) {
-      return { data: [], total: 0, page, pageSize };
+      return null;
     }
 
     const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(cdasToQuery);
-    if (ouvrageDepollutionIds.length === 0) return { data: [], total: 0, page, pageSize };
+    if (ouvrageDepollutionIds.length === 0) {
+      return null;
+    }
 
-    const filters: BilanSteuFilters = {
+    return {
       ouvrageDepollutionIds,
       year,
       parametreCodes: ALLOWED_BILAN_STEU_PARAMETRE_CODES,
@@ -62,27 +162,28 @@ export class BilanService {
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
-    const result = await this.masaProvider.findBilanSteu(filters);
-    return { ...result, page, pageSize };
   }
 
-  @TraceCalls(LOG_LEVELS[2])
-  async listBilanScl(options: ListBilanSclOptions) {
-    const { authorizedSclCdas, year, systemeCollecteCode, pointMesureId, statut, page, pageSize, sortBy, sortOrder } =
-      options;
-
+  private async buildBilanSclFilters(
+    options: ListBilanSclOptions,
+    page: number,
+    pageSize: number,
+  ): Promise<BilanSclFilters | null> {
+    const { authorizedSclCdas, year, systemeCollecteCode, pointMesureId, statut, sortBy, sortOrder } = options;
     const cdasToQuery = systemeCollecteCode
       ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
       : authorizedSclCdas;
 
     if (cdasToQuery.length === 0 && systemeCollecteCode) {
-      return { data: [], total: 0, page, pageSize };
+      return null;
     }
 
     const systemeCollecteIds = await this.resolveAuthorizedSclCdns(cdasToQuery);
-    if (systemeCollecteIds.length === 0) return { data: [], total: 0, page, pageSize };
+    if (systemeCollecteIds.length === 0) {
+      return null;
+    }
 
-    const filters: BilanSclFilters = {
+    return {
       systemeCollecteIds,
       year,
       page,
@@ -92,8 +193,6 @@ export class BilanService {
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
-    const result = await this.masaProvider.findBilanScl(filters);
-    return { ...result, page, pageSize };
   }
 
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {

@@ -1,13 +1,14 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
-import type { BilanSteuSortByValue, BilanSclSortByValue, IntervenantDetailDto } from '@lib/dossier';
+import { type BilanSteuSortByValue, type BilanSclSortByValue, type IntervenantDetailDto } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useBilanFilters';
-import type { ReactNode } from 'react';
 import { CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useBilanSteu, useBilanScl, useBilanSteuDetail, useBilanSclDetail } from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
@@ -18,13 +19,15 @@ import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
 import {
-  buildBilanSteuTableHeaders,
-  buildBilanSteuTableRows,
   buildBilanSclTableHeaders,
   buildBilanSclTableRows,
+  buildBilanSteuTableHeaders,
+  buildBilanSteuTableRows,
 } from '../../../helper/bilanTableData';
 import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import { downloadBilanSclExport, downloadBilanSteuExport } from '../../../api/bilan';
 
 function formatInfoDate(value: string | null | undefined) {
   if (!value) {
@@ -50,7 +53,7 @@ function formatIntervenants(intervenants: IntervenantDetailDto[], key: 'interven
 
 export const BilanDashboard = () => {
   const { filters, updateFilter, page, setPage } = useBilanFilters();
-  const pageSize = 10;
+  const pageSize = 20;
   const [ouvrageSearch, setOuvrageSearch] = useState('');
   const [sclSearch, setSclSearch] = useState('');
 
@@ -150,14 +153,80 @@ export const BilanDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
   const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
   const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadBilanSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadBilanSclExport);
 
   const handleDateSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(sclQuery, `bilan-scl-${filters.year}.csv`);
+      return;
+    }
+
+    void downloadSteuCsv(steuQuery, `bilan-steu-${filters.year}.csv`);
+  };
+
   const tableData = isScl ? buildBilanSclTableRows(sclData?.data || []) : buildBilanSteuTableRows(steuData?.data || []);
 
-  const headers = isScl ? buildBilanSclTableHeaders() : buildBilanSteuTableHeaders();
+  let headers;
+  if (isScl) {
+    headers = buildBilanSclTableHeaders().map((header) => {
+      if (header.property !== 'date') {
+        return header.label;
+      }
+
+      return (
+        <SortableHeader<BilanSclSortByValue>
+          key="date"
+          label={header.label}
+          field="date"
+          sortBy={filters.sortBy as BilanSclSortByValue | undefined}
+          sortOrder={filters.sortOrder}
+          onSort={handleDateSort as (nextSortBy: BilanSclSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+        />
+      );
+    });
+  } else {
+    headers = buildBilanSteuTableHeaders().map((header) => {
+      if (header.property !== 'date') {
+        return header.label;
+      }
+
+      return (
+        <SortableHeader<BilanSteuSortByValue>
+          key="date"
+          label={header.label}
+          field="date"
+          sortBy={filters.sortBy as BilanSteuSortByValue | undefined}
+          sortOrder={filters.sortOrder}
+          onSort={handleDateSort as (nextSortBy: BilanSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+        />
+      );
+    });
+  }
+
   const detail = isScl ? sclDetail : steuDetail;
   const codeSandreLabel = detail
     ? 'ouvrageDepollutionCode' in detail
@@ -169,22 +238,6 @@ export const BilanDashboard = () => {
   const siretLabel = formatIntervenants(detailIntervenants, 'intervenantSiret');
   const steuMiseEnServiceLabel = !isScl ? formatInfoDate(steuDetail?.dateMiseEnService ?? null) : '-';
 
-  // replace "Date" with SortableHeader
-  const dateIndex = headers.indexOf('Date');
-  const finalHeaders: (string | ReactNode)[] = [...headers];
-  if (dateIndex !== -1) {
-    finalHeaders[dateIndex] = (
-      <SortableHeader<SortByValue>
-        key="date"
-        label="Date"
-        field="date"
-        sortBy={filters.sortBy}
-        sortOrder={filters.sortOrder}
-        onSort={handleDateSort}
-      />
-    );
-  }
-
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
       <Notice
@@ -194,6 +247,17 @@ export const BilanDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>Tableau de bord bilans</h1>
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
@@ -308,7 +372,12 @@ export const BilanDashboard = () => {
         isFetching={isFetching}
         hasOuvrageSelected={hasOuvrageSelected}
       >
-        <Table data={tableData} headers={finalHeaders} />
+        <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
+        </div>
+        <Table data={tableData} headers={headers} />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
             count={Math.ceil((data?.total || 0) / pageSize)}

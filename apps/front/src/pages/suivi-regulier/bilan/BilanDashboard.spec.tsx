@@ -9,6 +9,7 @@ import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
+import * as bilanApi from '../../../api/bilan';
 
 vi.mock('../../../hooks/useBilan', () => ({
   useBilanSteu: vi.fn(),
@@ -33,6 +34,15 @@ vi.mock('../../../hooks/useBilanFilters', () => ({
   useBilanFilters: vi.fn(),
 }));
 
+vi.mock('../../../api/bilan', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/bilan')>('../../../api/bilan');
+  return {
+    ...actual,
+    downloadBilanSteuExport: vi.fn(),
+    downloadBilanSclExport: vi.fn(),
+  };
+});
+
 const mockUseBilanSteu = vi.mocked(useBilanSteu);
 const mockUseBilanScl = vi.mocked(useBilanScl);
 const mockUseBilanSteuDetail = vi.mocked(useBilanSteuDetail);
@@ -41,6 +51,7 @@ const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
 const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseBilanFilters = vi.mocked(useBilanFilters);
+const mockDownloadBilanSteuExport = vi.mocked(bilanApi.downloadBilanSteuExport);
 
 const emptySteuResult = {
   data: { data: [], total: 0, page: 1, pageSize: 10 },
@@ -286,7 +297,7 @@ describe('BilanDashboard', () => {
         data: Array.from({ length: 10 }, (_, index) =>
           makeSteuRow({ steuCdn: index + 1, ouvrageDepollutionCode: `STEU${index + 1}` }),
         ),
-        total: 15,
+        total: 501,
         page: 1,
         pageSize: 10,
       },
@@ -294,7 +305,7 @@ describe('BilanDashboard', () => {
 
     renderPage();
 
-    expect(screen.getByRole('navigation', { name: /pagination/i })).toBeInTheDocument();
+    expect(document.querySelector('.fr-pagination')).not.toBeNull();
   });
 
   it('masque la pagination quand total tient sur une page', () => {
@@ -337,5 +348,31 @@ describe('BilanDashboard', () => {
     fireEvent.click(screen.getByRole('combobox', { name: /point de mesures/i }));
 
     expect(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i })).toBeInTheDocument();
+  });
+
+  it('active le bouton export quand des résultats sont présents', () => {
+    mockUseBilanSteu.mockReturnValue({
+      data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+
+    renderPage();
+
+    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeEnabled();
+  });
+
+  it('déclenche l’export avec les filtres appliqués', async () => {
+    mockDownloadBilanSteuExport.mockResolvedValue({ blob: new Blob(['csv']), filename: 'bilan.csv' });
+    mockUseBilanSteu.mockReturnValue({
+      data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
+
+    await waitFor(() => {
+      expect(mockDownloadBilanSteuExport).toHaveBeenCalledWith(
+        expect.objectContaining({ year: CURRENT_BILAN_YEAR, ouvrageDepollutionCode: 'STEU001', page: 1 }),
+      );
+    });
   });
 });

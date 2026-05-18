@@ -64,7 +64,7 @@ export function useMesureFilters() {
   const { data: statuts = [], isLoading: statutsLoading } = useStatuts();
   const { data: qualifications = [], isLoading: qualificationsLoading } = useQualifications();
 
-  const query = {
+  const submittedQuery = {
     ouvrageType: submitted.ouvrageType,
     ...(submitted.ouvrageType === 'scl'
       ? submitted.selectedOuvrageCode
@@ -86,7 +86,7 @@ export function useMesureFilters() {
     pageSize: PAGE_SIZE,
   };
 
-  const { data, isLoading, isFetching, error } = useMesures(query, hasSearched);
+  const { data, isLoading, isFetching, error } = useMesures(submittedQuery, hasSearched);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -153,6 +153,9 @@ export function useMesureFilters() {
 
   return {
     form,
+    submitted,
+    submittedQuery,
+    hasSearched,
     updateForm,
     updateOuvrageType,
     updateSelectedPmo,

@@ -1,19 +1,21 @@
 import { formatDate } from '@lib/shared';
-import type { MesureDto } from '@lib/dossier';
+import { buildPointDeMesure, mesurePropertyToHeaderMapper, type MesureDto } from '@lib/dossier';
 import { QualificationBadge } from '../components/QualificationBadge';
 
-export function buildPointDeMesure(mesure: MesureDto): string {
-  const parts: string[] = [];
-  if (mesure.pointMesureLibelle) {
-    parts.push(mesure.pointMesureLibelle);
-  }
-  if (mesure.pointMesureNumero) {
-    parts.push(`n°${mesure.pointMesureNumero}`);
-  }
-  if (mesure.pointAgenceEauNumero) {
-    parts.push(`(${mesure.pointAgenceEauNumero})`);
-  }
-  return parts.join(' ') || '-';
+export type MesureTableHeaderDefinition = {
+  property: string;
+  label: string;
+};
+
+const MESURE_TABLE_HEADERS: MesureTableHeaderDefinition[] = mesurePropertyToHeaderMapper.map(
+  ({ property, header }) => ({
+    property,
+    label: header,
+  }),
+);
+
+export function buildMesureTableHeaders(): MesureTableHeaderDefinition[] {
+  return MESURE_TABLE_HEADERS;
 }
 
 export function buildMesureTableRows(mesures: MesureDto[]) {

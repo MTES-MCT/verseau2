@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MesuresService } from './mesures.service';
 import { MasaProvider } from '@masa/masa.provider';
 import type { MesureRow } from '@masa/masa.dto';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 
 const makeMesureRow = (): MesureRow => ({
   ouvrageDepollutionCode: 'STEU001',
@@ -31,6 +33,7 @@ const makeNomenclatureItem = (code: string, label: string) => ({
 describe('MesuresService', () => {
   let service: MesuresService;
   let masaProvider: jest.Mocked<MasaProvider>;
+  let csvGenerator: { generate: jest.Mock };
 
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
@@ -46,12 +49,19 @@ describe('MesuresService', () => {
       findQualifications: jest.fn(),
     };
 
+    csvGenerator = { generate: jest.fn().mockReturnValue('csv-content') };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MesuresService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: mockMasaProvider,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: csvGenerator,
         },
       ],
     }).compile();
@@ -272,6 +282,35 @@ describe('MesuresService', () => {
 
       expect(masaProvider.findSteuWithNamesBySandreCdasAndLabel).toHaveBeenCalledWith(['STEU001', 'STEU002'], 'sta');
       expect(result).toEqual([{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }]);
+    });
+  });
+
+  describe('exportMesuresCsv', () => {
+    it('formats rows before calling csv generator', async () => {
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+
+      const result = await service.exportMesuresCsv({
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toBe('csv-content');
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
+        {
+          prelevementDate: '15/01/2024',
+          pointMesure: 'Point 1 n°1',
+          pointMesureLocalisationCode: '-',
+          parametre: 'Matières en suspension',
+          resultatAnalyseValeur: '12.5',
+          uniteMesureSymbole: 'mg/L',
+          resultatAnalyseQualification: 'Brut',
+          analyseFinalite: '-',
+          resultatAnalyseStatut: '-',
+        },
+      ]);
     });
   });
 

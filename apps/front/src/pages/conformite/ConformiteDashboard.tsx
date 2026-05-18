@@ -6,11 +6,11 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import type {
-  ConformiteSclDto,
-  ConformiteSclSortByValue,
-  ConformiteSteuDto,
-  ConformiteSteuSortByValue,
+import {
+  type ConformiteSclDto,
+  type ConformiteSclSortByValue,
+  type ConformiteSteuDto,
+  type ConformiteSteuSortByValue,
 } from '@lib/dossier';
 import { getPreviousSunday } from '@lib/shared';
 import { useMemo, useState, type MouseEvent } from 'react';
@@ -28,6 +28,8 @@ import {
 } from '../../helper/conformiteTableData';
 import { useConformiteFilters } from '../../hooks/useConformiteFilters';
 import { TableLoader } from '../../components/common/TableLoader';
+import { useCsvExportDownload } from '../../hooks/useCsvExportDownload';
+import { downloadConformiteSclExport, downloadConformiteSteuExport } from '../../api/conformite';
 
 type ConformiteSteuRow = ConformiteSteuDto;
 
@@ -36,36 +38,6 @@ type ConformiteSclRow = ConformiteSclDto;
 type ConformiteDashboardDetailEntry = ConformiteDetailEntry & {
   key: string;
 };
-
-type ColumnConfig<TSortBy extends string> = {
-  label: string;
-  field: TSortBy | null;
-};
-
-const STEU_COLUMNS: ColumnConfig<ConformiteSteuSortByValue>[] = [
-  { label: 'Code Sandre', field: 'ouvrageDepollutionCode' },
-  { label: 'Nom', field: 'ouvrageDepollutionNom' },
-  { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
-  { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
-  { label: 'Début période', field: null },
-  { label: 'Fin période', field: null },
-  { label: 'Conformité réglementaire', field: 'conformiteLocaleProvisoire' },
-  { label: 'Synthèse des changements', field: null },
-];
-
-const SCL_COLUMNS: ColumnConfig<ConformiteSclSortByValue>[] = [
-  { label: 'Code Sandre', field: 'systemeCollecteCode' },
-  { label: 'Nom', field: 'systemeCollecteNom' },
-  { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
-  { label: 'Type', field: 'typeScl' },
-  { label: 'Début période', field: null },
-  { label: 'Fin période', field: null },
-  { label: 'Conformité réglementaire temps pluie', field: 'conformiteLocaleTempsPluieProvisoire' },
-  { label: 'Synthèse des changements', field: null },
-];
-
-const STEU_HEADER_LABELS = buildConformiteSteuTableHeaders();
-const SCL_HEADER_LABELS = buildConformiteSclTableHeaders();
 
 function getSteuDetailKey(steuCdn: number) {
   return `steu-${steuCdn}`;
@@ -140,17 +112,24 @@ export function ConformiteDashboard() {
   const headers = useMemo(() => {
     if (mode === 'steu') {
       return [
-        ...STEU_COLUMNS.map((column, index) => {
-          const label = STEU_HEADER_LABELS[index] ?? column.label;
-          if (!column.field) {
-            return label;
+        ...buildConformiteSteuTableHeaders().map((header) => {
+          if (
+            ![
+              'ouvrageDepollutionCode',
+              'ouvrageDepollutionNom',
+              'trancheObligationLibelle',
+              'capaciteNominaleEH',
+              'conformiteLocaleProvisoire',
+            ].includes(header.property)
+          ) {
+            return header.label;
           }
 
           return (
             <SortableHeader
-              key={column.field}
-              label={label}
-              field={column.field}
+              key={header.property}
+              label={header.label}
+              field={header.property as ConformiteSteuSortByValue}
               sortBy={form.sortBy as ConformiteSteuSortByValue | undefined}
               sortOrder={form.sortOrder}
               onSort={setSort as (nextSortBy: ConformiteSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
@@ -162,17 +141,24 @@ export function ConformiteDashboard() {
     }
 
     return [
-      ...SCL_COLUMNS.map((column, index) => {
-        const label = SCL_HEADER_LABELS[index] ?? column.label;
-        if (!column.field) {
-          return label;
+      ...buildConformiteSclTableHeaders().map((header) => {
+        if (
+          ![
+            'systemeCollecteCode',
+            'systemeCollecteNom',
+            'trancheObligationLibelle',
+            'typeScl',
+            'conformiteLocaleTempsPluieProvisoire',
+          ].includes(header.property)
+        ) {
+          return header.label;
         }
 
         return (
           <SortableHeader
-            key={column.field}
-            label={label}
-            field={column.field}
+            key={header.property}
+            label={header.label}
+            field={header.property as ConformiteSclSortByValue}
             sortBy={form.sortBy as ConformiteSclSortByValue | undefined}
             sortOrder={form.sortOrder}
             onSort={setSort as (nextSortBy: ConformiteSclSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
@@ -279,6 +265,59 @@ export function ConformiteDashboard() {
   const total = data?.total ?? 0;
   const firstResult = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const lastResult = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadConformiteSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadConformiteSclExport);
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && total > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(
+        {
+          year: Number(form.year),
+          ...(form.ouvrageCode ? { systemeCollecteCode: form.ouvrageCode } : {}),
+          ...(form.trancheObligationRfa ? { trancheObligationRfa: form.trancheObligationRfa } : {}),
+          ...(form.impact ? { impact: form.impact } : {}),
+          ...(form.sortBy ? { sortBy: form.sortBy as ConformiteSclSortByValue } : {}),
+          ...(form.sortOrder ? { sortOrder: form.sortOrder } : {}),
+          page,
+          pageSize: PAGE_SIZE,
+        },
+        `conformite-scl-${form.year}.csv`,
+      );
+      return;
+    }
+
+    void downloadSteuCsv(
+      {
+        year: Number(form.year),
+        ...(form.ouvrageCode ? { ouvrageDepollutionCode: form.ouvrageCode } : {}),
+        ...(form.trancheObligationRfa ? { trancheObligationRfa: form.trancheObligationRfa } : {}),
+        ...(form.impact ? { impact: form.impact } : {}),
+        ...(form.sortBy ? { sortBy: form.sortBy as ConformiteSteuSortByValue } : {}),
+        ...(form.sortOrder ? { sortOrder: form.sortOrder } : {}),
+        page,
+        pageSize: PAGE_SIZE,
+      },
+      `conformite-steu-${form.year}.csv`,
+    );
+  };
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -380,6 +419,17 @@ export function ConformiteDashboard() {
         />
       )}
 
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
+
       <TableLoader
         isLoading={isLoading && hasOuvrageSelected}
         isFetching={isFetching}
@@ -389,6 +439,16 @@ export function ConformiteDashboard() {
 
         {!error && total > 0 && (
           <>
+            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                priority="secondary"
+                onClick={handleExport}
+                disabled={!canExport || isExportLoading}
+              >
+                Exporter CSV
+              </Button>
+            </div>
             <Table
               headers={headers}
               data={tableData}

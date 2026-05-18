@@ -1,10 +1,15 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
   ConformiteSclSortByValue,
+  conformiteSclPropertyToHeaderMapper,
   ConformiteSteuSortByValue,
   PaginationQuery,
   TrancheObligationRfa,
+  conformiteSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -14,8 +19,15 @@ import type {
   ConformiteSteuFilters,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
+import { formatConformite, formatImpact, formatNullable } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+import { toConformiteSclDto, toConformiteSteuDto } from './conformite.mapper';
 
 type PaginatedConformiteSteuRows = {
   data: ConformiteSteuRow[];
@@ -54,6 +66,8 @@ export class ConformiteService {
   constructor(
     private readonly masaProvider: MasaProvider,
     private readonly logger: LoggerService,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
   ) {
     this.logger.setContext(ConformiteService.name);
   }
@@ -99,6 +113,30 @@ export class ConformiteService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
+  async exportConformiteSteuCsv(options: ListConformiteSteuOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listConformiteSteu({ ...options, page, pageSize });
+      return { data: result.data.map(toConformiteSteuDto), total: result.total };
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+      ouvrageDepollutionNom: formatNullable(row.ouvrageDepollutionNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      capaciteNominaleEH: formatNullable(row.capaciteNominaleEH),
+      suiviDebutDate: formatDate(row.suiviDebutDate),
+      suiviFinDate: formatDate(row.suiviFinDate),
+      conformiteLocaleProvisoire: formatConformite(row.conformiteLocaleProvisoire),
+      impactConformite: formatImpact(row.impactConformite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(conformiteSteuPropertyToHeaderMapper),
+      formattedRows,
+    );
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
     const {
       authorizedSteuCdas,
@@ -136,6 +174,30 @@ export class ConformiteService {
     const { data, total } = await this.masaProvider.findConformiteScl(filters);
 
     return { data, total, page, pageSize };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async exportConformiteSclCsv(options: ListConformiteSclOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listConformiteScl({ ...options, page, pageSize });
+      return { data: result.data.map(toConformiteSclDto), total: result.total };
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      systemeCollecteCode: row.systemeCollecteCode,
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      typeScl: formatNullable(row.typeScl),
+      suiviDebutDate: formatDate(row.suiviDebutDate),
+      suiviFinDate: formatDate(row.suiviFinDate),
+      conformiteLocaleTempsPluieProvisoire: formatConformite(row.conformiteLocaleTempsPluieProvisoire),
+      impactConformite: formatImpact(row.impactConformite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(conformiteSclPropertyToHeaderMapper),
+      formattedRows,
+    );
   }
 
   @TraceCalls(LOG_LEVELS[2])

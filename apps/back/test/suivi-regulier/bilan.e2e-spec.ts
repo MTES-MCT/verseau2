@@ -42,12 +42,12 @@ const mockMasaProvider = {
     MasaProvider,
     | 'findIntervenantById'
     | 'findVSteuSclItvByItvRfa'
-      | 'findSteuBatchBySandreCdas'
-      | 'findBilanSteu'
-      | 'findBilanSteuDetail'
-      | 'findSclBatchBySandreCdas'
-      | 'findBilanScl'
-      | 'findBilanSclDetail'
+    | 'findSteuBatchBySandreCdas'
+    | 'findBilanSteu'
+    | 'findBilanSteuDetail'
+    | 'findSclBatchBySandreCdas'
+    | 'findBilanScl'
+    | 'findBilanSclDetail'
   >
 >;
 
@@ -170,6 +170,55 @@ describe('BilanController (e2e)', () => {
         page: 1,
         pageSize: 20,
       });
+    });
+  });
+
+  describe('GET /suivi-regulier/bilan/steu/export', () => {
+    it('returns a csv file with headers', async () => {
+      const currentYear = new Date().getFullYear();
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      mockMasaProvider.findIntervenantById.mockResolvedValue({
+        intervenantId: 1,
+        intervenantSiret: 'SIRET_TEST',
+      });
+      mockMasaProvider.findVSteuSclItvByItvRfa.mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU_TEST_001',
+          systemeCollecteCode: 'SCL_TEST_001',
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+      mockMasaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionId: 10, ouvrageDepollutionCode: 'STEU_TEST_001' },
+      ]);
+      mockMasaProvider.findBilanSteu.mockResolvedValue({
+        data: [
+          {
+            steuCdn: 10,
+            ouvrageDepollutionCode: 'STEU_TEST_001',
+            bilanEcarteParSpe: true,
+            date: `${currentYear}-01-01`,
+            parametreNom: 'DBO5',
+            hcnf: 'Non',
+            evt: 'Non',
+            finalite: 'Autosurveillance',
+          },
+        ],
+        total: 1,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get(`/suivi-regulier/bilan/steu/export?year=${currentYear}&page=1&pageSize=20`)
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+
+      expect(response.headers['content-type']).toContain('text/csv');
+      expect(response.headers['content-disposition']).toContain(`bilan-steu-${currentYear}.csv`);
+      expect(response.text).toContain('Bilan écarté par le SPE (A)');
+      expect(response.text).toContain('DBO5');
     });
   });
 

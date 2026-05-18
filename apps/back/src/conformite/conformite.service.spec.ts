@@ -9,6 +9,7 @@ jest.mock('@shared/logger/traceCalls.decorator', () => ({
 }));
 
 import { ConformiteService } from './conformite.service';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -16,6 +17,7 @@ import type {
   ConformiteSteuDetailRow,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 
 const makeConformiteSteuRow = (): ConformiteSteuRow => ({
@@ -104,6 +106,7 @@ describe('ConformiteService', () => {
   let service: ConformiteService;
   let masaProvider: jest.Mocked<MasaProvider>;
   let logger: { warn: jest.Mock; setContext: jest.Mock };
+  let csvGenerator: { generate: jest.Mock };
 
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
@@ -121,9 +124,12 @@ describe('ConformiteService', () => {
       setContext: jest.fn(),
     };
 
+    csvGenerator = { generate: jest.fn().mockReturnValue('csv-content') };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConformiteService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: mockMasaProvider,
@@ -131,6 +137,10 @@ describe('ConformiteService', () => {
         {
           provide: LoggerService,
           useValue: logger,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: csvGenerator,
         },
       ],
     }).compile();
@@ -359,6 +369,66 @@ describe('ConformiteService', () => {
 
       expect(result).toBeNull();
       expect(masaProvider.findConformiteSteuDetail).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('exportConformiteSteuCsv', () => {
+    it('formats STEU rows before generating csv', async () => {
+      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
+      ]);
+      masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 1 });
+
+      const result = await service.exportConformiteSteuCsv({
+        authorizedSteuCdas: ['STEU001'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toBe('csv-content');
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
+        {
+          ouvrageDepollutionCode: 'STEU001',
+          ouvrageDepollutionNom: 'Station test',
+          trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
+          capaciteNominaleEH: '5000',
+          suiviDebutDate: '01/01/2024',
+          suiviFinDate: '31/12/2024',
+          conformiteLocaleProvisoire: 'Conforme',
+          impactConformite: 'Avec impact',
+        },
+      ]);
+    });
+  });
+
+  describe('exportConformiteSclCsv', () => {
+    it('formats SCL rows before generating csv', async () => {
+      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
+      ]);
+      masaProvider.findConformiteScl.mockResolvedValue({ data: [makeConformiteSclRow()], total: 1 });
+
+      const result = await service.exportConformiteSclCsv({
+        authorizedSteuCdas: ['STEU001'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toBe('csv-content');
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
+        {
+          systemeCollecteCode: 'SCL001',
+          systemeCollecteNom: 'Réseau test',
+          trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
+          typeScl: 'Unitaire',
+          suiviDebutDate: '01/01/2024',
+          suiviFinDate: '31/12/2024',
+          conformiteLocaleTempsPluieProvisoire: 'Conforme',
+          impactConformite: 'Sans impact',
+        },
+      ]);
     });
   });
 
