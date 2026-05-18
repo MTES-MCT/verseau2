@@ -1,4 +1,5 @@
-import { formatBooleanToOuiNon, formatDate, formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
+import { formatDate } from '@lib/shared';
+import { formatBooleanToOuiNon, formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
 import type { BilanSclDto, BilanSteuDto } from './bilan.dto';
 
 export const bilanSteuPropertyToHeaderMapper: PropertyToHeaderMapper<BilanSteuDto> = [

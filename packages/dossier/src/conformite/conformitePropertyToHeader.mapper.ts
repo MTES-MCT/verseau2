@@ -1,4 +1,5 @@
-import { formatDate, formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
+import { formatDate } from '@lib/shared';
+import { formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
 import { ConformiteProvisoire, conformiteProvisoireLabel, type ConformiteSclDto, type ConformiteSteuDto } from './conformite.dto';
 
 function formatConformite(value: string | null): string {

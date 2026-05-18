@@ -1,4 +1,5 @@
-import { formatDate, formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
+import { formatDate } from '@lib/shared';
+import { formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
 import type { TransmissionASRetardSclDto, TransmissionASRetardSteuDto } from './transmissionASRetard.dto';
 
 function formatRetard(value: number | null): string {

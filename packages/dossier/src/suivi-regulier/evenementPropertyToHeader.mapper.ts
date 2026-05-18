@@ -1,4 +1,5 @@
-import { formatDate, formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
+import { formatDate } from '@lib/shared';
+import { formatNullable, type PropertyToHeaderMapper } from '../shared/propertyToHeader.mapper';
 import type { EvenementSclDto, EvenementSteuDto } from './evenement.dto';
 
 function formatPrisEnCompte(value: boolean): string {
