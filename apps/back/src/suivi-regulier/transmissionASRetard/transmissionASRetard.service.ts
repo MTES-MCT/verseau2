@@ -6,7 +6,9 @@ import {
   transmissionASRetardSteuPropertyToHeaderMapper,
   transmissionASRetardSclPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { CsvGenerator, formatDate } from '@lib/shared';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type { TransmissionASRetardSteuFilters, TransmissionASRetardSclFilters } from '@masa/masa.dto';
 import { formatNullable, formatRetard } from '@shared/csv/csvFormatters';

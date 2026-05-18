@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { CsvGenerator } from '@lib/shared';
+import { CsvGenerator } from './csv/csv.types';
 import { LoggerService } from './logger/logger.service';
 import { ZodValidationPipe } from './schema/zodValidation.pipe';
 import { CsvGeneratorService } from './csv/csvGenerator.service';

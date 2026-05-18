@@ -10,5 +10,3 @@ export interface CsvGenerator {
 }
 
 export const CsvGenerator = Symbol('CsvGenerator');
-
-// TODO: déplacer dans back/

@@ -6,7 +6,9 @@ import {
   evenementSteuPropertyToHeaderMapper,
   evenementSclPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { CsvGenerator, formatDate } from '@lib/shared';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type { EvenementSteuFilters, EvenementSclFilters } from '@masa/masa.dto';
 import { formatNullable, formatPrisEnCompte } from '@shared/csv/csvFormatters';

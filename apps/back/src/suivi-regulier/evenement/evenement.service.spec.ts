@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CsvGenerator } from '@lib/shared';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { EvenementService } from './evenement.service';

@@ -40,6 +40,3 @@ export function formatRetard(value: number | null): string {
 export function formatDisplayedDate(value: Date | string | null): string {
   return formatDate(value);
 }
-
-// TODO: move to domain specific formatter ?
-// Move the mapper into the package, so it could be reused in the front and back ?

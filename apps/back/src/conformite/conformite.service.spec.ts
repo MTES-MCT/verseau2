@@ -9,7 +9,7 @@ jest.mock('@shared/logger/traceCalls.decorator', () => ({
 }));
 
 import { ConformiteService } from './conformite.service';
-import { CsvGenerator } from '@lib/shared';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,

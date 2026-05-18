@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
 import { Test, TestingModule } from '@nestjs/testing';
-import { CsvGenerator } from '@lib/shared';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { TransmissionASRetardService } from './transmissionASRetard.service';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';

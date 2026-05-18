@@ -1,5 +1,5 @@
 import type { PropertyToHeaderMapper } from '@lib/dossier';
-import type { CsvCellValue, CsvColumn } from '@lib/shared';
+import type { CsvCellValue, CsvColumn } from './csv.types';
 
 export type CsvFormattedRow = Record<string, CsvCellValue>;
 

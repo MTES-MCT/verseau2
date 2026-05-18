@@ -8,7 +8,9 @@ import {
   type OuvrageTypeValue,
   mesurePropertyToHeaderMapper,
 } from '@lib/dossier';
-import { CsvGenerator, formatDate } from '@lib/shared';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import {
   MesureFilters,
   SteuWithName,

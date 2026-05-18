@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { CsvColumn, CsvGenerator } from '@lib/shared';
+import type { CsvColumn, CsvGenerator } from './csv.types';
 
 @Injectable()
 export class CsvGeneratorService implements CsvGenerator {
