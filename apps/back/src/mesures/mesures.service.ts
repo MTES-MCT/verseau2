@@ -1,7 +1,7 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import {
-  type MesureDto,
+  buildPointDeMesure,
   PaginatedMesuresResponse,
   PaginationQuery,
   MesuresSortByValue,
@@ -24,21 +24,6 @@ import {
 } from '@shared/csv/propertyToHeaderCsvColumns';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
-
-function buildPointDeMesure(mesure: MesureDto): string {
-  const parts: string[] = [];
-  if (mesure.pointMesureLibelle) {
-    parts.push(mesure.pointMesureLibelle);
-  }
-  if (mesure.pointMesureNumero) {
-    parts.push(`n°${mesure.pointMesureNumero}`);
-  }
-  if (mesure.pointAgenceEauNumero) {
-    parts.push(`(${mesure.pointAgenceEauNumero})`);
-  }
-
-  return parts.join(' ') || '-';
-}
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;

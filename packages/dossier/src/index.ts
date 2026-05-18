@@ -9,6 +9,7 @@ export * from './depot/depot.status';
 export * from './masa/masa.dto';
 export * from './indicateur/indicateur.dto';
 export * from './mesure/mesure.dto';
+export * from './mesure/buildPointDeMesure';
 export * from './mesure/mesurePropertyToHeader.mapper';
 export * from './routes/route.types';
 export * from './routes/depot.routes';
