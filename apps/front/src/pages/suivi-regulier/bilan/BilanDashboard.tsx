@@ -3,6 +3,7 @@ import { type BilanSteuSortByValue, type BilanSclSortByValue, type IntervenantDe
 import type { SortByValue } from '../../../hooks/useBilanFilters';
 import { CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
@@ -152,14 +153,26 @@ export const BilanDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
   const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
   const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
-  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } = useCsvExportDownload(downloadBilanSteuExport);
-  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(downloadBilanSclExport);
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadBilanSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadBilanSclExport);
 
   const handleDateSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
   const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
   const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
   const handleExport = () => {
@@ -234,6 +247,17 @@ export const BilanDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>Tableau de bord bilans</h1>
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">

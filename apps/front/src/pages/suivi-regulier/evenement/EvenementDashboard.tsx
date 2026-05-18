@@ -2,6 +2,7 @@ import { useMemo, useState, type ChangeEvent } from 'react';
 import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue, TypePointMesureValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
@@ -129,9 +130,18 @@ export const EvenementDashboard = () => {
   const data = filters.mode === 'steu' ? steuData : sclData;
   const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
   const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
-  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } =
-    useCsvExportDownload(downloadEvenementSteuExport);
-  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(downloadEvenementSclExport);
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadEvenementSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadEvenementSclExport);
 
   const getTableData = (row: EvenementSteuDto | EvenementSclDto) => {
     const codeSandre =
@@ -160,6 +170,8 @@ export const EvenementDashboard = () => {
   };
 
   const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
   const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
   const handleExport = () => {
@@ -184,6 +196,17 @@ export const EvenementDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>Tableau de bord événements</h1>
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">

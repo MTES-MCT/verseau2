@@ -4,6 +4,7 @@ import type { SortByValue } from '../../../hooks/useTransmissionASRetardFilters'
 import type { ReactNode } from 'react';
 import { CURRENT_TRANSMISSION_YEAR, FIRST_TRANSMISSION_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
@@ -114,12 +115,18 @@ export const TransmissionASRetardDashboard = () => {
   const data = isScl ? sclData : steuData;
   const isLoading = isScl ? sclLoading : steuLoading;
   const isFetching = isScl ? sclFetching : steuFetching;
-  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } = useCsvExportDownload(
-    downloadTransmissionASRetardSteuExport,
-  );
-  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(
-    downloadTransmissionASRetardSclExport,
-  );
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadTransmissionASRetardSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadTransmissionASRetardSclExport);
 
   const tableData = isScl
     ? buildTransmissionASRetardSclTableRows(sclData?.data || [])
@@ -165,6 +172,8 @@ export const TransmissionASRetardDashboard = () => {
 
   const title = isScl ? 'Transmission AS des SCL en retard' : 'Transmission AS des STEU en retard';
   const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
   const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
   const handleExport = () => {
@@ -189,6 +198,17 @@ export const TransmissionASRetardDashboard = () => {
         className={fr.cx('fr-mb-2w')}
       />
       <h1>{title}</h1>
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">

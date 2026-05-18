@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DownloadedFile } from '../api/apiClient';
+import { ApiError, type DownloadedFile } from '../api/apiClient';
 import { triggerFileDownload } from '../helper/fileDownload';
 
 export function useCsvExportDownload<TQuery>(downloadFile: (query: TQuery) => Promise<DownloadedFile>) {
@@ -13,8 +13,8 @@ export function useCsvExportDownload<TQuery>(downloadFile: (query: TQuery) => Pr
     try {
       const file = await downloadFile(query);
       triggerFileDownload(file.blob, file.filename ?? fallbackFilename);
-    } catch {
-      setDownloadError("Erreur lors de l'export CSV.");
+    } catch (error) {
+      setDownloadError(getDownloadErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -26,4 +26,16 @@ export function useCsvExportDownload<TQuery>(downloadFile: (query: TQuery) => Pr
     downloadError,
     setDownloadError,
   };
+}
+
+function getDownloadErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.message.replace(/^[A-Z]+ .* failed:\s*/, '') || "Erreur lors de l'export CSV.";
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Erreur lors de l'export CSV.";
 }

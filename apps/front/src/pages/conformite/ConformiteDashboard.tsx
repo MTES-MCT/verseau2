@@ -265,10 +265,21 @@ export function ConformiteDashboard() {
   const total = data?.total ?? 0;
   const firstResult = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const lastResult = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
-  const { download: downloadSteuCsv, isLoading: isSteuExportLoading } =
-    useCsvExportDownload(downloadConformiteSteuExport);
-  const { download: downloadSclCsv, isLoading: isSclExportLoading } = useCsvExportDownload(downloadConformiteSclExport);
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadConformiteSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadConformiteSclExport);
   const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
   const canExport = hasOuvrageSelected && !isLoading && !isFetching && total > 0;
 
   const handleExport = () => {
@@ -404,6 +415,17 @@ export function ConformiteDashboard() {
           description={
             error instanceof Error ? error.message : 'Une erreur est survenue lors du chargement des données.'
           }
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
+
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
           className={fr.cx('fr-mb-2w')}
         />
       )}
