@@ -1,51 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { TransmissionASRetardSteuSortByValue, TransmissionASRetardSclSortByValue, PaginationQuery } from '@lib/dossier';
+import {
+  TransmissionASRetardSteuSortByValue,
+  TransmissionASRetardSclSortByValue,
+  PaginationQuery,
+  transmissionASRetardSteuPropertyToHeaderMapper,
+  transmissionASRetardSclPropertyToHeaderMapper,
+} from '@lib/dossier';
 import type { TransmissionASRetardSclDto, TransmissionASRetardSteuDto } from '@lib/dossier';
 import { CsvGenerator, type CsvColumn } from '@lib/shared';
-import { formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { TransmissionASRetardSteuFilters, TransmissionASRetardSclFilters } from '@masa/masa.dto';
-import { formatNullable, formatRetard } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { mapTransmissionASRetardSteuRowToDto, mapTransmissionASRetardSclRowToDto } from './transmissionASRetard.mapper';
-
-const TRANSMISSION_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<TransmissionASRetardSteuDto>> = [
-  { header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
-  { header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
-  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
-  { header: 'Capacité nominale (EH)', value: (row) => formatNullable(row.capaciteNominaleEH) },
-  { header: 'Nb fichiers AS reçus', value: (row) => formatNullable(row.nbFichiersAsRecus) },
-  {
-    header: 'Date dernier fichier reçu',
-    value: (row) => (row.dateDernierFichierRecu ? formatDate(row.dateDernierFichierRecu) : '-'),
-  },
-  { header: 'Période début', value: (row) => (row.dateDebutPeriode ? formatDate(row.dateDebutPeriode) : '-') },
-  { header: 'Période fin', value: (row) => (row.dateFinPeriode ? formatDate(row.dateFinPeriode) : '-') },
-  {
-    header: 'Date attendue',
-    value: (row) => (row.dateMesureSuivanteAttendue ? formatDate(row.dateMesureSuivanteAttendue) : '-'),
-  },
-  { header: 'Nb jours de retard', value: (row) => formatRetard(row.nbJoursRetard) },
-];
-
-const TRANSMISSION_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<TransmissionASRetardSclDto>> = [
-  { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
-  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
-  { header: "Tranche d'obligation (EH)", value: (row) => formatNullable(row.trancheObligationLibelle) },
-  { header: 'Capacité nominale (EH)', value: (row) => formatNullable(row.capaciteNominaleEH) },
-  { header: 'Nb fichiers AS reçus', value: (row) => formatNullable(row.nbFichiersAsRecus) },
-  {
-    header: 'Date dernier fichier reçu',
-    value: (row) => (row.dateDernierFichierRecu ? formatDate(row.dateDernierFichierRecu) : '-'),
-  },
-  { header: 'Période début', value: (row) => (row.dateDebutPeriode ? formatDate(row.dateDebutPeriode) : '-') },
-  { header: 'Période fin', value: (row) => (row.dateFinPeriode ? formatDate(row.dateFinPeriode) : '-') },
-  {
-    header: 'Date attendue',
-    value: (row) => (row.dateMesureSuivanteAttendue ? formatDate(row.dateMesureSuivanteAttendue) : '-'),
-  },
-  { header: 'Nb jours de retard', value: (row) => formatRetard(row.nbJoursRetard) },
-];
 
 export interface ListTransmissionASRetardSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -110,7 +76,10 @@ export class TransmissionASRetardService {
       return { data: result.data.map(mapTransmissionASRetardSteuRowToDto), total: result.total };
     });
 
-    return this.csvGenerator.generate(TRANSMISSION_STEU_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(
+      transmissionASRetardSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<TransmissionASRetardSteuDto>>,
+      rows,
+    );
   }
 
   async listTransmissionASRetardScl(options: ListTransmissionASRetardSclOptions) {
@@ -154,7 +123,10 @@ export class TransmissionASRetardService {
       return { data: result.data.map(mapTransmissionASRetardSclRowToDto), total: result.total };
     });
 
-    return this.csvGenerator.generate(TRANSMISSION_SCL_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(
+      transmissionASRetardSclPropertyToHeaderMapper as ReadonlyArray<CsvColumn<TransmissionASRetardSclDto>>,
+      rows,
+    );
   }
 
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {

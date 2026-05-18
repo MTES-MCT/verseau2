@@ -1,44 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { EvenementSteuSortByValue, EvenementSclSortByValue, PaginationQuery } from '@lib/dossier';
+import {
+  EvenementSteuSortByValue,
+  EvenementSclSortByValue,
+  PaginationQuery,
+  evenementSteuPropertyToHeaderMapper,
+  evenementSclPropertyToHeaderMapper,
+} from '@lib/dossier';
 import type { EvenementSclDto, EvenementSteuDto } from '@lib/dossier';
 import { CsvGenerator, type CsvColumn } from '@lib/shared';
-import { formatDate } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { EvenementSteuFilters, EvenementSclFilters } from '@masa/masa.dto';
-import { formatNullable, formatPrisEnCompte } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 
 const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
-
-const EVENEMENT_STEU_CSV_COLUMNS: ReadonlyArray<CsvColumn<EvenementSteuDto>> = [
-  { header: 'Pris en compte', value: (row) => formatPrisEnCompte(row.prisEnCompte) },
-  { header: 'Code Sandre', value: (row) => row.ouvrageDepollutionCode },
-  { header: 'Nom', value: (row) => formatNullable(row.ouvrageDepollutionNom) },
-  { header: 'Date', value: (row) => formatDate(row.date) },
-  {
-    header: "Type d'événement",
-    value: (row) => `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
-  },
-  { header: 'Finalité', value: (row) => formatNullable(row.finalite) },
-  { header: 'Commentaire', value: (row) => formatNullable(row.commentaire) },
-];
-
-const EVENEMENT_SCL_CSV_COLUMNS: ReadonlyArray<CsvColumn<EvenementSclDto>> = [
-  { header: 'Pris en compte', value: (row) => formatPrisEnCompte(row.prisEnCompte) },
-  { header: 'Code Sandre', value: (row) => row.systemeCollecteCode },
-  { header: 'Nom', value: (row) => formatNullable(row.systemeCollecteNom) },
-  { header: 'Date', value: (row) => formatDate(row.date) },
-  {
-    header: "Type d'événement",
-    value: (row) => `${row.typeEvenementCode}-${row.typeEvenementLibelle}`,
-  },
-  { header: 'Finalité', value: (row) => formatNullable(row.finalite) },
-  { header: 'Commentaire', value: (row) => formatNullable(row.commentaire) },
-  {
-    header: 'Point de mesures',
-    value: (row) => `${row.pointMesureNumero} - ${row.pointMesureLibelle ?? '-'}`,
-  },
-];
 
 export interface ListEvenementSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -114,7 +88,10 @@ export class EvenementService {
       return this.masaProvider.findEvenementSteu(filters);
     });
 
-    return this.csvGenerator.generate(EVENEMENT_STEU_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(
+      evenementSteuPropertyToHeaderMapper as ReadonlyArray<CsvColumn<EvenementSteuDto>>,
+      rows,
+    );
   }
 
   async listEvenementScl(options: ListEvenementSclOptions) {
@@ -165,7 +142,10 @@ export class EvenementService {
       return this.masaProvider.findEvenementScl(filters);
     });
 
-    return this.csvGenerator.generate(EVENEMENT_SCL_CSV_COLUMNS, rows);
+    return this.csvGenerator.generate(
+      evenementSclPropertyToHeaderMapper as ReadonlyArray<CsvColumn<EvenementSclDto>>,
+      rows,
+    );
   }
 
   async listEvenementTypes() {

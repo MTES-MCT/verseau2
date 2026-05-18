@@ -7,7 +7,7 @@ import {
   bilanSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
 import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
-import { CsvGenerator, type CsvColumn, formatDate } from '@lib/shared';
+import { CsvGenerator, type CsvColumn } from '@lib/shared';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
 import { CodeParametre } from '@referentiel/parametre/codeParametre';
