@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { downloadRapport, downloadXml, downloadAdminRapport, downloadAdminXml } from '../api/depot';
+import { triggerFileDownload } from '../helper/fileDownload';
 
 export function useRapportAndXmlDownload(isAdmin = false) {
   const [downloadingDepotId, setDownloadingDepotId] = useState<string | null>(null);
@@ -11,14 +12,7 @@ export function useRapportAndXmlDownload(isAdmin = false) {
     try {
       setDownloadingDepotId(depotId);
       const blob = isAdmin ? await downloadAdminRapport(depotId) : await downloadRapport(depotId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `rapport-${depotId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      triggerFileDownload(blob, `rapport-${depotId}.pdf`);
     } catch {
       setDownloadError(`Erreur lors du téléchargement du rapport pour le dépôt: ${depotId}  `);
     } finally {
@@ -31,14 +25,7 @@ export function useRapportAndXmlDownload(isAdmin = false) {
     try {
       setDownloadingXmlId(depotId);
       const blob = isAdmin ? await downloadAdminXml(depotId) : await downloadXml(depotId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName || `depot-${depotId}.xml`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      triggerFileDownload(blob, fileName || `depot-${depotId}.xml`);
     } catch {
       setDownloadError(`Erreur lors du téléchargement du fichier XML pour le dépôt: ${depotId}  `);
     } finally {

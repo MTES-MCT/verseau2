@@ -213,10 +213,10 @@ export class RoseauGatewayTestMock {
  * Mock for LanceleauGateway.
  */
 export class LanceleauGatewayTestMock {
-  findByItvCdn = jest.fn().mockResolvedValue(null);
+  findIntervenantById = jest.fn().mockResolvedValue(null);
 
   reset(): void {
-    this.findByItvCdn.mockClear().mockResolvedValue(null);
+    this.findIntervenantById.mockClear().mockResolvedValue(null);
   }
 }
 
@@ -387,5 +387,38 @@ export class ConfigServiceTestMock {
       OIDC_REDIRECT_URI: 'http://mock-redirect',
       USE_SANDRE_MOCK: 'true',
     };
+  }
+}
+
+/**
+ * Mock for NotificationGateway.
+ */
+export class NotificationGatewayTestMock {
+  sendEmail = jest.fn().mockResolvedValue(undefined);
+
+  reset(): void {
+    this.sendEmail.mockClear().mockResolvedValue(undefined);
+  }
+}
+
+/**
+ * Mock for MasaGateway.
+ */
+export class MasaGatewayTestMock {
+  findById = jest.fn().mockResolvedValue(null);
+
+  reset(): void {
+    this.findById.mockClear().mockResolvedValue(null);
+  }
+}
+
+/**
+ * Mock for ControleGateway.
+ */
+export class ControleGatewayTestMock {
+  findControlesV2ByDepotId = jest.fn().mockResolvedValue([]);
+
+  reset(): void {
+    this.findControlesV2ByDepotId.mockClear().mockResolvedValue([]);
   }
 }

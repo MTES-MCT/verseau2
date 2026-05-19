@@ -2,12 +2,31 @@ import type { AlertProps } from '@codegouvfr/react-dsfr/Alert';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import {
   ConformiteProvisoire,
+  conformiteSclPropertyToHeaderMapper,
+  conformiteSteuPropertyToHeaderMapper,
   conformiteProvisoireLabel,
   type ConformiteSclDto,
   type ConformiteSteuDto,
 } from '@lib/dossier';
 import { formatDate } from '@lib/shared';
 import type { ReactNode } from 'react';
+
+export type TableHeaderDefinition = {
+  property: string;
+  label: string;
+};
+
+const STEU_TABLE_HEADERS: TableHeaderDefinition[] = conformiteSteuPropertyToHeaderMapper.map(
+  ({ property, header }) => ({
+    property,
+    label: header,
+  }),
+);
+
+const SCL_TABLE_HEADERS: TableHeaderDefinition[] = conformiteSclPropertyToHeaderMapper.map(({ property, header }) => ({
+  property,
+  label: header,
+}));
 
 const conformiteProvisoireSeverityMap: Record<ConformiteProvisoire, AlertProps.Severity | undefined> = {
   [ConformiteProvisoire.Conforme]: 'success',
@@ -44,17 +63,8 @@ function renderImpactBadge(impactConformite: boolean): ReactNode {
   );
 }
 
-export function buildConformiteSteuTableHeaders(): string[] {
-  return [
-    'Code Sandre',
-    'Nom',
-    "Tranche d'obligation (EH)",
-    'Capacité nominale (EH)',
-    'Début période',
-    'Fin période',
-    'Conformité réglementaire',
-    'Synthèse des changements',
-  ];
+export function buildConformiteSteuTableHeaders(): TableHeaderDefinition[] {
+  return STEU_TABLE_HEADERS;
 }
 
 export function buildConformiteSteuTableRows(steuList: ConformiteSteuDto[]): ReactNode[][] {
@@ -70,17 +80,8 @@ export function buildConformiteSteuTableRows(steuList: ConformiteSteuDto[]): Rea
   ]);
 }
 
-export function buildConformiteSclTableHeaders(): string[] {
-  return [
-    'Code Sandre',
-    'Nom',
-    "Tranche d'obligation (EH)",
-    'Type',
-    'Début période',
-    'Fin période',
-    'Conformité réglementaire temps pluie',
-    'Synthèse des changements',
-  ];
+export function buildConformiteSclTableHeaders(): TableHeaderDefinition[] {
+  return SCL_TABLE_HEADERS;
 }
 
 export function buildConformiteSclTableRows(sclList: ConformiteSclDto[]): ReactNode[][] {

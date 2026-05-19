@@ -1,35 +1,45 @@
-import { useMemo, type ChangeEvent } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import type { TransmissionASRetardSteuSortByValue, TransmissionASRetardSclSortByValue } from '@lib/dossier';
 import type { SortByValue } from '../../../hooks/useTransmissionASRetardFilters';
 import type { ReactNode } from 'react';
 import { CURRENT_TRANSMISSION_YEAR, FIRST_TRANSMISSION_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
+import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useTransmissionASRetardSteu, useTransmissionASRetardScl } from '../../../hooks/useTransmissionASRetard';
 import { useTransmissionASRetardFilters } from '../../../hooks/useTransmissionASRetardFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useOuvrages } from '../../../hooks/useOuvrages';
-import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
 import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import {
   buildTransmissionASRetardTableHeaders,
   buildTransmissionASRetardSteuTableRows,
   buildTransmissionASRetardSclTableRows,
 } from '../../../helper/transmissionASRetardTableData';
+import { TableLoader } from '../../../components/common/TableLoader';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import {
+  downloadTransmissionASRetardSclExport,
+  downloadTransmissionASRetardSteuExport,
+} from '../../../api/transmissionASRetard';
 
 export const TransmissionASRetardDashboard = () => {
   const { filters, updateFilter, page, setPage } = useTransmissionASRetardFilters();
   const pageSize = 10;
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
 
   const isScl = filters.mode === 'scl';
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
   const yearOptions = useMemo(
     () =>
@@ -50,10 +60,23 @@ export const TransmissionASRetardDashboard = () => {
       }));
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
-  const currentOuvrageValue = filters.codeSandre || null;
+  const currentOuvrageValue = filters.ouvrageCode || null;
+  const hasOuvrageSelected = !!filters.ouvrageCode;
 
   const handleOuvrageChange = (value: string | null) => {
-    updateFilter({ codeSandre: value ?? '' });
+    const newVal = value ?? '';
+    if (isScl) {
+      setSclSearch(newVal);
+    } else {
+      setOuvrageSearch(newVal);
+    }
+    updateFilter({ ouvrageCode: newVal });
+  };
+
+  const handleModeChange = (mode: 'steu' | 'scl') => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateFilter({ mode });
   };
 
   const handleSort = (nextSortBy: SortByValue, nextSortOrder: 'ASC' | 'DESC') => {
@@ -64,7 +87,7 @@ export const TransmissionASRetardDashboard = () => {
     page,
     pageSize,
     year: filters.year,
-    ...(filters.codeSandre ? { codeSandre: filters.codeSandre } : {}),
+    ...(filters.ouvrageCode ? { ouvrageDepollutionCode: filters.ouvrageCode } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as TransmissionASRetardSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -73,15 +96,37 @@ export const TransmissionASRetardDashboard = () => {
     page,
     pageSize,
     year: filters.year,
-    ...(filters.codeSandre ? { codeSandre: filters.codeSandre } : {}),
+    ...(filters.ouvrageCode ? { systemeCollecteCode: filters.ouvrageCode } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as TransmissionASRetardSclSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 
-  const { data: steuData } = useTransmissionASRetardSteu(steuQuery, !isScl);
-  const { data: sclData } = useTransmissionASRetardScl(sclQuery, isScl);
+  const {
+    data: steuData,
+    isLoading: steuLoading,
+    isFetching: steuFetching,
+  } = useTransmissionASRetardSteu(steuQuery, !isScl && hasOuvrageSelected);
+  const {
+    data: sclData,
+    isLoading: sclLoading,
+    isFetching: sclFetching,
+  } = useTransmissionASRetardScl(sclQuery, isScl && hasOuvrageSelected);
 
   const data = isScl ? sclData : steuData;
+  const isLoading = isScl ? sclLoading : steuLoading;
+  const isFetching = isScl ? sclFetching : steuFetching;
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadTransmissionASRetardSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadTransmissionASRetardSclExport);
 
   const tableData = isScl
     ? buildTransmissionASRetardSclTableRows(sclData?.data || [])
@@ -90,14 +135,23 @@ export const TransmissionASRetardDashboard = () => {
   const headers = buildTransmissionASRetardTableHeaders();
 
   // Rendre les colonnes triables
-  const sortableColumns: { label: string; field: SortByValue }[] = [
-    { label: 'Code Sandre', field: 'codeSandre' },
-    { label: 'Nom', field: 'nom' },
-    { label: "Tranche d'obligation (EH)", field: 'trancheObligation' },
-    { label: 'Capacité nominale (EH)', field: 'capaciteNominale' },
-    { label: 'Date dernier fichier reçu', field: 'dateDernierFichierRecu' },
-    { label: 'Nb jours de retard', field: 'nbJoursRetard' },
-  ];
+  const sortableColumns: { label: string; field: SortByValue }[] = isScl
+    ? [
+        { label: 'Code Sandre', field: 'systemeCollecteCode' },
+        { label: 'Nom', field: 'systemeCollecteNom' },
+        { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
+        { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
+        { label: 'Date dernier fichier reçu', field: 'dateDernierFichierRecu' },
+        { label: 'Nb jours de retard', field: 'nbJoursRetard' },
+      ]
+    : [
+        { label: 'Code Sandre', field: 'ouvrageDepollutionCode' },
+        { label: 'Nom', field: 'ouvrageDepollutionNom' },
+        { label: "Tranche d'obligation (EH)", field: 'trancheObligationLibelle' },
+        { label: 'Capacité nominale (EH)', field: 'capaciteNominaleEH' },
+        { label: 'Date dernier fichier reçu', field: 'dateDernierFichierRecu' },
+        { label: 'Nb jours de retard', field: 'nbJoursRetard' },
+      ];
 
   const finalHeaders: (string | ReactNode)[] = headers.map((header) => {
     const sortable = sortableColumns.find((s) => s.label === header);
@@ -117,6 +171,23 @@ export const TransmissionASRetardDashboard = () => {
   });
 
   const title = isScl ? 'Transmission AS des SCL en retard' : 'Transmission AS des STEU en retard';
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(sclQuery, `transmission-as-retard-scl-${filters.year}.csv`);
+      return;
+    }
+
+    void downloadSteuCsv(steuQuery, `transmission-as-retard-steu-${filters.year}.csv`);
+  };
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -128,24 +199,36 @@ export const TransmissionASRetardDashboard = () => {
       />
       <h1>{title}</h1>
 
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
+
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'STEU',
                 nativeInputProps: {
                   checked: filters.mode === 'steu',
-                  onChange: () => updateFilter({ mode: 'steu' }),
+                  onChange: () => handleModeChange('steu'),
                 },
               },
               {
                 label: 'SCL',
                 nativeInputProps: {
                   checked: filters.mode === 'scl',
-                  onChange: () => updateFilter({ mode: 'scl' }),
+                  onChange: () => handleModeChange('scl'),
                 },
               },
             ]}
@@ -154,6 +237,7 @@ export const TransmissionASRetardDashboard = () => {
         <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
@@ -169,28 +253,41 @@ export const TransmissionASRetardDashboard = () => {
         <div className="fr-col-12 fr-col-lg-7 fr-col-xl-6">
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
-            placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
+            hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+            placeholder={isScl ? 'Rechercher un SCL' : 'Rechercher une station'}
             options={ouvragesOptions}
             value={currentOuvrageValue}
             onChange={handleOuvrageChange}
+            onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
       </div>
 
-      <Table data={tableData} headers={finalHeaders} />
-      {Math.ceil((data?.total || 0) / pageSize) > 1 && (
-        <Pagination
-          count={Math.ceil((data?.total || 0) / pageSize)}
-          defaultPage={page}
-          getPageLinkProps={(pageNumber: number) => ({
-            href: `#page-${pageNumber}`,
-            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.preventDefault();
-              setPage(pageNumber);
-            },
-          })}
-        />
-      )}
+      <TableLoader
+        isLoading={isLoading && hasOuvrageSelected}
+        isFetching={isFetching}
+        hasOuvrageSelected={hasOuvrageSelected}
+      >
+        <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
+        </div>
+        <Table data={tableData} headers={finalHeaders} />
+        {Math.ceil((data?.total || 0) / pageSize) > 1 && (
+          <Pagination
+            count={Math.ceil((data?.total || 0) / pageSize)}
+            defaultPage={page}
+            getPageLinkProps={(pageNumber: number) => ({
+              href: `#page-${pageNumber}`,
+              onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                setPage(pageNumber);
+              },
+            })}
+          />
+        )}
+      </TableLoader>
     </div>
   );
 };

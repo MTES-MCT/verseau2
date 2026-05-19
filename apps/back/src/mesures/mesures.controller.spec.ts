@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { MesuresController } from './mesures.controller';
 import { MesuresService } from './mesures.service';
@@ -34,6 +34,7 @@ describe('MesuresController', () => {
     const mockMesuresService: jest.Mocked<Partial<MesuresService>> = {
       listMesures: jest.fn(),
       listOuvrages: jest.fn(),
+      listPointsMesure: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -103,7 +104,7 @@ describe('MesuresController', () => {
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
         expect.objectContaining({
           authorizedSteuCdas: ['STEU001'],
-          steuSandreCdas: ['STEU001'],
+          ouvrageDepollutionCodes: ['STEU001'],
           dateDebut: '2024-01-01',
           dateFin: '2024-12-31',
           parametreCode: 'MES_CO',
@@ -123,19 +124,62 @@ describe('MesuresController', () => {
       const ouvrages = [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }];
       mesuresService.listOuvrages.mockResolvedValue(ouvrages);
 
-      const result = await controller.listOuvrages(makeRequest(['STEU001'], []));
+      const result = await controller.listOuvrages(makeRequest(['STEU001'], []), {});
 
-      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001']);
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001'], undefined);
       expect(result).toEqual(ouvrages);
     });
 
     it('delegates with empty STEU list', async () => {
       mesuresService.listOuvrages.mockResolvedValue([]);
 
-      const result = await controller.listOuvrages(makeRequest([], []));
+      const result = await controller.listOuvrages(makeRequest([], []), {});
 
-      expect(mesuresService.listOuvrages).toHaveBeenCalledWith([]);
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith([], undefined);
       expect(result).toEqual([]);
+    });
+
+    it('passes search query to service', async () => {
+      mesuresService.listOuvrages.mockResolvedValue([]);
+
+      await controller.listOuvrages(makeRequest(['STEU001'], []), { search: 'sta' });
+
+      expect(mesuresService.listOuvrages).toHaveBeenCalledWith(['STEU001'], 'sta');
+    });
+  });
+
+  describe('listPointsMesure', () => {
+    it('traduit le type de point en filtres de localisation avant délégation au service', async () => {
+      mesuresService.listPointsMesure.mockResolvedValue([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
+
+      const result = await controller.listPointsMesure(makeRequest(['STEU001'], []), {
+        ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        typePoint: 'reglementaire',
+      });
+
+      expect(mesuresService.listPointsMesure).toHaveBeenCalledWith(
+        ['STEU001'],
+        [],
+        'steu',
+        'STEU001',
+        expect.objectContaining({ localisationCodes: expect.arrayContaining(['A1', 'A3', 'A8']) }),
+      );
+      expect(result).toEqual([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
     });
   });
 });

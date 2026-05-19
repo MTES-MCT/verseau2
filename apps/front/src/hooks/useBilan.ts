@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { fetchBilanSteu, fetchBilanScl } from '../api/bilan';
+import { fetchBilanSteu, fetchBilanScl, fetchBilanSteuDetail, fetchBilanSclDetail } from '../api/bilan';
 import { type RouteQuery, listBilanSteu, listBilanScl } from '@lib/dossier';
 
 export const useBilanSteu = (query: RouteQuery<typeof listBilanSteu>, enabled: boolean) =>
@@ -16,4 +16,18 @@ export const useBilanScl = (query: RouteQuery<typeof listBilanScl>, enabled: boo
     queryFn: () => fetchBilanScl(query),
     enabled,
     placeholderData: keepPreviousData,
+  });
+
+export const useBilanSteuDetail = (ouvrageDepollutionCode: string | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ['bilan', 'steu', 'detail', ouvrageDepollutionCode],
+    queryFn: () => fetchBilanSteuDetail(ouvrageDepollutionCode!),
+    enabled: enabled && !!ouvrageDepollutionCode,
+  });
+
+export const useBilanSclDetail = (systemeCollecteCode: string | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ['bilan', 'scl', 'detail', systemeCollecteCode],
+    queryFn: () => fetchBilanSclDetail(systemeCollecteCode!),
+    enabled: enabled && !!systemeCollecteCode,
   });

@@ -2,13 +2,14 @@
 
 ## Quick Context
 
-Application de depots de fichiers d'autosurveillance des eaux usees. Monorepo TypeScript: NestJS 11 backend (dual-process: HTTP server + async worker) + React 19 frontend (Vite, DSFR). PostgreSQL, pg-boss queues, S3 storage, SFTP export.
+Application de depots de fichiers et de tableaux de bord d'autosurveillance des eaux usees. Monorepo TypeScript: NestJS 11 backend (dual-process: HTTP server + async worker) + React 19 frontend (Vite, DSFR). PostgreSQL, pg-boss queues, S3 storage, SFTP export.
 
 ## Commands
 
 ```bash
-pnpm test                            # Run backend + parser unit tests
+pnpm test                            # Run backend unit + e2e tests and parser tests
 pnpm --filter back test:e2e          # E2E tests (testcontainers)
+pnpm --filter back test:e2e:api-worker # E2E tests with API + worker
 pnpm build                           # Production build (front + back)
 pnpm --filter back lint              # Lint backend
 pnpm --filter front lint             # Lint frontend
@@ -28,11 +29,11 @@ _Rarely changes. Defines the project DNA._
 - `.agent-memory/tech-context.md` -- Stack, dependencies, setup, path aliases, constraints
 - `.agent-memory/conventions.md` -- Code style, naming, git, testing patterns
 
-### Layer 2: Accumulated Experience (append-only)
+### Layer 2: Accumulated Experience (curated over time)
 
-_Grows over time. Capture insights._
+_Grows over time but should stay concise and reusable._
 
-- `.agent-memory/lessons-learned.md` -- Solutions to tricky problems, strategies that worked
+- `.agent-memory/lessons-learned.md` -- Reusable solutions, strategies, and pitfalls worth keeping
 
 ## Session Protocol
 
@@ -49,7 +50,7 @@ _Grows over time. Capture insights._
 - Always use path aliases (`@dossier/*`, `@infra/*`, etc.), never relative imports across module boundaries
 - Never Commit on your own
 - Scopes: `back`, `front`, or omit for root-level changes
-- All controllers must use `@UseGuards` (enforced by architecture tests)
+- Most API controllers must use `@UseGuards` (architecture tests exempt `AuthenticationController`, `ReferentielController`, `VersionController`, and a few named endpoints)
 - Gateway pattern: interface + Symbol export with same name
 - Run tests before considering your task finished
 - Use pnpm, not npm or yarn

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { PaginatedMesuresResponseSchema } from '../mesure/mesure.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
+import { TypePointMesure } from '../shared/typePointMesure';
 
 /** Allow-list of sortable columns for the mesures list endpoint. */
 export const MesuresSortBy = z.enum(['date', 'parametreCode', 'valeur', 'statut']);
@@ -31,9 +32,18 @@ export const listMesures = {
   response: PaginatedMesuresResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportMesures = {
+  method: 'GET',
+  path: '/mesures/export',
+  query: listMesures.query,
+} as const satisfies RouteDefinition;
+
 export const listOuvrages = {
   method: 'GET',
   path: '/mesures/ouvrages',
+  query: z.object({
+    search: z.string().trim().min(2).optional(),
+  }),
   response: z.array(
     z.object({
       ouvrageDepollutionCode: z.string(),
@@ -45,6 +55,9 @@ export const listOuvrages = {
 export const listSystemesCollecte = {
   method: 'GET',
   path: '/mesures/systemes-collecte',
+  query: z.object({
+    search: z.string().trim().min(2).optional(),
+  }),
   response: z.array(
     z.object({
       systemeCollecteCode: z.string(),
@@ -59,12 +72,14 @@ export const listPointsMesure = {
   query: z.object({
     ouvrageType: OuvrageType.default('steu'),
     ouvrageCode: z.string(),
+    typePoint: TypePointMesure.default('tous'),
   }),
   response: z.array(
     z.object({
-      pointMesureIdentifiant: z.number(),
+      pointMesureId: z.number(),
       pointMesureNumero: z.string(),
       pointMesureLibelle: z.string().nullable(),
+      pointMesureLocalisationGlobale: z.string().nullable(),
     }),
   ),
 } as const satisfies RouteDefinition;

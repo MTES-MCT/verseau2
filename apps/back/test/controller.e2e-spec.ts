@@ -83,17 +83,24 @@ describe('Controller (e2e) - Unauthorized', () => {
     });
 
     it('/auth/refresh (POST) - Should return 201', async () => {
+      // Forge a minimal JWT with a sub claim for the access_token cookie
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ sub: 'test-user-id' })).toString('base64url');
+      const fakeJwt = `${header}.${payload}.fake`;
       return request(app.getHttpServer())
         .post('/auth/refresh')
-        .set('Cookie', ['refresh_token=refresh-token-abc'])
+        .set('Cookie', [`refresh_token=refresh-token-abc`, `access_token=${fakeJwt}`])
         .expect(201);
     });
 
     it('/auth/refresh (POST) - Should return 401 when refreshTokens throw an error', async () => {
       jest.spyOn(authService, 'refreshTokens').mockRejectedValueOnce(new Error('Refresh failed'));
+      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ sub: 'test-user-id' })).toString('base64url');
+      const fakeJwt = `${header}.${payload}.fake`;
       return request(app.getHttpServer())
         .post('/auth/refresh')
-        .set('Cookie', ['refresh_token=refresh-token-abc'])
+        .set('Cookie', [`refresh_token=refresh-token-abc`, `access_token=${fakeJwt}`])
         .expect(401);
     });
 
@@ -151,7 +158,12 @@ describe('Controller (e2e) - Unauthorized', () => {
       const response = await request(app.getHttpServer())
         .post('/webhook/masa/agent-verseau')
         .set('x-api-key', 'private-token')
-        .send({ versau2DepotId: 'dep_test_001', numeroDepotVerseau1: '1234567890', statut: 'INTEGRE', rapport: 'test' })
+        .send({
+          verseau2DepotId: 'dep_test_001',
+          numeroDepotVerseau1: '1234567890',
+          statut: 'INTEGRE',
+          rapport: 'test',
+        })
         .expect(201);
       return response;
     });
@@ -483,7 +495,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
       isExpertNational: false,
     });
     jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
-      intervenantIdentifiant: 100,
+      intervenantId: 100,
       intervenantSiret: 'SIRET001',
     });
     jest.spyOn(masaProvider, 'findVSteuSclItvByItvRfa').mockResolvedValue([
@@ -504,7 +516,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
         pointMesureLibelle: 'Point entrée',
         pointMesureLocalisationCode: 'ENT',
         pointMesureLocalisationLibelle: 'Entrée',
-        pointMesureSclCategorie: 'REG',
+        pointMesureCategorieSystemeCollecte: 'REG',
         pointMesureValiditeDebutDate: '2020-01-01',
         pointMesureValiditeFinDate: null,
       },
@@ -526,7 +538,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
           pointMesureLibelle: 'Point entrée',
           pointMesureLocalisationCode: 'ENT',
           pointMesureLocalisationLibelle: 'Entrée',
-          pointMesureSclCategorie: 'REG',
+          pointMesureCategorieSystemeCollecte: 'REG',
           pointMesureValiditeDebutDate: '2020-01-01',
           pointMesureValiditeFinDate: null,
         },

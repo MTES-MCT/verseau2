@@ -1,29 +1,45 @@
-import { useMemo, type ChangeEvent } from 'react';
-import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue } from '@lib/dossier';
+import { useMemo, useState, type ChangeEvent } from 'react';
+import type { EvenementSteuDto, EvenementSclDto, EvenementSteuSortByValue, TypePointMesureValue } from '@lib/dossier';
 import { CURRENT_EVENEMENT_YEAR, FIRST_EVENEMENT_YEAR } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
-import { useEvenementSteu, useEvenementScl, useEvenementTypes, useEvenementPmo } from '../../../hooks/useEvenement';
+import { Button } from '@codegouvfr/react-dsfr/Button';
+import { useEvenementSteu, useEvenementScl, useEvenementTypes } from '../../../hooks/useEvenement';
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
 import { renderPrisEnCompteBadge } from '../../../helper/evenementTableData';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
-import { useOuvrages } from '../../../hooks/useOuvrages';
-import { useSystemesCollecte } from '../../../hooks/useSystemesCollecte';
+import { usePointsMesure } from '../../../hooks/usePointsMesure';
 import { formatDate, getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
+import { TableLoader } from '../../../components/common/TableLoader';
+import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import { downloadEvenementSclExport, downloadEvenementSteuExport } from '../../../api/evenement';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
   const pageSize = 10;
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
+  const isScl = filters.mode === 'scl';
 
   const { data: types } = useEvenementTypes();
-  const { data: pmos } = useEvenementPmo(filters.mode === 'scl');
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const pointsMesureOuvrageType = isScl ? 'scl' : 'steu';
+  const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : filters.ouvrageDepollutionCode || null;
+  const { data: pmos = [] } = usePointsMesure(
+    pointsMesureOuvrageType,
+    pointsMesureOuvrageCode,
+    filters.typePointMesure,
+  );
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
   const yearOptions = useMemo(
     () =>
@@ -32,8 +48,6 @@ export const EvenementDashboard = () => {
         .map((year) => year.toString()),
     [],
   );
-
-  const isScl = filters.mode === 'scl';
 
   const ouvragesOptions: AutocompleteOption[] = isScl
     ? systemesCollecte.map((s) => ({
@@ -47,14 +61,37 @@ export const EvenementDashboard = () => {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
   const currentOuvrageValue = isScl ? filters.systemeCollecteCode : filters.ouvrageDepollutionCode;
+  const hasOuvrageSelected = !!currentOuvrageValue;
+  const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
+    value: p.pointMesureId.toString(),
+    label: buildPointMesureLabel(p),
+  }));
 
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
     if (isScl) {
-      updateFilter({ systemeCollecteCode: newVal, pointMesureIdentifiant: '' });
+      setSclSearch(newVal);
+      updateFilter({ systemeCollecteCode: newVal, pointMesureId: '', typePointMesure: 'tous' });
     } else {
-      updateFilter({ ouvrageDepollutionCode: newVal });
+      setOuvrageSearch(newVal);
+      updateFilter({ ouvrageDepollutionCode: newVal, pointMesureId: '', typePointMesure: 'tous' });
     }
+  };
+
+  const handlePointMesureChange = (value: string | null) => {
+    const newVal = value ?? '';
+    updateFilter({ pointMesureId: newVal });
+  };
+
+  const handleTypePointMesureChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const newVal = e.target.value as TypePointMesureValue;
+    updateFilter({ typePointMesure: newVal, pointMesureId: '' });
+  };
+
+  const handleModeChange = (mode: 'steu' | 'scl') => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateFilter({ mode, typeEvenementCode: '' });
   };
 
   const steuQuery = {
@@ -63,6 +100,7 @@ export const EvenementDashboard = () => {
     year: filters.year,
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
+    ...(filters.pointMesureId ? { pointMesureId: Number(filters.pointMesureId) } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as EvenementSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -73,15 +111,37 @@ export const EvenementDashboard = () => {
     year: filters.year,
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.systemeCollecteCode ? { systemeCollecteCode: filters.systemeCollecteCode } : {}),
-    ...(filters.pointMesureIdentifiant ? { pointMesureIdentifiant: Number(filters.pointMesureIdentifiant) } : {}),
+    ...(filters.pointMesureId ? { pointMesureId: Number(filters.pointMesureId) } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
 
-  const { data: steuData } = useEvenementSteu(steuQuery, filters.mode === 'steu');
-  const { data: sclData } = useEvenementScl(sclQuery, filters.mode === 'scl');
+  const {
+    data: steuData,
+    isLoading: steuLoading,
+    isFetching: steuFetching,
+  } = useEvenementSteu(steuQuery, filters.mode === 'steu' && hasOuvrageSelected);
+  const {
+    data: sclData,
+    isLoading: sclLoading,
+    isFetching: sclFetching,
+  } = useEvenementScl(sclQuery, filters.mode === 'scl' && hasOuvrageSelected);
 
   const data = filters.mode === 'steu' ? steuData : sclData;
+  const isLoading = filters.mode === 'steu' ? steuLoading : sclLoading;
+  const isFetching = filters.mode === 'steu' ? steuFetching : sclFetching;
+  const {
+    download: downloadSteuCsv,
+    isLoading: isSteuExportLoading,
+    downloadError: steuDownloadError,
+    setDownloadError: setSteuDownloadError,
+  } = useCsvExportDownload(downloadEvenementSteuExport);
+  const {
+    download: downloadSclCsv,
+    isLoading: isSclExportLoading,
+    downloadError: sclDownloadError,
+    setDownloadError: setSclDownloadError,
+  } = useCsvExportDownload(downloadEvenementSclExport);
 
   const getTableData = (row: EvenementSteuDto | EvenementSclDto) => {
     const codeSandre =
@@ -109,6 +169,24 @@ export const EvenementDashboard = () => {
     updateFilter({ sortBy: nextSortBy, sortOrder: nextSortOrder });
   };
 
+  const isExportLoading = isScl ? isSclExportLoading : isSteuExportLoading;
+  const downloadError = isScl ? sclDownloadError : steuDownloadError;
+  const setDownloadError = isScl ? setSclDownloadError : setSteuDownloadError;
+  const canExport = hasOuvrageSelected && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    if (isScl) {
+      void downloadSclCsv(sclQuery, `evenement-scl-${filters.year}.csv`);
+      return;
+    }
+
+    void downloadSteuCsv(steuQuery, `evenement-steu-${filters.year}.csv`);
+  };
+
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
       <Notice
@@ -119,24 +197,36 @@ export const EvenementDashboard = () => {
       />
       <h1>Tableau de bord événements</h1>
 
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
+
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
         <div className="fr-col-6 fr-col-lg-3 fr-col-xl-2">
           <RadioButtons
             legend="Type d'ouvrage"
             orientation="horizontal"
+            hintText={<br />}
             options={[
               {
                 label: 'STEU',
                 nativeInputProps: {
                   checked: filters.mode === 'steu',
-                  onChange: () => updateFilter({ mode: 'steu', typeEvenementCode: '' }),
+                  onChange: () => handleModeChange('steu'),
                 },
               },
               {
                 label: 'SCL',
                 nativeInputProps: {
                   checked: filters.mode === 'scl',
-                  onChange: () => updateFilter({ mode: 'scl', typeEvenementCode: '' }),
+                  onChange: () => handleModeChange('scl'),
                 },
               },
             ]}
@@ -145,6 +235,7 @@ export const EvenementDashboard = () => {
         <div className="fr-col-6 fr-col-lg-2 fr-col-xl-2">
           <Select
             label="Année"
+            hint={<br />}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
@@ -157,18 +248,22 @@ export const EvenementDashboard = () => {
             ))}
           </Select>
         </div>
-        <div className={`fr-col-12 fr-col-lg-7 ${filters.mode === 'steu' ? 'fr-col-xl-6' : 'fr-col-xl-4'}`}>
+        <div className={`fr-col-12 fr-col-lg-7 fr-col-xl-4`}>
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
-            placeholder={ouvragesLoadingCurrent ? 'Chargement...' : isScl ? 'Tous les systèmes' : 'Toutes les stations'}
+            hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+            placeholder={isScl ? 'Rechercher un SCL' : 'Rechercher une station'}
             options={ouvragesOptions}
             value={currentOuvrageValue || null}
             onChange={handleOuvrageChange}
+            onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
         <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
           <Select
             label="Type d'événement"
+            hint={<br />}
+            disabled={!hasOuvrageSelected}
             nativeSelectProps={{
               value: filters.typeEvenementCode,
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ typeEvenementCode: e.target.value }),
@@ -182,60 +277,86 @@ export const EvenementDashboard = () => {
             ))}
           </Select>
         </div>
-        {filters.mode === 'scl' && (
-          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
-            <Select
-              label="Point de mesures"
-              nativeSelectProps={{
-                value: filters.pointMesureIdentifiant,
-                onChange: (e: ChangeEvent<HTMLSelectElement>) =>
-                  updateFilter({ pointMesureIdentifiant: e.target.value }),
-              }}
-            >
-              <option value="">Tous les points</option>
-              {(pmos || []).map((p) => (
-                <option key={p.pointMesureIdentifiant} value={p.pointMesureIdentifiant.toString()}>
-                  {p.pointMesureNumero} - {p.pointMesureLibelle}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
       </div>
 
-      <Table
-        data={(data?.data || []).map(getTableData)}
-        headers={[
-          'Pris en compte',
-          'Code Sandre',
-          'Nom',
-          <SortableHeader
-            key="date"
-            label="Date"
-            field="date"
-            sortBy={filters.sortBy as EvenementSteuSortByValue | undefined}
-            sortOrder={filters.sortOrder}
-            onSort={handleDateSort}
-          />,
-          "Type d'événement",
-          'Finalité',
-          'Commentaire',
-          ...(filters.mode === 'scl' ? ['Point de mesures'] : []),
-        ]}
-      />
-      {Math.ceil((data?.total || 0) / pageSize) > 1 && (
-        <Pagination
-          count={Math.ceil((data?.total || 0) / pageSize)}
-          defaultPage={page}
-          getPageLinkProps={(pageNumber: number) => ({
-            href: `#page-${pageNumber}`,
-            onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
-              e.preventDefault();
-              setPage(pageNumber);
-            },
-          })}
+      <h2 id="evenement-filtres-avances-title" className={fr.cx('fr-h6', 'fr-mb-2w')} style={{ textAlign: 'left' }}>
+        Filtres avancés
+      </h2>
+      <section aria-labelledby="evenement-filtres-avances-title" className={fr.cx('fr-mb-4w')}>
+        <div className="fr-grid-row fr-grid-row--gutters">
+          <div className="fr-col-12 fr-col-lg-3 fr-col-xl-2">
+            <Select
+              label="Type de point"
+              hint={<br />}
+              disabled={!hasOuvrageSelected}
+              nativeSelectProps={{
+                value: filters.typePointMesure,
+                onChange: handleTypePointMesureChange,
+              }}
+            >
+              <option value="tous">Tous</option>
+              <option value="reglementaire">Réglementaire (A/M)</option>
+              <option value="logique">Logique (R/S)</option>
+            </Select>
+          </div>
+          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-4">
+            <SelectAutocomplete
+              label="Point de mesures"
+              hintText={<br />}
+              placeholder="Rechercher un point de mesure"
+              options={pointMesureOptions}
+              value={filters.pointMesureId || null}
+              onChange={handlePointMesureChange}
+              disabled={!hasOuvrageSelected}
+            />
+          </div>
+        </div>
+      </section>
+
+      <TableLoader
+        isLoading={isLoading && hasOuvrageSelected}
+        isFetching={isFetching}
+        hasOuvrageSelected={hasOuvrageSelected}
+      >
+        <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
+            Exporter CSV
+          </Button>
+        </div>
+        <Table
+          data={(data?.data || []).map(getTableData)}
+          headers={[
+            'Pris en compte',
+            'Code Sandre',
+            'Nom',
+            <SortableHeader
+              key="date"
+              label="Date"
+              field="date"
+              sortBy={filters.sortBy as EvenementSteuSortByValue | undefined}
+              sortOrder={filters.sortOrder}
+              onSort={handleDateSort}
+            />,
+            "Type d'événement",
+            'Finalité',
+            'Commentaire',
+            ...(filters.mode === 'scl' ? ['Point de mesures'] : []),
+          ]}
         />
-      )}
+        {Math.ceil((data?.total || 0) / pageSize) > 1 && (
+          <Pagination
+            count={Math.ceil((data?.total || 0) / pageSize)}
+            defaultPage={page}
+            getPageLinkProps={(pageNumber: number) => ({
+              href: `#page-${pageNumber}`,
+              onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+                e.preventDefault();
+                setPage(pageNumber);
+              },
+            })}
+          />
+        )}
+      </TableLoader>
     </div>
   );
 };

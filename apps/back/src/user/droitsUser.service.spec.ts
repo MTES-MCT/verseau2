@@ -49,7 +49,7 @@ describe('DroitsUserService', () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
         principalIdentifiant: prCdn,
-        intervenantIdentifiant: 100,
+        intervenantId: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(true);
 
@@ -63,7 +63,7 @@ describe('DroitsUserService', () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
         principalIdentifiant: prCdn,
-        intervenantIdentifiant: 100,
+        intervenantId: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(false);
 
@@ -111,7 +111,7 @@ describe('DroitsUserService', () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
         principalIdentifiant: prCdn,
-        intervenantIdentifiant: 100,
+        intervenantId: 100,
       });
       mockMasaProvider.hasRole.mockRejectedValue(new Error('provider error'));
 
@@ -130,7 +130,7 @@ describe('DroitsUserService', () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
         principalIdentifiant: prCdn,
-        intervenantIdentifiant: 100,
+        intervenantId: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(true);
 
@@ -144,7 +144,7 @@ describe('DroitsUserService', () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
         principalIdentifiant: prCdn,
-        intervenantIdentifiant: 100,
+        intervenantId: 100,
       });
       mockMasaProvider.hasRole.mockResolvedValue(false);
 
@@ -192,7 +192,7 @@ describe('DroitsUserService', () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
       mockMasaProvider.findAgByEmail.mockResolvedValue({
         principalIdentifiant: prCdn,
-        intervenantIdentifiant: 100,
+        intervenantId: 100,
       });
       mockMasaProvider.hasRole.mockRejectedValue(new Error('provider error'));
 

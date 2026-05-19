@@ -147,6 +147,7 @@ export async function seedUserWithoutDroits(
  * Clear all user and lanceleau data.
  */
 export async function clearUserWithDroits(dataSource: DataSource): Promise<void> {
+  await dataSource.query(`DELETE FROM masa`);
   await dataSource.query(`DELETE FROM depot`);
   await dataSource.query(`DELETE FROM "user"`);
   await dataSource.query(`DELETE FROM verseau.v_steu_scl_itv`);

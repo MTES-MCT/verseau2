@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
 import type { MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
-import { useOuvrages } from './useOuvrages';
-import { useSystemesCollecte } from './useSystemesCollecte';
 import { usePointsMesure } from './usePointsMesure';
 import { useParametresMesure } from './useParametresMesure';
 import { useFinalites } from './useFinalites';
 import { useStatuts } from './useStatuts';
 import { useQualifications } from './useQualifications';
+import { useAsyncOuvragesSearch } from './useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from './useAsyncSystemesCollecteSearch';
 
 const PAGE_SIZE = 20;
 
@@ -46,9 +46,11 @@ export function useMesureFilters() {
   const [hasSearched, setHasSearched] = useState(false);
   const [page, setPage] = useState(1);
   const [ouvrageError, setOuvrageError] = useState<string>('');
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
   const { data: pointsMesure = [], isLoading: pointsMesureLoading } = usePointsMesure(
     form.ouvrageType,
     form.selectedOuvrageCode || null,
@@ -62,7 +64,7 @@ export function useMesureFilters() {
   const { data: statuts = [], isLoading: statutsLoading } = useStatuts();
   const { data: qualifications = [], isLoading: qualificationsLoading } = useQualifications();
 
-  const query = {
+  const submittedQuery = {
     ouvrageType: submitted.ouvrageType,
     ...(submitted.ouvrageType === 'scl'
       ? submitted.selectedOuvrageCode
@@ -84,7 +86,7 @@ export function useMesureFilters() {
     pageSize: PAGE_SIZE,
   };
 
-  const { data, isLoading, isFetching, error } = useMesures(query, hasSearched);
+  const { data, isLoading, isFetching, error } = useMesures(submittedQuery, hasSearched);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 
@@ -106,6 +108,8 @@ export function useMesureFilters() {
 
   function updateOuvrageType(ouvrageType: OuvrageTypeValue) {
     setOuvrageError('');
+    setOuvrageSearch('');
+    setSclSearch('');
     setForm({
       ...INITIAL_FILTERS,
       ouvrageType,
@@ -115,6 +119,16 @@ export function useMesureFilters() {
   }
 
   function updateForm(field: Exclude<keyof FilterState, 'selectedPmoCdn' | 'ouvrageType'>, value: string) {
+    if (field === 'selectedOuvrageCode') {
+      if (form.ouvrageType === 'scl') {
+        setOuvrageSearch('');
+        setSclSearch(value);
+      } else {
+        setSclSearch('');
+        setOuvrageSearch(value);
+      }
+    }
+
     setForm((f) => {
       // Cascade: changement d'ouvrage → reset PMO + paramètre
       if (field === 'selectedOuvrageCode') {
@@ -139,6 +153,9 @@ export function useMesureFilters() {
 
   return {
     form,
+    submitted,
+    submittedQuery,
+    hasSearched,
     updateForm,
     updateOuvrageType,
     updateSelectedPmo,
@@ -146,8 +163,12 @@ export function useMesureFilters() {
     setSort,
     ouvrages,
     ouvragesLoading,
+    ouvrageSearch,
+    setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
+    sclSearch,
+    setSclSearch,
     ouvrageError,
     pointsMesure,
     pointsMesureLoading,

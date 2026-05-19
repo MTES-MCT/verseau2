@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import { ClsServiceManager } from 'nestjs-cls';
 import { LoggerService } from './logger.service';
 import { TraceCalls } from './traceCalls.decorator';
@@ -94,28 +95,24 @@ describe('TraceCalls Decorator', () => {
     }
   }
 
-  it('should log start, internal calls, service calls', async () => {
+  it('should buffer all log lines and flush them sequentially at the end', async () => {
     const example = new Example();
     const result = await example.mainMethod('input');
 
     expect(result).toBe('service-internal-input');
 
-    // Check Start log
-    expect(mockLogger.log).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/));
+    // All lines should be flushed sequentially at the end
+    expect(mockLogger.log).toHaveBeenCalledTimes(4);
 
-    // Check Internal call log
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethod\(\) - \d+\.\d+ms/),
+    expect(mockLogger.log.mock.calls[0][0]).toMatch(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/);
+    expect(mockLogger.log.mock.calls[1][0]).toMatch(
+      /\[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethod\(\) - \d+\.\d+ms/,
     );
-
-    // Check Service call log
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.doSomething\(\) - \d+\.\d+ms/),
+    expect(mockLogger.log.mock.calls[2][0]).toMatch(
+      /\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.doSomething\(\) - \d+\.\d+ms/,
     );
-
-    // Check End log with duration
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\]<<< \[END\] mainMethod \| Duration: \d+\.\d+ms/),
+    expect(mockLogger.log.mock.calls[3][0]).toMatch(
+      /\[callId: [a-z0-9]+\]<<< \[END\] mainMethod \| Duration: \d+\.\d+ms/,
     );
   });
 
@@ -123,19 +120,27 @@ describe('TraceCalls Decorator', () => {
     const example = new Example();
     example.syncMain();
 
-    expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] syncMain/));
-    expect(mockLogger.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.syncMethod\(\) - \d+\.\d+ms/),
+    expect(mockLogger.debug).toHaveBeenCalledTimes(3);
+
+    expect(mockLogger.debug.mock.calls[0][0]).toMatch(/\[callId: [a-z0-9]+\]>>> \[START\] syncMain/);
+    expect(mockLogger.debug.mock.calls[1][0]).toMatch(
+      /\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] subService.syncMethod\(\) - \d+\.\d+ms/,
+    );
+    expect(mockLogger.debug.mock.calls[2][0]).toMatch(
+      /\[callId: [a-z0-9]+\]<<< \[END\] syncMain \| Duration: \d+\.\d+ms/,
     );
   });
 
-  it('should log errors with duration', async () => {
+  it('should buffer and flush error logs sequentially at the end', async () => {
     const example = new Example();
 
     await expect(example.errorMethod()).rejects.toThrow('Failure');
 
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/),
+    expect(mockLogger.error).toHaveBeenCalledTimes(2);
+
+    expect(mockLogger.error.mock.calls[0][0]).toMatch(/\[callId: [a-z0-9]+\]>>> \[START\] errorMethod/);
+    expect(mockLogger.error.mock.calls[1][0]).toMatch(
+      /\[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/,
     );
   });
 
@@ -144,13 +149,19 @@ describe('TraceCalls Decorator', () => {
 
     await expect(example.usesDependencyThroughInternalMethod('world')).resolves.toBe('hello-world');
 
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /\[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethodUsingDependency\(\) - \d+\.\d+ms/,
-      ),
+    expect(mockLogger.log).toHaveBeenCalledTimes(4);
+
+    expect(mockLogger.log.mock.calls[0][0]).toMatch(
+      /\[callId: [a-z0-9]+\]>>> \[START\] usesDependencyThroughInternalMethod/,
     );
-    expect(mockLogger.log).toHaveBeenCalledWith(
-      expect.stringMatching(/\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] dependency.greet\(\) - \d+\.\d+ms/),
+    expect(mockLogger.log.mock.calls[1][0]).toMatch(
+      /\[callId: [a-z0-9]+\] {4}\[SERVICE CALL\] dependency.greet\(\) - \d+\.\d+ms/,
+    );
+    expect(mockLogger.log.mock.calls[2][0]).toMatch(
+      /\[callId: [a-z0-9]+\] {4}\[INTERNAL CALL\] this.internalMethodUsingDependency\(\) - \d+\.\d+ms/,
+    );
+    expect(mockLogger.log.mock.calls[3][0]).toMatch(
+      /\[callId: [a-z0-9]+\]<<< \[END\] usesDependencyThroughInternalMethod \| Duration: \d+\.\d+ms/,
     );
   });
 
@@ -159,7 +170,8 @@ describe('TraceCalls Decorator', () => {
     const example = new Example();
     await example.mainMethod('test');
 
-    expect(mockLogger.log).not.toHaveBeenCalledWith(expect.stringContaining('[cid:'));
-    expect(mockLogger.log).toHaveBeenCalledWith(expect.stringMatching(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/));
+    expect(mockLogger.log).toHaveBeenCalledTimes(4);
+    expect(mockLogger.log.mock.calls[0][0] as string).not.toMatch(/\[cid:/);
+    expect(mockLogger.log.mock.calls[0][0] as string).toMatch(/\[callId: [a-z0-9]+\]>>> \[START\] mainMethod/);
   });
 });

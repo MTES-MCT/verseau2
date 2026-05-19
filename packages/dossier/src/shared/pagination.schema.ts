@@ -3,7 +3,7 @@ import { z } from 'zod';
 export function createPaginationQuerySchema<T extends z.ZodTypeAny = z.ZodString>(sortBySchema?: T) {
   return z.object({
     page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    pageSize: z.coerce.number().int().min(1).max(500).default(20),
     sortBy: (sortBySchema ?? z.string()).optional() as z.ZodOptional<T extends undefined ? z.ZodString : T>,
     sortOrder: z.enum(['ASC', 'DESC']).optional(),
   });

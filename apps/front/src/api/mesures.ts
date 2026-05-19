@@ -1,4 +1,5 @@
 import {
+  exportMesures,
   listMesures,
   listOuvrages,
   listSystemesCollecte,
@@ -8,23 +9,37 @@ import {
   listStatuts,
   listQualifications,
 } from '@lib/dossier';
-import type { RouteQuery, OuvrageTypeValue } from '@lib/dossier';
-import { apiCall } from './apiClient';
+import type { RouteQuery, OuvrageTypeValue, TypePointMesureValue } from '@lib/dossier';
+import { apiCall, apiDownloadFile, buildRoutePath } from './apiClient';
 
 export async function fetchMesures(query: RouteQuery<typeof listMesures>) {
   return apiCall(listMesures, { query });
 }
 
 export async function fetchOuvrages() {
-  return apiCall(listOuvrages);
+  return apiCall(listOuvrages, { query: {} });
+}
+
+export async function searchOuvrages(search: string) {
+  return apiCall(listOuvrages, { query: { search } });
 }
 
 export async function fetchSystemesCollecte() {
-  return apiCall(listSystemesCollecte);
+  return apiCall(listSystemesCollecte, { query: {} });
 }
 
-export async function fetchPointsMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string) {
-  return apiCall(listPointsMesure, { query: { ouvrageType, ouvrageCode } });
+export async function searchSystemesCollecte(search: string) {
+  return apiCall(listSystemesCollecte, { query: { search } });
+}
+
+export async function fetchPointsMesure(
+  ouvrageType: OuvrageTypeValue,
+  ouvrageCode: string,
+  typePoint: TypePointMesureValue = 'tous',
+) {
+  return apiCall(listPointsMesure, {
+    query: { ouvrageType, ouvrageCode, typePoint },
+  });
 }
 
 export async function fetchParametresMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string, pmoCdn: number) {
@@ -41,4 +56,8 @@ export async function fetchStatuts() {
 
 export async function fetchQualifications() {
   return apiCall(listQualifications);
+}
+
+export async function downloadMesuresExport(query: RouteQuery<typeof exportMesures>) {
+  return apiDownloadFile(buildRoutePath(exportMesures, { query }), 'text/csv');
 }

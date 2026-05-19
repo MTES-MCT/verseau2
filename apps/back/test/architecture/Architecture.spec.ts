@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import { RelativePath } from 'arch-unit-ts/dist/arch-unit/core/domain/RelativePath';
 import { TypeScriptProject } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptProject';
 import { TypeScriptClass } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptClass';

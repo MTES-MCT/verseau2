@@ -1,10 +1,15 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
   ConformiteSclSortByValue,
+  conformiteSclPropertyToHeaderMapper,
   ConformiteSteuSortByValue,
   PaginationQuery,
   TrancheObligationRfa,
+  conformiteSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -14,8 +19,15 @@ import type {
   ConformiteSteuFilters,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
+import { formatConformite, formatImpact, formatNullable } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+import { toConformiteSclDto, toConformiteSteuDto } from './conformite.mapper';
 
 type PaginatedConformiteSteuRows = {
   data: ConformiteSteuRow[];
@@ -34,6 +46,7 @@ type PaginatedConformiteSclRows = {
 export interface ListConformiteSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
+  ouvrageDepollutionCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSteuSortByValue;
@@ -42,6 +55,7 @@ export interface ListConformiteSteuOptions extends PaginationQuery {
 export interface ListConformiteSclOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
+  systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: ConformiteSclSortByValue;
@@ -52,28 +66,41 @@ export class ConformiteService {
   constructor(
     private readonly masaProvider: MasaProvider,
     private readonly logger: LoggerService,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
   ) {
     this.logger.setContext(ConformiteService.name);
   }
 
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteSteu(options: ListConformiteSteuOptions): Promise<PaginatedConformiteSteuRows> {
-    const { authorizedSteuCdas, year, trancheObligationRfa, impact, page, pageSize, sortBy, sortOrder } = options;
+    const {
+      authorizedSteuCdas,
+      year,
+      ouvrageDepollutionCode,
+      trancheObligationRfa,
+      impact,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
-    const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
-    if (steuCdns.length === 0) {
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
+    if (ouvrageDepollutionIds.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSteuFilters = {
-      steuCdns,
+      ouvrageDepollutionIds,
       year,
       page,
       pageSize,
+      ...(ouvrageDepollutionCode ? { ouvrageDepollutionCode } : {}),
       ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),
@@ -86,23 +113,58 @@ export class ConformiteService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
+  async exportConformiteSteuCsv(options: ListConformiteSteuOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listConformiteSteu({ ...options, page, pageSize });
+      return { data: result.data.map(toConformiteSteuDto), total: result.total };
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      ouvrageDepollutionCode: row.ouvrageDepollutionCode,
+      ouvrageDepollutionNom: formatNullable(row.ouvrageDepollutionNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      capaciteNominaleEH: formatNullable(row.capaciteNominaleEH),
+      suiviDebutDate: formatDate(row.suiviDebutDate),
+      suiviFinDate: formatDate(row.suiviFinDate),
+      conformiteLocaleProvisoire: formatConformite(row.conformiteLocaleProvisoire),
+      impactConformite: formatImpact(row.impactConformite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(conformiteSteuPropertyToHeaderMapper),
+      formattedRows,
+    );
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
-    const { authorizedSteuCdas, year, trancheObligationRfa, impact, page, pageSize, sortBy, sortOrder } = options;
+    const {
+      authorizedSteuCdas,
+      year,
+      systemeCollecteCode,
+      trancheObligationRfa,
+      impact,
+      page,
+      pageSize,
+      sortBy,
+      sortOrder,
+    } = options;
 
     if (authorizedSteuCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
-    const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
-    if (steuCdns.length === 0) {
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
+    if (ouvrageDepollutionIds.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSclFilters = {
-      steuCdns,
+      ouvrageDepollutionIds,
       year,
       page,
       pageSize,
+      ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
       ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),
@@ -115,14 +177,38 @@ export class ConformiteService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
+  async exportConformiteSclCsv(options: ListConformiteSclOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listConformiteScl({ ...options, page, pageSize });
+      return { data: result.data.map(toConformiteSclDto), total: result.total };
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      systemeCollecteCode: row.systemeCollecteCode,
+      systemeCollecteNom: formatNullable(row.systemeCollecteNom),
+      trancheObligationLibelle: formatNullable(row.trancheObligationLibelle),
+      typeScl: formatNullable(row.typeScl),
+      suiviDebutDate: formatDate(row.suiviDebutDate),
+      suiviFinDate: formatDate(row.suiviFinDate),
+      conformiteLocaleTempsPluieProvisoire: formatConformite(row.conformiteLocaleTempsPluieProvisoire),
+      impactConformite: formatImpact(row.impactConformite),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(conformiteSclPropertyToHeaderMapper),
+      formattedRows,
+    );
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
   async getConformiteSteuDetail(
     steuCdn: number,
     year: number,
     authorizedSteuCdas: string[],
   ): Promise<ConformiteSteuDetailRow | null> {
-    const steuCdns = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
+    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
 
-    if (!steuCdns.includes(steuCdn)) {
+    if (!ouvrageDepollutionIds.includes(steuCdn)) {
       this.logger.warn(`Accès refusé au détail conformité STEU ${steuCdn}`);
       return null;
     }
@@ -136,9 +222,9 @@ export class ConformiteService {
     year: number,
     authorizedSclCdas: string[],
   ): Promise<ConformiteSclDetailRow | null> {
-    const sclCdns = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
 
-    if (!sclCdns.includes(sclCdn)) {
+    if (!systemeCollecteIds.includes(sclCdn)) {
       this.logger.warn(`Accès refusé au détail conformité SCL ${sclCdn}`);
       return null;
     }
@@ -157,7 +243,7 @@ export class ConformiteService {
 
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
 
-    return [...new Set(steus.map((steu) => steu.ouvrageDepollutionIdentifiant))];
+    return [...new Set(steus.map((steu) => steu.ouvrageDepollutionId))];
   }
 
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {
@@ -167,6 +253,6 @@ export class ConformiteService {
 
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
 
-    return [...new Set(scls.map((scl) => scl.systemeCollecteIdentifiant))];
+    return [...new Set(scls.map((scl) => scl.systemeCollecteId))];
   }
 }

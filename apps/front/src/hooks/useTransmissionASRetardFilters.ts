@@ -10,7 +10,7 @@ export type SortByValue = TransmissionASRetardSteuSortByValue | TransmissionASRe
 export interface FilterState {
   mode: 'steu' | 'scl';
   year: number;
-  codeSandre: string;
+  ouvrageCode: string;
   sortBy?: SortByValue;
   sortOrder?: 'ASC' | 'DESC';
 }
@@ -19,7 +19,7 @@ export const useTransmissionASRetardFilters = () => {
   const [filters, setFilters] = useState<FilterState>({
     mode: 'steu',
     year: CURRENT_TRANSMISSION_YEAR,
-    codeSandre: '',
+    ouvrageCode: '',
     sortBy: 'nbJoursRetard',
     sortOrder: 'DESC',
   });
@@ -30,7 +30,7 @@ export const useTransmissionASRetardFilters = () => {
     setFilters((prev) => {
       const updated = { ...prev, ...newFilters };
       if (newFilters.mode && newFilters.mode !== prev.mode) {
-        updated.codeSandre = '';
+        updated.ouvrageCode = '';
       }
       return updated;
     });

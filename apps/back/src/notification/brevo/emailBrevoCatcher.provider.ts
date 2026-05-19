@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
@@ -49,7 +48,7 @@ export class EmailBrevoCatcherProvider implements EmailProvider {
     };
 
     try {
-      const info = await this.transporter.sendMail(mailOptions);
+      const info = (await this.transporter.sendMail(mailOptions)) as { messageId: string };
       this.logger.log(`Email sent via MailCatcher to ${emailParams.to.map((t) => t.email).join(', ')}`);
       return {
         response: info,
@@ -66,7 +65,7 @@ export class EmailBrevoCatcherProvider implements EmailProvider {
     return template.body;
   }
 
-  private replaceTemplateParams(content: string, params: any) {
+  private replaceTemplateParams(content: string, params: EmailParams) {
     if (!params) {
       return content;
     }

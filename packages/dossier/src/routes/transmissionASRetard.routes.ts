@@ -10,20 +10,20 @@ import { createPaginationQuerySchema } from '../shared/pagination.schema';
 
 export const TransmissionASRetardSteuSortBy = z.enum([
   'nbJoursRetard',
-  'codeSandre',
-  'nom',
-  'trancheObligation',
-  'capaciteNominale',
+  'ouvrageDepollutionCode',
+  'ouvrageDepollutionNom',
+  'trancheObligationLibelle',
+  'capaciteNominaleEH',
   'dateDernierFichierRecu',
 ]);
 export type TransmissionASRetardSteuSortByValue = z.infer<typeof TransmissionASRetardSteuSortBy>;
 
 export const TransmissionASRetardSclSortBy = z.enum([
   'nbJoursRetard',
-  'codeSandre',
-  'nom',
-  'trancheObligation',
-  'capaciteNominale',
+  'systemeCollecteCode',
+  'systemeCollecteNom',
+  'trancheObligationLibelle',
+  'capaciteNominaleEH',
   'dateDernierFichierRecu',
 ]);
 export type TransmissionASRetardSclSortByValue = z.infer<typeof TransmissionASRetardSclSortBy>;
@@ -39,10 +39,16 @@ export const listTransmissionASRetardSteu = {
   query: z
     .object({
       year: TransmissionYearSchema,
-      codeSandre: z.string().optional(),
+      ouvrageDepollutionCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(TransmissionASRetardSteuSortBy).shape),
   response: PaginatedTransmissionASRetardSteuResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportTransmissionASRetardSteu = {
+  method: 'GET',
+  path: '/suivi-regulier/transmission-as-retard/steu/export',
+  query: listTransmissionASRetardSteu.query,
 } as const satisfies RouteDefinition;
 
 export const listTransmissionASRetardScl = {
@@ -51,8 +57,14 @@ export const listTransmissionASRetardScl = {
   query: z
     .object({
       year: TransmissionYearSchema,
-      codeSandre: z.string().optional(),
+      systemeCollecteCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(TransmissionASRetardSclSortBy).shape),
   response: PaginatedTransmissionASRetardSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportTransmissionASRetardScl = {
+  method: 'GET',
+  path: '/suivi-regulier/transmission-as-retard/scl/export',
+  query: listTransmissionASRetardScl.query,
 } as const satisfies RouteDefinition;

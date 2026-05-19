@@ -4,23 +4,35 @@ import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus } from '@lib/dossier';
+import { ControleSandreStatus, DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
+import { DepotError } from '@dossier/depot/depotError';
+import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
+
+const SANDRE_POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
+
+type ControleSandreUploadJob = {
+  depotId: string;
+  filePath: string;
+  retryCount?: number;
+  retryLimit?: number;
+};
 
 @Injectable()
-export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
+export class ControleSandreUploadProcessorService implements AsyncTask<ControleSandreUploadJob> {
   constructor(
     @Inject(S3) private readonly s3: S3,
     private readonly sandreService: SandreService,
     private readonly depotService: DepotService,
     @Inject(QueueGateway) private readonly queueService: Queue,
+    private readonly depotCoordinatorService: DepotCoordinatorService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(ControleSandreUploadProcessorService.name);
   }
 
-  async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
+  async process({ depotId, filePath, retryCount = 0, retryLimit = 0 }: ControleSandreUploadJob): Promise<void> {
     await this.depotService.update(depotId, {
       status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
@@ -45,21 +57,33 @@ export class ControleSandreUploadProcessorService implements AsyncTask<{ depotId
         jeton: tokenResponse.jeton,
       });
 
-      // Enqueue the poll job with startAfter: 30 seconds
+      // Keep the production delay by default, but allow faster polling in tests.
       this.logger.log(`Depot ${depotId} - Enqueuing poll job`, { jeton: tokenResponse.jeton });
       await this.queueService.send(
         QueueName.controle_sandre_poll,
         { depotId, jeton: tokenResponse.jeton, attemptCount: 0 },
-        { startAfter: 30 }, // Start after 30 seconds
+        { startAfter: SANDRE_POLL_INTERVAL_SECONDS },
       );
 
       this.logger.log(`Depot ${depotId} - Upload job completed`);
     } catch (error) {
-      this.logger.error(`Depot ${depotId} - SANDRE upload failed`, error);
-      await this.depotService.update(depotId, {
-        status: DepotStatus.REJETE,
-        step: DepotStep.CONTROLE_SANDRE_FAILED,
+      this.logger.error(`Depot ${depotId} - SANDRE upload failed`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        retryCount,
+        retryLimit,
       });
+
+      if (retryCount >= retryLimit) {
+        await this.depotService.update(depotId, {
+          step: DepotStep.CONTROLE_SANDRE_FAILED,
+          controleSandreStatus: ControleSandreStatus.FAILED,
+          error: DepotError.SANDRE_UPLOAD_FAILED,
+        });
+
+        await this.depotCoordinatorService.checkControlesCompletion(depotId);
+      }
+
       throw error;
     }
   }

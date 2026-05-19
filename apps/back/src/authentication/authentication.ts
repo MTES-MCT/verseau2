@@ -1,9 +1,8 @@
 export interface OIDCTokens {
   accessToken: string;
-  idToken: string;
   refreshToken?: string;
   expiresIn?: number;
-  cerbereAccessToken?: string; // token Cerbere original, stocké dans un cookie séparé pour refresh/logout
+  cerbereAccessToken?: string; // token Cerbere original, utilisé en interne pour fetchUserInfo
 }
 
 export interface OIDCConfiguration {
@@ -18,11 +17,11 @@ import type { Response } from 'express';
 
 export interface Authentication {
   validateToken(token: string): Promise<AuthenticatedUser>;
+  /** Verify the internal JWT signature (ignoring expiration) and return the `sub` claim. */
+  extractSubjectFromExpiredToken(token: string): Promise<string>;
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
   handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
-  getUserInfo(accessToken: string): Promise<AuthenticatedUser>;
-  refreshTokens(refreshToken: string): Promise<OIDCTokens>;
-  generateLogoutUrl(idToken: string): Promise<string>;
+  refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;
   clearCookieResponse(res: Response): void;
 }

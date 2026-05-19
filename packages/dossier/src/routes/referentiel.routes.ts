@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { OuvrageType } from './mesures.routes';
+import { TypePointMesure } from '../shared/typePointMesure';
+import { SclDetailDtoSchema, SteuDetailDtoSchema } from '../referentiel/referentiel.dto';
 
-/** Type de point de mesure : réglementaire (A1–A8), logique (R1, S1–S17) ou tous. */
-export const TypePointMesure = z.enum(['reglementaire', 'logique', 'tous']);
-export type TypePointMesureValue = z.infer<typeof TypePointMesure>;
+export { TypePointMesure, type TypePointMesureValue } from '../shared/typePointMesure';
 
 // GET /referentiel/codes-to-parametres - Convert numeric codes to parametre names
 export const codesToParametres = {
@@ -28,7 +28,7 @@ export const PointMesureReferentielSchema = z.object({
   pointMesureLibelle: z.string().nullable(),
   pointMesureLocalisationCode: z.string().nullable(),
   pointMesureLocalisationLibelle: z.string().nullable(),
-  pointMesureSclCategorie: z.string().nullable(),
+  pointMesureCategorieSystemeCollecte: z.string().nullable(),
   pointMesureValiditeDebutDate: z.string().nullable(),
   pointMesureValiditeFinDate: z.string().nullable(),
 });
@@ -49,4 +49,22 @@ export const listPointsMesureReferentiel = {
   response: z.object({
     points: z.array(PointMesureReferentielSchema),
   }),
+} as const satisfies RouteDefinition;
+
+export const getSteuDetail = {
+  method: 'GET',
+  path: '/referentiel/steu/:ouvrageDepollutionCode/detail',
+  params: z.object({
+    ouvrageDepollutionCode: z.string(),
+  }),
+  response: SteuDetailDtoSchema.nullable(),
+} as const satisfies RouteDefinition;
+
+export const getSclDetail = {
+  method: 'GET',
+  path: '/referentiel/scl/:systemeCollecteCode/detail',
+  params: z.object({
+    systemeCollecteCode: z.string(),
+  }),
+  response: SclDetailDtoSchema.nullable(),
 } as const satisfies RouteDefinition;

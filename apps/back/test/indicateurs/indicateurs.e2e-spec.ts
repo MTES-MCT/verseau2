@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
 import * as dotenv from 'dotenv';
 import path from 'path';
 
@@ -67,8 +68,15 @@ describe('IndicateursController (e2e) - Caching', () => {
     await cacheManager.clear();
   });
 
+  const emptyPaginatedResponse = {
+    data: [],
+    total: 0,
+    page: 1,
+    pageSize: 50,
+  };
+
   it('/indicateurs/steu (GET) - should cache the response for the same user', async () => {
-    const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue([]);
+    const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue(emptyPaginatedResponse);
 
     // First call
     await request(app.getHttpServer())
@@ -86,14 +94,18 @@ describe('IndicateursController (e2e) - Caching', () => {
   });
 
   it('/indicateurs/steu (GET) - should NOT share cache between different users', async () => {
-    // eslint-disable-next-line @typescript-eslint/require-await
-    const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockImplementation(async (cerbereId) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return [{ steuCda: 'STEU-' + cerbereId } as any];
-    });
+    const spy = jest
+      .spyOn(indicateursService, 'getIndicateursSteu')
+      .mockImplementation(async (cerbereId, page, pageSize) => {
+        return {
+          data: [{ steuCda: 'STEU-' + cerbereId } as any],
+          total: 1,
+          page,
+          pageSize,
+        };
+      });
 
     // Mock different users for different tokens
-    // eslint-disable-next-line @typescript-eslint/require-await
     jest.spyOn(authService, 'validateToken').mockImplementation(async (token) => {
       const baseUser = {
         cerbereId: 'default',
@@ -117,7 +129,12 @@ describe('IndicateursController (e2e) - Caching', () => {
       .get('/indicateurs/steu')
       .set('Cookie', ['access_token=token-user-1'])
       .expect(200);
-    expect(res1.body).toEqual([{ steuCda: 'STEU-user-1' }]);
+    expect(res1.body).toEqual({
+      data: [{ steuCda: 'STEU-user-1' }],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+    });
 
     // Second call - User 2
     const res2 = await request(app.getHttpServer())
@@ -125,12 +142,17 @@ describe('IndicateursController (e2e) - Caching', () => {
       .set('Cookie', ['access_token=token-user-2'])
       .expect(200);
 
-    expect(res2.body).toEqual([{ steuCda: 'STEU-user-2' }]);
+    expect(res2.body).toEqual({
+      data: [{ steuCda: 'STEU-user-2' }],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+    });
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it('/indicateurs/steu (GET) - should call twice the service if cache is cleared', async () => {
-    const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue([]);
+    const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue(emptyPaginatedResponse);
 
     // First call
     await request(app.getHttpServer())

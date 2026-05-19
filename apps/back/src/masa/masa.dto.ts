@@ -26,67 +26,65 @@ import {
 
 /** Filtres pour la recherche d'événements STEU */
 export interface EvenementSteuFilters extends PaginationQuery {
-  steuCdns: number[];
+  ouvrageDepollutionIds: number[];
   year: number;
-  typeEvenementCode?: string;
+  typeEvenementCodes: string[];
+  pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
 }
 
 /** Filtres pour la recherche d'événements SCL */
 export interface EvenementSclFilters extends PaginationQuery {
-  sclCdns: number[];
+  systemeCollecteIds: number[];
   year: number;
-  typeEvenementCode?: string;
-  pointMesureIdentifiant?: number;
+  typeEvenementCodes: string[];
+  pointMesureId?: number;
   sortBy?: EvenementSclSortByValue;
 }
 
 /** Filtres pour la recherche de bilans STEU */
 export interface BilanSteuFilters extends PaginationQuery {
-  steuCdns: number[];
+  ouvrageDepollutionIds: number[];
   year: number;
-  ouvrageDepollutionCode?: string;
+  parametreCodes: string[];
   sortBy?: BilanSteuSortByValue;
 }
 
 /** Filtres pour la recherche de bilans SCL */
 export interface BilanSclFilters extends PaginationQuery {
-  sclCdns: number[];
+  systemeCollecteIds: number[];
   year: number;
-  systemeCollecteCode?: string;
-  pointMesureIdentifiant?: number;
+  pointMesureId?: number;
   statut?: 'TP' | 'TS';
   sortBy?: BilanSclSortByValue;
 }
 
 /** Filtres pour la recherche de transmissions AS en retard STEU */
 export interface TransmissionASRetardSteuFilters extends PaginationQuery {
-  steuCdns: number[];
+  ouvrageDepollutionIds: number[];
   year: number;
-  codeSandre?: string;
   sortBy?: TransmissionASRetardSteuSortByValue;
 }
 
 /** Filtres pour la recherche de transmissions AS en retard SCL */
 export interface TransmissionASRetardSclFilters extends PaginationQuery {
-  sclCdns: number[];
+  systemeCollecteIds: number[];
   year: number;
-  codeSandre?: string;
   sortBy?: TransmissionASRetardSclSortByValue;
 }
 
-/** Ligne brute de transmission AS en retard STEU — inclut colonnes extra (déposant, mail, dateMailExploitant) */
+/** Ligne brute de transmission AS en retard STEU — inclut colonnes extra exploitant */
 export interface TransmissionASRetardSteuRow extends TransmissionASRetardSteuDto {
-  deposant: string | null;
-  mail: string | null;
-  dateMailExploitant: string | null;
+  exploitantNom: string | null;
+  exploitantEmail: string | null;
+  exploitantDateEnvoiMail: string | null;
 }
 
 /** Ligne brute de transmission AS en retard SCL — inclut colonnes extra */
 export interface TransmissionASRetardSclRow extends TransmissionASRetardSclDto {
-  deposant: string | null;
-  mail: string | null;
-  dateMailExploitant: string | null;
+  exploitantNom: string | null;
+  exploitantEmail: string | null;
+  exploitantDateEnvoiMail: string | null;
 }
 
 /** Une ligne de bilan STEU */
@@ -94,6 +92,25 @@ export type BilanSteuRow = BilanSteuDto;
 
 /** Une ligne de bilan SCL */
 export type BilanSclRow = BilanSclDto;
+
+export type OuvrageIntervenantRole = 'exploitant' | 'maitre_ouvrage';
+
+export interface OuvrageIntervenantRow {
+  role: OuvrageIntervenantRole;
+  intervenantNom: string | null;
+  intervenantSiret: string | null;
+}
+
+export interface SteuDetailRow {
+  ouvrageDepollutionCode: string;
+  dateMiseEnService: string | null;
+  intervenants: OuvrageIntervenantRow[];
+}
+
+export interface SclDetailRow {
+  systemeCollecteCode: string;
+  intervenants: OuvrageIntervenantRow[];
+}
 
 /** Une ligne d'événement STEU */
 export type EvenementSteuRow = EvenementSteuDto;
@@ -113,7 +130,7 @@ export interface CmaBySandreCdaAndParam {
 /** CTL051 / CTL060 — Capacité nominale en EH pour un STEU donné et une année */
 export interface CapaciteNominaleBySandreCda {
   ouvrageDepollutionCode: string;
-  ouvrageDepollutionCapaciteNominaleEH: number;
+  capaciteNominaleEH: number;
 }
 
 /** CTL053 — Débit max de référence (max(PC95, Dref)) pour un STEU donné */
@@ -138,10 +155,24 @@ export interface ChargeEntranteMaxComparison {
   bilanReferenceAnnee: number;
 }
 
+/** Référence STEU consolidée — utilisée comme contrat source MASA pour les résolutions par code */
+export interface SteuRef {
+  ouvrageDepollutionId: number;
+  ouvrageDepollutionCode: string;
+  ouvrageDepollutionNom: string | null;
+}
+
+/** Référence SCL consolidée — utilisée comme contrat source MASA pour les résolutions par code */
+export interface SclRef {
+  systemeCollecteId: number;
+  systemeCollecteCode: string;
+  systemeCollecteNom: string | null;
+}
+
 /** Résultat STEU retourné par un fetch batch MASA */
 export interface SteuCdnBySandreCda {
   ouvrageDepollutionCode: string;
-  ouvrageDepollutionIdentifiant: number;
+  ouvrageDepollutionId: number;
 }
 
 /** STEU avec nom — utilisé pour les dropdowns et listes d'ouvrages */
@@ -159,27 +190,40 @@ export interface SclWithName {
 /** Résultat SCL retourné par un fetch batch MASA */
 export interface SclCdnBySandreCda {
   systemeCollecteCode: string;
-  systemeCollecteIdentifiant: number;
+  systemeCollecteId: number;
 }
 
 /** Résultat ITV retourné par un fetch batch MASA */
 
 export interface ItvCdnByRfa {
   intervenantSiret: string;
-  intervenantIdentifiant: number;
+  intervenantId: number;
 }
 
 /** Résultat de résolution AG (agent) par email — utilisé pour l'authentification */
 export interface AgByEmail {
-  intervenantIdentifiant: number;
+  intervenantId: number;
   principalIdentifiant: number;
 }
 
 /** Intervenant résolu pour l'authentification et les droits de dépôt */
 export interface IntervenantAuth {
-  intervenantIdentifiant: number;
+  intervenantId: number;
   intervenantNom?: string;
   intervenantSiret?: string; // siret
+}
+
+/** Système de collecte des eaux usées — résultat de recherche par code Sandre */
+export interface SystemeCollecte {
+  systemeCollecteId: number;
+  systemeCollecteCode: string;
+  systemeCollecteNom: string | null;
+}
+
+/** Rôle Orion attribué à un principal — utilisé pour vérifier les droits (déposant, expert bassin, etc.) */
+export interface RolePrincipal {
+  principalIdentifiant: number;
+  roleOrionId: number;
 }
 
 /** Droits STEU/SCL par SIRET intervenant — utilisé pour la validation des droits de dépôt */
@@ -193,9 +237,10 @@ export interface VSteuSclItvResult {
 
 /** Point de mesure (PMO) — utilisé pour le dropdown de sélection */
 export interface PointMesure {
-  pointMesureIdentifiant: number;
+  pointMesureId: number;
   pointMesureNumero: string;
   pointMesureLibelle: string | null;
+  pointMesureLocalisationGlobale: string | null;
 }
 
 /** Paramètre — utilisé pour le dropdown de sélection */
@@ -219,15 +264,16 @@ export interface PointMesureReferentielRow {
   pointMesureLibelle: string | null;
   pointMesureLocalisationCode: string | null;
   pointMesureLocalisationLibelle: string | null;
-  pointMesureSclCategorie: string | null;
+  pointMesureCategorieSystemeCollecte: string | null;
   pointMesureValiditeDebutDate: string | null;
   pointMesureValiditeFinDate: string | null;
 }
 
 /** Filtres pour la recherche de conformité STEU */
 export interface ConformiteSteuFilters extends PaginationQuery {
-  steuCdns: number[];
+  ouvrageDepollutionIds: number[];
   year: number;
+  ouvrageDepollutionCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSteuSortByValue;
@@ -235,8 +281,9 @@ export interface ConformiteSteuFilters extends PaginationQuery {
 
 /** Filtres pour la recherche de conformité SCL */
 export interface ConformiteSclFilters extends PaginationQuery {
-  steuCdns: number[];
+  ouvrageDepollutionIds: number[];
   year: number;
+  systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSclSortByValue;
@@ -274,9 +321,9 @@ export type ConformiteSclDetailRow = ConformiteSclDetailDto;
 /** Filtres pour la recherche de mesures */
 export interface MesureFilters extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
-  steuSandreCdas: string[];
-  sclSandreCdas: string[];
-  pointMesureIdentifiant?: number;
+  ouvrageDepollutionCodes: string[];
+  systemeCollecteCodes: string[];
+  pointMesureId?: number;
   dateDebut?: string;
   dateFin?: string;
   parametreAnalyseCode?: string;

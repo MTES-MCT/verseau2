@@ -9,6 +9,7 @@ jest.mock('@shared/logger/traceCalls.decorator', () => ({
 }));
 
 import { ConformiteService } from './conformite.service';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type {
   ConformiteSclDetailRow,
@@ -16,6 +17,7 @@ import type {
   ConformiteSteuDetailRow,
   ConformiteSteuRow,
 } from '@masa/masa.dto';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { LoggerService } from '@shared/logger/logger.service';
 
 const makeConformiteSteuRow = (): ConformiteSteuRow => ({
@@ -104,6 +106,7 @@ describe('ConformiteService', () => {
   let service: ConformiteService;
   let masaProvider: jest.Mocked<MasaProvider>;
   let logger: { warn: jest.Mock; setContext: jest.Mock };
+  let csvGenerator: { generate: jest.Mock };
 
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
@@ -121,9 +124,12 @@ describe('ConformiteService', () => {
       setContext: jest.fn(),
     };
 
+    csvGenerator = { generate: jest.fn().mockReturnValue('csv-content') };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConformiteService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: mockMasaProvider,
@@ -131,6 +137,10 @@ describe('ConformiteService', () => {
         {
           provide: LoggerService,
           useValue: logger,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: csvGenerator,
         },
       ],
     }).compile();
@@ -146,8 +156,8 @@ describe('ConformiteService', () => {
   describe('listConformiteSteu', () => {
     it('calls findSteuBatchBySandreCdas then findConformiteSteu with resolved CDNs', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
-        { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionIdentifiant: 202 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
+        { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionId: 202 },
       ]);
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 1 });
 
@@ -160,7 +170,7 @@ describe('ConformiteService', () => {
 
       expect(masaProvider.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU001', 'STEU002']);
       expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
-        expect.objectContaining({ steuCdns: [101, 202], year: 2024, page: 1, pageSize: 20 }),
+        expect.objectContaining({ ouvrageDepollutionIds: [101, 202], year: 2024, page: 1, pageSize: 20 }),
       );
       expect(result).toEqual({ data: [makeConformiteSteuRow()], total: 1, page: 1, pageSize: 20 });
     });
@@ -194,7 +204,7 @@ describe('ConformiteService', () => {
 
     it('passes optional filters and pagination to masaProvider', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [], total: 0 });
 
@@ -211,7 +221,7 @@ describe('ConformiteService', () => {
 
       expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
         expect.objectContaining({
-          steuCdns: [101],
+          ouvrageDepollutionIds: [101],
           year: 2023,
           trancheObligationRfa: '30',
           impact: 'avec',
@@ -225,7 +235,7 @@ describe('ConformiteService', () => {
 
     it('returns pagination metadata from list response', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 42 });
 
@@ -245,7 +255,7 @@ describe('ConformiteService', () => {
   describe('listConformiteScl', () => {
     it('uses authorized STEU CDNs to filter SCL results', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
       masaProvider.findConformiteScl.mockResolvedValue({ data: [makeConformiteSclRow()], total: 1 });
 
@@ -258,7 +268,7 @@ describe('ConformiteService', () => {
 
       expect(masaProvider.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU001']);
       expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
-        expect.objectContaining({ steuCdns: [101], year: 2024, page: 1, pageSize: 20 }),
+        expect.objectContaining({ ouvrageDepollutionIds: [101], year: 2024, page: 1, pageSize: 20 }),
       );
       expect(result).toEqual({ data: [makeConformiteSclRow()], total: 1, page: 1, pageSize: 20 });
     });
@@ -292,7 +302,7 @@ describe('ConformiteService', () => {
 
     it('passes optional filters to masaProvider for SCL listing', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
       masaProvider.findConformiteScl.mockResolvedValue({ data: [], total: 0 });
 
@@ -309,7 +319,7 @@ describe('ConformiteService', () => {
 
       expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
         expect.objectContaining({
-          steuCdns: [101],
+          ouvrageDepollutionIds: [101],
           year: 2021,
           trancheObligationRfa: '30',
           impact: 'sans',
@@ -327,7 +337,7 @@ describe('ConformiteService', () => {
       const detail = makeConformiteSteuDetailRow();
 
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
       masaProvider.findConformiteSteuDetail.mockResolvedValue(detail);
 
@@ -339,7 +349,7 @@ describe('ConformiteService', () => {
 
     it('returns null when steuCdn is not authorized', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
 
       const result = await service.getConformiteSteuDetail(999, 2020, ['STEU001']);
@@ -351,7 +361,7 @@ describe('ConformiteService', () => {
 
     it('returns null detail from provider when authorized STEU has no detail', async () => {
       masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionIdentifiant: 101 },
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
       ]);
       masaProvider.findConformiteSteuDetail.mockResolvedValue(null);
 
@@ -362,12 +372,72 @@ describe('ConformiteService', () => {
     });
   });
 
+  describe('exportConformiteSteuCsv', () => {
+    it('formats STEU rows before generating csv', async () => {
+      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
+      ]);
+      masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 1 });
+
+      const result = await service.exportConformiteSteuCsv({
+        authorizedSteuCdas: ['STEU001'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toBe('csv-content');
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
+        {
+          ouvrageDepollutionCode: 'STEU001',
+          ouvrageDepollutionNom: 'Station test',
+          trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
+          capaciteNominaleEH: '5000',
+          suiviDebutDate: '01/01/2024',
+          suiviFinDate: '31/12/2024',
+          conformiteLocaleProvisoire: 'Conforme',
+          impactConformite: 'Avec impact',
+        },
+      ]);
+    });
+  });
+
+  describe('exportConformiteSclCsv', () => {
+    it('formats SCL rows before generating csv', async () => {
+      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
+      ]);
+      masaProvider.findConformiteScl.mockResolvedValue({ data: [makeConformiteSclRow()], total: 1 });
+
+      const result = await service.exportConformiteSclCsv({
+        authorizedSteuCdas: ['STEU001'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toBe('csv-content');
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
+        {
+          systemeCollecteCode: 'SCL001',
+          systemeCollecteNom: 'Réseau test',
+          trancheObligationLibelle: '[ 2 000 ; 10 000 [ EH',
+          typeScl: 'Unitaire',
+          suiviDebutDate: '01/01/2024',
+          suiviFinDate: '31/12/2024',
+          conformiteLocaleTempsPluieProvisoire: 'Conforme',
+          impactConformite: 'Sans impact',
+        },
+      ]);
+    });
+  });
+
   describe('getConformiteSclDetail', () => {
     it('delegates to masaProvider.findConformiteSclDetail with requested year when authorized', async () => {
       const detail = makeConformiteSclDetailRow();
 
       masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteIdentifiant: 201 },
+        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
       ]);
       masaProvider.findConformiteSclDetail.mockResolvedValue(detail);
 
@@ -380,7 +450,7 @@ describe('ConformiteService', () => {
 
     it('returns null when sclCdn is not authorized', async () => {
       masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteIdentifiant: 201 },
+        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
       ]);
 
       const result = await service.getConformiteSclDetail(999, 2019, ['SCL001']);

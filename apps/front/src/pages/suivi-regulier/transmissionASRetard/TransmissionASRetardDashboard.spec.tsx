@@ -6,11 +6,13 @@ import { BrowserRouter } from 'react-router';
 
 // Mocks
 vi.mock('../../../hooks/useTransmissionASRetard', () => ({
-  useTransmissionASRetardSteu: vi.fn(() => ({ data: { data: [], total: 0 } })),
-  useTransmissionASRetardScl: vi.fn(() => ({ data: { data: [], total: 0 } })),
+  useTransmissionASRetardSteu: vi.fn(() => ({ data: { data: [], total: 0 }, isLoading: false, isFetching: false })),
+  useTransmissionASRetardScl: vi.fn(() => ({ data: { data: [], total: 0 }, isLoading: false, isFetching: false })),
 }));
-vi.mock('../../../hooks/useOuvrages', () => ({ useOuvrages: vi.fn(() => ({ data: [] })) }));
-vi.mock('../../../hooks/useSystemesCollecte', () => ({ useSystemesCollecte: vi.fn(() => ({ data: [] })) }));
+vi.mock('../../../hooks/useAsyncOuvragesSearch', () => ({ useAsyncOuvragesSearch: vi.fn(() => ({ data: [] })) }));
+vi.mock('../../../hooks/useAsyncSystemesCollecteSearch', () => ({
+  useAsyncSystemesCollecteSearch: vi.fn(() => ({ data: [] })),
+}));
 
 describe('TransmissionASRetardDashboard', () => {
   it('renders correctly', () => {
@@ -23,5 +25,9 @@ describe('TransmissionASRetardDashboard', () => {
       </BrowserRouter>,
     );
     expect(screen.getByText(/Transmission AS des STEU en retard/i)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /veuillez sélectionner un ouvrage pour afficher les résultats/i,
+    );
+    expect(screen.queryByRole('button', { name: /exporter csv/i })).not.toBeInTheDocument();
   });
 });

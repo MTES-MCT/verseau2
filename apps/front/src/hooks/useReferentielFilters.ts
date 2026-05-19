@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
 import type { OuvrageTypeValue, TypePointMesureValue } from '@lib/dossier';
-import { useOuvrages } from './useOuvrages';
 import { useSystemesCollecte } from './useSystemesCollecte';
 import { usePointsMesureReferentiel } from './usePointsMesureReferentiel';
+import { useAsyncOuvragesSearch } from './useAsyncOuvragesSearch';
 
 interface FilterState {
   ouvrageType: OuvrageTypeValue;
@@ -28,8 +28,9 @@ export function useReferentielFilters() {
   const [submitted, setSubmitted] = useState<FilterState>(INITIAL_FILTERS);
   const [hasSearched, setHasSearched] = useState(false);
   const [ouvrageError, setOuvrageError] = useState<string>('');
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useOuvrages();
+  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useSystemesCollecte();
 
   function toTypePoint(reglementaire: boolean, logique: boolean): TypePointMesureValue {
@@ -70,6 +71,7 @@ export function useReferentielFilters() {
 
   function updateOuvrageType(ouvrageType: OuvrageTypeValue) {
     setOuvrageError('');
+    setOuvrageSearch('');
     setForm({
       ...INITIAL_FILTERS,
       ouvrageType,
@@ -81,6 +83,10 @@ export function useReferentielFilters() {
   }
 
   function updateForm(field: Exclude<keyof FilterState, 'ouvrageType' | 'reglementaire' | 'logique'>, value: string) {
+    if (field === 'selectedOuvrageCode') {
+      setOuvrageSearch(value);
+    }
+
     setForm((f) => {
       if (field === 'selectedOuvrageCode') {
         if (value) {
@@ -104,6 +110,8 @@ export function useReferentielFilters() {
     handleSearch,
     ouvrages,
     ouvragesLoading,
+    ouvrageSearch,
+    setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
     ouvrageError,

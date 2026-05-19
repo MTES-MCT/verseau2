@@ -48,8 +48,11 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
       });
-    } catch (error: any) {
-      this.logger.error('Failed to process file', error);
+    } catch (error) {
+      this.logger.error(
+        'Failed to process file',
+        error instanceof Error ? error.stack || error.message : String(error),
+      );
       await this.depotService.update(depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.SFTP_FAILED,

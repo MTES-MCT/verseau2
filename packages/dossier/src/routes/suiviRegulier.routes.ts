@@ -33,9 +33,16 @@ export const listEvenementSteu = {
       year: EvenementYearSchema,
       typeEvenementCode: z.string().optional(),
       ouvrageDepollutionCode: z.string().optional(),
+      pointMesureId: z.coerce.number().optional(),
     })
     .extend(createPaginationQuerySchema(EvenementSteuSortBy).shape),
   response: PaginatedEvenementSteuResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportEvenementSteu = {
+  method: 'GET',
+  path: '/suivi-regulier/evenement/steu/export',
+  query: listEvenementSteu.query,
 } as const satisfies RouteDefinition;
 
 export const listEvenementScl = {
@@ -45,11 +52,17 @@ export const listEvenementScl = {
     .object({
       year: EvenementYearSchema,
       typeEvenementCode: z.string().optional(),
-      pointMesureIdentifiant: z.coerce.number().optional(),
+      pointMesureId: z.coerce.number().optional(),
       systemeCollecteCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(EvenementSclSortBy).shape),
   response: PaginatedEvenementSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportEvenementScl = {
+  method: 'GET',
+  path: '/suivi-regulier/evenement/scl/export',
+  query: listEvenementScl.query,
 } as const satisfies RouteDefinition;
 
 export const listEvenementTypes = {
@@ -70,7 +83,7 @@ export const listEvenementPmo = {
   query: z.object({}),
   response: z.array(
     z.object({
-      pointMesureIdentifiant: z.number(),
+      pointMesureId: z.number(),
       pointMesureNumero: z.string(),
       pointMesureLibelle: z.string().nullable(),
     }),

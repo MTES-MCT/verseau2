@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
+import { CsvGenerator } from '@shared/csv/csv.types';
 import { MesuresService } from './mesures.service';
 import { MasaProvider } from '@masa/masa.provider';
 import type { MesureRow } from '@masa/masa.dto';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 
 const makeMesureRow = (): MesureRow => ({
   ouvrageDepollutionCode: 'STEU001',
@@ -31,12 +33,15 @@ const makeNomenclatureItem = (code: string, label: string) => ({
 describe('MesuresService', () => {
   let service: MesuresService;
   let masaProvider: jest.Mocked<MasaProvider>;
+  let csvGenerator: { generate: jest.Mock };
 
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
       findMesures: jest.fn(),
       findSteuWithNamesBySandreCdas: jest.fn(),
+      findSteuWithNamesBySandreCdasAndLabel: jest.fn(),
       findSclWithNamesBySandreCdas: jest.fn(),
+      findSclWithNamesBySandreCdasAndLabel: jest.fn(),
       findPointsMesureByOuvrage: jest.fn(),
       findParametresByOuvrageAndPmo: jest.fn(),
       findFinalites: jest.fn(),
@@ -44,12 +49,19 @@ describe('MesuresService', () => {
       findQualifications: jest.fn(),
     };
 
+    csvGenerator = { generate: jest.fn().mockReturnValue('csv-content') };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MesuresService,
+        PaginatedExportService,
         {
           provide: MasaProvider,
           useValue: mockMasaProvider,
+        },
+        {
+          provide: CsvGenerator,
+          useValue: csvGenerator,
         },
       ],
     }).compile();
@@ -75,7 +87,7 @@ describe('MesuresService', () => {
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ steuSandreCdas: ['STEU001', 'STEU002'], ouvrageType: 'steu' }),
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001', 'STEU002'], ouvrageType: 'steu' }),
       );
       expect(result.total).toBe(1);
       expect(result.data).toHaveLength(1);
@@ -101,12 +113,14 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001', 'STEU003'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        steuSandreCdas: ['STEU001', 'STEU002'],
+        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
         page: 1,
         pageSize: 20,
       });
 
-      expect(masaProvider.findMesures).toHaveBeenCalledWith(expect.objectContaining({ steuSandreCdas: ['STEU001'] }));
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001'] }),
+      );
     });
 
     it('returns empty when requested STEUs are not in authorized list', async () => {
@@ -114,7 +128,7 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU999'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        steuSandreCdas: ['STEU001', 'STEU002'],
+        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
         page: 1,
         pageSize: 20,
       });
@@ -175,13 +189,13 @@ describe('MesuresService', () => {
         authorizedSteuCdas: [],
         authorizedSclCdas: ['SCL001'],
         ouvrageType: 'scl',
-        sclSandreCdas: ['SCL001'],
+        systemeCollecteCodes: ['SCL001'],
         page: 1,
         pageSize: 20,
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ ouvrageType: 'scl', sclSandreCdas: ['SCL001'] }),
+        expect.objectContaining({ ouvrageType: 'scl', systemeCollecteCodes: ['SCL001'] }),
       );
     });
 
@@ -251,6 +265,53 @@ describe('MesuresService', () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' });
     });
+
+    it('returns empty array when search has less than 2 characters', async () => {
+      const result = await service.listOuvrages(['STEU001'], 's');
+
+      expect(result).toEqual([]);
+      expect(masaProvider.findSteuWithNamesBySandreCdasAndLabel).not.toHaveBeenCalled();
+    });
+
+    it('delegates to search when a search term is provided', async () => {
+      masaProvider.findSteuWithNamesBySandreCdasAndLabel.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' },
+      ]);
+
+      const result = await service.listOuvrages(['STEU001', 'STEU002'], 'sta');
+
+      expect(masaProvider.findSteuWithNamesBySandreCdasAndLabel).toHaveBeenCalledWith(['STEU001', 'STEU002'], 'sta');
+      expect(result).toEqual([{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }]);
+    });
+  });
+
+  describe('exportMesuresCsv', () => {
+    it('formats rows before calling csv generator', async () => {
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+
+      const result = await service.exportMesuresCsv({
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toBe('csv-content');
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
+        {
+          prelevementDate: '15/01/2024',
+          pointMesure: 'Point 1 n°1',
+          pointMesureLocalisationCode: '-',
+          parametre: 'Matières en suspension',
+          resultatAnalyseValeur: '12.5',
+          uniteMesureSymbole: 'mg/L',
+          resultatAnalyseQualification: 'Brut',
+          analyseFinalite: '-',
+          resultatAnalyseStatut: '-',
+        },
+      ]);
+    });
   });
 
   describe('listSystemesCollecte', () => {
@@ -272,6 +333,49 @@ describe('MesuresService', () => {
       expect(masaProvider.findSclWithNamesBySandreCdas).toHaveBeenCalledWith(['SCL001', 'SCL002']);
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' });
+    });
+
+    it('returns empty array when search term is too short', async () => {
+      const result = await service.listSystemesCollecte(['SCL001', 'SCL002'], 'r');
+
+      expect(result).toEqual([]);
+      expect(masaProvider.findSclWithNamesBySandreCdasAndLabel).not.toHaveBeenCalled();
+    });
+
+    it('delegates to searchSclWithNamesBySandreCdas when search is provided', async () => {
+      masaProvider.findSclWithNamesBySandreCdasAndLabel.mockResolvedValue([
+        { systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' },
+      ]);
+
+      const result = await service.listSystemesCollecte(['SCL001', 'SCL002'], 'rés');
+
+      expect(masaProvider.findSclWithNamesBySandreCdasAndLabel).toHaveBeenCalledWith(['SCL001', 'SCL002'], 'rés');
+      expect(result).toEqual([{ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Réseau A' }]);
+    });
+  });
+
+  describe('listPointsMesure', () => {
+    it('retourne les points de mesure avec la localisation globale quand l’ouvrage est autorisé', async () => {
+      masaProvider.findPointsMesureByOuvrage.mockResolvedValue([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
+
+      const result = await service.listPointsMesure(['STEU001'], [], 'steu', 'STEU001');
+
+      expect(masaProvider.findPointsMesureByOuvrage).toHaveBeenCalledWith('steu', 'STEU001', undefined);
+      expect(result).toEqual([
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
     });
   });
 

@@ -50,16 +50,16 @@ export class DroitsDepotService {
     }
 
     const roles = await this.masaProvider.findRolesByPrCdn(ag.principalIdentifiant);
-    const roleCdns = new Set(roles?.map((r) => r.roleCdn));
+    const roleCdns = new Set(roles?.map((r) => r.roleOrionId));
     const hasRoleDeposantOrExpertBassin = roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU);
     this.logger.log('hasRoleDeposantOrExpertBassin', hasRoleDeposantOrExpertBassin);
     if (!hasRoleDeposantOrExpertBassin) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
-    const intervenant = await this.masaProvider.findIntervenantById(ag.intervenantIdentifiant);
+    const intervenant = await this.masaProvider.findIntervenantById(ag.intervenantId);
     this.logger.log('Intervenant found', {
-      intervenantIdentifiant: intervenant?.intervenantIdentifiant,
+      intervenantId: intervenant?.intervenantId,
       siret: intervenant?.intervenantSiret,
     });
     if (!intervenant?.intervenantSiret) {

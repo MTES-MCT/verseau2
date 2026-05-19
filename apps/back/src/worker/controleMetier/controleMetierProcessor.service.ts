@@ -16,6 +16,7 @@ import {
   ControleType,
   ErrorCode,
 } from '@lib/dossier';
+import { DepotError } from '@dossier/depot/depotError';
 import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { DataSource } from 'typeorm';
@@ -89,10 +90,12 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       }
 
       await this.depotService.update(depotId, {
-        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
         controleStatus: ControleStatus.FAILED,
+        error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
       });
+
+      await this.depotCoordinatorService.checkControlesCompletion(depotId);
     }
   }
 

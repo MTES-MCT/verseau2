@@ -13,6 +13,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@lib/shared": "workspace:*",
     "zod": "^4.3.6"
   }
 }

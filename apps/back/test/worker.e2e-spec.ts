@@ -9,6 +9,11 @@ import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { DepotStep, DepotStatus } from '@lib/dossier';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
 import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
+import { DiffusionRapportProcessorService } from '@worker/diffusionRapport/diffusionRapportProcessor.service';
+import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
+import { MasaGateway } from '@dossier/masa/masa.gateway';
+import { NotificationGateway } from '@notification/notification.gateway';
+import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
@@ -17,6 +22,8 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseSandre.entity';
+import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
+import { ReponseSandreRepository } from '@dossier/controle/technique/sandre/reponseSandre.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
@@ -34,6 +41,9 @@ import {
   ControleV1TestMock,
   DroitsDepotServiceTestMock,
   UserServiceTestMock,
+  NotificationGatewayTestMock,
+  MasaGatewayTestMock,
+  ControleGatewayTestMock,
 } from './mock/shared-mocks';
 
 describe('Worker Service (e2e)', () => {
@@ -42,8 +52,12 @@ describe('Worker Service (e2e)', () => {
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
   let queueMock: QueueTestMock;
+  let notificationMock: NotificationGatewayTestMock;
+  let masaGatewayMock: MasaGatewayTestMock;
+  let controleGatewayMock: ControleGatewayTestMock;
   let fileProcessorService: FileProcessorService;
   let sftpProcessorService: SftpAgentVerseauProcessorService;
+  let diffusionRapportProcessorService: DiffusionRapportProcessorService;
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -51,6 +65,9 @@ describe('Worker Service (e2e)', () => {
     s3Mock = new S3TestMock();
     sftpMock = new SftpTestMock();
     queueMock = new QueueTestMock();
+    notificationMock = new NotificationGatewayTestMock();
+    masaGatewayMock = new MasaGatewayTestMock();
+    controleGatewayMock = new ControleGatewayTestMock();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -67,11 +84,18 @@ describe('Worker Service (e2e)', () => {
         LoggerService,
         FileProcessorService,
         SftpAgentVerseauProcessorService,
+        DiffusionRapportProcessorService,
+        RapportPdfGeneratorService,
         { provide: DroitsDepotService, useClass: DroitsDepotServiceTestMock },
         { provide: UserService, useClass: UserServiceTestMock },
         DepotService,
         DepotRepository,
+        ReponseSandreRepository,
+        { provide: ReponseSandreGateway, useExisting: ReponseSandreRepository },
         { provide: DepotGateway, useExisting: DepotRepository },
+        { provide: NotificationGateway, useValue: notificationMock },
+        { provide: MasaGateway, useValue: masaGatewayMock },
+        { provide: ControleGateway, useValue: controleGatewayMock },
         { provide: S3, useValue: s3Mock },
         { provide: Sftp, useValue: sftpMock },
         { provide: QueueGateway, useValue: queueMock },
@@ -87,6 +111,7 @@ describe('Worker Service (e2e)', () => {
     dataSource = moduleFixture.get(DataSource);
     fileProcessorService = moduleFixture.get(FileProcessorService);
     sftpProcessorService = moduleFixture.get(SftpAgentVerseauProcessorService);
+    diffusionRapportProcessorService = moduleFixture.get(DiffusionRapportProcessorService);
   });
 
   afterAll(async () => {
@@ -262,6 +287,123 @@ describe('Worker Service (e2e)', () => {
       });
       expect(updatedDepot.status).toBe(DepotStatus.REJETE);
       expect(updatedDepot.step).toBe(DepotStep.SFTP_FAILED);
+    });
+  });
+
+  describe('DiffusionRapportProcessorService', () => {
+    it('should generate and diffuse rapport for a rejected depot without MASA', async () => {
+      // Create user
+      const user = await dataSource.getRepository(UserEntity).save({
+        id: 'user_diff_001',
+        sub: 'sub_diff_001',
+        email: 'test.deposant@example.com',
+        nom: 'Deposant',
+        prenom: 'Test',
+      });
+
+      // Create depot that was rejected
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_test_diff_001',
+        path: 'rejected_file.xml',
+        nomOriginalFichier: 'rejected_file.xml',
+        type: 'application/xml',
+        tailleFichier: 1024,
+        status: DepotStatus.REJETE,
+        step: DepotStep.CONTROLE_FAILED,
+        user,
+      });
+
+      // Mock dependencies
+      s3Mock.reset();
+      notificationMock.reset();
+      sftpMock.reset();
+      // Seed original file for SFTP transfer simulation
+      s3Mock.seed('rejected_file.xml', '<data>test</data>');
+
+      // Set mock for controles (e.g., an error occurred)
+      controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([
+        {
+          id: 'ctrl_001',
+          name: 'StructureXML',
+          evenementType: 'ERREUR',
+          error: 'Le fichier XML est mal formé',
+          createdAt: new Date(),
+        },
+      ]);
+
+      // Process the diffusion rapport (no masaId provided)
+      await diffusionRapportProcessorService.process({ depotId: depot.id });
+
+      // Verify PDF was generated and uploaded
+      expect(s3Mock.uploads.length).toBeGreaterThan(0);
+      const pdfUpload = s3Mock.uploads.find((u) => u.key.endsWith('.pdf'));
+      expect(pdfUpload).toBeDefined();
+
+      // Verify Email was sent to Deposant
+      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
+      expect(notificationMock.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Rapport de rejet du dépôt',
+        }),
+        expect.anything(),
+      );
+
+      // Verify Depot step was updated
+      const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
+        where: { id: depot.id },
+      });
+      expect(updatedDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+    });
+
+    it('should generate and diffuse rapport for a depot with MASA', async () => {
+      // Create user
+      const user = await dataSource.getRepository(UserEntity).save({
+        id: 'user_diff_002',
+        sub: 'sub_diff_002',
+        email: 'test.deposant2@example.com',
+        nom: 'Deposant2',
+        prenom: 'Test2',
+      });
+
+      // Create depot
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_test_diff_002',
+        path: 'valid_file.xml',
+        nomOriginalFichier: 'valid_file.xml',
+        type: 'application/xml',
+        tailleFichier: 1024,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.MASA_CALLED_ENPOINT,
+        user,
+      });
+
+      // Set MASA mock
+      masaGatewayMock.findById.mockResolvedValue({
+        id: 'masa_001',
+        statut: 'INTEGRE',
+        numeroDepotVerseau1: 'V1-999',
+        rapport: 'Ok',
+        createdAt: new Date(),
+      });
+
+      // Mock dependencies
+      s3Mock.reset();
+      notificationMock.reset();
+      sftpMock.reset();
+      s3Mock.seed('valid_file.xml', '<data>test</data>');
+      controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([]);
+
+      // Process the diffusion rapport with MASA
+      await diffusionRapportProcessorService.process({ depotId: depot.id, masaId: 'masa_001' });
+
+      // Verify Email was sent to Deposant with MASA subject
+      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
+      expect(notificationMock.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Rapport du dépôt V1-999',
+        }),
+        expect.anything(),
+      );
     });
   });
 });

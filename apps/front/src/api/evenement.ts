@@ -1,5 +1,7 @@
-import { apiCall } from './apiClient';
+import { apiCall, apiDownloadFile, buildRoutePath } from './apiClient';
 import {
+  exportEvenementScl,
+  exportEvenementSteu,
   listEvenementSteu,
   listEvenementScl,
   listEvenementTypes,
@@ -21,4 +23,12 @@ export const fetchEvenementTypes = async () => {
 
 export const fetchEvenementPmo = async () => {
   return apiCall(listEvenementPmo);
+};
+
+export const downloadEvenementSteuExport = async (query: RouteQuery<typeof exportEvenementSteu>) => {
+  return apiDownloadFile(buildRoutePath(exportEvenementSteu, { query }), 'text/csv');
+};
+
+export const downloadEvenementSclExport = async (query: RouteQuery<typeof exportEvenementScl>) => {
+  return apiDownloadFile(buildRoutePath(exportEvenementScl, { query }), 'text/csv');
 };

@@ -13,7 +13,7 @@ export interface AutocompleteOption {
 
 export interface SelectAutocompleteProps {
   label: string;
-  hintText?: string;
+  hintText?: ReactNode;
   state?: 'success' | 'error' | 'default';
   stateRelatedMessage?: string;
   options: AutocompleteOption[];

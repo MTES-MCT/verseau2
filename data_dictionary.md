@@ -1,20 +1,21 @@
 ouvrageDepollutionCode, steu_sandre_cda, Code Sandre identifiant la station de traitement des eaux usees (STEU)
-ouvrageDepollutionIdentifiant, steu_cdn, Identifiant technique interne de la STEU dans Roseau
+ouvrageDepollutionId, steu_cdn, Identifiant technique interne de la STEU dans Roseau
 ouvrageDepollutionNom, steu_nom_lb, Denomination de la station de traitement des eaux usees
+systemeCollecteId, scl_cdn, Identifiant technique interne du systeme de collecte dans Roseau
 systemeCollecteCode, scl_sandre_cda, Code Sandre identifiant le systeme de collecte des eaux usees (SCL)
 systemeCollecteNom, scl_lb, Denomination du systeme de collecte
-intervenantIdentifiant, itv_cdn, Identifiant technique interne de l'intervenant dans Lanceleau
+intervenantId, itv_cdn, Identifiant technique interne de l'intervenant dans Lanceleau
 intervenantSiret, itv_rfa, Numero SIRET de l'organisme intervenant
 intervenantNom, itv_nom_lb, Raison sociale ou nom de l'organisme intervenant
 principalIdentifiant, pr_cdn, Identifiant technique interne du principal (agent authentifie) dans Lanceleau
-roleOrionIdentifiant, role_cdn, Identifiant technique du role Orion attribue au principal (t_orion_role_for_principal)
+roleOrionId, role_cdn, Identifiant technique du role Orion attribue au principal (t_orion_role_for_principal)
 authentificationEmail, mail, Adresse email de l'utilisateur pour l'authentification (t_orion_credentials)
-ouvrageDepollutionVueDroitsCode, steu_cda, Code de la STEU dans la vue de droits v_steu_scl_itv
-systemeCollecteVueDroitsCode, scl_cda, Code du systeme de collecte dans la vue de droits v_steu_scl_itv
+ouvrageDepollutionCode, steu_cda, Code de la STEU dans la vue de droits v_steu_scl_itv
+systemeCollecteCode, scl_cda, Code du systeme de collecte dans la vue de droits v_steu_scl_itv
 maitreOuvrageSiret, mo_itv_rfa, Numero SIRET du maitre d'ouvrage de la STEU (vue v_steu_scl_itv)
 prestataireAutosurveillanceSiret, sat_itv_rfa, Numero SIRET du prestataire du service d'assistance technique a l'autosurveillance (vue v_steu_scl_itv)
 agenceEauSiret, ae_itv_rfa, Numero SIRET de l'agence de l'eau competente (vue v_steu_scl_itv)
-pointMesureIdentifiant, pmo_cdn, Identifiant technique interne du point de mesure dans Roseau
+pointMesureId, pmo_cdn, Identifiant technique interne du point de mesure dans Roseau
 pointMesureNumero, pmo_no, Numero du point de mesure au sein de l'ouvrage
 pointMesureLibelle, pmo_lb, Denomination du point de mesure
 pointAgenceEauNumero, pmo_ae_cda, Numero du point de mesure attribue par l'agence de l'eau
@@ -26,14 +27,13 @@ elementNomenclatureCode, tlref_elt_cda, Code de l'element dans la table de refer
 elementNomenclatureLibelle, tlref_mnemo_lb, Libelle mnemonique de l'element dans la table de reference
 pointMesureLocalisationCode, tlref_elt_cda (LREF_16), Code de localisation du point de mesure (ex: A2 a A8)
 pointMesureLocalisationLibelle, tlref_mnemo_lb (LREF_16), Libelle de la localisation du point de mesure
-pointMesureSclCategorie, tlref_mnemo_lb (LREF_24), Categorie du point de mesure pour les systemes de collecte (via orm.tlref_24_cdn)
+pointMesureCategorieSystemeCollecte, tlref_mnemo_lb (LREF_24), Categorie du point de mesure pour les systemes de collecte (via orm.tlref_24_cdn)
 resultatAnnuelConcentrationMoyenne, resa_cma_val, Concentration moyenne annuelle calculee pour un parametre et une STEU
-ouvrageDepollutionCapaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants
+capaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants
 ouvrageDepollutionDebitMaximalReference, max(stchan_pc95_val; cpy_ref_debit_mt), Debit maximal de reference calcule comme le max entre le percentile 95 et le debit de reference
 chargeEntranteMaximaleEHN, stchan_r_eh_max_chg_val (annee N), Charge entrante maximale en equivalent-habitants pour l'annee courante
 chargeEntranteMaximaleEHNMoins1, stchan_r_eh_max_chg_val (annee N-1), Charge entrante maximale en equivalent-habitants pour l'annee precedente
 trancheObligationLibelle, tltobl_lb, Libelle de la tranche de taille d'agglomeration (obligation reglementaire)
-capaciteNominaleEH, cpy_eh_trait_nom_cap_mt, Capacite nominale de traitement de la STEU en equivalent-habitants dans le tableau conformite
 suiviDebutDate, steureg_suiv_deb_dt / sclreg_suiv_deb_dt, Date de debut de la periode de suivi du bilan conformite
 suiviFinDate, steureg_suiv_fin_dt / sclreg_suiv_fin_dt, Date de fin de la periode de suivi du bilan conformite
 conformiteNationaleProvisoire, cfprf_r_glob_perf_eru_conf_in, Conformite nationale provisoire en performance ERU de la STEU
@@ -99,3 +99,12 @@ uniteMesureSymbole, urf_symb_lb, Symbole de l'unite de mesure du resultat (ex: m
 analyseFinalite, tlref_mnemo_lb (LREF_17), Finalite de l'analyse (autosurveillance, police, etc.)
 resultatAnalyseStatut, tlref_elt_cda || tlref_mnemo_lb (LREF_20), Statut de validation du resultat d'analyse
 resultatAnalyseQualification, tlref_mnemo_lb (LREF_18), Qualification de la donnee d'analyse (correcte, incertaine, etc.)
+exploitantNom, itv_mnemo_lb, Nom ou raison sociale de l'exploitant associe au retard de transmission AS
+exploitantEmail, adr_mail_lb, Adresse email de l'exploitant associe au retard de transmission AS
+exploitantDateEnvoiMail, steureg_mail_expl_dt / sclreg_mail_expl_dt, Date d'envoi du mail a l'exploitant pour le suivi regulier
+nbFichiersAsRecus, suivqual_fic_nb, Nombre de fichiers d'autosurveillance recus pour l'ouvrage et l'annee
+dateDernierFichierRecu, suivqual_der_trans_dt, Date de reception du dernier fichier d'autosurveillance transmis
+dateDebutPeriode, v_dep_suiv_reg_ref_deb_dt, Date de debut de la periode de reference pour la transmission AS
+dateFinPeriode, v_dep_suiv_reg_ref_fin_dt, Date de fin de la periode de reference pour la transmission AS
+dateMesureSuivanteAttendue, computed (steureg_suiv_fin_dt / sclreg_suiv_fin_dt + 1 mois), Date a laquelle la prochaine mesure d'autosurveillance est attendue
+nbJoursRetard, computed (NOW - dateMesureSuivanteAttendue), Nombre de jours de retard dans la transmission des donnees d'autosurveillance

@@ -1,11 +1,10 @@
 import { authService } from '../services/auth.service';
+import { APP_HOME_PATH, API_BASE_URL } from '../appConfig';
 import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
 import { buildRoutePath } from '@lib/dossier';
 
 // Re-export buildRoutePath for convenience
 export { buildRoutePath };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export class ApiError extends Error {
   status: number;
@@ -19,6 +18,11 @@ export class ApiError extends Error {
   }
 }
 
+export interface DownloadedFile {
+  blob: Blob;
+  filename?: string;
+}
+
 /**
  * Enhanced fetch wrapper with automatic token management and refresh
  */
@@ -28,7 +32,7 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     credentials: 'include',
   });
 
-  // Handle 401 by attempting to refresh token
+  // Handle 401 by attempting to refresh token (dedup handled by authService)
   if (response.status === 401) {
     try {
       await authService.refreshToken();
@@ -41,8 +45,8 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
       return retryResponse;
     } catch {
       // Refresh failed, redirect to login
-      authService.clearTokens();
-      window.location.href = '/';
+      authService.clearSession();
+      window.location.href = APP_HOME_PATH;
       throw new ApiError('Session expired', 401, 'Unauthorized');
     }
   }
@@ -51,24 +55,15 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
 }
 
 /**
- * POST with FormData (for file uploads)
+ * POST with FormData (for file uploads).
+ * Uses authenticatedFetch for automatic 401-retry via cookie-based auth.
  */
 export async function apiPostFormData<T>(endpoint: string, formData: FormData): Promise<T> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const token = await authService.getAccessToken();
 
-  if (!token) {
-    window.location.href = '/';
-    throw new ApiError('Not authenticated', 401, 'Unauthorized');
-  }
-
-  const response = await fetch(url, {
+  const response = await authenticatedFetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: formData,
-    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -85,19 +80,25 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
 }
 
 export async function apiDownload(endpoint: string): Promise<Blob> {
+  const file = await apiDownloadFile(endpoint, 'application/pdf');
+  return file.blob;
+}
+
+export async function apiDownloadFile(endpoint: string, accept?: string): Promise<DownloadedFile> {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const response = await authenticatedFetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/pdf',
-    },
+    headers: accept ? { Accept: accept } : undefined,
   });
   if (!response.ok) {
     const message = await response.text().catch(() => response.statusText);
     throw new ApiError(`GET ${endpoint} failed: ${message}`, response.status, response.statusText);
   }
 
-  return response.blob();
+  return {
+    blob: await response.blob(),
+    filename: parseContentDispositionFilename(response.headers.get('Content-Disposition')),
+  };
 }
 
 /**
@@ -136,4 +137,22 @@ export async function apiCall<R extends RouteDefinition>(
   // Parse response (no validation on frontend, schemas are for typing only)
   const json = await response.json();
   return json as RouteResponse<R>;
+}
+
+function parseContentDispositionFilename(contentDisposition: string | null): string | undefined {
+  if (!contentDisposition) {
+    return undefined;
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const filenameMatch = contentDisposition.match(/filename=([^;]+)/i);
+  if (!filenameMatch?.[1]) {
+    return undefined;
+  }
+
+  return filenameMatch[1].trim().replace(/^"|"$/g, '');
 }

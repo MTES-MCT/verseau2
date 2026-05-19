@@ -8,7 +8,7 @@ import {
 } from '../bilan/bilan.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 
-export const BilanSteuSortBy = z.enum(['date', 'ouvrageDepollutionCode', 'ouvrageDepollutionNom', 'parametreNom']);
+export const BilanSteuSortBy = z.enum(['date', 'ouvrageDepollutionCode', 'parametreNom']);
 export type BilanSteuSortByValue = z.infer<typeof BilanSteuSortBy>;
 
 export const BilanSclSortBy = z.enum(['date', 'systemeCollecteCode', 'pointMesureNumero', 'statut']);
@@ -31,6 +31,12 @@ export const listBilanSteu = {
   response: PaginatedBilanSteuResponseSchema,
 } as const satisfies RouteDefinition;
 
+export const exportBilanSteu = {
+  method: 'GET',
+  path: '/suivi-regulier/bilan/steu/export',
+  query: listBilanSteu.query,
+} as const satisfies RouteDefinition;
+
 export const listBilanScl = {
   method: 'GET',
   path: '/suivi-regulier/bilan/scl',
@@ -38,9 +44,15 @@ export const listBilanScl = {
     .object({
       year: BilanYearSchema,
       systemeCollecteCode: z.string().optional(),
-      pointMesureIdentifiant: z.coerce.number().optional(),
+      pointMesureId: z.coerce.number().optional(),
       statut: z.enum(['TP', 'TS']).optional(),
     })
     .extend(createPaginationQuerySchema(BilanSclSortBy).shape),
   response: PaginatedBilanSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportBilanScl = {
+  method: 'GET',
+  path: '/suivi-regulier/bilan/scl/export',
+  query: listBilanScl.query,
 } as const satisfies RouteDefinition;

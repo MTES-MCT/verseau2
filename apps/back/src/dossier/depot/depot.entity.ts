@@ -14,6 +14,7 @@ import { UserEntity } from '@user/user.entity';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { MasaEntity } from '@dossier/masa/masa.entity';
+import { DepotError } from '@dossier/depot/depotError';
 
 @Entity('depot')
 export class DepotEntity extends BaseEntity {
@@ -35,8 +36,8 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'varchar' })
   type: string;
 
-  @Column({ type: 'varchar', nullable: true })
-  error?: string;
+  @Column({ type: 'enum', enum: DepotError, nullable: true })
+  error?: DepotError;
 
   @Column({ type: 'enum', enum: DepotStep, nullable: true })
   step?: DepotStep;

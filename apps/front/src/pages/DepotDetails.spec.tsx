@@ -1,17 +1,18 @@
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepotDetailsPage } from './DepotDetails';
 import { renderWithQueryClient } from '../test.helper';
+import * as mesuresApi from '../api/mesures';
 
 // Mock all hooks used by useMesureFilters
 vi.mock('../hooks/useMesures', () => ({
   useMesures: vi.fn(),
 }));
-vi.mock('../hooks/useOuvrages', () => ({
-  useOuvrages: vi.fn(),
+vi.mock('../hooks/useAsyncOuvragesSearch', () => ({
+  useAsyncOuvragesSearch: vi.fn(),
 }));
-vi.mock('../hooks/useSystemesCollecte', () => ({
-  useSystemesCollecte: vi.fn(),
+vi.mock('../hooks/useAsyncSystemesCollecteSearch', () => ({
+  useAsyncSystemesCollecteSearch: vi.fn(),
 }));
 vi.mock('../hooks/usePointsMesure', () => ({
   usePointsMesure: vi.fn(),
@@ -29,9 +30,17 @@ vi.mock('../hooks/useQualifications', () => ({
   useQualifications: vi.fn(),
 }));
 
+vi.mock('../api/mesures', async () => {
+  const actual = await vi.importActual<typeof import('../api/mesures')>('../api/mesures');
+  return {
+    ...actual,
+    downloadMesuresExport: vi.fn(),
+  };
+});
+
 import { useMesures } from '../hooks/useMesures';
-import { useOuvrages } from '../hooks/useOuvrages';
-import { useSystemesCollecte } from '../hooks/useSystemesCollecte';
+import { useAsyncOuvragesSearch } from '../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../hooks/useAsyncSystemesCollecteSearch';
 import { usePointsMesure } from '../hooks/usePointsMesure';
 import { useParametresMesure } from '../hooks/useParametresMesure';
 import { useFinalites } from '../hooks/useFinalites';
@@ -39,13 +48,14 @@ import { useStatuts } from '../hooks/useStatuts';
 import { useQualifications } from '../hooks/useQualifications';
 
 const mockUseMesures = vi.mocked(useMesures);
-const mockUseOuvrages = vi.mocked(useOuvrages);
-const mockUseSystemesCollecte = vi.mocked(useSystemesCollecte);
+const mockUseAsyncOuvragesSearch = vi.mocked(useAsyncOuvragesSearch);
+const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSearch);
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseParametresMesure = vi.mocked(useParametresMesure);
 const mockUseFinalites = vi.mocked(useFinalites);
 const mockUseStatuts = vi.mocked(useStatuts);
 const mockUseQualifications = vi.mocked(useQualifications);
+void mesuresApi;
 
 const emptyNomenclatureResult = {
   data: [],
@@ -99,8 +109,12 @@ const makeMesure = (overrides = {}) => ({
 describe('DepotDetailsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseOuvrages.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useOuvrages>);
-    mockUseSystemesCollecte.mockReturnValue(emptyOuvragesResult as unknown as ReturnType<typeof useSystemesCollecte>);
+    mockUseAsyncOuvragesSearch.mockReturnValue(
+      emptyOuvragesResult as unknown as ReturnType<typeof useAsyncOuvragesSearch>,
+    );
+    mockUseAsyncSystemesCollecteSearch.mockReturnValue(
+      emptyOuvragesResult as unknown as ReturnType<typeof useAsyncSystemesCollecteSearch>,
+    );
     mockUseMesures.mockReturnValue(emptyMesuresResult as unknown as ReturnType<typeof useMesures>);
     mockUsePointsMesure.mockReturnValue(emptyPointsMesureResult as unknown as ReturnType<typeof usePointsMesure>);
     mockUseParametresMesure.mockReturnValue(emptyParametresResult as unknown as ReturnType<typeof useParametresMesure>);
@@ -127,7 +141,7 @@ describe('DepotDetailsPage', () => {
   it('renders all filter labels', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    expect(screen.getByRole('combobox', { name: 'Station' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /station/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/date début/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/date fin/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
@@ -148,26 +162,59 @@ describe('DepotDetailsPage', () => {
 
     // The dropdown label should change from "Ouvrage (STEU)" to something else
     expect(screen.queryByRole('combobox', { name: 'Station' })).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/tous les systèmes/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/rechercher un scl/i)).toBeInTheDocument();
   });
 
   it('renders ouvrage dropdown showing options after clicking', () => {
-    mockUseOuvrages.mockReturnValue({
+    mockUseAsyncOuvragesSearch.mockReturnValue({
       data: [
         { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' },
         { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionNom: 'Station B' },
       ],
       isLoading: false,
       error: null,
-    } as unknown as ReturnType<typeof useOuvrages>);
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
 
     renderWithQueryClient(<DepotDetailsPage />);
 
     // Open the autocomplete dropdown
-    fireEvent.click(screen.getByRole('combobox', { name: 'Station' }));
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
 
     expect(screen.getByRole('option', { name: /Station A/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Station B/i })).toBeInTheDocument();
+  });
+
+  it('préfixe les options de point de mesure avec la localisation globale', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof usePointsMesure>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /point de mesure/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesure/i }));
+
+    expect(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i })).toBeInTheDocument();
   });
 
   it('shows loading state while data is loading', () => {
@@ -180,6 +227,12 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/chargement des mesures/i)).toBeInTheDocument();
+  });
+
+  it('désactive l’export tant qu’aucune recherche n’a été lancée', () => {
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeDisabled();
   });
 
   it('shows error alert when fetch fails', () => {
@@ -433,6 +486,6 @@ describe('DepotDetailsPage', () => {
     const fieldset = document.querySelector('fieldset');
     expect(fieldset).toBeInTheDocument();
     // Station combobox is inside the fieldset, not inside the advanced filters section
-    expect(fieldset).toContainElement(screen.getByRole('combobox', { name: 'Station' }));
+    expect(fieldset).toContainElement(screen.getByRole('combobox', { name: /station/i }));
   });
 });

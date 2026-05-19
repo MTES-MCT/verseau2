@@ -1,49 +1,26 @@
-import { SclEntity } from './entities/scl.entity';
 import { SteuEntity } from './entities/steu.entity';
 import { CxnadmEntity } from './entities/cxnadm.entity';
 import { TlrefEntity } from './entities/tlref.entity';
 import {
+  SclDetailRow,
+  SteuDetailRow,
   CmaBySandreCdaAndParam,
   CapaciteNominaleBySandreCda,
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
-  EvenementSclFilters,
-  EvenementSteuFilters,
-  EvenementSclRow,
-  EvenementSteuRow,
-  BilanSteuFilters,
-  BilanSclFilters,
-  BilanSteuRow,
-  BilanSclRow,
-  TransmissionASRetardSclFilters,
-  TransmissionASRetardSteuFilters,
-  TransmissionASRetardSclRow,
-  TransmissionASRetardSteuRow,
-  ConformiteSclDetailRow,
-  ConformiteSclFilters,
-  ConformiteSclRow,
-  ConformiteSteuDetailRow,
-  ConformiteSteuFilters,
-  ConformiteSteuRow,
-  ProductionBoueZero,
-  MesureFilters,
-  MesureRow,
-  SteuWithName,
-  SclWithName,
   PointMesure,
   ParametreMesure,
   NomenclatureItem,
-  PointMesureReferentielRow,
-  SclCdnBySandreCda,
+  ProductionBoueZero,
+  SclRef,
+  SteuRef,
 } from '@masa/masa.dto';
-import { SteuCdnBySandreCda } from '@masa/masa.dto';
 
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
-  findSclBySandreCda(sandreCda: string): Promise<SclEntity | null>;
-  findSclBatchBySandreCdas(sandreCdas: string[]): Promise<SclCdnBySandreCda[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findSteuBatchBySandreCdas(sandreCdas: string[]): Promise<SteuCdnBySandreCda[]>;
+  findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]>;
+  findSclsBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SclRef[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;
   checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>>;
   checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>>;
@@ -59,39 +36,20 @@ export interface RoseauGateway {
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
-  findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }>;
-  findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }>;
-  findConformiteSteuDetail(steuCdn: number, annee: number): Promise<ConformiteSteuDetailRow | null>;
-  findConformiteSclDetail(sclCdn: number, annee: number): Promise<ConformiteSclDetailRow | null>;
-  findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }>;
-  findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }>;
-  findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }>;
-  findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }>;
-  findTransmissionASRetardSteu(
-    filters: TransmissionASRetardSteuFilters,
-  ): Promise<{ data: TransmissionASRetardSteuRow[]; total: number }>;
-  findTransmissionASRetardScl(
-    filters: TransmissionASRetardSclFilters,
-  ): Promise<{ data: TransmissionASRetardSclRow[]; total: number }>;
-  findEvenementTypes(): Promise<NomenclatureItem[]>;
-  findPointsMesureBySclCdns(sclCdns: number[]): Promise<PointMesure[]>;
-  findMesures(filters: MesureFilters): Promise<{ data: MesureRow[]; total: number }>;
-  findSteuWithNamesBySandreCdas(sandreCdas: string[]): Promise<SteuWithName[]>;
-  findSclWithNamesBySandreCdas(sandreCdas: string[]): Promise<SclWithName[]>;
-  findPointsMesureByOuvrage(ouvrageType: 'steu' | 'scl', ouvrageCode: string): Promise<PointMesure[]>;
+  findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]>;
+  findPointsMesureByOuvrage(
+    ouvrageType: 'steu' | 'scl',
+    ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
+  ): Promise<PointMesure[]>;
+  findSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null>;
+  findSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null>;
   findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
     pmoCdn: number,
   ): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
-  findStatuts(): Promise<NomenclatureItem[]>;
-  findQualifications(): Promise<NomenclatureItem[]>;
-  findPointsMesureReferentiel(
-    ouvrageType: 'steu' | 'scl',
-    ouvrageCode: string,
-    filters: { dateDebut?: string; dateFin?: string; localisationCodes?: string[] },
-  ): Promise<PointMesureReferentielRow[]>;
 }
 
 export const RoseauGateway = Symbol('RoseauGateway');

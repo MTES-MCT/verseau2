@@ -83,7 +83,9 @@ export async function createRoseauTables(dataSource: DataSource): Promise<void> 
       cxnadm_cdn INTEGER PRIMARY KEY,
       mo_steu_cdn INTEGER,
       steu_itv_cdn INTEGER,
-      exp_steu_cdn INTEGER
+      exp_steu_cdn INTEGER,
+      cxnadm_creation_dt TIMESTAMP,
+      cxnadm_retrait_dt TIMESTAMP
     )
   `);
 
@@ -411,6 +413,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
   await dataSource.query(`DELETE FROM lanceleau.par`);
   await dataSource.query(`DELETE FROM lanceleau.urf`);
   await dataSource.query(`DELETE FROM lanceleau.itv`);
+  await dataSource.query(`DELETE FROM verseau.v_steu_scl_itv`);
 }
 
 // ============= Seed Data Functions =============
@@ -446,13 +449,14 @@ export async function seedCxnadm(
   moSteuCdn: number,
   steuItvCdn: number,
   expSteuCdn?: number,
+  options?: { creationDt?: Date | string | null; retraitDt?: Date | string | null },
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO roseau.cxnadm (cxnadm_cdn, mo_steu_cdn, steu_itv_cdn, exp_steu_cdn)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO roseau.cxnadm (cxnadm_cdn, mo_steu_cdn, steu_itv_cdn, exp_steu_cdn, cxnadm_creation_dt, cxnadm_retrait_dt)
+    VALUES ($1, $2, $3, $4, $5, $6)
   `,
-    [cxnadmCdn, moSteuCdn, steuItvCdn, expSteuCdn ?? null],
+    [cxnadmCdn, moSteuCdn, steuItvCdn, expSteuCdn ?? null, options?.creationDt ?? null, options?.retraitDt ?? null],
   );
 }
 

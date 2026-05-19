@@ -14,6 +14,7 @@ import { DesignSystemPage } from './pages/DesignSystemPage';
 import { EvenementDashboard } from './pages/suivi-regulier/evenement/EvenementDashboard';
 import { BilanDashboard } from './pages/suivi-regulier/bilan/BilanDashboard';
 import { TransmissionASRetardDashboard } from './pages/suivi-regulier/transmissionASRetard/TransmissionASRetardDashboard';
+import { APP_BASE_PATH } from './appConfig';
 import { AppHeader } from './components/Header';
 import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
@@ -29,7 +30,7 @@ function App() {
   const isExpertNational = authenticatedUser?.isExpertNational ?? false;
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={APP_BASE_PATH === '/' ? undefined : APP_BASE_PATH}>
       <AppHeader />
       <div className={`${fr.cx('fr-container')} app-container`}>
         <Breadcrumb />

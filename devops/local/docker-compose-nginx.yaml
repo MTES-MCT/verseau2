@@ -1,0 +1,19 @@
+# Usage:
+#   docker compose -f devops/local/docker-compose.yml -f devops/local/docker-compose-nginx.yaml up app nginx
+#
+# Then test:
+#   curl -v http://localhost:8080/           → 302 /verseau/
+#   curl -v http://localhost:8080/verseau    → 308 /verseau/
+#   curl -v http://localhost:8080/verseau/   → proxied to app:3000
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - verseau2-network

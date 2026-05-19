@@ -1,6 +1,16 @@
-import { Injectable, LOG_LEVELS } from '@nestjs/common';
+import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
-import { PaginatedMesuresResponse, PaginationQuery, MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
+import {
+  buildPointDeMesure,
+  PaginatedMesuresResponse,
+  PaginationQuery,
+  MesuresSortByValue,
+  type OuvrageTypeValue,
+  mesurePropertyToHeaderMapper,
+} from '@lib/dossier';
+import { formatDate } from '@lib/shared';
+
+import { CsvGenerator } from '@shared/csv/csv.types';
 import {
   MesureFilters,
   SteuWithName,
@@ -9,14 +19,20 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
+import { formatNullable } from '@shared/csv/csvFormatters';
+import {
+  buildCsvColumnsFromPropertyToHeaderMapper,
+  type CsvFormattedRow,
+} from '@shared/csv/propertyToHeaderCsvColumns';
+import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
   authorizedSteuCdas: string[];
   authorizedSclCdas: string[];
-  steuSandreCdas?: string[];
-  sclSandreCdas?: string[];
+  ouvrageDepollutionCodes?: string[];
+  systemeCollecteCodes?: string[];
   pmoCdn?: number;
   dateDebut?: string;
   dateFin?: string;
@@ -30,7 +46,11 @@ export interface ListMesuresOptions extends PaginationQuery {
 
 @Injectable()
 export class MesuresService {
-  constructor(private readonly masaProvider: MasaProvider) {}
+  constructor(
+    private readonly masaProvider: MasaProvider,
+    private readonly paginatedExportService: PaginatedExportService,
+    @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+  ) {}
 
   @TraceCalls(LOG_LEVELS[2])
   async listMesures(options: ListMesuresOptions): Promise<PaginatedMesuresResponse> {
@@ -38,8 +58,8 @@ export class MesuresService {
       ouvrageType,
       authorizedSteuCdas,
       authorizedSclCdas,
-      steuSandreCdas: requestedSteus = [],
-      sclSandreCdas: requestedScls = [],
+      ouvrageDepollutionCodes: requestedOuvrages = [],
+      systemeCollecteCodes: requestedSystemesCollecte = [],
       pmoCdn,
       parametreCode,
       qualification,
@@ -51,18 +71,20 @@ export class MesuresService {
     let filters: MesureFilters;
 
     if (ouvrageType === 'scl') {
-      const sclSandreCdas =
-        requestedScls.length > 0 ? requestedScls.filter((cda) => authorizedSclCdas.includes(cda)) : authorizedSclCdas;
+      const systemeCollecteCodes =
+        requestedSystemesCollecte.length > 0
+          ? requestedSystemesCollecte.filter((code) => authorizedSclCdas.includes(code))
+          : authorizedSclCdas;
 
-      if (sclSandreCdas.length === 0) {
+      if (systemeCollecteCodes.length === 0) {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
       }
 
       filters = {
         ouvrageType: 'scl',
-        steuSandreCdas: [],
-        sclSandreCdas,
-        ...(pmoCdn !== undefined ? { pointMesureIdentifiant: pmoCdn } : {}),
+        ouvrageDepollutionCodes: [],
+        systemeCollecteCodes,
+        ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
         ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
         ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
         ...(statut ? { resultatAnalyseStatut: statut } : {}),
@@ -70,20 +92,20 @@ export class MesuresService {
         ...rest,
       };
     } else {
-      const steuSandreCdas =
-        requestedSteus.length > 0
-          ? requestedSteus.filter((cda) => authorizedSteuCdas.includes(cda))
+      const ouvrageDepollutionCodes =
+        requestedOuvrages.length > 0
+          ? requestedOuvrages.filter((code) => authorizedSteuCdas.includes(code))
           : authorizedSteuCdas;
 
-      if (steuSandreCdas.length === 0) {
+      if (ouvrageDepollutionCodes.length === 0) {
         return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
       }
 
       filters = {
         ouvrageType: 'steu',
-        steuSandreCdas,
-        sclSandreCdas: [],
-        ...(pmoCdn !== undefined ? { pointMesureIdentifiant: pmoCdn } : {}),
+        ouvrageDepollutionCodes,
+        systemeCollecteCodes: [],
+        ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
         ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
         ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
         ...(statut ? { resultatAnalyseStatut: statut } : {}),
@@ -102,21 +124,68 @@ export class MesuresService {
     };
   }
 
-  async listOuvrages(authorizedSteuCdas: string[]): Promise<SteuWithName[]> {
+  @TraceCalls(LOG_LEVELS[2])
+  async exportMesuresCsv(options: ListMesuresOptions): Promise<string> {
+    const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listMesures({ ...options, page, pageSize });
+      return { data: result.data, total: result.total };
+    });
+
+    const formattedRows: CsvFormattedRow[] = rows.map((row) => ({
+      prelevementDate: formatDate(row.prelevementDate),
+      pointMesure: buildPointDeMesure(row),
+      pointMesureLocalisationCode: formatNullable(row.pointMesureLocalisationCode),
+      parametre: row.parametreNomCourt ?? row.parametreAnalyseCode,
+      resultatAnalyseValeur: formatNullable(row.resultatAnalyseValeur),
+      uniteMesureSymbole: formatNullable(row.uniteMesureSymbole),
+      resultatAnalyseQualification: formatNullable(row.resultatAnalyseQualification),
+      analyseFinalite: formatNullable(row.analyseFinalite),
+      resultatAnalyseStatut: formatNullable(row.resultatAnalyseStatut),
+    }));
+
+    return this.csvGenerator.generate(
+      buildCsvColumnsFromPropertyToHeaderMapper(mesurePropertyToHeaderMapper),
+      formattedRows,
+    );
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async listOuvrages(authorizedSteuCdas: string[], search?: string): Promise<SteuWithName[]> {
     if (authorizedSteuCdas.length === 0) return [];
+
+    if (search) {
+      const normalizedLabel = search.trim();
+      if (normalizedLabel.length < 2) {
+        return [];
+      }
+      return this.masaProvider.findSteuWithNamesBySandreCdasAndLabel(authorizedSteuCdas, normalizedLabel);
+    }
+
     return this.masaProvider.findSteuWithNamesBySandreCdas(authorizedSteuCdas);
   }
 
-  async listSystemesCollecte(authorizedSclCdas: string[]): Promise<SclWithName[]> {
+  @TraceCalls(LOG_LEVELS[2])
+  async listSystemesCollecte(authorizedSclCdas: string[], search?: string): Promise<SclWithName[]> {
     if (authorizedSclCdas.length === 0) return [];
+
+    if (search) {
+      const normalizedLabel = search.trim();
+      if (normalizedLabel.length < 2) {
+        return [];
+      }
+      return this.masaProvider.findSclWithNamesBySandreCdasAndLabel(authorizedSclCdas, normalizedLabel);
+    }
+
     return this.masaProvider.findSclWithNamesBySandreCdas(authorizedSclCdas);
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listPointsMesure(
     authorizedSteuCdas: string[],
     authorizedSclCdas: string[],
     ouvrageType: OuvrageTypeValue,
     ouvrageCode: string,
+    filters?: { localisationCodes?: string[] },
   ): Promise<PointMesure[]> {
     if (ouvrageType === 'scl') {
       if (!authorizedSclCdas.includes(ouvrageCode)) return [];
@@ -124,9 +193,10 @@ export class MesuresService {
       if (!authorizedSteuCdas.includes(ouvrageCode)) return [];
     }
 
-    return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode);
+    return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode, filters);
   }
 
+  @TraceCalls(LOG_LEVELS[2])
   async listParametresMesure(
     authorizedSteuCdas: string[],
     authorizedSclCdas: string[],

@@ -1,0 +1,154 @@
+import { Injectable, Inject } from '@nestjs/common';
+import { LoggerService } from '@shared/logger/logger.service';
+import { MasaGateway } from '@dossier/masa/masa.gateway';
+import { DepotGateway } from '@dossier/depot/depot.gateway';
+import { NotificationGateway } from '@notification/notification.gateway';
+import { EmailTemplate, EmailRapportParams } from '@notification/notification';
+import { S3 } from '@infra/s3/s3';
+import { Sftp } from '@infra/sftp/sftp';
+import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
+import { DepotModel } from '@dossier/depot/depot.model';
+import { MasaModel } from '@dossier/masa/masa.model';
+import { DepotStep } from '@lib/dossier';
+import { AsyncTask } from '@worker/asyncTask';
+import { ControleGateway } from '@dossier/controle/controle.gateway';
+import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
+
+interface DiffusionRapportProcessorData {
+  depotId: string;
+  masaId?: string;
+}
+
+@Injectable()
+export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapportProcessorData> {
+  constructor(
+    @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
+    @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
+    @Inject(NotificationGateway) private readonly notificationService: NotificationGateway,
+    @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
+    @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
+    @Inject(S3) private readonly s3: S3,
+    @Inject(Sftp) private readonly sftpService: Sftp,
+    private readonly pdfGenerator: RapportPdfGeneratorService,
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(DiffusionRapportProcessorService.name);
+  }
+
+  async process(data: DiffusionRapportProcessorData): Promise<void> {
+    const { depotId, masaId } = data;
+    this.logger.log(`Processing diffusion rapport`, { depotId, masaId });
+
+    try {
+      const depot = await this.depotGateway.findDepotByIdWithUser(depotId);
+      if (!depot) {
+        throw new Error(`Depot not found: ${depotId}`);
+      }
+
+      if (!depot.path) {
+        throw new Error(`No XML file path for depot: ${depotId}`);
+      }
+
+      let masa: MasaModel | null | undefined;
+      if (masaId) {
+        masa = await this.masaGateway.findById(masaId);
+        if (!masa) {
+          throw new Error(`MASA not found: ${masaId}`);
+        }
+      }
+
+      // 1. Generate PDF report
+      const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);
+      const reponsesSandre = await this.reponseSandreGateway.findByDepotId(depotId);
+      this.logger.log(`Generating PDF report`, { depotId, masaId });
+      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controlesV2, masa ?? undefined, reponsesSandre);
+
+      // 2. Upload PDF to S3
+      const pdfPath = `rapports/${depotId}/rapport.pdf`;
+      await this.s3.upload(pdfPath, pdfBuffer, 'application/pdf');
+      this.logger.log(`PDF uploaded to S3`, { pdfPath });
+
+      await this.depotGateway.updateDepot(depotId, { rapportPath: pdfPath });
+
+      // 3. Send to Agence de l'eau SFTP
+      await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
+
+      // 4. Send email to déposant
+      await this.sendEmailToDeposant(depot, pdfBuffer, masa ?? undefined);
+
+      this.logger.log(`Diffusion rapport processing completed`, { depotId, masaId });
+    } catch (error) {
+      this.logger.error(`Failed to process diffusion rapport`, {
+        depotId,
+        masaId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw error;
+    }
+  }
+
+  private async sendEmailToDeposant(depot: DepotModel, pdfBuffer: Buffer, masa?: MasaModel): Promise<void> {
+    const user = depot.user;
+    if (!user || !user.email) {
+      this.logger.error('User email not available, skipping email notification', {
+        userId: depot.user?.id,
+      });
+      return;
+    }
+
+    const subject = masa ? `Rapport du dépôt ${masa.numeroDepotVerseau1}` : `Rapport de rejet du dépôt`;
+
+    await this.notificationService.sendEmail<EmailRapportParams>(
+      {
+        to: [{ email: user.email, name: `${user.prenom} ${user.nom}` }],
+        subject,
+        attachments: [
+          {
+            fileName: `rapport-${depot.id}.pdf`,
+            content: pdfBuffer.toString('base64'),
+          },
+        ],
+        depotId: depot.id,
+        nomOriginalFichier: depot.nomOriginalFichier,
+        ...(masa && {
+          statut: masa.statut,
+          numeroDepotVerseau1: masa.numeroDepotVerseau1,
+        }),
+        prenom: user.prenom,
+        nom: user.nom,
+      },
+      EmailTemplate.RAPPORT,
+    );
+    this.logger.log('Job email added - to déposant', { email: user.email });
+    await this.depotGateway.updateDepot(depot.id, {
+      step: DepotStep.SEND_EMAIL_TO_DEPOSANT,
+    });
+  }
+
+  private async sendToAgenceDeEauSftp(depot: DepotModel, _pdfBuffer: Buffer): Promise<void> {
+    try {
+      if (!depot.path) {
+        throw new Error(`No XML file path for depot: ${depot.id}`);
+      }
+      const _xmlBuffer = await this.s3.download(depot.path);
+
+      const remotePath = `verseau2/${depot.id}`;
+
+      // TODO: Send to different SFTP based on agency configuration
+      // // Send XML
+      // await this.sftpService.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
+
+      // // Send PDF
+      // await this.sftpService.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
+
+      this.logger.log("Files sent to Agence de l'eau SFTP", { remotePath });
+    } catch (error) {
+      this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {
+        depotId: depot.id,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+  }
+}

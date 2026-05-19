@@ -2,7 +2,16 @@ import { RapportPdfGeneratorService } from './rapportPdfGenerator.service';
 import { MasaModel, MasaStatus } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '../controle/controle.model';
-import { DepotStep, DepotStatus, ControleName, ControleType, ErrorCode, EvenementType } from '@lib/dossier';
+import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
+import {
+  DepotStep,
+  DepotStatus,
+  ControleName,
+  ControleType,
+  ErrorCode,
+  EvenementType,
+  SandreAcceptationStatus,
+} from '@lib/dossier';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -262,19 +271,94 @@ async function generateDummyPdf() {
     },
   ];
 
+  const reponsesSandreSuccess: ReponseSandreModel[] = [
+    {
+      id: 'res_123',
+      jeton: 'jeton_xyz',
+      acceptationStatus: SandreAcceptationStatus.CONFORMANT,
+      isConformant: true,
+      codeScenario: 'SCENARIO_1',
+      versionScenario: '1.0',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  const reponsesSandreRejected: ReponseSandreModel[] = [
+    {
+      id: 'res_456',
+      jeton: 'jeton_abc',
+      acceptationStatus: SandreAcceptationStatus.NON_CONFORMANT,
+      isConformant: false,
+      codeScenario: 'SCENARIO_1',
+      versionScenario: '1.0',
+      errors: [
+        {
+          code: 'ERR_001',
+          message: 'Balise <Test> inattendue',
+          ligne: '12',
+          colonne: '5',
+          location: '/Racine/Test',
+        },
+        {
+          code: 'ERR_002',
+          message: 'Attribut manquant: ref',
+          ligne: '15',
+          colonne: '2',
+        },
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
   try {
-    console.log('Generating PDF...');
-    const buffer = await service.generateReport(masa, depot, controlesV2);
+    console.log('Generating PDF for successful scenario (with MASA)...');
+    const bufferSuccess = await service.generateReport(depot, controlesV2, masa, reponsesSandreSuccess);
+    const outputPathSuccess = path.join(__dirname, 'dummy_report_success.pdf');
+    fs.writeFileSync(outputPathSuccess, bufferSuccess);
+    console.log(`✅ Success PDF generated at: ${outputPathSuccess}`);
 
-    const outputFilename = 'dummy_report.pdf';
-    const outputPath = path.join(__dirname, outputFilename);
-    fs.writeFileSync(outputPath, buffer);
+    console.log('\nGenerating PDF for rejected scenario (without MASA, with internal errors)...');
+    const depotRejected: DepotModel = {
+      ...depot,
+      status: DepotStatus.REJETE,
+      step: DepotStep.CONTROLE_FAILED,
+    };
 
-    console.log(`\n✅ PDF successfully generated at: ${outputPath}`);
+    // Add a critical error to the controls to simulate a rejection
+    const controlesV2Rejected: ControleModelWithoutDepot[] = [
+      ...controlesV2.filter((ctrl) => ctrl.id !== 'ctrl_002'), // Keep successful controls for context
+      {
+        id: 'ctrl_040',
+        name: ControleName.CTL002,
+        type: ControleType.CONTROLE_V2,
+        success: false,
+        error: ErrorCode.E2_003,
+        errorParams: [],
+        evenementType: EvenementType.ERREUR,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const bufferRejected = await service.generateReport(
+      depotRejected,
+      controlesV2Rejected,
+      undefined,
+      reponsesSandreRejected,
+    );
+    const outputPathRejected = path.join(__dirname, 'dummy_report_rejected.pdf');
+    fs.writeFileSync(outputPathRejected, bufferRejected);
+    console.log(`✅ Rejected PDF generated at: ${outputPathRejected}`);
   } catch (error) {
-    console.error('\n❌ Error generating PDF:', error);
+    if (error instanceof Error) {
+      console.error('\n❌ Error generating PDF:', error.message);
+    } else {
+      console.error('\n❌ Error generating PDF:', String(error));
+    }
   }
 }
 
 // Execute the function
-generateDummyPdf();
+generateDummyPdf().catch(console.error);

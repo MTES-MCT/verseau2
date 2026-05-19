@@ -8,7 +8,19 @@ import { ControleMapper } from '@dossier/controle/isov1/controle.mapper';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ControleRepository } from '@dossier/controle/controle.repository';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
+import { RoseauReferentielPointMesureGateway } from '@referentiel/roseau/roseauReferentielPointMesure.gateway';
+import { RoseauReferentielPointMesureRepository } from '@referentiel/roseau/roseauReferentielPointMesure.repository';
+import { RoseauBilanGateway } from '@referentiel/roseau/roseauBilan.gateway';
+import { RoseauBilanRepository } from '@referentiel/roseau/roseauBilan.repository';
+import { RoseauConformiteGateway } from '@referentiel/roseau/roseauConformite.gateway';
+import { RoseauConformiteRepository } from '@referentiel/roseau/roseauConformite.repository';
+import { RoseauEvenementGateway } from '@referentiel/roseau/roseauEvenement.gateway';
+import { RoseauEvenementRepository } from '@referentiel/roseau/roseauEvenement.repository';
 import { RoseauRepository } from '@referentiel/roseau/roseau.repository';
+import { RoseauTransmissionGateway } from '@referentiel/roseau/roseauTransmission.gateway';
+import { RoseauMesureDeposeeGateway } from '@referentiel/roseau/roseauMesureDeposee.gateway';
+import { RoseauTransmissionRepository } from '@referentiel/roseau/roseauTransmission.repository';
+import { RoseauMesureDeposeeRepository } from '@referentiel/roseau/roseauMesureDeposee.repository';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
@@ -62,10 +74,22 @@ describe('ControleMetierV2Service (e2e)', () => {
         ControleMapper,
         ControleRepository,
         RoseauRepository,
+        RoseauReferentielPointMesureRepository,
+        RoseauBilanRepository,
+        RoseauConformiteRepository,
+        RoseauEvenementRepository,
         LanceleauRepository,
         MasaProvider,
         { provide: ControleGateway, useExisting: ControleRepository },
         { provide: RoseauGateway, useExisting: RoseauRepository },
+        { provide: RoseauReferentielPointMesureGateway, useExisting: RoseauReferentielPointMesureRepository },
+        { provide: RoseauBilanGateway, useExisting: RoseauBilanRepository },
+        { provide: RoseauConformiteGateway, useExisting: RoseauConformiteRepository },
+        { provide: RoseauEvenementGateway, useExisting: RoseauEvenementRepository },
+        RoseauTransmissionRepository,
+        { provide: RoseauTransmissionGateway, useExisting: RoseauTransmissionRepository },
+        RoseauMesureDeposeeRepository,
+        { provide: RoseauMesureDeposeeGateway, useExisting: RoseauMesureDeposeeRepository },
         { provide: LanceleauGateway, useExisting: LanceleauRepository },
       ],
     }).compile();

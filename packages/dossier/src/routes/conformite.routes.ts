@@ -61,11 +61,18 @@ export const listConformiteSteu = {
   query: z
     .object({
       year: ConformiteYearQuerySchema.shape.year,
-      trancheObligationRfa: TrancheObligationRfaSchema.optional(),
+      ouvrageDepollutionCode: z.string().optional(),
+      trancheObligationRfa: TrancheObligationRfaSchema.optional(), // TODO : remove trancheObligationRfa ?
       impact: z.enum(['avec', 'sans']).optional(),
     })
     .extend(createPaginationQuerySchema(ConformiteSteuSortBy).shape),
   response: PaginatedConformiteSteuResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportConformiteSteu = {
+  method: 'GET',
+  path: '/conformite/steu/export',
+  query: listConformiteSteu.query,
 } as const satisfies RouteDefinition;
 
 export const listConformiteScl = {
@@ -74,11 +81,18 @@ export const listConformiteScl = {
   query: z
     .object({
       year: ConformiteYearQuerySchema.shape.year,
-      trancheObligationRfa: TrancheObligationRfaSchema.optional(),
+      systemeCollecteCode: z.string().optional(),
+      trancheObligationRfa: TrancheObligationRfaSchema.optional(), // TODO : remove trancheObligationRfa ?
       impact: z.enum(['avec', 'sans']).optional(),
     })
     .extend(createPaginationQuerySchema(ConformiteSclSortBy).shape),
   response: PaginatedConformiteSclResponseSchema,
+} as const satisfies RouteDefinition;
+
+export const exportConformiteScl = {
+  method: 'GET',
+  path: '/conformite/scl/export',
+  query: listConformiteScl.query,
 } as const satisfies RouteDefinition;
 
 export const getConformiteSteuDetail = {

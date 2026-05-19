@@ -1,7 +1,8 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { CanActivate, type ExecutionContext, ForbiddenException, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import { LoggerService } from '@shared/logger/logger.service';
 import { CustomRequest } from '@shared/constants/customRequest';
+import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 // TODO : refactor en un guard et un middleware (AttachOuvragesInterceptor)
 @Injectable()
@@ -13,6 +14,7 @@ export class HasUserAccessToOuvragesGuard implements CanActivate {
     this.logger.setContext('HasUserAccessToOuvragesGuard');
   }
 
+  @TraceCalls(LOG_LEVELS[1])
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<CustomRequest>();
     const { itvCdn } = request.user;

@@ -83,7 +83,7 @@ export class ControleV1DataFetcherService {
       const steu = steus.find((s) => s.ouvrageDepollutionCode === ouvrage.cdOuvrageDepollution);
       const itv = itvs.find((i) => i.intervenantSiret === ouvrage.exploitant?.cdIntervenant);
       if (!steu || !itv) return [];
-      return [{ steuCdn: steu.ouvrageDepollutionIdentifiant, itvCdn: itv.intervenantIdentifiant }];
+      return [{ steuCdn: steu.ouvrageDepollutionId, itvCdn: itv.intervenantId }];
     });
   }
 }

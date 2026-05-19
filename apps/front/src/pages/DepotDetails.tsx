@@ -11,11 +11,14 @@ import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
 import type { MesuresSortByValue } from '@lib/dossier';
 import { useMesureFilters } from '../hooks/useMesureFilters';
-import { buildMesureTableRows } from '../helper/mesureTableData';
+import { buildMesureTableHeaders, buildMesureTableRows } from '../helper/mesureTableData';
 import { formatOption } from '../helper/optionsFormatter';
+import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
 import { useState } from 'react';
+import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
+import { downloadMesuresExport } from '../api/mesures';
 
 export function DepotDetailsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -29,8 +32,10 @@ export function DepotDetailsPage() {
     setSort,
     ouvrages,
     ouvragesLoading,
+    setOuvrageSearch,
     systemesCollecte,
     systemesCollecteLoading,
+    setSclSearch,
     ouvrageError,
     pointsMesure,
     pointsMesureLoading,
@@ -51,7 +56,16 @@ export function DepotDetailsPage() {
     totalPages,
     PAGE_SIZE,
     advancedFilterCount,
+    submitted,
+    submittedQuery,
+    hasSearched,
   } = useMesureFilters();
+  const {
+    download: downloadCsv,
+    isLoading: isExportLoading,
+    downloadError,
+    setDownloadError,
+  } = useCsvExportDownload(downloadMesuresExport);
 
   const isScl = form.ouvrageType === 'scl';
 
@@ -67,12 +81,10 @@ export function DepotDetailsPage() {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
 
-  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) =>
-    formatOption({
-      elementNomenclatureCode: String(option.pointMesureIdentifiant),
-      elementNomenclatureLibelle: option.pointMesureLibelle,
-    }),
-  );
+  const pointsMesureOptions: AutocompleteOption[] = pointsMesure.map((option) => ({
+    value: String(option.pointMesureId),
+    label: buildPointMesureLabel(option),
+  }));
 
   const parametresOptions: AutocompleteOption[] = parametres.map((option) =>
     formatOption({
@@ -106,34 +118,40 @@ export function DepotDetailsPage() {
   const qualificationsOptions: AutocompleteOption[] = qualifications.map(formatOption);
 
   const tableData = data ? buildMesureTableRows(data.data) : [];
+  const headers = buildMesureTableHeaders().map((header) => {
+    const sortFieldByProperty: Partial<Record<(typeof header)['property'], MesuresSortByValue>> = {
+      prelevementDate: 'date',
+      parametre: 'parametreCode',
+      resultatAnalyseValeur: 'valeur',
+      resultatAnalyseStatut: 'statut',
+    };
 
-  const columns: { label: string; field: MesuresSortByValue | null }[] = [
-    { label: 'Date', field: 'date' },
-    { label: 'Point de mesure', field: null },
-    { label: 'Localisation', field: null },
-    { label: 'Paramètre', field: 'parametreCode' },
-    { label: 'Valeur', field: 'valeur' },
-    { label: 'Unité', field: null },
-    { label: 'Qualification', field: null },
-    { label: 'Finalité', field: null },
-    { label: 'Statut', field: 'statut' },
-  ];
-
-  const headers = columns.map((col) => {
-    if (!col.field) {
-      return col.label;
+    const field = sortFieldByProperty[header.property];
+    if (!field) {
+      return header.label;
     }
 
     return (
       <SortableHeader<MesuresSortByValue>
-        label={col.label}
-        field={col.field}
+        key={field}
+        label={header.label}
+        field={field}
         sortBy={form.sortBy}
         sortOrder={form.sortOrder}
         onSort={setSort}
       />
     );
   });
+
+  const canExport = hasSearched && !isLoading && !isFetching && (data?.total ?? 0) > 0;
+
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+
+    void downloadCsv(submittedQuery, `mesures-${submitted.ouvrageType}.csv`);
+  };
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -179,10 +197,14 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-6')}>
               <SelectAutocomplete
                 label={isScl ? 'Système de collecte' : 'Station'}
-                placeholder={ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Tous les systèmes' : 'Tous les ouvrages'}
+                hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
+                placeholder={
+                  ouvragesLoadingCurrent ? 'Chargement…' : isScl ? 'Rechercher un SCL' : 'Rechercher une station'
+                }
                 options={ouvragesOptions}
                 value={form.selectedOuvrageCode || null}
                 onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
+                onInputChange={isScl ? setSclSearch : setOuvrageSearch}
                 state={ouvrageError ? 'error' : 'default'}
                 stateRelatedMessage={ouvrageError || undefined}
               />
@@ -191,6 +213,7 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
               <SelectAutocomplete
                 label="Point de mesure"
+                hintText={<br />}
                 placeholder={
                   !form.selectedOuvrageCode
                     ? isScl
@@ -210,6 +233,7 @@ export function DepotDetailsPage() {
             <div className={fr.cx('fr-col-12', 'fr-col-md-3')}>
               <SelectAutocomplete
                 label="Paramètre"
+                hintText={<br />}
                 placeholder={
                   form.selectedPmoCdn === null
                     ? 'Sélectionnez un point'
@@ -323,10 +347,31 @@ export function DepotDetailsPage() {
         />
       )}
 
+      {downloadError && (
+        <Alert
+          severity="error"
+          title="Erreur d'export"
+          description={downloadError}
+          closable
+          onClose={() => setDownloadError(null)}
+          className={fr.cx('fr-mb-4w')}
+        />
+      )}
+
       {/* Table — stays mounted while paginating; opacity signals background refresh */}
       {!isLoading && !error && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <>
+            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                priority="secondary"
+                onClick={handleExport}
+                disabled={!canExport || isExportLoading}
+              >
+                Exporter CSV
+              </Button>
+            </div>
             <Table
               caption="Liste des mesures d'autosurveillance"
               noCaption
