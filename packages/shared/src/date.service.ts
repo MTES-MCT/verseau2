@@ -36,6 +36,10 @@ export const getDateAsISODate = (date: Date): string => {
   return dateToLocalISODate(date);
 };
 
+export const getStartOfYearAsUTCDate = (year: number): Date => {
+  return new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
+};
+
 const dateToLocalISODate = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

@@ -6,7 +6,7 @@ import {
   PaginationQuery,
   bilanSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { formatDate } from '@lib/shared';
+import { formatDate, getStartOfYearAsUTCDate } from '@lib/shared';
 
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
@@ -140,6 +140,8 @@ export class BilanService {
     pageSize: number,
   ): Promise<BilanSteuFilters | null> {
     const { authorizedSteuCdas, year, ouvrageDepollutionCode, sortBy, sortOrder } = options;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
@@ -155,7 +157,8 @@ export class BilanService {
 
     return {
       ouvrageDepollutionIds,
-      year,
+      startDate,
+      endDate,
       parametreCodes: ALLOWED_BILAN_STEU_PARAMETRE_CODES,
       page,
       pageSize,
@@ -170,6 +173,8 @@ export class BilanService {
     pageSize: number,
   ): Promise<BilanSclFilters | null> {
     const { authorizedSclCdas, year, systemeCollecteCode, pointMesureId, statut, sortBy, sortOrder } = options;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = systemeCollecteCode
       ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
       : authorizedSclCdas;
@@ -185,7 +190,8 @@ export class BilanService {
 
     return {
       systemeCollecteIds,
-      year,
+      startDate,
+      endDate,
       page,
       pageSize,
       ...(pointMesureId ? { pointMesureId } : {}),

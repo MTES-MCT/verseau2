@@ -85,7 +85,8 @@ describe('BilanService', () => {
       expect(masaProviderMock.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU1']);
       expect(masaProviderMock.findBilanSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [123],
-        year: 2024,
+        startDate: expect.any(Date),
+        endDate: expect.any(Date),
         parametreCodes: [
           CodeParametre.DBO5,
           CodeParametre.DCO,
@@ -102,6 +103,12 @@ describe('BilanService', () => {
         page: 1,
         pageSize: 10,
       });
+      expect((masaProviderMock.findBilanSteu as jest.Mock).mock.calls[0][0].startDate.toISOString()).toBe(
+        '2024-01-01T00:00:00.000Z',
+      );
+      expect((masaProviderMock.findBilanSteu as jest.Mock).mock.calls[0][0].endDate.toISOString()).toBe(
+        '2025-01-01T00:00:00.000Z',
+      );
       expect(result.data).toHaveLength(1);
     });
   });
@@ -117,6 +124,50 @@ describe('BilanService', () => {
 
       expect(result.data).toEqual([]);
       expect(result.total).toBe(0);
+    });
+
+    it('calls masaProvider with resolved cdns and UTC date range', async () => {
+      (masaProviderMock.findSclBatchBySandreCdas as any).mockResolvedValue([{ systemeCollecteId: 456 }]);
+      (masaProviderMock.findBilanScl as any).mockResolvedValue({
+        data: [
+          {
+            sclCdn: 456,
+            systemeCollecteCode: 'SCL1',
+            systemeCollecteNom: 'Systeme 1',
+            pointMesureId: 789,
+            pointMesureNumero: 'PM1',
+            pointMesureLibelle: 'Point 1',
+            date: '2024-01-01',
+            volumeDeverse: 12,
+            tempsDeversement: 34,
+            statut: 'TP',
+          },
+        ],
+        total: 1,
+      });
+
+      const result = await service.listBilanScl({
+        authorizedSclCdas: ['SCL1'],
+        year: 2024,
+        page: 1,
+        pageSize: 10,
+      });
+
+      expect(masaProviderMock.findSclBatchBySandreCdas).toHaveBeenCalledWith(['SCL1']);
+      expect(masaProviderMock.findBilanScl).toHaveBeenCalledWith({
+        systemeCollecteIds: [456],
+        startDate: expect.any(Date),
+        endDate: expect.any(Date),
+        page: 1,
+        pageSize: 10,
+      });
+      expect((masaProviderMock.findBilanScl as jest.Mock).mock.calls[0][0].startDate.toISOString()).toBe(
+        '2024-01-01T00:00:00.000Z',
+      );
+      expect((masaProviderMock.findBilanScl as jest.Mock).mock.calls[0][0].endDate.toISOString()).toBe(
+        '2025-01-01T00:00:00.000Z',
+      );
+      expect(result.data).toHaveLength(1);
     });
   });
 

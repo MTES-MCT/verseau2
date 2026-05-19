@@ -1,4 +1,4 @@
-import { formatDate, getDateAsISODate, toISODateOrNull, getPreviousSunday } from './date.service';
+import { formatDate, getDateAsISODate, getStartOfYearAsUTCDate, toISODateOrNull, getPreviousSunday } from './date.service';
 
 describe('formatDate', () => {
   it('returns "-" for null', () => {
@@ -74,6 +74,10 @@ describe('UTC shift protection', () => {
     const justAfterMidnight = new Date(2024, 5, 15, 0, 15, 0); // 00:15 local
 
     expect(formatDate(justAfterMidnight)).toBe('15/06/2024');
+  });
+
+  it('getStartOfYearAsUTCDate returns UTC midnight for the requested year', () => {
+    expect(getStartOfYearAsUTCDate(2024).toISOString()).toBe('2024-01-01T00:00:00.000Z');
   });
 });
 
