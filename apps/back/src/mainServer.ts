@@ -23,12 +23,12 @@ async function bootstrapServer() {
 
   // Enable Nest lifecycle hooks on shutdown signals (SIGTERM, SIGINT)
   app.enableShutdownHooks();
-
-  // Enable CORS for frontend development
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true,
-  });
+  if (process.env.CORS_ORIGIN) {
+    app.enableCors({
+      origin: process.env.CORS_ORIGIN,
+      credentials: true,
+    });
+  }
   app.setGlobalPrefix('api');
 
   await app.listen(process.env.PORT ?? 3000);
