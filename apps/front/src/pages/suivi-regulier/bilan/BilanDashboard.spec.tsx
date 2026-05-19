@@ -425,7 +425,7 @@ describe('BilanDashboard', () => {
     renderPage();
 
     expect(mockUseBilanSteuParametres).toHaveBeenCalledWith();
-    expect(ALLOWED_BILAN_STEU_PARAMETRE_CODES).toContain('1313');
+    expect(ALLOWED_BILAN_STEU_PARAMETRE_CODES).toContain(1313);
   });
 
   it('inclut le paramètre sélectionné dans la requête STEU et dans l’export csv', async () => {
