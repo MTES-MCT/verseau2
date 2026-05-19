@@ -49,6 +49,7 @@ export interface RoseauGateway {
     ouvrageCode: string,
     pmoCdn?: number,
   ): Promise<ParametreMesure[]>;
+  findParametresByCodes(codes: string[]): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
 }
 

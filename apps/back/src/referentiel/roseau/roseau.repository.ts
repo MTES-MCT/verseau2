@@ -567,6 +567,35 @@ export class RoseauRepository implements RoseauGateway {
     }));
   }
 
+  async findParametresByCodes(codes: string[]): Promise<ParametreMesure[]> {
+    if (codes.length === 0) {
+      return [];
+    }
+
+    const rows = await this.alrRepository.manager
+      .getRepository(ParEntity)
+      .createQueryBuilder('par')
+      .select('par.par_rfa', 'par_rfa')
+      .addSelect('par.par_court_nom_lb', 'par_court_nom_lb')
+      .where('par.par_rfa IN (:...codes)', { codes })
+      .orderBy('par.par_rfa', 'ASC')
+      .getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
+
+    const rowsByCode = new Map(rows.map((row) => [row.par_rfa?.trim() ?? '', row] as const));
+
+    return codes.flatMap((code) => {
+      const row = rowsByCode.get(code);
+      if (!row) {
+        return [];
+      }
+
+      return {
+        parametreAnalyseCode: row.par_rfa?.trim() ?? '',
+        parametreNomCourt: row.par_court_nom_lb?.trim() ?? null,
+      };
+    });
+  }
+
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
     if (systemeCollecteIds.length === 0) return [];
 

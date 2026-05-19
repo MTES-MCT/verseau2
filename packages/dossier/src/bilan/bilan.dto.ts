@@ -1,5 +1,22 @@
 import { z } from 'zod';
+import { CodeParametre } from '../referentiel/codeParametre';
 import { createPaginatedResponseSchema } from '../shared/pagination.schema';
+
+export const ALLOWED_BILAN_STEU_PARAMETRE_CODES = [
+  CodeParametre.DBO5,
+  CodeParametre.DCO,
+  CodeParametre.MES,
+  CodeParametre.NGL,
+  CodeParametre.N_NH4,
+  CodeParametre.NTK,
+  CodeParametre.NO2,
+  CodeParametre.NO3,
+  CodeParametre.pH,
+  CodeParametre.Temperature,
+  CodeParametre.Ptot,
+] as const;
+
+export type AllowedBilanSteuParametreCode = `${(typeof ALLOWED_BILAN_STEU_PARAMETRE_CODES)[number]}`;
 
 export const BilanSteuDtoSchema = z.object({
   steuCdn: z.number(),

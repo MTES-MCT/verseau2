@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { OuvrageType } from './mesures.routes';
+import { ParametreMesureSchema } from '../mesure/mesure.dto';
 import { TypePointMesure } from '../shared/typePointMesure';
 import { SclDetailDtoSchema, SteuDetailDtoSchema } from '../referentiel/referentiel.dto';
 
@@ -16,6 +17,15 @@ export const codesToParametres = {
   response: z.object({
     parametres: z.array(z.string().nullable()),
   }),
+} as const satisfies RouteDefinition;
+
+export const listParametresReferentiel = {
+  method: 'POST',
+  path: '/referentiel/parametres',
+  body: z.object({
+    codes: z.array(z.string()),
+  }),
+  response: z.array(ParametreMesureSchema),
 } as const satisfies RouteDefinition;
 
 // --- Points de mesure du référentiel ---

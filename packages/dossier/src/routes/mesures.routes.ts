@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
-import { PaginatedMesuresResponseSchema } from '../mesure/mesure.dto';
+import { PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 import { TypePointMesure } from '../shared/typePointMesure';
 
@@ -92,12 +92,7 @@ export const listParametresMesure = {
     ouvrageCode: z.string(),
     pmoCdn: z.coerce.number().optional(),
   }),
-  response: z.array(
-    z.object({
-      parametreAnalyseCode: z.string(),
-      parametreNomCourt: z.string().nullable(),
-    }),
-  ),
+  response: z.array(ParametreMesureSchema),
 } as const satisfies RouteDefinition;
 
 export const listFinalites = {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CodeParametre } from './codeParametre';
+import { CodeParametre } from '@lib/dossier';
 
 // Pour l'instant, cette gateway fait un mapping en dur avec les valeurs de code Sandre
 // Plus tard, elle sera implémentée par un repository

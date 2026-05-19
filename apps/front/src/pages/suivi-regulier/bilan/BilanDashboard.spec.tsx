@@ -1,22 +1,28 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { CURRENT_BILAN_YEAR } from '@lib/dossier';
+import { ALLOWED_BILAN_STEU_PARAMETRE_CODES, CURRENT_BILAN_YEAR } from '@lib/dossier';
 import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
-import { useBilanScl, useBilanSclDetail, useBilanSteu, useBilanSteuDetail } from '../../../hooks/useBilan';
+import {
+  useBilanScl,
+  useBilanSclDetail,
+  useBilanSteu,
+  useBilanSteuDetail,
+  useBilanSteuParametres,
+} from '../../../hooks/useBilan';
 import { BilanDashboard } from './BilanDashboard';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import * as bilanApi from '../../../api/bilan';
-import { useParametresMesure } from '../../../hooks/useParametresMesure';
 
 vi.mock('../../../hooks/useBilan', () => ({
   useBilanSteu: vi.fn(),
   useBilanScl: vi.fn(),
   useBilanSteuDetail: vi.fn(),
   useBilanSclDetail: vi.fn(),
+  useBilanSteuParametres: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useAsyncOuvragesSearch', () => ({
@@ -33,10 +39,6 @@ vi.mock('../../../hooks/usePointsMesure', () => ({
 
 vi.mock('../../../hooks/useBilanFilters', () => ({
   useBilanFilters: vi.fn(),
-}));
-
-vi.mock('../../../hooks/useParametresMesure', () => ({
-  useParametresMesure: vi.fn(),
 }));
 
 vi.mock('../../../api/bilan', async () => {
@@ -57,7 +59,7 @@ const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSea
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseBilanFilters = vi.mocked(useBilanFilters);
 const mockDownloadBilanSteuExport = vi.mocked(bilanApi.downloadBilanSteuExport);
-const mockUseParametresMesure = vi.mocked(useParametresMesure);
+const mockUseBilanSteuParametres = vi.mocked(useBilanSteuParametres);
 
 const emptySteuResult = {
   data: { data: [], total: 0, page: 1, pageSize: 10 },
@@ -157,9 +159,9 @@ describe('BilanDashboard', () => {
     mockUsePointsMesure.mockReturnValue({ data: [], isLoading: false } as Partial<
       ReturnType<typeof usePointsMesure>
     > as ReturnType<typeof usePointsMesure>);
-    mockUseParametresMesure.mockReturnValue({ data: [], isLoading: false } as Partial<
-      ReturnType<typeof useParametresMesure>
-    > as ReturnType<typeof useParametresMesure>);
+    mockUseBilanSteuParametres.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useBilanSteuParametres>
+    > as ReturnType<typeof useBilanSteuParametres>);
   });
 
   it('affiche le tableau STEU par défaut', () => {
@@ -399,7 +401,7 @@ describe('BilanDashboard', () => {
     expect(screen.queryByLabelText(/paramètre/i)).not.toBeInTheDocument();
   });
 
-  it('désactive le filtre paramètre tant qu’aucune station n’est sélectionnée', () => {
+  it('garde le filtre paramètre actif sans station sélectionnée', () => {
     mockUseBilanFilters.mockReturnValue(
       defaultFilters({
         filters: {
@@ -416,7 +418,14 @@ describe('BilanDashboard', () => {
 
     renderPage();
 
-    expect(screen.getByLabelText(/paramètre/i)).toBeDisabled();
+    expect(screen.getByLabelText(/paramètre/i)).toBeEnabled();
+  });
+
+  it('charge les paramètres bilan STEU depuis le référentiel avec la liste autorisée', () => {
+    renderPage();
+
+    expect(mockUseBilanSteuParametres).toHaveBeenCalledWith();
+    expect(ALLOWED_BILAN_STEU_PARAMETRE_CODES).toContain('1313');
   });
 
   it('inclut le paramètre sélectionné dans la requête STEU et dans l’export csv', async () => {
@@ -429,7 +438,7 @@ describe('BilanDashboard', () => {
           ouvrageDepollutionCode: 'STEU001',
           systemeCollecteCode: '',
           pointMesureId: '',
-          parametreCode: 'DBO5',
+          parametreCode: '1313',
           statut: '',
         },
       }),
@@ -441,7 +450,7 @@ describe('BilanDashboard', () => {
     renderPage();
 
     expect(mockUseBilanSteu).toHaveBeenCalledWith(
-      expect.objectContaining({ parametreCode: 'DBO5' }),
+      expect.objectContaining({ parametreCode: '1313' }),
       true,
     );
 
@@ -449,7 +458,7 @@ describe('BilanDashboard', () => {
 
     await waitFor(() => {
       expect(mockDownloadBilanSteuExport).toHaveBeenCalledWith(
-        expect.objectContaining({ parametreCode: 'DBO5' }),
+        expect.objectContaining({ parametreCode: '1313' }),
       );
     });
   });

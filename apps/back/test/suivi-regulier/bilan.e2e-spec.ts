@@ -8,7 +8,7 @@ import cookieParser from 'cookie-parser';
 import { ApiModule } from '../../src/api/api.module';
 import { PGBOSS } from '../../src/infra/queue/queue';
 import { InfraModule } from '@infra/infra.module';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import { CodeParametre } from '@lib/dossier';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
 import { initTestContainerImports } from '../init/initTestContainer';
 import { getPostgresConnectionUri, startPostgresContainer } from '../testcontainer.config';
@@ -200,7 +200,9 @@ describe('BilanController (e2e)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get(`/suivi-regulier/bilan/steu/export?year=${currentYear}&parametreCode=${CodeParametre.DBO5}&page=1&pageSize=20`)
+        .get(
+          `/suivi-regulier/bilan/steu/export?year=${currentYear}&parametreCode=${CodeParametre.DBO5}&page=1&pageSize=20`,
+        )
         .set('Cookie', ['access_token=token'])
         .expect(200);
 

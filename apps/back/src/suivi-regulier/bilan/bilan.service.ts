@@ -1,5 +1,6 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
+  ALLOWED_BILAN_STEU_PARAMETRE_CODES,
   bilanSclPropertyToHeaderMapper,
   BilanSteuSortByValue,
   BilanSclSortByValue,
@@ -11,7 +12,6 @@ import { formatDate, getStartOfYearAsUTCDate } from '@lib/shared';
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import {
   buildCsvColumnsFromPropertyToHeaderMapper,
   type CsvFormattedRow,
@@ -19,20 +19,6 @@ import {
 import { formatBooleanToOuiNon, formatNullable } from '@shared/csv/csvFormatters';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
-
-const ALLOWED_BILAN_STEU_PARAMETRE_CODES: string[] = [
-  CodeParametre.DBO5,
-  CodeParametre.DCO,
-  CodeParametre.MES,
-  CodeParametre.NGL,
-  CodeParametre.N_NH4,
-  CodeParametre.NTK,
-  CodeParametre.NO2,
-  CodeParametre.NO3,
-  CodeParametre.pH,
-  CodeParametre.Temperature,
-  CodeParametre.Ptot,
-].map(String);
 
 export interface ListBilanSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
@@ -157,8 +143,8 @@ export class BilanService {
     }
 
     const parametreCodes = parametreCode
-      ? ALLOWED_BILAN_STEU_PARAMETRE_CODES.filter((code) => code === parametreCode)
-      : ALLOWED_BILAN_STEU_PARAMETRE_CODES;
+      ? ALLOWED_BILAN_STEU_PARAMETRE_CODES.filter((code) => String(code) === parametreCode).map(String)
+      : ALLOWED_BILAN_STEU_PARAMETRE_CODES.map(String);
 
     if (parametreCodes.length === 0) {
       return null;

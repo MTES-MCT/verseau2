@@ -9,7 +9,13 @@ import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Button } from '@codegouvfr/react-dsfr/Button';
-import { useBilanSteu, useBilanScl, useBilanSteuDetail, useBilanSclDetail } from '../../../hooks/useBilan';
+import {
+  useBilanSteu,
+  useBilanScl,
+  useBilanSteuDetail,
+  useBilanSclDetail,
+  useBilanSteuParametres,
+} from '../../../hooks/useBilan';
 import { useBilanFilters } from '../../../hooks/useBilanFilters';
 import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
 import { usePointsMesure } from '../../../hooks/usePointsMesure';
@@ -28,7 +34,6 @@ import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
 import { downloadBilanSclExport, downloadBilanSteuExport } from '../../../api/bilan';
-import { useParametresMesure } from '../../../hooks/useParametresMesure';
 import { formatOption } from '../../../helper/optionsFormatter';
 
 function formatInfoDate(value: string | null | undefined) {
@@ -62,10 +67,7 @@ export const BilanDashboard = () => {
   const isScl = filters.mode === 'scl';
 
   const { data: pmos = [] } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode || null : null);
-  const { data: parametres = [], isLoading: parametresLoading } = useParametresMesure(
-    'steu',
-    !isScl ? filters.ouvrageDepollutionCode || null : null,
-  );
+  const { data: parametres = [], isLoading: parametresLoading } = useBilanSteuParametres();
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
@@ -316,7 +318,7 @@ export const BilanDashboard = () => {
             ))}
           </Select>
         </div>
-        <div className={`fr-col-12 fr-col-lg-7 ${isScl ? 'fr-col-xl-4' : 'fr-col-xl-6'}`}>
+        <div className={`fr-col-12 fr-col-lg-4 ${isScl ? 'fr-col-xl-4' : 'fr-col-xl-5'}`}>
           <SelectAutocomplete
             label={isScl ? 'Système de collecte' : 'Station'}
             hintText={ouvragesLoadingCurrent ? 'Recherche en cours...' : 'Saisissez au moins 2 caractères'}
@@ -328,12 +330,11 @@ export const BilanDashboard = () => {
           />
         </div>
         {!isScl && (
-          <div className="fr-col-12 fr-col-lg-5 fr-col-xl-4">
+          <div className="fr-col-12 fr-col-lg-3 fr-col-xl-3">
             <SelectAutocomplete
               label="Paramètre"
               hintText={<br />}
-              disabled={!hasOuvrageSelected}
-              placeholder={!hasOuvrageSelected ? 'Sélectionnez une station' : parametresLoading ? 'Chargement…' : 'Tous les paramètres'}
+              placeholder={parametresLoading ? 'Chargement…' : 'Tous les paramètres'}
               options={parametreOptions}
               value={filters.parametreCode || null}
               onChange={handleParametreChange}

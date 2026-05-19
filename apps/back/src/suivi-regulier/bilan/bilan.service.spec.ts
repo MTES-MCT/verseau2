@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
+import { CodeParametre } from '@lib/dossier';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { BilanService } from './bilan.service';
 

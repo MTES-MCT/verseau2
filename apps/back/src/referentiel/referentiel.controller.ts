@@ -1,6 +1,12 @@
-import { Controller, ForbiddenException, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
-import type { RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
-import { codesToParametres, getSclDetail, getSteuDetail, listPointsMesureReferentiel } from '@lib/dossier';
+import { Body, Controller, ForbiddenException, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import type { RouteBody, RouteParams, RouteQuery, RouteResponse } from '@lib/dossier';
+import {
+  codesToParametres,
+  getSclDetail,
+  getSteuDetail,
+  listParametresReferentiel,
+  listPointsMesureReferentiel,
+} from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { MeGuard } from '@authentication/me.guard';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
@@ -24,6 +30,14 @@ export class ReferentielController {
     const parametres = this.parametreGateway.findParametresByCodes(query.codes);
 
     return { parametres };
+  }
+
+  @Post('parametres')
+  @UseGuards(MeGuard)
+  async listParametresReferentiel(
+    @Body(new ZodValidationPipe(listParametresReferentiel['body'])) body: RouteBody<typeof listParametresReferentiel>,
+  ): Promise<RouteResponse<typeof listParametresReferentiel>> {
+    return this.masaProvider.findParametresByCodes(body.codes);
   }
 
   @Get('points-mesure')

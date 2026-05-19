@@ -500,6 +500,11 @@ export class MasaProvider {
     return this.roseauGateway.findParametresByOuvrageAndPmo(ouvrageType, ouvrageCode, pmoCdn);
   }
 
+  // route: POST /api/referentiel/parametres
+  async findParametresByCodes(codes: string[]): Promise<ParametreMesure[]> {
+    return this.roseauGateway.findParametresByCodes(codes);
+  }
+
   // ---------------------------------------------------------------------------
   // Nomenclatures — Récupération d'une nomenclature par son code RFA
   // route: GET /api/nomenclatures/:rfa
