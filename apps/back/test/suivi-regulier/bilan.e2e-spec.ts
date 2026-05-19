@@ -134,7 +134,7 @@ describe('BilanController (e2e)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get(`/suivi-regulier/bilan/steu?year=${currentYear}&page=1&pageSize=20`)
+        .get(`/suivi-regulier/bilan/steu?year=${currentYear}&parametreCode=${CodeParametre.DBO5}&page=1&pageSize=20`)
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -153,20 +153,9 @@ describe('BilanController (e2e)', () => {
 
       expect(mockMasaProvider.findBilanSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
-        year: currentYear,
-        parametreCodes: [
-          CodeParametre.DBO5,
-          CodeParametre.DCO,
-          CodeParametre.MES,
-          CodeParametre.NGL,
-          CodeParametre.N_NH4,
-          CodeParametre.NTK,
-          CodeParametre.NO2,
-          CodeParametre.NO3,
-          CodeParametre.pH,
-          CodeParametre.Temperature,
-          CodeParametre.Ptot,
-        ].map(String),
+        startDate: new Date(`${currentYear}-01-01T00:00:00.000Z`),
+        endDate: new Date(`${currentYear + 1}-01-01T00:00:00.000Z`),
+        parametreCodes: [CodeParametre.DBO5].map(String),
         page: 1,
         pageSize: 20,
       });
@@ -211,7 +200,7 @@ describe('BilanController (e2e)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .get(`/suivi-regulier/bilan/steu/export?year=${currentYear}&page=1&pageSize=20`)
+        .get(`/suivi-regulier/bilan/steu/export?year=${currentYear}&parametreCode=${CodeParametre.DBO5}&page=1&pageSize=20`)
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -329,7 +318,8 @@ describe('BilanController (e2e)', () => {
 
       expect(mockMasaProvider.findBilanScl).toHaveBeenCalledWith({
         systemeCollecteIds: [20],
-        year: currentYear,
+        startDate: new Date(`${currentYear}-01-01T00:00:00.000Z`),
+        endDate: new Date(`${currentYear + 1}-01-01T00:00:00.000Z`),
         page: 1,
         pageSize: 20,
       });

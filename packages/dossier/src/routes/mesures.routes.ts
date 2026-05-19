@@ -90,7 +90,7 @@ export const listParametresMesure = {
   query: z.object({
     ouvrageType: OuvrageType.default('steu'),
     ouvrageCode: z.string(),
-    pmoCdn: z.coerce.number(),
+    pmoCdn: z.coerce.number().optional(),
   }),
   response: z.array(
     z.object({

@@ -38,6 +38,7 @@ export interface ListBilanSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
   ouvrageDepollutionCode?: string;
+  parametreCode?: string;
   sortBy?: BilanSteuSortByValue;
 }
 
@@ -139,7 +140,7 @@ export class BilanService {
     page: number,
     pageSize: number,
   ): Promise<BilanSteuFilters | null> {
-    const { authorizedSteuCdas, year, ouvrageDepollutionCode, sortBy, sortOrder } = options;
+    const { authorizedSteuCdas, year, ouvrageDepollutionCode, parametreCode, sortBy, sortOrder } = options;
     const startDate = getStartOfYearAsUTCDate(year);
     const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = ouvrageDepollutionCode
@@ -155,11 +156,19 @@ export class BilanService {
       return null;
     }
 
+    const parametreCodes = parametreCode
+      ? ALLOWED_BILAN_STEU_PARAMETRE_CODES.filter((code) => code === parametreCode)
+      : ALLOWED_BILAN_STEU_PARAMETRE_CODES;
+
+    if (parametreCodes.length === 0) {
+      return null;
+    }
+
     return {
       ouvrageDepollutionIds,
       startDate,
       endDate,
-      parametreCodes: ALLOWED_BILAN_STEU_PARAMETRE_CODES,
+      parametreCodes,
       page,
       pageSize,
       ...(sortBy ? { sortBy } : {}),

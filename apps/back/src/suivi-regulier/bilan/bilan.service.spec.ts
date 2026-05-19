@@ -111,6 +111,24 @@ describe('BilanService', () => {
       );
       expect(result.data).toHaveLength(1);
     });
+
+    it('forwards selected parametreCode to findBilanSteu', async () => {
+      (masaProviderMock.findSteuBatchBySandreCdas as any).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
+      (masaProviderMock.findBilanSteu as any).mockResolvedValue({ data: [], total: 0 });
+
+      await service.listBilanSteu({
+        authorizedSteuCdas: ['STEU1'],
+        year: 2024,
+        ouvrageDepollutionCode: 'STEU1',
+        parametreCode: String(CodeParametre.DBO5),
+        page: 1,
+        pageSize: 10,
+      });
+
+      expect(masaProviderMock.findBilanSteu).toHaveBeenCalledWith(
+        expect.objectContaining({ parametreCodes: [String(CodeParametre.DBO5)] }),
+      );
+    });
   });
 
   describe('listBilanScl', () => {

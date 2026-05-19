@@ -379,6 +379,27 @@ describe('MesuresService', () => {
     });
   });
 
+  describe('listParametresMesure', () => {
+    it('delegates with omitted pmoCdn when ouvrage is authorized', async () => {
+      masaProvider.findParametresByOuvrageAndPmo.mockResolvedValue([
+        {
+          parametreAnalyseCode: 'DBO5',
+          parametreNomCourt: 'Demande biochimique en oxygène sur 5 jours',
+        },
+      ]);
+
+      const result = await service.listParametresMesure(['STEU001'], [], 'steu', 'STEU001');
+
+      expect(masaProvider.findParametresByOuvrageAndPmo).toHaveBeenCalledWith('steu', 'STEU001', undefined);
+      expect(result).toEqual([
+        {
+          parametreAnalyseCode: 'DBO5',
+          parametreNomCourt: 'Demande biochimique en oxygène sur 5 jours',
+        },
+      ]);
+    });
+  });
+
   describe('listStatuts', () => {
     it('delegates to masaProvider.findStatuts', async () => {
       const items = [makeNomenclatureItem('A', 'Donnée brute'), makeNomenclatureItem('B', 'Pré-qualification')];

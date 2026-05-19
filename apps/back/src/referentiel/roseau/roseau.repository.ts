@@ -533,7 +533,7 @@ export class RoseauRepository implements RoseauGateway {
   async findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
-    pmoCdn: number,
+    pmoCdn?: number,
   ): Promise<ParametreMesure[]> {
     const qb = this.alrRepository
       .createQueryBuilder('alr')
@@ -542,7 +542,11 @@ export class RoseauRepository implements RoseauGateway {
       .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
       .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
       .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
-      .where('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+      .where('1 = 1');
+
+    if (pmoCdn !== undefined) {
+      qb.andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+    }
 
     if (ouvrageType === 'scl') {
       qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').andWhere('scl.scl_sandre_cda = :ouvrageCode', {

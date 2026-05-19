@@ -202,7 +202,7 @@ export class MesuresService {
     authorizedSclCdas: string[],
     ouvrageType: OuvrageTypeValue,
     ouvrageCode: string,
-    pmoCdn: number,
+    pmoCdn?: number,
   ): Promise<ParametreMesure[]> {
     if (ouvrageType === 'scl') {
       if (!authorizedSclCdas.includes(ouvrageCode)) return [];

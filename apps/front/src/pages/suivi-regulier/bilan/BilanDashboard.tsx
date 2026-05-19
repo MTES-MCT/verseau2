@@ -28,6 +28,8 @@ import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
 import { downloadBilanSclExport, downloadBilanSteuExport } from '../../../api/bilan';
+import { useParametresMesure } from '../../../hooks/useParametresMesure';
+import { formatOption } from '../../../helper/optionsFormatter';
 
 function formatInfoDate(value: string | null | undefined) {
   if (!value) {
@@ -60,6 +62,10 @@ export const BilanDashboard = () => {
   const isScl = filters.mode === 'scl';
 
   const { data: pmos = [] } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode || null : null);
+  const { data: parametres = [], isLoading: parametresLoading } = useParametresMesure(
+    'steu',
+    !isScl ? filters.ouvrageDepollutionCode || null : null,
+  );
   const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
 
@@ -88,6 +94,12 @@ export const BilanDashboard = () => {
     value: p.pointMesureId.toString(),
     label: buildPointMesureLabel(p),
   }));
+  const parametreOptions: AutocompleteOption[] = parametres.map((option) =>
+    formatOption({
+      elementNomenclatureCode: option.parametreAnalyseCode,
+      elementNomenclatureLibelle: option.parametreNomCourt,
+    }),
+  );
 
   const handleOuvrageChange = (value: string | null) => {
     const newVal = value ?? '';
@@ -96,7 +108,7 @@ export const BilanDashboard = () => {
       updateFilter({ systemeCollecteCode: newVal, pointMesureId: '' });
     } else {
       setOuvrageSearch(newVal);
-      updateFilter({ ouvrageDepollutionCode: newVal });
+      updateFilter({ ouvrageDepollutionCode: newVal, parametreCode: '' });
     }
   };
 
@@ -111,11 +123,16 @@ export const BilanDashboard = () => {
     updateFilter({ mode });
   };
 
+  const handleParametreChange = (value: string | null) => {
+    updateFilter({ parametreCode: value ?? '' });
+  };
+
   const steuQuery = {
     page,
     pageSize,
     year: filters.year,
     ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
+    ...(filters.parametreCode ? { parametreCode: filters.parametreCode } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as BilanSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -310,6 +327,19 @@ export const BilanDashboard = () => {
             onInputChange={isScl ? setSclSearch : setOuvrageSearch}
           />
         </div>
+        {!isScl && (
+          <div className="fr-col-12 fr-col-lg-5 fr-col-xl-4">
+            <SelectAutocomplete
+              label="Paramètre"
+              hintText={<br />}
+              disabled={!hasOuvrageSelected}
+              placeholder={!hasOuvrageSelected ? 'Sélectionnez une station' : parametresLoading ? 'Chargement…' : 'Tous les paramètres'}
+              options={parametreOptions}
+              value={filters.parametreCode || null}
+              onChange={handleParametreChange}
+            />
+          </div>
+        )}
         {isScl && (
           <>
             <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
