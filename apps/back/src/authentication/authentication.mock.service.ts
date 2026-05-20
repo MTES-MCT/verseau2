@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Authentication,
@@ -8,25 +8,56 @@ import {
   AuthenticatedUserAndNomPrenom,
 } from './authentication';
 import type { Response } from 'express';
+import { DroitsUserService } from '@user/droitsUser.service';
+import { SignJWT, jwtVerify } from 'jose';
+import { DataSource } from 'typeorm';
+import { UserEntity } from '@user/user.entity';
+import { normalizeEmail } from '@shared/service/string.service';
 
 @Injectable()
 export class AuthenticationMockService implements Authentication {
-  constructor(private readonly configService: ConfigService) {}
+  private readonly jwtSecret: Uint8Array;
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async validateToken(token: string): Promise<AuthenticatedUser> {
-    const providedToken = token?.trim();
-
-    if (!providedToken) {
-      throw new Error('Missing token');
-    }
-
-    return this.getMockUser();
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly droitsUserService: DroitsUserService,
+    private readonly dataSource: DataSource,
+  ) {
+    this.jwtSecret = new TextEncoder().encode(this.configService.getOrThrow<string>('JWT_SECRET'));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
+  async validateToken(token: string): Promise<AuthenticatedUser> {
+    try {
+      const { payload } = await jwtVerify(token, this.jwtSecret, {
+        algorithms: ['HS256'],
+      });
+
+      return {
+        cerbereId: (payload.sub as string) || '',
+        mel: (payload.email as string) || '',
+        itvCdn: (payload.itvCdn as number) ?? null,
+        isExpertNational: (payload.isExpertNational as boolean) ?? false,
+      };
+    } catch {
+      throw new UnauthorizedException();
+    }
+  }
+
   async extractSubjectFromExpiredToken(token: string): Promise<string> {
-    return this.getMockUser().cerbereId;
+    try {
+      const { payload } = await jwtVerify(token, this.jwtSecret, {
+        algorithms: ['HS256'],
+        clockTolerance: 7 * 24 * 60 * 60,
+      });
+
+      if (!payload.sub) {
+        throw new UnauthorizedException();
+      }
+
+      return payload.sub;
+    } catch {
+      throw new UnauthorizedException();
+    }
   }
 
   getOIDCConfiguration(): Promise<OIDCConfiguration> {
@@ -38,23 +69,33 @@ export class AuthenticationMockService implements Authentication {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
   async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
-    const fakeToken = 'mock-token';
+    void code;
+    void nonce;
+    const user = await this.getMockUser();
+    const accessToken = await this.signInternalToken(user);
+
     return {
-      accessToken: fakeToken,
-      refreshToken: fakeToken,
+      accessToken,
+      refreshToken: accessToken,
       expiresIn: 3600,
-      user: this.getMockUser(),
+      user,
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
   async refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens> {
-    const fakeToken = 'mock-token';
+    void refreshToken;
+
+    const user = await this.getMockUser();
+    if (user.cerbereId !== expectedSubject) {
+      throw new UnauthorizedException();
+    }
+
+    const accessToken = await this.signInternalToken(user);
+
     return {
-      accessToken: fakeToken,
-      refreshToken: fakeToken,
+      accessToken,
+      refreshToken: accessToken,
       expiresIn: 3600,
     };
   }
@@ -82,14 +123,44 @@ export class AuthenticationMockService implements Authentication {
     res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 
-  private getMockUser(): AuthenticatedUserAndNomPrenom {
+  private async signInternalToken(user: AuthenticatedUser): Promise<string> {
+    return new SignJWT({
+      sub: user.cerbereId,
+      email: user.mel,
+      itvCdn: user.itvCdn,
+      isExpertNational: user.isExpertNational,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(this.jwtSecret);
+  }
+
+  private async getMockUser(): Promise<AuthenticatedUserAndNomPrenom> {
+    const mockEmail = this.configService.get<string>('OIDC_MOCK_EMAIL')?.trim();
+    if (!mockEmail) {
+      throw new UnauthorizedException('OIDC_MOCK_EMAIL is required when OIDC_MOCK=true');
+    }
+
+    const user = await this.dataSource.getRepository(UserEntity).findOne({
+      where: { email: normalizeEmail(mockEmail) },
+    });
+    if (!user) {
+      throw new UnauthorizedException(`User with email ${mockEmail} not found`);
+    }
+
+    const [itvCdn, isExpertNational] = await Promise.all([
+      this.droitsUserService.resolveItvCdn(user.sub),
+      this.droitsUserService.isExpertNationalVerseau(user.sub),
+    ]);
+
     return {
-      cerbereId: 'test-user-id',
-      mel: 'dev@example.com',
-      itvCdn: 900995,
-      isExpertNational: false,
-      nom: 'Test',
-      prenom: 'User',
+      cerbereId: user.sub,
+      mel: user.email || mockEmail,
+      itvCdn,
+      isExpertNational,
+      nom: user.nom || undefined,
+      prenom: user.prenom || undefined,
     };
   }
 }
