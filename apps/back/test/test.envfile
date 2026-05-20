@@ -6,6 +6,7 @@ OIDC_CLIENT_ID=verseau2
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URI=http://localhost:5173/callback
 OIDC_MOCK=true
+OIDC_MOCK_EMAIL=email@email.com
 
 # SFTP Configuration
 SFTP_PROVIDER=mock # or real

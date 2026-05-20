@@ -333,11 +333,13 @@ export class ConfigServiceTestMock {
       SFTP_PRIVATE_KEY: 'key',
       SFTP_AGENCY_CONFIG: '{}',
       OIDC_MOCK: 'true',
+      OIDC_MOCK_EMAIL: 'email@email.com',
       OIDC_ISSUER_URL: 'https://mock-issuer',
       OIDC_CLIENT_ID: 'mock-client',
       OIDC_CLIENT_SECRET: 'mock-secret',
       OIDC_REDIRECT_URI: 'http://mock-redirect',
       USE_SANDRE_MOCK: 'true',
+      JWT_SECRET: 'unsupersecret',
       ...additionalValues,
     };
   }
