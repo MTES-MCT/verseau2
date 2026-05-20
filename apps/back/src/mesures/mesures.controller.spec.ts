@@ -35,6 +35,7 @@ describe('MesuresController', () => {
       listMesures: jest.fn(),
       listOuvrages: jest.fn(),
       listPointsMesure: jest.fn(),
+      listParametresMesure: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -178,6 +179,30 @@ describe('MesuresController', () => {
           pointMesureNumero: '120',
           pointMesureLibelle: 'DO entrée station',
           pointMesureLocalisationGlobale: 'A3',
+        },
+      ]);
+    });
+  });
+
+  describe('listParametresMesure', () => {
+    it('delegates with omitted pmoCdn', async () => {
+      mesuresService.listParametresMesure.mockResolvedValue([
+        {
+          parametreAnalyseCode: 'DBO5',
+          parametreNomCourt: 'Demande biochimique en oxygène sur 5 jours',
+        },
+      ]);
+
+      const result = await controller.listParametresMesure(makeRequest(['STEU001'], []), {
+        ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+      });
+
+      expect(mesuresService.listParametresMesure).toHaveBeenCalledWith(['STEU001'], [], 'steu', 'STEU001', undefined);
+      expect(result).toEqual([
+        {
+          parametreAnalyseCode: 'DBO5',
+          parametreNomCourt: 'Demande biochimique en oxygène sur 5 jours',
         },
       ]);
     });

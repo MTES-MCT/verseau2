@@ -1,9 +1,15 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { CURRENT_BILAN_YEAR } from '@lib/dossier';
+import { ALLOWED_BILAN_STEU_PARAMETRE_CODES, CURRENT_BILAN_YEAR } from '@lib/dossier';
 import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithQueryClient } from '../../../test.helper';
-import { useBilanScl, useBilanSclDetail, useBilanSteu, useBilanSteuDetail } from '../../../hooks/useBilan';
+import {
+  useBilanScl,
+  useBilanSclDetail,
+  useBilanSteu,
+  useBilanSteuDetail,
+  useBilanSteuParametres,
+} from '../../../hooks/useBilan';
 import { BilanDashboard } from './BilanDashboard';
 import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
 import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
@@ -16,6 +22,7 @@ vi.mock('../../../hooks/useBilan', () => ({
   useBilanScl: vi.fn(),
   useBilanSteuDetail: vi.fn(),
   useBilanSclDetail: vi.fn(),
+  useBilanSteuParametres: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useAsyncOuvragesSearch', () => ({
@@ -52,6 +59,7 @@ const mockUseAsyncSystemesCollecteSearch = vi.mocked(useAsyncSystemesCollecteSea
 const mockUsePointsMesure = vi.mocked(usePointsMesure);
 const mockUseBilanFilters = vi.mocked(useBilanFilters);
 const mockDownloadBilanSteuExport = vi.mocked(bilanApi.downloadBilanSteuExport);
+const mockUseBilanSteuParametres = vi.mocked(useBilanSteuParametres);
 
 const emptySteuResult = {
   data: { data: [], total: 0, page: 1, pageSize: 10 },
@@ -111,6 +119,7 @@ function defaultFilters(overrides = {}) {
       ouvrageDepollutionCode: 'STEU001',
       systemeCollecteCode: '',
       pointMesureId: '',
+      parametreCode: '',
       statut: '' as const,
     },
     updateFilter: mockUpdateFilter,
@@ -150,6 +159,9 @@ describe('BilanDashboard', () => {
     mockUsePointsMesure.mockReturnValue({ data: [], isLoading: false } as Partial<
       ReturnType<typeof usePointsMesure>
     > as ReturnType<typeof usePointsMesure>);
+    mockUseBilanSteuParametres.mockReturnValue({ data: [], isLoading: false } as Partial<
+      ReturnType<typeof useBilanSteuParametres>
+    > as ReturnType<typeof useBilanSteuParametres>);
   });
 
   it('affiche le tableau STEU par défaut', () => {
@@ -223,6 +235,7 @@ describe('BilanDashboard', () => {
           ouvrageDepollutionCode: '',
           systemeCollecteCode: 'SCL001',
           pointMesureId: '',
+          parametreCode: '',
           statut: '',
         },
       }),
@@ -261,6 +274,7 @@ describe('BilanDashboard', () => {
           ouvrageDepollutionCode: '',
           systemeCollecteCode: '',
           pointMesureId: '',
+          parametreCode: '',
           statut: '',
         },
       }),
@@ -327,6 +341,7 @@ describe('BilanDashboard', () => {
           ouvrageDepollutionCode: '',
           systemeCollecteCode: 'SCL001',
           pointMesureId: '',
+          parametreCode: '',
           statut: '',
         },
       }),
@@ -358,6 +373,94 @@ describe('BilanDashboard', () => {
     renderPage();
 
     expect(screen.getByRole('button', { name: /exporter csv/i })).toBeEnabled();
+  });
+
+  it('affiche le filtre paramètre en mode STEU', () => {
+    renderPage();
+
+    expect(screen.getByLabelText(/paramètre/i)).toBeInTheDocument();
+  });
+
+  it('masque le filtre paramètre en mode SCL', () => {
+    mockUseBilanFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_BILAN_YEAR,
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: 'SCL001',
+          pointMesureId: '',
+          parametreCode: '',
+          statut: '',
+        },
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.queryByLabelText(/paramètre/i)).not.toBeInTheDocument();
+  });
+
+  it('garde le filtre paramètre actif sans station sélectionnée', () => {
+    mockUseBilanFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'steu',
+          year: CURRENT_BILAN_YEAR,
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: '',
+          pointMesureId: '',
+          parametreCode: '',
+          statut: '',
+        },
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByLabelText(/paramètre/i)).toBeEnabled();
+  });
+
+  it('charge les paramètres bilan STEU depuis le référentiel avec la liste autorisée', () => {
+    renderPage();
+
+    expect(mockUseBilanSteuParametres).toHaveBeenCalledWith();
+    expect(ALLOWED_BILAN_STEU_PARAMETRE_CODES).toContain(1313);
+  });
+
+  it('inclut le paramètre sélectionné dans la requête STEU et dans l’export csv', async () => {
+    mockDownloadBilanSteuExport.mockResolvedValue({ blob: new Blob(['csv']), filename: 'bilan.csv' });
+    mockUseBilanFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'steu',
+          year: CURRENT_BILAN_YEAR,
+          ouvrageDepollutionCode: 'STEU001',
+          systemeCollecteCode: '',
+          pointMesureId: '',
+          parametreCode: '1313',
+          statut: '',
+        },
+      }),
+    );
+    mockUseBilanSteu.mockReturnValue({
+      data: { data: [makeSteuRow()], total: 1, page: 1, pageSize: 10 },
+    } as Partial<ReturnType<typeof useBilanSteu>> as ReturnType<typeof useBilanSteu>);
+
+    renderPage();
+
+    expect(mockUseBilanSteu).toHaveBeenCalledWith(
+      expect.objectContaining({ parametreCode: '1313' }),
+      true,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
+
+    await waitFor(() => {
+      expect(mockDownloadBilanSteuExport).toHaveBeenCalledWith(
+        expect.objectContaining({ parametreCode: '1313' }),
+      );
+    });
   });
 
   it('déclenche l’export avec les filtres appliqués', async () => {

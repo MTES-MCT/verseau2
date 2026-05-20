@@ -42,8 +42,18 @@ export async function fetchPointsMesure(
   });
 }
 
-export async function fetchParametresMesure(ouvrageType: OuvrageTypeValue, ouvrageCode: string, pmoCdn: number) {
-  return apiCall(listParametresMesure, { query: { ouvrageType, ouvrageCode, pmoCdn } });
+export async function fetchParametresMesure(
+  ouvrageType: OuvrageTypeValue,
+  ouvrageCode: string,
+  pmoCdn?: number | null,
+) {
+  return apiCall(listParametresMesure, {
+    query: {
+      ouvrageType,
+      ouvrageCode,
+      ...(pmoCdn !== null && pmoCdn !== undefined ? { pmoCdn } : {}),
+    },
+  });
 }
 
 export async function fetchFinalites() {

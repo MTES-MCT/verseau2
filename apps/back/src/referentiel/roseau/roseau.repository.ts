@@ -419,7 +419,7 @@ export class RoseauRepository implements RoseauGateway {
           SELECT
             steu.steu_cdn,
             RTRIM(steu.steu_sandre_cda) AS code,
-            steu.steu_serv_en_mise_dt::date AS date_mise_en_service
+            steu.steu_serv_en_mise_dt AS date_mise_en_service
           FROM roseau.steu steu
           WHERE RTRIM(steu.steu_sandre_cda) = BTRIM($1)
         )
@@ -533,7 +533,7 @@ export class RoseauRepository implements RoseauGateway {
   async findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
-    pmoCdn: number,
+    pmoCdn?: number,
   ): Promise<ParametreMesure[]> {
     const qb = this.alrRepository
       .createQueryBuilder('alr')
@@ -542,7 +542,11 @@ export class RoseauRepository implements RoseauGateway {
       .innerJoin(PleEntity, 'ple', 'ple.ple_cdn = alr.ple_cdn')
       .innerJoin(PmoEntity, 'pmo', 'pmo.pmo_cdn = ple.pmo_cdn')
       .innerJoin(ParEntity, 'par', 'par.par_rfa = alr.par_rfa')
-      .where('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+      .where('1 = 1');
+
+    if (pmoCdn !== undefined) {
+      qb.andWhere('pmo.pmo_cdn = :pmoCdn', { pmoCdn });
+    }
 
     if (ouvrageType === 'scl') {
       qb.innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn').andWhere('scl.scl_sandre_cda = :ouvrageCode', {
@@ -561,6 +565,35 @@ export class RoseauRepository implements RoseauGateway {
       parametreAnalyseCode: r.par_rfa?.trim() ?? '',
       parametreNomCourt: r.par_court_nom_lb?.trim() ?? null,
     }));
+  }
+
+  async findParametresByCodes(codes: string[]): Promise<ParametreMesure[]> {
+    if (codes.length === 0) {
+      return [];
+    }
+
+    const rows = await this.alrRepository.manager
+      .getRepository(ParEntity)
+      .createQueryBuilder('par')
+      .select('par.par_rfa', 'par_rfa')
+      .addSelect('par.par_court_nom_lb', 'par_court_nom_lb')
+      .where('par.par_rfa IN (:...codes)', { codes })
+      .orderBy('par.par_rfa', 'ASC')
+      .getRawMany<{ par_rfa: string; par_court_nom_lb: string | null }>();
+
+    const rowsByCode = new Map(rows.map((row) => [row.par_rfa?.trim() ?? '', row] as const));
+
+    return codes.flatMap((code) => {
+      const row = rowsByCode.get(code);
+      if (!row) {
+        return [];
+      }
+
+      return {
+        parametreAnalyseCode: row.par_rfa?.trim() ?? '',
+        parametreNomCourt: row.par_court_nom_lb?.trim() ?? null,
+      };
+    });
   }
 
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {

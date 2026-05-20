@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchBilanSteu, fetchBilanScl, fetchBilanSteuDetail, fetchBilanSclDetail } from '../api/bilan';
-import { type RouteQuery, listBilanSteu, listBilanScl } from '@lib/dossier';
+import { fetchParametresReferentiel } from '../api/referentiel';
+import { ALLOWED_BILAN_STEU_PARAMETRE_CODES, type RouteQuery, listBilanSteu, listBilanScl } from '@lib/dossier';
 
 export const useBilanSteu = (query: RouteQuery<typeof listBilanSteu>, enabled: boolean) =>
   useQuery({
@@ -30,4 +31,10 @@ export const useBilanSclDetail = (systemeCollecteCode: string | null, enabled: b
     queryKey: ['bilan', 'scl', 'detail', systemeCollecteCode],
     queryFn: () => fetchBilanSclDetail(systemeCollecteCode!),
     enabled: enabled && !!systemeCollecteCode,
+  });
+
+export const useBilanSteuParametres = () =>
+  useQuery({
+    queryKey: ['bilan', 'steu', 'parametres'],
+    queryFn: () => fetchParametresReferentiel(ALLOWED_BILAN_STEU_PARAMETRE_CODES.map(String)),
   });

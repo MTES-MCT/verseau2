@@ -1,12 +1,13 @@
-export const formatDate = (date: Date | string | null): string => {
+export const formatDate = (date: Date | string | null, timezone: string = 'Europe/Paris'): string => {
   if (!date) {
     return '-';
   }
-  const d = typeof date === 'string' ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00` : date) : date;
+  const d = typeof date === 'string' ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00Z` : date) : date;
   return d.toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+    timeZone: timezone,
   });
 };
 
@@ -34,6 +35,10 @@ export const getNYearsAgoAsISODate = (n: number): string => {
 
 export const getDateAsISODate = (date: Date): string => {
   return dateToLocalISODate(date);
+};
+
+export const getStartOfYearAsUTCDate = (year: number): Date => {
+  return new Date(`${year}-01-01T00:00:00+01:00`);
 };
 
 const dateToLocalISODate = (date: Date): string => {

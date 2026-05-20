@@ -31,4 +31,5 @@ export * from './transmission-as-retard/transmissionASRetardPropertyToHeader.map
 export * from './routes/transmissionASRetard.routes';
 export * from './shared/pagination.schema';
 export * from './shared/propertyToHeader.mapper';
+export * from './referentiel/codeParametre';
 export * from './referentiel/referentiel.dto';

@@ -22,6 +22,13 @@ export const MesureDtoSchema = z.object({
 
 export type MesureDto = z.infer<typeof MesureDtoSchema>;
 
+export const ParametreMesureSchema = z.object({
+  parametreAnalyseCode: z.string(),
+  parametreNomCourt: z.string().nullable(),
+});
+
+export type ParametreMesureDto = z.infer<typeof ParametreMesureSchema>;
+
 export const PaginatedMesuresResponseSchema = createPaginatedResponseSchema(MesureDtoSchema);
 
 export type PaginatedMesuresResponse = z.infer<typeof PaginatedMesuresResponseSchema>;

@@ -29,7 +29,7 @@ import {
   filterFctAssainissementForMetierV2,
   type FilterFctAssainissementForMetierVOptions,
 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import { CodeParametre, CodeUniteMesure } from '@referentiel/parametre/codeParametre';
+import { CodeParametre, CodeUniteMesure } from '@lib/dossier';
 
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';

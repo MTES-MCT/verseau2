@@ -47,8 +47,9 @@ export interface RoseauGateway {
   findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
-    pmoCdn: number,
+    pmoCdn?: number,
   ): Promise<ParametreMesure[]>;
+  findParametresByCodes(codes: string[]): Promise<ParametreMesure[]>;
   findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]>;
 }
 

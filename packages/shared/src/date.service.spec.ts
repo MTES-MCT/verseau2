@@ -1,4 +1,4 @@
-import { formatDate, getDateAsISODate, toISODateOrNull, getPreviousSunday } from './date.service';
+import { formatDate, getDateAsISODate, getStartOfYearAsUTCDate, toISODateOrNull, getPreviousSunday } from './date.service';
 
 describe('formatDate', () => {
   it('returns "-" for null', () => {
@@ -18,6 +18,18 @@ describe('formatDate', () => {
   it('pads single-digit day and month', () => {
     const date = new Date(2024, 0, 5); // January 5
     expect(formatDate(date)).toBe('05/01/2024');
+  });
+
+  it('uses Europe/Paris timezone by default, shifting dates near midnight UTC', () => {
+    // 2020-03-04 23:00 UTC = 2020-03-05 00:00 CET (UTC+1)
+    const result = formatDate('2020-03-04T23:00:00+00:00');
+    expect(result).toBe('05/03/2020');
+  });
+
+  it('accepts an optional timezone parameter', () => {
+    // 2020-03-04 23:00 UTC = 2020-03-04 18:00 EST (UTC-5)
+    const result = formatDate('2020-03-04T23:00:00+00:00', 'America/New_York');
+    expect(result).toBe('04/03/2020');
   });
 });
 
@@ -74,6 +86,10 @@ describe('UTC shift protection', () => {
     const justAfterMidnight = new Date(2024, 5, 15, 0, 15, 0); // 00:15 local
 
     expect(formatDate(justAfterMidnight)).toBe('15/06/2024');
+  });
+
+  it('getStartOfYearAsUTCDate returns Paris midnight as a UTC instant', () => {
+    expect(getStartOfYearAsUTCDate(2024).toISOString()).toBe('2023-12-31T23:00:00.000Z');
   });
 });
 

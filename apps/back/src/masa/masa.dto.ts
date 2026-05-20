@@ -45,7 +45,8 @@ export interface EvenementSclFilters extends PaginationQuery {
 /** Filtres pour la recherche de bilans STEU */
 export interface BilanSteuFilters extends PaginationQuery {
   ouvrageDepollutionIds: number[];
-  year: number;
+  startDate: Date;
+  endDate: Date;
   parametreCodes: string[];
   sortBy?: BilanSteuSortByValue;
 }
@@ -53,7 +54,8 @@ export interface BilanSteuFilters extends PaginationQuery {
 /** Filtres pour la recherche de bilans SCL */
 export interface BilanSclFilters extends PaginationQuery {
   systemeCollecteIds: number[];
-  year: number;
+  startDate: Date;
+  endDate: Date;
   pointMesureId?: number;
   statut?: 'TP' | 'TS';
   sortBy?: BilanSclSortByValue;

@@ -33,7 +33,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
   constructor(private readonly dataSource: DataSource) {}
 
   async findBilanSteu(filters: BilanSteuFilters): Promise<{ data: BilanSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, page, pageSize } = filters;
+    const { ouvrageDepollutionIds, startDate: filterStartDate, endDate: filterEndDate, page, pageSize } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -53,20 +53,19 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean | number[] | string[]> = [];
-    const addParam = (value: number | string | boolean | number[] | string[]) => {
+    const queryParams: Array<number | string | boolean | Date | number[] | string[]> = [];
+    const addParam = (value: number | string | boolean | Date | number[] | string[]) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
 
-    const startDate = addParam(`${year}-01-01`);
-    const endDate = addParam(`${year}-12-31`);
+    const startDate = addParam(filterStartDate);
+    const endDate = addParam(filterEndDate);
     const steuArrayParam = addParam(ouvrageDepollutionIds);
     const allowedParamCodesParam = addParam(filters.parametreCodes);
     const whereClauses = [
       `resj.resj_mes_dt >= ${startDate}`,
-      `resj.resj_mes_dt <= ${endDate}`,
-      `(resj.resj_jok_in = '2' OR resj.resj_aok_in = '2')`,
+      `resj.resj_mes_dt < ${endDate}`,
       `resj.par_rfa IN (SELECT unnest(${allowedParamCodesParam}::text[]))`,
     ];
 
@@ -75,7 +74,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         SELECT
           steu.steu_cdn AS steu_cdn,
           RTRIM(steu.steu_sandre_cda) AS ouvrage_depollution_code,
-          resj.resj_mes_dt::date AS date,
+          resj.resj_mes_dt AS date,
           par.par_court_nom_lb AS parametre_nom,
           resj.resj_aok_in AS bilan_spe_a, 
           CASE resj.resj_evt_in
@@ -83,8 +82,8 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
             ELSE 'Non'
           END AS evt,
           CASE resj.resj_hcnf_in
-            WHEN 'O' THEN 'Non'
-            ELSE 'Oui'
+            WHEN 'O' THEN 'Oui'
+            ELSE 'Non'
           END AS hcnf,
           t17.tlref_mnemo_lb AS finalite,
           resj.resj_jok_in AS prise_en_compte_j_code,
@@ -143,7 +142,15 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
   }
 
   async findBilanScl(filters: BilanSclFilters): Promise<{ data: BilanSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, page, pageSize, pointMesureId, statut } = filters;
+    const {
+      systemeCollecteIds,
+      startDate: filterStartDate,
+      endDate: filterEndDate,
+      page,
+      pageSize,
+      pointMesureId,
+      statut,
+    } = filters;
 
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
@@ -164,17 +171,19 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean | number[]> = [];
-    const addParam = (value: number | string | boolean | number[]) => {
+    const queryParams: Array<number | string | boolean | Date | number[]> = [];
+    const addParam = (value: number | string | boolean | Date | number[]) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
 
-    const yearPlaceholder = addParam(year);
+    const startDate = addParam(filterStartDate);
+    const endDate = addParam(filterEndDate);
     const sclArrayParam = addParam(systemeCollecteIds);
     const whereClauses = [
       `scl.scl_cdn IN (SELECT unnest(${sclArrayParam}::int[]))`,
-      `date_part('year', d.devers_dt) = ${yearPlaceholder}`,
+      `d.devers_dt >= ${startDate}`,
+      `d.devers_dt < ${endDate}`,
       `d.devers_pris_en_compte_on = false`,
       `(d.devers_statut_in IN ('TP', 'TS') OR d.devers_statut_s_in IN ('TP', 'TS'))`,
     ];
@@ -200,7 +209,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
           pmo.pmo_cdn AS point_mesure_identifiant,
           pmo.pmo_no AS point_mesure_numero,
           pmo.pmo_lb AS point_mesure_libelle,
-          d.devers_dt::date AS date,
+          d.devers_dt AS date,
           d.devers_vol_val AS volume_deverse,
           d.devers_temps_devers_val AS temps_deversement,
           CASE

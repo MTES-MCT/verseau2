@@ -174,6 +174,13 @@ describe('Controller (e2e) - Unauthorized', () => {
       return request(app.getHttpServer()).get('/referentiel/codes-to-parametres').expect(401);
     });
 
+    it('/referentiel/parametres (POST) - Should return 401 Unauthorized', async () => {
+      return request(app.getHttpServer())
+        .post('/referentiel/parametres')
+        .send({ codes: ['1313'] })
+        .expect(401);
+    });
+
     it('/referentiel/points-mesure (GET) - Should return 401 Unauthorized', async () => {
       return request(app.getHttpServer())
         .get('/referentiel/points-mesure')
@@ -544,5 +551,79 @@ describe('ReferentielController (e2e) - points-mesure', () => {
         },
       ],
     });
+  });
+});
+
+describe('ReferentielController (e2e) - parametres', () => {
+  let app: INestApplication<App>;
+  let authService: Authentication;
+  let masaProvider: MasaProvider;
+
+  beforeAll(async () => {
+    await startPostgresContainer();
+    const connectionUri = getPostgresConnectionUri();
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [...initTestContainerImports(connectionUri), ApiModule, ThrottlerConfigModule],
+    })
+      .overrideModule(InfraModule)
+      .useModule(InfraMockModule)
+      .overrideProvider(PGBOSS)
+      .useValue(null)
+      .overrideProvider(LoggerService)
+      .useValue(loggerValueMock)
+      .compile();
+
+    app = moduleFixture.createNestApplication({ logger: false });
+    app.use(cookieParser());
+    await app.init();
+
+    authService = app.get<Authentication>(Authentication);
+    masaProvider = app.get<MasaProvider>(MasaProvider);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('/referentiel/parametres (POST) - Should return ordered parameters for posted codes', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
+    jest.spyOn(masaProvider, 'findParametresByCodes').mockResolvedValue([
+      {
+        parametreAnalyseCode: '1313',
+        parametreNomCourt: 'DBO5',
+      },
+      {
+        parametreAnalyseCode: '1314',
+        parametreNomCourt: 'DCO',
+      },
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .post('/referentiel/parametres')
+      .set('Cookie', ['access_token=token-user-1'])
+      .send({ codes: ['1313', '1314'] })
+      .expect(201);
+
+    expect(masaProvider.findParametresByCodes).toHaveBeenCalledWith(['1313', '1314']);
+    expect(response.body).toEqual([
+      {
+        parametreAnalyseCode: '1313',
+        parametreNomCourt: 'DBO5',
+      },
+      {
+        parametreAnalyseCode: '1314',
+        parametreNomCourt: 'DCO',
+      },
+    ]);
   });
 });

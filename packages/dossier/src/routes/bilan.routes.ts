@@ -26,6 +26,7 @@ export const listBilanSteu = {
     .object({
       year: BilanYearSchema,
       ouvrageDepollutionCode: z.string().optional(),
+      parametreCode: z.string().optional(),
     })
     .extend(createPaginationQuerySchema(BilanSteuSortBy).shape),
   response: PaginatedBilanSteuResponseSchema,

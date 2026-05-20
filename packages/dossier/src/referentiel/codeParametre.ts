@@ -1,9 +1,9 @@
 export enum CodeParametre {
-  /** Demande Chimique en Oxygène (DCO) */
+  /** Demande Chimique en Oxygene (DCO) */
   DCO = 1314,
-  /** Demande Biologique en Oxygène sous 5 jours (DBO5) */
+  /** Demande Biologique en Oxygene sous 5 jours (DBO5) */
   DBO5 = 1313,
-  /** Matières en suspensions (MES) */
+  /** Matieres en suspensions (MES) */
   MES = 1305,
   /** Azote Kjeldal (NTK) */
   NTK = 1319,
@@ -13,17 +13,17 @@ export enum CodeParametre {
   N_NH4 = 1335,
   /** Azote Global (NGL) */
   NGL = 1551,
-  /** Potentiel Hydrogène (pH) */
+  /** Potentiel Hydrogene (pH) */
   pH = 1302,
   /** Orthophosphates (PO4) */
   PO4 = 1433,
-  /** Volume moyen journalier (m³/j) */
+  /** Volume moyen journalier (m3/j) */
   Volume = 1552,
-  /** Température (°C) */
+  /** Temperature (degC) */
   Temperature = 1301,
-  /** Pluviométrie journalière (mm) */
+  /** Pluviometrie journaliere (mm) */
   Pluviometrie = 1553,
-  /** Volume (m³) */
+  /** Volume (m3) */
   VolumeRef = 1098,
   /** Masse (kg) */
   Masse = 1099,
@@ -31,13 +31,14 @@ export enum CodeParametre {
   NO2 = 1339,
   /** Nitrates (NO3) */
   NO3 = 1340,
-  /** Matières Sèches à 105°C (MS105) */
+  /** Matieres Seches a 105C (MS105) */
   MS105 = 1307,
 }
+
 export enum CodeUniteMesure {
-  //mg(N)/L
+  // mg(N)/L
   MG_N_L = 168,
 
-  //mg/L
+  // mg/L
   MG_L = 162,
 }

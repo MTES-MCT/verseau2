@@ -1,17 +1,17 @@
 import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import {
+  ALLOWED_BILAN_STEU_PARAMETRE_CODES,
   bilanSclPropertyToHeaderMapper,
   BilanSteuSortByValue,
   BilanSclSortByValue,
   PaginationQuery,
   bilanSteuPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { formatDate } from '@lib/shared';
+import { formatDate, getStartOfYearAsUTCDate } from '@lib/shared';
 
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import type { BilanSteuFilters, BilanSclFilters } from '@masa/masa.dto';
-import { CodeParametre } from '@referentiel/parametre/codeParametre';
 import {
   buildCsvColumnsFromPropertyToHeaderMapper,
   type CsvFormattedRow,
@@ -20,24 +20,11 @@ import { formatBooleanToOuiNon, formatNullable } from '@shared/csv/csvFormatters
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
-const ALLOWED_BILAN_STEU_PARAMETRE_CODES: string[] = [
-  CodeParametre.DBO5,
-  CodeParametre.DCO,
-  CodeParametre.MES,
-  CodeParametre.NGL,
-  CodeParametre.N_NH4,
-  CodeParametre.NTK,
-  CodeParametre.NO2,
-  CodeParametre.NO3,
-  CodeParametre.pH,
-  CodeParametre.Temperature,
-  CodeParametre.Ptot,
-].map(String);
-
 export interface ListBilanSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
   year: number;
   ouvrageDepollutionCode?: string;
+  parametreCode?: string;
   sortBy?: BilanSteuSortByValue;
 }
 
@@ -139,7 +126,9 @@ export class BilanService {
     page: number,
     pageSize: number,
   ): Promise<BilanSteuFilters | null> {
-    const { authorizedSteuCdas, year, ouvrageDepollutionCode, sortBy, sortOrder } = options;
+    const { authorizedSteuCdas, year, ouvrageDepollutionCode, parametreCode, sortBy, sortOrder } = options;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
@@ -153,10 +142,19 @@ export class BilanService {
       return null;
     }
 
+    const parametreCodes = parametreCode
+      ? ALLOWED_BILAN_STEU_PARAMETRE_CODES.filter((code) => String(code) === parametreCode).map(String)
+      : ALLOWED_BILAN_STEU_PARAMETRE_CODES.map(String);
+
+    if (parametreCodes.length === 0) {
+      return null;
+    }
+
     return {
       ouvrageDepollutionIds,
-      year,
-      parametreCodes: ALLOWED_BILAN_STEU_PARAMETRE_CODES,
+      startDate,
+      endDate,
+      parametreCodes,
       page,
       pageSize,
       ...(sortBy ? { sortBy } : {}),
@@ -170,6 +168,8 @@ export class BilanService {
     pageSize: number,
   ): Promise<BilanSclFilters | null> {
     const { authorizedSclCdas, year, systemeCollecteCode, pointMesureId, statut, sortBy, sortOrder } = options;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = systemeCollecteCode
       ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
       : authorizedSclCdas;
@@ -185,7 +185,8 @@ export class BilanService {
 
     return {
       systemeCollecteIds,
-      year,
+      startDate,
+      endDate,
       page,
       pageSize,
       ...(pointMesureId ? { pointMesureId } : {}),

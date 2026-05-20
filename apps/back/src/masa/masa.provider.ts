@@ -495,9 +495,14 @@ export class MasaProvider {
   async findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
-    pmoCdn: number,
+    pmoCdn?: number,
   ): Promise<ParametreMesure[]> {
     return this.roseauGateway.findParametresByOuvrageAndPmo(ouvrageType, ouvrageCode, pmoCdn);
+  }
+
+  // route: POST /api/referentiel/parametres
+  async findParametresByCodes(codes: string[]): Promise<ParametreMesure[]> {
+    return this.roseauGateway.findParametresByCodes(codes);
   }
 
   // ---------------------------------------------------------------------------
