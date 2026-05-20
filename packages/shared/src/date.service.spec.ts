@@ -19,6 +19,18 @@ describe('formatDate', () => {
     const date = new Date(2024, 0, 5); // January 5
     expect(formatDate(date)).toBe('05/01/2024');
   });
+
+  it('uses Europe/Paris timezone by default, shifting dates near midnight UTC', () => {
+    // 2020-03-04 23:00 UTC = 2020-03-05 00:00 CET (UTC+1)
+    const result = formatDate('2020-03-04T23:00:00+00:00');
+    expect(result).toBe('05/03/2020');
+  });
+
+  it('accepts an optional timezone parameter', () => {
+    // 2020-03-04 23:00 UTC = 2020-03-04 18:00 EST (UTC-5)
+    const result = formatDate('2020-03-04T23:00:00+00:00', 'America/New_York');
+    expect(result).toBe('04/03/2020');
+  });
 });
 
 describe('toISODateOrNull', () => {
@@ -76,8 +88,8 @@ describe('UTC shift protection', () => {
     expect(formatDate(justAfterMidnight)).toBe('15/06/2024');
   });
 
-  it('getStartOfYearAsUTCDate returns UTC midnight for the requested year', () => {
-    expect(getStartOfYearAsUTCDate(2024).toISOString()).toBe('2024-01-01T00:00:00.000Z');
+  it('getStartOfYearAsUTCDate returns Paris midnight as a UTC instant', () => {
+    expect(getStartOfYearAsUTCDate(2024).toISOString()).toBe('2023-12-31T23:00:00.000Z');
   });
 });
 

@@ -74,7 +74,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
         SELECT
           steu.steu_cdn AS steu_cdn,
           RTRIM(steu.steu_sandre_cda) AS ouvrage_depollution_code,
-          resj.resj_mes_dt::date AS date,
+          resj.resj_mes_dt AS date,
           par.par_court_nom_lb AS parametre_nom,
           resj.resj_aok_in AS bilan_spe_a, 
           CASE resj.resj_evt_in
@@ -209,7 +209,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
           pmo.pmo_cdn AS point_mesure_identifiant,
           pmo.pmo_no AS point_mesure_numero,
           pmo.pmo_lb AS point_mesure_libelle,
-          d.devers_dt::date AS date,
+          d.devers_dt AS date,
           d.devers_vol_val AS volume_deverse,
           d.devers_temps_devers_val AS temps_deversement,
           CASE

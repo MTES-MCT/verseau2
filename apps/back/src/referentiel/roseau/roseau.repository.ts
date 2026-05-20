@@ -419,7 +419,7 @@ export class RoseauRepository implements RoseauGateway {
           SELECT
             steu.steu_cdn,
             RTRIM(steu.steu_sandre_cda) AS code,
-            steu.steu_serv_en_mise_dt::date AS date_mise_en_service
+            steu.steu_serv_en_mise_dt AS date_mise_en_service
           FROM roseau.steu steu
           WHERE RTRIM(steu.steu_sandre_cda) = BTRIM($1)
         )
