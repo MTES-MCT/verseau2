@@ -5,6 +5,9 @@ import { MasaProvider } from '@masa/masa.provider';
 import { CodeParametre } from '@lib/dossier';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { BilanService } from './bilan.service';
+import { LoggerService } from '@shared/logger/logger.service';
+import { LoggerServiceMock } from '@shared/logger/logger.mock';
+import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 describe('BilanService', () => {
   let service: BilanService;
@@ -104,10 +107,10 @@ describe('BilanService', () => {
         pageSize: 10,
       });
       expect((masaProviderMock.findBilanSteu as jest.Mock).mock.calls[0][0].startDate.toISOString()).toBe(
-        '2024-01-01T00:00:00.000Z',
+        '2023-12-31T23:00:00.000Z',
       );
       expect((masaProviderMock.findBilanSteu as jest.Mock).mock.calls[0][0].endDate.toISOString()).toBe(
-        '2025-01-01T00:00:00.000Z',
+        '2024-12-31T23:00:00.000Z',
       );
       expect(result.data).toHaveLength(1);
     });
@@ -180,10 +183,10 @@ describe('BilanService', () => {
         pageSize: 10,
       });
       expect((masaProviderMock.findBilanScl as jest.Mock).mock.calls[0][0].startDate.toISOString()).toBe(
-        '2024-01-01T00:00:00.000Z',
+        '2023-12-31T23:00:00.000Z',
       );
       expect((masaProviderMock.findBilanScl as jest.Mock).mock.calls[0][0].endDate.toISOString()).toBe(
-        '2025-01-01T00:00:00.000Z',
+        '2024-12-31T23:00:00.000Z',
       );
       expect(result.data).toHaveLength(1);
     });

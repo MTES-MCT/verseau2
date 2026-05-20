@@ -153,8 +153,8 @@ describe('BilanController (e2e)', () => {
 
       expect(mockMasaProvider.findBilanSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
-        startDate: new Date(`${currentYear}-01-01T00:00:00.000Z`),
-        endDate: new Date(`${currentYear + 1}-01-01T00:00:00.000Z`),
+        startDate: new Date(`${currentYear}-01-01T00:00:00+01:00`),
+        endDate: new Date(`${currentYear + 1}-01-01T00:00:00+01:00`),
         parametreCodes: [CodeParametre.DBO5].map(String),
         page: 1,
         pageSize: 20,
@@ -320,8 +320,8 @@ describe('BilanController (e2e)', () => {
 
       expect(mockMasaProvider.findBilanScl).toHaveBeenCalledWith({
         systemeCollecteIds: [20],
-        startDate: new Date(`${currentYear}-01-01T00:00:00.000Z`),
-        endDate: new Date(`${currentYear + 1}-01-01T00:00:00.000Z`),
+        startDate: new Date(`${currentYear}-01-01T00:00:00+01:00`),
+        endDate: new Date(`${currentYear + 1}-01-01T00:00:00+01:00`),
         page: 1,
         pageSize: 20,
       });
