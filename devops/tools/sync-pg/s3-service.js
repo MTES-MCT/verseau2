@@ -1,6 +1,7 @@
 const { S3Client, GetObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const fs = require('fs');
 const { pipeline } = require('stream/promises');
+const { Transform } = require('stream');
 
 class S3Service {
   constructor(config) {
@@ -40,6 +41,15 @@ class S3Service {
     }
   }
 
+        // Human-readable byte formatter
+  formatBytes = (bytes) => {
+    if (!bytes && bytes !== 0) return 'unknown';      
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
+  };
+
   async downloadFile() {
     const key = await this.getMostRecentKey();
     console.log(`Starting download from s3://${this.config.aws.bucket}/${key}`);
@@ -51,8 +61,56 @@ class S3Service {
 
     try {
       const response = await this.client.send(command);
+
+      if (!response.Body) {
+        throw new Error('S3 getObject response has no Body');
+      }
+
       const localPath = `./${require('path').basename(key)}`;
-      await pipeline(response.Body, fs.createWriteStream(localPath));
+
+      // Total size in bytes if available
+      const totalBytes = typeof response.ContentLength === 'number' ? response.ContentLength : undefined;
+      const formatBytes = this.formatBytes.bind(this);
+
+      let bytesDownloaded = 0;
+      let lastLoggedPercent = 0; // start at 0 so we log from 1%
+
+      // Transform stream that counts bytes and logs progress every 5%
+      const progressStream = new Transform({
+        transform(chunk, encoding, callback) {
+          try {
+            bytesDownloaded += chunk.length;
+
+            if (totalBytes) {
+              const percent = Math.floor((bytesDownloaded / totalBytes) * 100);
+              if (percent >= lastLoggedPercent + 5) {
+                lastLoggedPercent = percent;
+                console.log(`Download progress: ${percent}% (${formatBytes(bytesDownloaded)} / ${formatBytes(totalBytes)})`);
+              }
+            } else {
+              // Fallback when total size is unknown: log every 100 MB
+              const MB100 = 100 * 1024 * 1024;
+              if (!this._lastLoggedBytes) this._lastLoggedBytes = 0;
+              if (bytesDownloaded - this._lastLoggedBytes >= MB100) {
+                this._lastLoggedBytes = bytesDownloaded;
+                console.log(`Download progress: ${formatBytes(bytesDownloaded)} downloaded`);
+              }
+            }
+
+            callback(null, chunk);
+          } catch (err) {
+            callback(err);
+          }
+        }
+      });
+
+      await pipeline(response.Body, progressStream, fs.createWriteStream(localPath));
+
+      // Ensure we log 100% if total was known but final chunk didn't hit 100 exactly
+      if (totalBytes && lastLoggedPercent < 100) {
+        console.log(`Download progress: 100% (${formatBytes(totalBytes)} / ${formatBytes(totalBytes)})`);
+      }
+
       console.log(`Download completed successfully: ${localPath}`);
       return localPath;
     } catch (error) {
