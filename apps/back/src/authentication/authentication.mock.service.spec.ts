@@ -13,6 +13,8 @@ describe('AuthenticationMockService', () => {
   let mockDataSource: Pick<DataSource, 'getRepository'>;
   let mockFindOne: jest.Mock;
 
+  const JWT_SECRET = 'test-secret-key-that-is-at-least-32-characters-long!!';
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -21,7 +23,10 @@ describe('AuthenticationMockService', () => {
         if (key === 'OIDC_MOCK_EMAIL') return 'real.user@example.com';
         return null;
       }),
-      getOrThrow: jest.fn(),
+      getOrThrow: jest.fn((key: string) => {
+        if (key === 'JWT_SECRET') return JWT_SECRET;
+        throw new Error(`Missing config: ${key}`);
+      }),
     } as unknown as jest.Mocked<ConfigService>;
 
     mockFindOne = jest.fn().mockResolvedValue({
@@ -70,7 +75,7 @@ describe('AuthenticationMockService', () => {
       nom: 'Real',
       prenom: 'User',
     });
-    expect(result.accessToken).toBe('mock-token');
+    expect(result.accessToken).toBeTruthy();
     await expect(service.validateToken(result.accessToken)).resolves.toMatchObject({
       cerbereId: 'real-sub',
       mel: 'real.user@example.com',
@@ -79,8 +84,9 @@ describe('AuthenticationMockService', () => {
     });
   });
 
-  it('extracts subject from the configured mock user', async () => {
-    await expect(service.extractSubjectFromExpiredToken('mock-token')).resolves.toBe('real-sub');
+  it('extracts subject from a token issued by the mock service', async () => {
+    const { accessToken } = await service.handleCallback('mock-code', 'mock-nonce');
+    await expect(service.extractSubjectFromExpiredToken(accessToken)).resolves.toBe('real-sub');
   });
 
   it('refreshes tokens for the same mock user', async () => {
@@ -88,7 +94,7 @@ describe('AuthenticationMockService', () => {
 
     const refreshed = await service.refreshTokens(initial.refreshToken ?? '', 'real-sub');
 
-    expect(refreshed.accessToken).toBe('mock-token');
+    expect(refreshed.accessToken).toBeTruthy();
     await expect(service.validateToken(refreshed.accessToken)).resolves.toMatchObject({
       cerbereId: 'real-sub',
       mel: 'real.user@example.com',

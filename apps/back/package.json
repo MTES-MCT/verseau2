@@ -93,6 +93,7 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": ["node_modules/(?!.pnpm|openid-client|oauth4webapi|jose)"],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
