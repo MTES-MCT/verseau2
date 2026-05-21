@@ -11,7 +11,7 @@ const assertMockAuthenticationConfig = (configService: ConfigService) => {
   if (!mockEmail) {
     throw new Error('OIDC_MOCK_EMAIL is required when OIDC_MOCK=true');
   }
-  if (configService.get<string>('NODE_ENV') === 'production') {
+  if (configService.get<string>('NODE_ENV') !== 'development') {
     throw new Error('Mock authentication cannot be used in production environment');
   }
 };
