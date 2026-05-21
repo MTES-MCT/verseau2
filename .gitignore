@@ -6,6 +6,7 @@ tsconfig.build.tsbuildinfo
 
 # Dependencies
 node_modules
+.pnpm-store
 
 # Logs
 logs
