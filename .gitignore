@@ -79,6 +79,7 @@ coverage
 script/
 
 .npmrc
+!devops/tools/sync-pg/.npmrc
 
 .codex/
 .opencode/
