@@ -9,17 +9,12 @@ import {
 } from './authentication';
 import type { CookieOptions, Response } from 'express';
 import { DroitsUserService } from '@user/droitsUser.service';
-import { SignJWT, jwtVerify } from 'jose';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
 import { normalizeEmail } from '@shared/service/string.service';
+import { SignJWT, jwtVerify } from 'jose';
 
 const MOCK_AUTHENTICATION_FAILED_MESSAGE = 'Mock authentication failed';
-const DEFAULT_TEST_FIXTURE_TOKEN = 'test-token';
-const DEFAULT_TEST_USER_SUBJECT = 'test-user-id';
-const DEFAULT_TEST_USER_EMAIL = 'dev@example.com';
-const DEFAULT_TEST_USER_NOM = 'Test';
-const DEFAULT_TEST_USER_PRENOM = 'User';
 
 @Injectable()
 export class AuthenticationMockService implements Authentication {
@@ -34,11 +29,14 @@ export class AuthenticationMockService implements Authentication {
   }
 
   async validateToken(token: string): Promise<AuthenticatedUser> {
+    if (!token?.trim()) {
+      throw new UnauthorizedException();
+    }
+
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
       });
-
       return {
         cerbereId: (payload.sub as string) || '',
         mel: (payload.email as string) || '',
@@ -46,33 +44,25 @@ export class AuthenticationMockService implements Authentication {
         isExpertNational: (payload.isExpertNational as boolean) ?? false,
       };
     } catch {
-      const fallbackUser = this.getTestRuntimeFallbackUser(token);
-      if (fallbackUser) {
-        return fallbackUser;
-      }
-
       throw new UnauthorizedException();
     }
   }
 
   async extractSubjectFromExpiredToken(token: string): Promise<string> {
+    if (!token?.trim()) {
+      throw new UnauthorizedException();
+    }
+
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
         clockTolerance: 7 * 24 * 60 * 60,
       });
-
       if (!payload.sub) {
         throw new UnauthorizedException();
       }
-
       return payload.sub;
     } catch {
-      const testRuntimeSubject = this.getTestRuntimeFallbackSubject(token);
-      if (testRuntimeSubject) {
-        return testRuntimeSubject;
-      }
-
       throw new UnauthorizedException();
     }
   }
@@ -90,48 +80,54 @@ export class AuthenticationMockService implements Authentication {
     void code;
     void nonce;
     const user = await this.getMockUser();
-    const accessToken = await this.signInternalToken(user);
+
+    const expiresIn = 3600;
+    const internalToken = await this.signInternalToken(
+      user.cerbereId,
+      user.mel,
+      user.itvCdn,
+      user.isExpertNational,
+      expiresIn,
+    );
 
     return {
-      accessToken,
-      refreshToken: accessToken,
-      expiresIn: 3600,
+      accessToken: internalToken,
+      refreshToken: internalToken,
+      expiresIn,
       user,
     };
   }
 
   async refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens> {
-    void refreshToken;
-
-    let user: AuthenticatedUserAndNomPrenom;
-    try {
-      user = await this.getMockUser();
-    } catch (error) {
-      const fallbackUser = this.getTestRuntimeFallbackUserForSubject(expectedSubject);
-      if (!fallbackUser) {
-        throw error;
-      }
-
-      user = fallbackUser;
+    if (!refreshToken?.trim()) {
+      throw new UnauthorizedException();
     }
 
+    const user = await this.getMockUser();
     if (user.cerbereId !== expectedSubject) {
       throw new UnauthorizedException();
     }
 
-    const accessToken = await this.signInternalToken(user);
+    const expiresIn = 3600;
+    const internalToken = await this.signInternalToken(
+      user.cerbereId,
+      user.mel,
+      user.itvCdn,
+      user.isExpertNational,
+      expiresIn,
+    );
 
     return {
-      accessToken,
-      refreshToken: accessToken,
-      expiresIn: 3600,
+      accessToken: internalToken,
+      refreshToken: internalToken,
+      expiresIn,
     };
   }
 
   private get baseCookieOptions(): CookieOptions {
     return {
       httpOnly: true,
-      secure: this.shouldUseSecureCookies(),
+      secure: false,
       sameSite: 'strict',
       path: '/',
     };
@@ -151,112 +147,24 @@ export class AuthenticationMockService implements Authentication {
     res.clearCookie('refresh_token', this.baseCookieOptions);
   }
 
-  private shouldUseSecureCookies(): boolean {
-    if (this.isTestRuntime()) {
-      return false;
-    }
-
-    const urls = [this.configService.get<string>('CORS_ORIGIN'), this.configService.get<string>('OIDC_REDIRECT_URI')];
-
-    return urls.some((value) => {
-      if (!value) {
-        return false;
-      }
-
-      try {
-        return new URL(value).protocol === 'https:';
-      } catch {
-        return false;
-      }
-    });
-  }
-
-  private isTestRuntime(): boolean {
-    return process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
-  }
-
-  private getTestRuntimeFallbackUser(token: string): AuthenticatedUserAndNomPrenom | null {
-    const subject = this.getTestRuntimeFallbackSubject(token);
-    if (!subject) {
-      return null;
-    }
-
-    return this.getTestRuntimeFallbackUserForSubject(subject);
-  }
-
-  private getTestRuntimeFallbackUserForSubject(subject: string): AuthenticatedUserAndNomPrenom | null {
-    if (!this.isTestRuntime()) {
-      return null;
-    }
-
-    const trimmedSubject = subject.trim();
-    if (!trimmedSubject) {
-      return null;
-    }
-
-    return {
-      cerbereId: trimmedSubject,
-      mel: DEFAULT_TEST_USER_EMAIL,
-      itvCdn: null,
-      isExpertNational: false,
-      nom: DEFAULT_TEST_USER_NOM,
-      prenom: DEFAULT_TEST_USER_PRENOM,
-    };
-  }
-
-  private getTestRuntimeFallbackSubject(token: string): string | null {
-    if (!this.isTestRuntime()) {
-      return null;
-    }
-
-    const trimmedToken = token.trim();
-    if (!trimmedToken) {
-      return null;
-    }
-
-    const fixtureToken = this.configService.get<string>('FAKE_TOKEN_STORAGE_KEY')?.trim() || DEFAULT_TEST_FIXTURE_TOKEN;
-    if (fixtureToken && trimmedToken === fixtureToken) {
-      return DEFAULT_TEST_USER_SUBJECT;
-    }
-
-    if (trimmedToken.startsWith('token-user-')) {
-      return trimmedToken.slice('token-'.length);
-    }
-
-    const jwtSubject = this.extractSubjectFromUnsignedJwt(trimmedToken);
-    if (jwtSubject) {
-      return jwtSubject;
-    }
-
-    return null;
-  }
-
-  private extractSubjectFromUnsignedJwt(token: string): string | null {
-    const [, payload] = token.split('.');
-    if (!payload) {
-      return null;
-    }
-
-    try {
-      const parsedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: unknown };
-
-      return typeof parsedPayload.sub === 'string' && parsedPayload.sub.length > 0 ? parsedPayload.sub : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private async signInternalToken(user: AuthenticatedUser): Promise<string> {
-    return new SignJWT({
-      sub: user.cerbereId,
-      email: user.mel,
-      itvCdn: user.itvCdn,
-      isExpertNational: user.isExpertNational,
-    })
+  private async signInternalToken(
+    sub: string,
+    email: string,
+    itvCdn: number | null,
+    isExpertNational: boolean,
+    expiresIn?: number,
+  ): Promise<string> {
+    const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('1h')
-      .sign(this.jwtSecret);
+      .setIssuedAt();
+
+    if (expiresIn) {
+      jwt.setExpirationTime(`${expiresIn}s`);
+    } else {
+      jwt.setExpirationTime('1h');
+    }
+
+    return jwt.sign(this.jwtSecret);
   }
 
   private async getMockUser(): Promise<AuthenticatedUserAndNomPrenom> {

@@ -3,24 +3,8 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthenticationMockService } from './authentication.mock.service';
 import { DroitsUserService } from '@user/droitsUser.service';
-import { jwtVerify, SignJWT } from 'jose';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
-
-const mockSign = jest.fn().mockResolvedValue('signed-mock-jwt');
-const mockSetProtectedHeader = jest.fn().mockReturnThis();
-const mockSetIssuedAt = jest.fn().mockReturnThis();
-const mockSetExpirationTime = jest.fn().mockReturnThis();
-
-jest.mock('jose', () => ({
-  jwtVerify: jest.fn(),
-  SignJWT: jest.fn().mockImplementation(() => ({
-    setProtectedHeader: mockSetProtectedHeader,
-    setIssuedAt: mockSetIssuedAt,
-    setExpirationTime: mockSetExpirationTime,
-    sign: mockSign,
-  })),
-}));
 
 describe('AuthenticationMockService', () => {
   let service: AuthenticationMockService;
@@ -37,10 +21,7 @@ describe('AuthenticationMockService', () => {
         if (key === 'OIDC_MOCK_EMAIL') return 'real.user@example.com';
         return null;
       }),
-      getOrThrow: jest.fn((key: string) => {
-        if (key === 'JWT_SECRET') return 'mock-jwt-secret';
-        throw new Error(`Config key ${key} not found`);
-      }),
+      getOrThrow: jest.fn(),
     } as unknown as jest.Mocked<ConfigService>;
 
     mockFindOne = jest.fn().mockResolvedValue({
@@ -74,18 +55,13 @@ describe('AuthenticationMockService', () => {
     service = module.get(AuthenticationMockService);
   });
 
-  it('forges and validates a signed internal JWT from OIDC_MOCK_EMAIL', async () => {
+  it('returns the configured real user from OIDC_MOCK_EMAIL', async () => {
     const result = await service.handleCallback('mock-code', 'mock-nonce');
 
     expect(mockDataSource.getRepository).toHaveBeenCalledWith(UserEntity);
     expect(mockFindOne).toHaveBeenCalledWith({ where: { email: 'real.user@example.com' } });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('real-sub');
-    expect(SignJWT).toHaveBeenCalledWith({
-      sub: 'real-sub',
-      email: 'real.user@example.com',
-      itvCdn: 917072,
-      isExpertNational: false,
-    });
     expect(result.user).toEqual({
       cerbereId: 'real-sub',
       mel: 'real.user@example.com',
@@ -94,17 +70,8 @@ describe('AuthenticationMockService', () => {
       nom: 'Real',
       prenom: 'User',
     });
-    expect(result.accessToken).toBe('signed-mock-jwt');
-
-    (jwtVerify as jest.Mock).mockResolvedValue({
-      payload: {
-        sub: 'real-sub',
-        email: 'real.user@example.com',
-        itvCdn: 917072,
-        isExpertNational: false,
-      },
-    });
-    await expect(service.validateToken(result.accessToken)).resolves.toEqual({
+    expect(result.accessToken).toBe('mock-token');
+    await expect(service.validateToken(result.accessToken)).resolves.toMatchObject({
       cerbereId: 'real-sub',
       mel: 'real.user@example.com',
       itvCdn: 917072,
@@ -112,16 +79,8 @@ describe('AuthenticationMockService', () => {
     });
   });
 
-  it('extracts subject from a signed token', async () => {
-    const result = await service.handleCallback('mock-code', 'mock-nonce');
-
-    (jwtVerify as jest.Mock).mockResolvedValue({
-      payload: {
-        sub: 'real-sub',
-      },
-    });
-
-    await expect(service.extractSubjectFromExpiredToken(result.accessToken)).resolves.toBe('real-sub');
+  it('extracts subject from the configured mock user', async () => {
+    await expect(service.extractSubjectFromExpiredToken('mock-token')).resolves.toBe('real-sub');
   });
 
   it('refreshes tokens for the same mock user', async () => {
@@ -129,15 +88,8 @@ describe('AuthenticationMockService', () => {
 
     const refreshed = await service.refreshTokens(initial.refreshToken ?? '', 'real-sub');
 
-    (jwtVerify as jest.Mock).mockResolvedValue({
-      payload: {
-        sub: 'real-sub',
-        email: 'real.user@example.com',
-        itvCdn: 917072,
-        isExpertNational: false,
-      },
-    });
-    await expect(service.validateToken(refreshed.accessToken)).resolves.toEqual({
+    expect(refreshed.accessToken).toBe('mock-token');
+    await expect(service.validateToken(refreshed.accessToken)).resolves.toMatchObject({
       cerbereId: 'real-sub',
       mel: 'real.user@example.com',
       itvCdn: 917072,
@@ -159,5 +111,13 @@ describe('AuthenticationMockService', () => {
 
   it('fails when the expected subject does not match on refresh', async () => {
     await expect(service.refreshTokens('refresh-token', 'other-sub')).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('fails when validateToken receives an empty token', async () => {
+    await expect(service.validateToken('')).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('fails when extractSubjectFromExpiredToken receives an empty token', async () => {
+    await expect(service.extractSubjectFromExpiredToken('')).rejects.toThrow(UnauthorizedException);
   });
 });

@@ -35,6 +35,7 @@ import { SandreService } from '@dossier/controle/technique/sandre/sandre.service
 import { ApiModule } from '../../src/api/api.module';
 import { InfraModule } from '@infra/infra.module';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
+import { Authentication } from '@authentication/authentication';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { WorkerModule } from '@worker/worker.module';
@@ -98,6 +99,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let pgboss: PgBoss;
+  let authService: Authentication;
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
   let notificationMock: NotificationGatewayTestMock;
@@ -279,6 +281,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    authService = moduleFixture.get(Authentication);
     sandreService = moduleFixture.get(SandreService);
 
     // Create referential data schemas and tables
@@ -298,8 +301,13 @@ describe('Dossier E2E - Real Queue Processing', () => {
     // Clear and reseed user data
     await clearUserWithDroits(dataSource);
     testUserId = await seedUserWithDroits(dataSource, TEST_USER);
-    // await clearReferentielData(dataSource);
-    // await createReferentielDataset(dataSource);
+
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: TEST_USER.sub,
+      mel: TEST_USER.email,
+      itvCdn: TEST_USER.itvCdn,
+      isExpertNational: false,
+    });
   });
 
   afterAll(async () => {

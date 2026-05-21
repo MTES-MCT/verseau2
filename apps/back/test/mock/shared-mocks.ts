@@ -229,7 +229,7 @@ export class UserServiceTestMock {
   private mockUser: Partial<UserEntity> = {
     id: 'user_123',
     sub: 'test-user-id',
-    email: 'test@example.com',
+    email: 'dev@example.com',
     nom: 'Test',
     prenom: 'User',
   };
@@ -257,7 +257,7 @@ export class UserServiceTestMock {
     this.mockUser = {
       id: 'user_123',
       sub: 'test-user-id',
-      email: 'test@example.com',
+      email: 'dev@example.com',
       nom: 'Test',
       prenom: 'User',
     };
@@ -333,7 +333,7 @@ export class ConfigServiceTestMock {
       SFTP_PRIVATE_KEY: 'key',
       SFTP_AGENCY_CONFIG: '{}',
       OIDC_MOCK: 'true',
-      OIDC_MOCK_EMAIL: 'email@email.com',
+      OIDC_MOCK_EMAIL: 'dev@example.com',
       OIDC_ISSUER_URL: 'https://mock-issuer',
       OIDC_CLIENT_ID: 'mock-client',
       OIDC_CLIENT_SECRET: 'mock-secret',
@@ -383,6 +383,7 @@ export class ConfigServiceTestMock {
       SFTP_PRIVATE_KEY: 'key',
       SFTP_AGENCY_CONFIG: '{}',
       OIDC_MOCK: 'true',
+      OIDC_MOCK_EMAIL: 'dev@example.com',
       OIDC_ISSUER_URL: 'https://mock-issuer',
       OIDC_CLIENT_ID: 'mock-client',
       OIDC_CLIENT_SECRET: 'mock-secret',

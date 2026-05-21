@@ -27,6 +27,7 @@ import { QueueGateway, PGBOSS, QueueName } from '@infra/queue/queue';
 import { ApiModule } from '../../src/api/api.module';
 import { InfraModule } from '@infra/infra.module';
 import { InfraWithRealDbMockModule } from '../mock/infraWithRealDbMock.module';
+import { Authentication } from '@authentication/authentication';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
@@ -45,6 +46,7 @@ import { S3TestMock, SftpTestMock, QueueTestMock } from '../mock/shared-mocks';
 describe('Dossier E2E - Depot Upload', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
+  let authService: Authentication;
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
   let queueMock: QueueTestMock;
@@ -92,6 +94,7 @@ describe('Dossier E2E - Depot Upload', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    authService = moduleFixture.get(Authentication);
 
     // Create referential data schemas and tables
     await createReferentielDataset(dataSource);
@@ -106,6 +109,13 @@ describe('Dossier E2E - Depot Upload', () => {
     // Clear and reseed user data
     await clearUserWithDroits(dataSource);
     await seedUserWithDroits(dataSource, TEST_USER);
+
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: TEST_USER.sub,
+      mel: TEST_USER.email,
+      itvCdn: TEST_USER.itvCdn,
+      isExpertNational: false,
+    });
   });
 
   afterAll(async () => {

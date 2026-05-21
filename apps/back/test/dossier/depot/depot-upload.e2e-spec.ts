@@ -8,6 +8,7 @@ import { DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
+import { Authentication } from '@authentication/authentication';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { UserService } from '@user/user.service';
 import { ConfigService } from '@nestjs/config';
@@ -38,6 +39,7 @@ describe('Depot upload (e2e)', () => {
   let s3Mock: S3TestMock;
   let queueMock: QueueTestMock;
   let configMock: ConfigServiceTestMock;
+  let authentication: Authentication;
 
   beforeAll(async () => {
     process.env.USE_SANDRE_MOCK = 'true';
@@ -84,19 +86,29 @@ describe('Depot upload (e2e)', () => {
     await app.init();
 
     dataSource = moduleFixture.get(DataSource);
+    authentication = moduleFixture.get(Authentication);
   });
 
   beforeEach(async () => {
+    jest.restoreAllMocks();
+
     // Reset mocks
     s3Mock.reset();
     queueMock.reset();
+
+    jest.spyOn(authentication, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
 
     // Seed user
     const userRepository = dataSource.getRepository(UserEntity);
     await userRepository.save({
       id: 'user_123',
       sub: 'test-user-id',
-      email: 'test@example.com',
+      email: 'dev@example.com',
       nom: 'Test',
       prenom: 'User',
     });
