@@ -22,3 +22,5 @@ JWT_SECRET=unsupersecret
 MASA_API_KEY=private-toke
 
 SANDRE_POLL_INTERVAL_SECONDS=0
+
+NODE_ENV=development

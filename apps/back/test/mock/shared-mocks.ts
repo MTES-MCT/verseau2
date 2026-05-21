@@ -340,6 +340,7 @@ export class ConfigServiceTestMock {
       OIDC_REDIRECT_URI: 'http://mock-redirect',
       USE_SANDRE_MOCK: 'true',
       JWT_SECRET: 'unsupersecret',
+      NODE_ENV: 'development',
       ...additionalValues,
     };
   }
