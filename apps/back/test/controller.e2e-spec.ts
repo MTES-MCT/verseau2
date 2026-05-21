@@ -83,24 +83,24 @@ describe('Controller (e2e) - Unauthorized', () => {
     });
 
     it('/auth/refresh (POST) - Should return 201', async () => {
-      // Forge a minimal JWT with a sub claim for the access_token cookie
-      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
-      const payload = Buffer.from(JSON.stringify({ sub: 'test-user-id' })).toString('base64url');
-      const fakeJwt = `${header}.${payload}.fake`;
+      jest.spyOn(authService, 'extractSubjectFromExpiredToken').mockResolvedValueOnce('test-user-id');
+      jest.spyOn(authService, 'refreshTokens').mockResolvedValueOnce({
+        accessToken: 'mock-token',
+        refreshToken: 'mock-token',
+        expiresIn: 3600,
+      });
       return request(app.getHttpServer())
         .post('/auth/refresh')
-        .set('Cookie', [`refresh_token=refresh-token-abc`, `access_token=${fakeJwt}`])
+        .set('Cookie', ['refresh_token=refresh-token-abc', 'access_token=mock-token'])
         .expect(201);
     });
 
     it('/auth/refresh (POST) - Should return 401 when refreshTokens throw an error', async () => {
       jest.spyOn(authService, 'refreshTokens').mockRejectedValueOnce(new Error('Refresh failed'));
-      const header = Buffer.from(JSON.stringify({ alg: 'HS256' })).toString('base64url');
-      const payload = Buffer.from(JSON.stringify({ sub: 'test-user-id' })).toString('base64url');
-      const fakeJwt = `${header}.${payload}.fake`;
+      jest.spyOn(authService, 'extractSubjectFromExpiredToken').mockResolvedValueOnce('test-user-id');
       return request(app.getHttpServer())
         .post('/auth/refresh')
-        .set('Cookie', [`refresh_token=refresh-token-abc`, `access_token=${fakeJwt}`])
+        .set('Cookie', ['refresh_token=refresh-token-abc', 'access_token=mock-token'])
         .expect(401);
     });
 
@@ -194,6 +194,13 @@ describe('Controller (e2e) - Unauthorized', () => {
       return request(app.getHttpServer()).get('/indicateurs/steu').expect(401);
     });
     it('/indicateurs/steu (GET) - Should return 200 when a token is provided', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue({
+        cerbereId: 'test-user-id',
+        mel: 'dev@example.com',
+        itvCdn: 100,
+        isExpertNational: false,
+      });
+
       return request(app.getHttpServer())
         .get('/indicateurs/steu')
         .set('Cookie', ['access_token=token-user-1'])
@@ -205,6 +212,7 @@ describe('Controller (e2e) - Unauthorized', () => {
 describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   let app: INestApplication<App>;
   let droitsDepotService: DroitsDepotService;
+  let authService: Authentication;
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -225,6 +233,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
     await app.init();
 
     droitsDepotService = moduleFixture.get(DroitsDepotService);
+    authService = moduleFixture.get(Authentication);
   });
 
   afterAll(async () => {
@@ -236,6 +245,12 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   });
 
   it('should return authorized: true when validateDroits succeeds', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
     jest.spyOn(droitsDepotService, 'validateDroits').mockResolvedValue(undefined);
 
     const response = await request(app.getHttpServer())
@@ -250,6 +265,12 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   });
 
   it('should return errorCode FLUX_QUALIFIE_INTERDIT when service throws FLUX_QUALIFIE_INTERDIT', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
     jest
       .spyOn(droitsDepotService, 'validateDroits')
       .mockRejectedValue(new DepotRightsException(DepotError.FLUX_QUALIFIE_INTERDIT));
@@ -267,6 +288,12 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   });
 
   it('should return errorCode DROITS_INSUFFISANTS when service throws DROITS_INSUFFISANTS', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
     jest
       .spyOn(droitsDepotService, 'validateDroits')
       .mockRejectedValue(new DepotRightsException(DepotError.DROITS_INSUFFISANTS));
@@ -284,6 +311,12 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   });
 
   it('should pass isFluxQualifie=false when query param is absent', async () => {
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'test-user-id',
+      mel: 'dev@example.com',
+      itvCdn: 100,
+      isExpertNational: false,
+    });
     jest.spyOn(droitsDepotService, 'validateDroits').mockResolvedValue(undefined);
 
     await request(app.getHttpServer())
@@ -614,6 +647,7 @@ describe('ReferentielController (e2e) - parametres', () => {
       .send({ codes: ['1313', '1314'] })
       .expect(201);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(masaProvider.findParametresByCodes).toHaveBeenCalledWith(['1313', '1314']);
     expect(response.body).toEqual([
       {

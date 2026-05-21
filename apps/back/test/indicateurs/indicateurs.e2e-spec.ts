@@ -77,6 +77,12 @@ describe('IndicateursController (e2e) - Caching', () => {
 
   it('/indicateurs/steu (GET) - should cache the response for the same user', async () => {
     const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue(emptyPaginatedResponse);
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'user-1',
+      mel: 'dev@example.com',
+      itvCdn: null,
+      isExpertNational: false,
+    });
 
     // First call
     await request(app.getHttpServer())
@@ -153,6 +159,12 @@ describe('IndicateursController (e2e) - Caching', () => {
 
   it('/indicateurs/steu (GET) - should call twice the service if cache is cleared', async () => {
     const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue(emptyPaginatedResponse);
+    jest.spyOn(authService, 'validateToken').mockResolvedValue({
+      cerbereId: 'user-1',
+      mel: 'dev@example.com',
+      itvCdn: null,
+      isExpertNational: false,
+    });
 
     // First call
     await request(app.getHttpServer())
