@@ -16,15 +16,14 @@ import { formatOption } from '../helper/optionsFormatter';
 import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
-import { useCallback, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
-import { downloadMesuresExport, fetchMesuresGraph } from '../api/mesures';
+import { useMesuresGraph } from '../hooks/useMesuresGraph';
+import { downloadMesuresExport } from '../api/mesures';
 import { MesuresGraph } from '../components/MesuresGraph';
 
 export function DepotDetailsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [showGraph, setShowGraph] = useState(false);
 
   const {
     form,
@@ -149,28 +148,11 @@ export function DepotDetailsPage() {
     );
   });
 
-  const canShowGraph = form.selectedPmoCdn !== null && form.selectedParametre !== '';
-
-  const {
-    data: graphData,
-    isLoading: graphLoading,
-    refetch: fetchGraph,
-  } = useQuery({
-    queryKey: ['mesures-graph', submittedQuery],
-    queryFn: () => fetchMesuresGraph(submittedQuery),
-    enabled: false,
-  });
-
-  const handleToggleGraph = useCallback(() => {
-    if (showGraph) {
-      setShowGraph(false);
-      return;
-    }
-
-    if (canShowGraph) {
-      fetchGraph().then(() => setShowGraph(true));
-    }
-  }, [showGraph, canShowGraph, fetchGraph]);
+  const { showGraph, graphData, graphLoading, handleToggleGraph, canShowGraph } = useMesuresGraph(
+    submittedQuery,
+    form.selectedPmoCdn,
+    form.selectedParametre,
+  );
 
   const canExport = hasSearched && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
@@ -304,7 +286,13 @@ export function DepotDetailsPage() {
           </div>
 
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')} style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <Button onClick={handleSearch} iconId="fr-icon-search-line" iconPosition="right">
+            <Button
+              onClick={() => {
+                handleSearch();
+              }}
+              iconId="fr-icon-search-line"
+              iconPosition="right"
+            >
               Rechercher
             </Button>
           </div>
