@@ -150,9 +150,7 @@ export class MesuresService {
         page,
         pageSize,
       };
-      console.log('filtresEvenement', filtresEvenement);
       const result = await this.evenementService.listEvenementSteu({ ...filtresEvenement, page, pageSize });
-      console.log('resultEvenement', result.total);
       return { data: result.data, total: result.total };
     });
 
