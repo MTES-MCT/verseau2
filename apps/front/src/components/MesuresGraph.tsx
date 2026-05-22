@@ -14,7 +14,9 @@ import {
 import { Line } from 'react-chartjs-2';
 import type { MesuresGraphItemDto } from '@lib/dossier';
 import { fr } from '@codegouvfr/react-dsfr';
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip);
+import { verticalLinePlugin } from './verticalLinePlugin';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, verticalLinePlugin);
 
 interface MesuresGraphProps {
   data: MesuresGraphItemDto[];
@@ -79,12 +81,17 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
 
   const options: ChartOptions<'line'> = {
     responsive: true,
+    interaction: {
+      mode: 'index',
+    },
     plugins: {
       title: {
         display: true,
         text: `Évolution de ${parametreLabel}`,
       },
       tooltip: {
+        animation: { duration: 100 },
+        intersect: false,
         callbacks: {
           label: (context: TooltipItem<'line'>) => {
             const item = values[context.dataIndex];
