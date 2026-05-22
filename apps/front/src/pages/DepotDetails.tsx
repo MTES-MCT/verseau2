@@ -16,12 +16,15 @@ import { formatOption } from '../helper/optionsFormatter';
 import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
-import { downloadMesuresExport } from '../api/mesures';
+import { downloadMesuresExport, fetchMesuresGraph } from '../api/mesures';
+import { MesuresGraph } from '../components/MesuresGraph';
 
 export function DepotDetailsPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
 
   const {
     form,
@@ -117,6 +120,9 @@ export function DepotDetailsPage() {
 
   const qualificationsOptions: AutocompleteOption[] = qualifications.map(formatOption);
 
+  const selectedParametreOption = parametres.find((p) => p.parametreAnalyseCode === submitted.selectedParametre);
+  const parametreLabel = selectedParametreOption?.parametreNomCourt ?? submitted.selectedParametre;
+
   const tableData = data ? buildMesureTableRows(data.data) : [];
   const headers = buildMesureTableHeaders().map((header) => {
     const sortFieldByProperty: Partial<Record<(typeof header)['property'], MesuresSortByValue>> = {
@@ -142,6 +148,29 @@ export function DepotDetailsPage() {
       />
     );
   });
+
+  const canShowGraph = form.selectedPmoCdn !== null && form.selectedParametre !== '';
+
+  const {
+    data: graphData,
+    isLoading: graphLoading,
+    refetch: fetchGraph,
+  } = useQuery({
+    queryKey: ['mesures-graph', submittedQuery],
+    queryFn: () => fetchMesuresGraph(submittedQuery),
+    enabled: false,
+  });
+
+  const handleToggleGraph = useCallback(() => {
+    if (showGraph) {
+      setShowGraph(false);
+      return;
+    }
+
+    if (canShowGraph) {
+      fetchGraph().then(() => setShowGraph(true));
+    }
+  }, [showGraph, canShowGraph, fetchGraph]);
 
   const canExport = hasSearched && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
@@ -362,27 +391,44 @@ export function DepotDetailsPage() {
       {!isLoading && !error && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <>
-            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <Button
                 type="button"
                 priority="secondary"
-                onClick={handleExport}
-                disabled={!canExport || isExportLoading}
+                onClick={handleToggleGraph}
+                disabled={!canShowGraph || graphLoading}
+                nativeButtonProps={{
+                  title: !canShowGraph ? 'Sélectionner un Point de mesure et un Paramètre' : undefined,
+                }}
               >
-                Exporter CSV
+                {showGraph ? 'Vue tableau' : 'Vue graphique'}
               </Button>
+              {!showGraph && (
+                <Button
+                  type="button"
+                  priority="secondary"
+                  onClick={handleExport}
+                  disabled={!canExport || isExportLoading}
+                >
+                  Exporter CSV
+                </Button>
+              )}
             </div>
-            <Table
-              caption="Liste des mesures d'autosurveillance"
-              noCaption
-              bordered
-              headers={headers}
-              data={tableData}
-              noScroll={false}
-              className={fr.cx('fr-mb-1w')}
-            />
+            {showGraph && graphData ? (
+              <MesuresGraph data={graphData} parametreLabel={parametreLabel} />
+            ) : (
+              <Table
+                caption="Liste des mesures d'autosurveillance"
+                noCaption
+                bordered
+                headers={headers}
+                data={tableData}
+                noScroll={false}
+                className={fr.cx('fr-mb-1w')}
+              />
+            )}
 
-            {data && (
+            {data && !showGraph && (
               <div className={fr.cx('fr-mt-2w')}>
                 <p className={fr.cx('fr-text--sm')}>
                   {data.total === 0
@@ -392,7 +438,7 @@ export function DepotDetailsPage() {
               </div>
             )}
 
-            {totalPages > 1 && (
+            {totalPages > 1 && !showGraph && (
               <div className={fr.cx('fr-mt-4w')}>
                 <Pagination
                   count={totalPages}

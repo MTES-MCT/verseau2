@@ -7,6 +7,7 @@ import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import type { RouteQuery, RouteResponse } from '@lib/dossier';
 import {
   exportMesures,
+  graphMesures,
   listMesures,
   listOuvrages,
   listSystemesCollecte,
@@ -32,6 +33,32 @@ export class MesuresController {
     @Query(new ZodValidationPipe(listMesures['query'])) query: RouteQuery<typeof listMesures>,
   ): Promise<RouteResponse<typeof listMesures>> {
     return this.mesuresService.listMesures({
+      authorizedSteuCdas: req.authorizedSteuCdas!,
+      authorizedSclCdas: req.authorizedSclCdas!,
+      ouvrageType: query.ouvrageType,
+      ouvrageDepollutionCodes: query.steuSandreCdas,
+      systemeCollecteCodes: query.sclSandreCdas,
+      pmoCdn: query.pmoCdn,
+      dateDebut: query.dateDebut,
+      dateFin: query.dateFin,
+      parametreCode: query.parametreCode,
+      qualification: query.qualification,
+      statut: query.statut,
+      finalite: query.finalite,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
+  }
+
+  @Get('graph')
+  @UseGuards(HasUserAccessToOuvragesGuard)
+  async getMesuresGraph(
+    @Req() req: CustomRequest,
+    @Query(new ZodValidationPipe(graphMesures['query'])) query: RouteQuery<typeof graphMesures>,
+  ): Promise<RouteResponse<typeof graphMesures>> {
+    return this.mesuresService.getMesuresGraph({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       authorizedSclCdas: req.authorizedSclCdas!,
       ouvrageType: query.ouvrageType,

@@ -125,6 +125,14 @@ export class MesuresService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
+  async getMesuresGraph(options: ListMesuresOptions): Promise<PaginatedMesuresResponse['data']> {
+    return this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listMesures({ ...options, page, pageSize });
+      return { data: result.data, total: result.total };
+    });
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
   async exportMesuresCsv(options: ListMesuresOptions): Promise<string> {
     const rows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
       const result = await this.listMesures({ ...options, page, pageSize });

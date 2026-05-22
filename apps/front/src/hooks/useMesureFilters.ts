@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
+import { getStartOfPreviousYearAsISODate, getEndOfPreviousYearAsISODate } from '@lib/shared';
 import type { MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
 import { usePointsMesure } from './usePointsMesure';
@@ -31,8 +31,8 @@ const INITIAL_FILTERS: FilterState = {
   selectedOuvrageCode: '',
   selectedPmoCdn: null,
   selectedParametre: '',
-  dateDebut: getNYearsAgoAsISODate(1),
-  dateFin: getTodayAsISODate(),
+  dateDebut: getStartOfPreviousYearAsISODate(),
+  dateFin: getEndOfPreviousYearAsISODate(),
   finalite: '',
   statut: '',
   qualification: '',
