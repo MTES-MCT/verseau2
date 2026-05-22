@@ -53,7 +53,14 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
   }
 
   async findEvenementSteu(filters: EvenementSteuFilters): Promise<{ data: EvenementSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, page, pageSize, typeEvenementCodes } = filters;
+    const {
+      ouvrageDepollutionIds,
+      startDate: filterStartDate,
+      endDate: filterEndDate,
+      page,
+      pageSize,
+      typeEvenementCodes,
+    } = filters;
 
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0 };
@@ -74,18 +81,20 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean> = [];
-    const addParam = (value: number | string | boolean) => {
+    const queryParams: Array<number | string | boolean | Date> = [];
+    const addParam = (value: number | string | boolean | Date) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
 
-    const yearPlaceholder = addParam(year);
+    const startDate = addParam(filterStartDate);
+    const endDate = addParam(filterEndDate);
     const steuPlaceholders = ouvrageDepollutionIds.map((cdn) => addParam(cdn)).join(', ');
     const typeEvenementPlaceholders = typeEvenementCodes.map((code) => addParam(code)).join(', ');
     const whereClauses = [
       `steu.steu_cdn IN (${steuPlaceholders})`,
-      `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
+      `evo.evo_evt_dt >= ${startDate}`,
+      `evo.evo_evt_dt < ${endDate}`,
       `t46.tlref_elt_cda IN (${typeEvenementPlaceholders})`,
     ];
 
@@ -148,7 +157,14 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
   }
 
   async findEvenementScl(filters: EvenementSclFilters): Promise<{ data: EvenementSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, page, pageSize, typeEvenementCodes } = filters;
+    const {
+      systemeCollecteIds,
+      startDate: filterStartDate,
+      endDate: filterEndDate,
+      page,
+      pageSize,
+      typeEvenementCodes,
+    } = filters;
 
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
@@ -170,18 +186,20 @@ export class RoseauEvenementRepository implements RoseauEvenementGateway {
       throw new Error(`Invalid sortBy value: "${sortBy}"`);
     }
 
-    const queryParams: Array<number | string | boolean> = [];
-    const addParam = (value: number | string | boolean) => {
+    const queryParams: Array<number | string | boolean | Date> = [];
+    const addParam = (value: number | string | boolean | Date) => {
       queryParams.push(value);
       return `$${queryParams.length}`;
     };
 
-    const yearPlaceholder = addParam(year);
+    const startDate = addParam(filterStartDate);
+    const endDate = addParam(filterEndDate);
     const sclPlaceholders = systemeCollecteIds.map((cdn) => addParam(cdn)).join(', ');
     const typeEvenementPlaceholders = typeEvenementCodes.map((code) => addParam(code)).join(', ');
     const whereClauses = [
       `scl.scl_cdn IN (${sclPlaceholders})`,
-      `date_part('year', evo.evo_evt_dt) = ${yearPlaceholder}`,
+      `evo.evo_evt_dt >= ${startDate}`,
+      `evo.evo_evt_dt < ${endDate}`,
       `t46.tlref_elt_cda IN (${typeEvenementPlaceholders})`,
     ];
 

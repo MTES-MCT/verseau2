@@ -6,7 +6,7 @@ import {
   evenementSteuPropertyToHeaderMapper,
   evenementSclPropertyToHeaderMapper,
 } from '@lib/dossier';
-import { formatDate } from '@lib/shared';
+import { formatDate, getStartOfYearAsUTCDate } from '@lib/shared';
 
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
@@ -78,9 +78,12 @@ export class EvenementService {
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0, page, pageSize };
     }
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const filters: EvenementSteuFilters = {
       ouvrageDepollutionIds,
-      year,
+      startDate,
+      endDate,
       page,
       pageSize,
       typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
@@ -142,9 +145,12 @@ export class EvenementService {
     if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0, page, pageSize };
     }
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const filters: EvenementSclFilters = {
       systemeCollecteIds,
-      year,
+      startDate,
+      endDate,
       page,
       pageSize,
       typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
@@ -220,6 +226,8 @@ export class EvenementService {
   ): Promise<EvenementSteuFilters | null> {
     const { authorizedSteuCdas, year, typeEvenementCode, ouvrageDepollutionCode, pointMesureId, sortBy, sortOrder } =
       options;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
@@ -235,7 +243,8 @@ export class EvenementService {
 
     return {
       ouvrageDepollutionIds,
-      year,
+      startDate,
+      endDate,
       page,
       pageSize,
       typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
@@ -252,6 +261,8 @@ export class EvenementService {
   ): Promise<EvenementSclFilters | null> {
     const { authorizedSclCdas, year, typeEvenementCode, systemeCollecteCode, pointMesureId, sortBy, sortOrder } =
       options;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const cdasToQuery = systemeCollecteCode
       ? [systemeCollecteCode].filter((code) => authorizedSclCdas.includes(code))
       : authorizedSclCdas;
@@ -267,7 +278,8 @@ export class EvenementService {
 
     return {
       systemeCollecteIds,
-      year,
+      startDate,
+      endDate,
       page,
       pageSize,
       typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),

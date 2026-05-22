@@ -22,6 +22,7 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
+import { getStartOfYearAsUTCDate } from '@lib/shared';
 import { formatNullable } from '@shared/csv/csvFormatters';
 import {
   buildCsvColumnsFromPropertyToHeaderMapper,
@@ -152,9 +153,12 @@ export class MesuresService {
     if (ouvrageType === 'steu' && ouvrageDepollutionCodes?.length) {
       const [steu] = await this.masaProvider.findSteuBatchBySandreCdas([ouvrageDepollutionCodes[0]]);
       if (steu) {
+        const startDate = getStartOfYearAsUTCDate(year);
+        const endDate = getStartOfYearAsUTCDate(year + 1);
         const result = await this.masaProvider.findEvenementSteu({
           ouvrageDepollutionIds: [steu.ouvrageDepollutionId],
-          year,
+          startDate,
+          endDate,
           typeEvenementCodes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
           page: 1,
           pageSize: 500,
@@ -170,9 +174,12 @@ export class MesuresService {
     } else if (ouvrageType === 'scl' && systemeCollecteCodes?.length) {
       const [scl] = await this.masaProvider.findSclBatchBySandreCdas([systemeCollecteCodes[0]]);
       if (scl) {
+        const startDate = getStartOfYearAsUTCDate(year);
+        const endDate = getStartOfYearAsUTCDate(year + 1);
         const result = await this.masaProvider.findEvenementScl({
           systemeCollecteIds: [scl.systemeCollecteId],
-          year,
+          startDate,
+          endDate,
           typeEvenementCodes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
           page: 1,
           pageSize: 500,

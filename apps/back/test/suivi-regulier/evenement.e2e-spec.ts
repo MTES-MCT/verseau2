@@ -16,6 +16,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { MasaProvider } from '@masa/masa.provider';
+import { getStartOfYearAsUTCDate } from '@lib/shared';
 
 const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
@@ -151,7 +152,8 @@ describe('EvenementController (e2e)', () => {
 
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
-        year: currentYear,
+        startDate: getStartOfYearAsUTCDate(currentYear),
+        endDate: getStartOfYearAsUTCDate(currentYear + 1),
         typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
         page: 1,
         pageSize: 20,
@@ -214,7 +216,8 @@ describe('EvenementController (e2e)', () => {
 
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
-        year: currentYear,
+        startDate: getStartOfYearAsUTCDate(currentYear),
+        endDate: getStartOfYearAsUTCDate(currentYear + 1),
         typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
         page: 1,
         pageSize: 20,
@@ -251,7 +254,8 @@ describe('EvenementController (e2e)', () => {
 
       expect(mockMasaProvider.findEvenementSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [10],
-        year: currentYear,
+        startDate: getStartOfYearAsUTCDate(currentYear),
+        endDate: getStartOfYearAsUTCDate(currentYear + 1),
         typeEvenementCodes: ['3'],
         page: 1,
         pageSize: 20,
@@ -360,7 +364,8 @@ describe('EvenementController (e2e)', () => {
 
       expect(mockMasaProvider.findEvenementScl).toHaveBeenCalledWith({
         systemeCollecteIds: [20],
-        year: currentYear,
+        startDate: getStartOfYearAsUTCDate(currentYear),
+        endDate: getStartOfYearAsUTCDate(currentYear + 1),
         typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
         page: 1,
         pageSize: 20,

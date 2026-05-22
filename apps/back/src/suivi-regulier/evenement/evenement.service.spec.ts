@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
+import { getStartOfYearAsUTCDate } from '@lib/shared';
 import { EvenementService } from './evenement.service';
 
 const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -53,7 +54,8 @@ describe('EvenementService', () => {
 
     expect(masaProviderMock.findEvenementSteu).toHaveBeenCalledWith({
       ouvrageDepollutionIds: [123],
-      year: 2024,
+      startDate: getStartOfYearAsUTCDate(2024),
+      endDate: getStartOfYearAsUTCDate(2025),
       typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
       pointMesureId: 45,
       page: 1,
@@ -75,7 +77,8 @@ describe('EvenementService', () => {
 
     expect(masaProviderMock.findEvenementSteu).toHaveBeenCalledWith({
       ouvrageDepollutionIds: [123],
-      year: 2024,
+      startDate: getStartOfYearAsUTCDate(2024),
+      endDate: getStartOfYearAsUTCDate(2025),
       typeEvenementCodes: ['3'],
       page: 1,
       pageSize: 10,
@@ -95,7 +98,8 @@ describe('EvenementService', () => {
 
     expect(masaProviderMock.findEvenementScl).toHaveBeenCalledWith({
       systemeCollecteIds: [456],
-      year: 2024,
+      startDate: getStartOfYearAsUTCDate(2024),
+      endDate: getStartOfYearAsUTCDate(2025),
       typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
       page: 1,
       pageSize: 10,
