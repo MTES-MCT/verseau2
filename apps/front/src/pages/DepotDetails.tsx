@@ -391,16 +391,14 @@ export function DepotDetailsPage() {
               >
                 {showGraph ? 'Vue tableau' : 'Vue graphique'}
               </Button>
-              {!showGraph && (
-                <Button
-                  type="button"
-                  priority="secondary"
-                  onClick={handleExport}
-                  disabled={!canExport || isExportLoading}
-                >
-                  Exporter CSV
-                </Button>
-              )}
+              <Button
+                type="button"
+                priority="secondary"
+                onClick={handleExport}
+                disabled={!canExport || isExportLoading || showGraph}
+              >
+                Exporter CSV
+              </Button>
             </div>
             {showGraph && graphData ? (
               <MesuresGraph data={graphData} parametreLabel={parametreLabel} />

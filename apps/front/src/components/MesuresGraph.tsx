@@ -7,6 +7,7 @@ import {
   LineElement,
   Title,
   Tooltip,
+  Legend,
   type ChartData,
   type ChartOptions,
   type TooltipItem,
@@ -17,7 +18,10 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { verticalLinePlugin } from './common/verticalLinePlugin';
 import './common/graph.css';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, verticalLinePlugin);
+const COLOR_DEFAULT = '#6a6af4' as const;
+const COLOR_COMMENT = '#e4794a' as const;
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, verticalLinePlugin);
 
 interface MesuresGraphProps {
   data: MesuresGraphItemDto[];
@@ -72,9 +76,10 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
       {
         label: parametreLabel,
         data: values,
-        borderColor: '#6a6af4',
-        backgroundColor: '#6a6af4',
-        pointBackgroundColor: '#6a6af4',
+        borderColor: COLOR_DEFAULT,
+        backgroundColor: COLOR_DEFAULT,
+        pointBackgroundColor: (ctx) =>
+          ctx.dataIndex != null && values[ctx.dataIndex]?.evenementCommentaire ? COLOR_COMMENT : COLOR_DEFAULT,
         tension: 0.1,
       },
     ],
@@ -89,6 +94,25 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
       title: {
         display: true,
         text: `Évolution de ${parametreLabel}`,
+      },
+      legend: {
+        display: true,
+        labels: {
+          generateLabels: () => [
+            {
+              text: 'Sans commentaire',
+              fillStyle: COLOR_DEFAULT,
+              strokeStyle: COLOR_DEFAULT,
+              pointStyle: 'circle',
+            },
+            {
+              text: 'Avec commentaire',
+              fillStyle: COLOR_COMMENT,
+              strokeStyle: COLOR_COMMENT,
+              pointStyle: 'circle',
+            },
+          ],
+        },
       },
       tooltip: {
         animation: { duration: 100 },
