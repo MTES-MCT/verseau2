@@ -14,7 +14,8 @@ import {
 import { Line } from 'react-chartjs-2';
 import type { MesuresGraphItemDto } from '@lib/dossier';
 import { fr } from '@codegouvfr/react-dsfr';
-import { verticalLinePlugin } from './verticalLinePlugin';
+import { verticalLinePlugin } from './common/verticalLinePlugin';
+import './common/graph.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, verticalLinePlugin);
 
@@ -125,7 +126,7 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
   };
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className={'chart-container'}>
       <Line ref={ref} data={chartData} options={options} />
     </div>
   );
