@@ -15,6 +15,7 @@ import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvr
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import type { Response } from 'express';
 import { EvenementService } from './evenement.service';
+import { getStartOfYearAsUTCDate } from '@lib/shared';
 
 @Controller('suivi-regulier/evenement')
 @UseGuards(MeGuard)
@@ -28,9 +29,13 @@ export class EvenementController {
     @Query(new ZodValidationPipe(listEvenementSteuRoute['query']))
     query: RouteQuery<typeof listEvenementSteuRoute>,
   ): Promise<RouteResponse<typeof listEvenementSteuRoute>> {
+    const startDate = getStartOfYearAsUTCDate(query.year);
+    const endDate = getStartOfYearAsUTCDate(query.year + 1);
     return this.evenementService.listEvenementSteu({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       ...query,
+      startDate,
+      endDate,
     });
   }
 
@@ -42,9 +47,13 @@ export class EvenementController {
     query: RouteQuery<typeof exportEvenementSteuRoute>,
     @Res() res: Response,
   ): Promise<void> {
+    const startDate = getStartOfYearAsUTCDate(query.year);
+    const endDate = getStartOfYearAsUTCDate(query.year + 1);
     const csv = await this.evenementService.exportEvenementSteuCsv({
       authorizedSteuCdas: req.authorizedSteuCdas!,
       ...query,
+      startDate,
+      endDate,
     });
 
     sendCsvResponse(res, `evenement-steu-${query.year}.csv`, csv);

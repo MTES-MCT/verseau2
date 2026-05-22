@@ -30,7 +30,8 @@ function formatPointMesure(row: { pointMesureNumero: string; pointMesureLibelle:
 
 export interface ListEvenementSteuOptions extends PaginationQuery {
   authorizedSteuCdas: string[];
-  year: number;
+  startDate: Date;
+  endDate: Date;
   typeEvenementCode?: string | null;
   ouvrageDepollutionCode?: string;
   pointMesureId?: number;
@@ -57,7 +58,8 @@ export class EvenementService {
   async listEvenementSteu(options: ListEvenementSteuOptions) {
     const {
       authorizedSteuCdas,
-      year,
+      startDate,
+      endDate,
       typeEvenementCode,
       ouvrageDepollutionCode,
       pointMesureId,
@@ -78,8 +80,8 @@ export class EvenementService {
     if (ouvrageDepollutionIds.length === 0) {
       return { data: [], total: 0, page, pageSize };
     }
-    const startDate = getStartOfYearAsUTCDate(year);
-    const endDate = getStartOfYearAsUTCDate(year + 1);
+    // const startDate = getStartOfYearAsUTCDate(year);
+    // const endDate = getStartOfYearAsUTCDate(year + 1);
     const filters: EvenementSteuFilters = {
       ouvrageDepollutionIds,
       startDate,
@@ -224,10 +226,16 @@ export class EvenementService {
     page: number,
     pageSize: number,
   ): Promise<EvenementSteuFilters | null> {
-    const { authorizedSteuCdas, year, typeEvenementCode, ouvrageDepollutionCode, pointMesureId, sortBy, sortOrder } =
-      options;
-    const startDate = getStartOfYearAsUTCDate(year);
-    const endDate = getStartOfYearAsUTCDate(year + 1);
+    const {
+      authorizedSteuCdas,
+      startDate,
+      endDate,
+      typeEvenementCode,
+      ouvrageDepollutionCode,
+      pointMesureId,
+      sortBy,
+      sortOrder,
+    } = options;
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;

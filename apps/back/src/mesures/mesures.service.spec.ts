@@ -5,6 +5,7 @@ import { MesuresService } from './mesures.service';
 import { MasaProvider } from '@masa/masa.provider';
 import type { MesureRow } from '@masa/masa.dto';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
+import { EvenementService } from '../suivi-regulier/evenement/evenement.service';
 
 const makeMesureRow = (): MesureRow => ({
   ouvrageDepollutionCode: 'STEU001',
@@ -62,6 +63,17 @@ describe('MesuresService', () => {
         {
           provide: CsvGenerator,
           useValue: csvGenerator,
+        },
+        {
+          provide: EvenementService,
+          useValue: {
+            listEvenementSteu: jest.fn(),
+            exportEvenementSteuCsv: jest.fn(),
+            listEvenementScl: jest.fn(),
+            exportEvenementSclCsv: jest.fn(),
+            listEvenementTypes: jest.fn(),
+            listAvailablePointsMesure: jest.fn(),
+          },
         },
       ],
     }).compile();

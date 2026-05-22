@@ -13,8 +13,6 @@ import { formatDate } from '@lib/shared';
 
 import { CsvGenerator } from '@shared/csv/csv.types';
 import {
-  EvenementSclFilters,
-  EvenementSteuFilters,
   MesureFilters,
   SteuWithName,
   SclWithName,
@@ -22,7 +20,6 @@ import {
   ParametreMesure,
   NomenclatureItem,
 } from '@masa/masa.dto';
-import { getStartOfYearAsUTCDate } from '@lib/shared';
 import { formatNullable } from '@shared/csv/csvFormatters';
 import {
   buildCsvColumnsFromPropertyToHeaderMapper,
@@ -30,6 +27,7 @@ import {
 } from '@shared/csv/propertyToHeaderCsvColumns';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+import { EvenementService, ListEvenementSteuOptions } from '../suivi-regulier/evenement/evenement.service';
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
@@ -54,6 +52,7 @@ export class MesuresService {
     private readonly masaProvider: MasaProvider,
     private readonly paginatedExportService: PaginatedExportService,
     @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+    private readonly evenementService: EvenementService,
   ) {}
 
   @TraceCalls(LOG_LEVELS[2])
@@ -130,71 +129,42 @@ export class MesuresService {
 
   @TraceCalls(LOG_LEVELS[2])
   async getMesuresGraph(options: ListMesuresOptions): Promise<MesuresGraphItemDto[]> {
-    const MesureDonneesBrutesRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+    const mesureDonneesBrutesRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
       const result = await this.listMesures({ ...options, page, pageSize });
       return { data: result.data, total: result.total };
     });
 
-    if (MesureDonneesBrutesRows.length === 0) return [];
-
-    const { ouvrageType, ouvrageDepollutionCodes, systemeCollecteCodes, dateDebut } = options;
-
-    const year = dateDebut
-      ? new Date(dateDebut).getFullYear()
-      : Math.min(
-          ...MesureDonneesBrutesRows.map((r) => r.prelevementDate?.getFullYear()).filter((y): y is number => y != null),
-        );
+    if (mesureDonneesBrutesRows.length === 0) return [];
 
     const evenementByDate = new Map<
       string,
       { typeEvenementCode: string; typeEvenementLibelle: string; commentaire: string | null }
     >();
 
-    if (ouvrageType === 'steu' && ouvrageDepollutionCodes?.length) {
-      const [steu] = await this.masaProvider.findSteuBatchBySandreCdas([ouvrageDepollutionCodes[0]]);
-      if (steu) {
-        const startDate = getStartOfYearAsUTCDate(year);
-        const endDate = getStartOfYearAsUTCDate(year + 1);
-        const result = await this.masaProvider.findEvenementSteu({
-          ouvrageDepollutionIds: [steu.ouvrageDepollutionId],
-          startDate,
-          endDate,
-          typeEvenementCodes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
-          page: 1,
-          pageSize: 500,
-        } satisfies EvenementSteuFilters);
-        for (const evt of result.data) {
-          evenementByDate.set(evt.date, {
-            typeEvenementCode: evt.typeEvenementCode,
-            typeEvenementLibelle: evt.typeEvenementLibelle,
-            commentaire: evt.commentaire,
-          });
-        }
-      }
-    } else if (ouvrageType === 'scl' && systemeCollecteCodes?.length) {
-      const [scl] = await this.masaProvider.findSclBatchBySandreCdas([systemeCollecteCodes[0]]);
-      if (scl) {
-        const startDate = getStartOfYearAsUTCDate(year);
-        const endDate = getStartOfYearAsUTCDate(year + 1);
-        const result = await this.masaProvider.findEvenementScl({
-          systemeCollecteIds: [scl.systemeCollecteId],
-          startDate,
-          endDate,
-          typeEvenementCodes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
-          page: 1,
-          pageSize: 500,
-        } satisfies EvenementSclFilters);
-        for (const evt of result.data) {
-          evenementByDate.set(evt.date, {
-            typeEvenementCode: evt.typeEvenementCode,
-            typeEvenementLibelle: evt.typeEvenementLibelle,
-            commentaire: evt.commentaire,
-          });
-        }
-      }
+    const evenementRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const filtresEvenement: ListEvenementSteuOptions = {
+        authorizedSteuCdas: options.authorizedSteuCdas,
+        startDate: options.dateDebut ? new Date(options.dateDebut) : new Date(),
+        endDate: options.dateFin ? new Date(options.dateFin) : new Date(),
+        ouvrageDepollutionCode: options.ouvrageDepollutionCodes?.[0],
+        page,
+        pageSize,
+      };
+      console.log('filtresEvenement', filtresEvenement);
+      const result = await this.evenementService.listEvenementSteu({ ...filtresEvenement, page, pageSize });
+      console.log('resultEvenement', result.total);
+      return { data: result.data, total: result.total };
+    });
+
+    for (const evt of evenementRows) {
+      evenementByDate.set(evt.date, {
+        typeEvenementCode: evt.typeEvenementCode,
+        typeEvenementLibelle: evt.typeEvenementLibelle,
+        commentaire: evt.commentaire,
+      });
     }
 
-    return MesureDonneesBrutesRows.map((row) => {
+    return mesureDonneesBrutesRows.map((row) => {
       const dateKey = row.prelevementDate
         ? `${row.prelevementDate.getFullYear()}-${String(row.prelevementDate.getMonth() + 1).padStart(2, '0')}-${String(row.prelevementDate.getDate()).padStart(2, '0')}`
         : null;

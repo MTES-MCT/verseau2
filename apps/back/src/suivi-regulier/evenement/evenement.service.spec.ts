@@ -46,7 +46,8 @@ describe('EvenementService', () => {
 
     await service.listEvenementSteu({
       authorizedSteuCdas: ['STEU1'],
-      year: 2024,
+      startDate: getStartOfYearAsUTCDate(2024),
+      endDate: getStartOfYearAsUTCDate(2025),
       pointMesureId: 45,
       page: 1,
       pageSize: 10,
@@ -69,7 +70,8 @@ describe('EvenementService', () => {
 
     await service.listEvenementSteu({
       authorizedSteuCdas: ['STEU1'],
-      year: 2024,
+      startDate: getStartOfYearAsUTCDate(2024),
+      endDate: getStartOfYearAsUTCDate(2025),
       typeEvenementCode: '3',
       page: 1,
       pageSize: 10,

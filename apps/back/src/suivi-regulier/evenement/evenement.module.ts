@@ -7,5 +7,6 @@ import { EvenementService } from './evenement.service';
   imports: [MasaModule],
   controllers: [EvenementController],
   providers: [EvenementService],
+  exports: [EvenementService],
 })
 export class EvenementModule {}
