@@ -29,6 +29,14 @@ export const ParametreMesureSchema = z.object({
 
 export type ParametreMesureDto = z.infer<typeof ParametreMesureSchema>;
 
+export const MesuresGraphItemDtoSchema = MesureDtoSchema.extend({
+  typeEvenementCode: z.string().nullable().optional(),
+  typeEvenementLibelle: z.string().nullable().optional(),
+  commentaire: z.string().nullable().optional(),
+});
+
+export type MesuresGraphItemDto = z.infer<typeof MesuresGraphItemDtoSchema>;
+
 export const PaginatedMesuresResponseSchema = createPaginatedResponseSchema(MesureDtoSchema);
 
 export type PaginatedMesuresResponse = z.infer<typeof PaginatedMesuresResponseSchema>;

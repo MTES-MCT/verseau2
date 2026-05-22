@@ -2,6 +2,7 @@ import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import {
   buildPointDeMesure,
+  MesuresGraphItemDto,
   PaginatedMesuresResponse,
   PaginationQuery,
   MesuresSortByValue,
@@ -12,6 +13,8 @@ import { formatDate } from '@lib/shared';
 
 import { CsvGenerator } from '@shared/csv/csv.types';
 import {
+  EvenementSclFilters,
+  EvenementSteuFilters,
   MesureFilters,
   SteuWithName,
   SclWithName,
@@ -125,10 +128,76 @@ export class MesuresService {
   }
 
   @TraceCalls(LOG_LEVELS[2])
-  async getMesuresGraph(options: ListMesuresOptions): Promise<PaginatedMesuresResponse['data']> {
-    return this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+  async getMesuresGraph(options: ListMesuresOptions): Promise<MesuresGraphItemDto[]> {
+    const MesureDonneesBrutesRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
       const result = await this.listMesures({ ...options, page, pageSize });
       return { data: result.data, total: result.total };
+    });
+
+    if (MesureDonneesBrutesRows.length === 0) return [];
+
+    const { ouvrageType, ouvrageDepollutionCodes, systemeCollecteCodes, dateDebut } = options;
+
+    const year = dateDebut
+      ? new Date(dateDebut).getFullYear()
+      : Math.min(
+          ...MesureDonneesBrutesRows.map((r) => r.prelevementDate?.getFullYear()).filter((y): y is number => y != null),
+        );
+
+    const evenementByDate = new Map<
+      string,
+      { typeEvenementCode: string; typeEvenementLibelle: string; commentaire: string | null }
+    >();
+
+    if (ouvrageType === 'steu' && ouvrageDepollutionCodes?.length) {
+      const [steu] = await this.masaProvider.findSteuBatchBySandreCdas([ouvrageDepollutionCodes[0]]);
+      if (steu) {
+        const result = await this.masaProvider.findEvenementSteu({
+          ouvrageDepollutionIds: [steu.ouvrageDepollutionId],
+          year,
+          typeEvenementCodes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+          page: 1,
+          pageSize: 500,
+        } satisfies EvenementSteuFilters);
+        for (const evt of result.data) {
+          evenementByDate.set(evt.date, {
+            typeEvenementCode: evt.typeEvenementCode,
+            typeEvenementLibelle: evt.typeEvenementLibelle,
+            commentaire: evt.commentaire,
+          });
+        }
+      }
+    } else if (ouvrageType === 'scl' && systemeCollecteCodes?.length) {
+      const [scl] = await this.masaProvider.findSclBatchBySandreCdas([systemeCollecteCodes[0]]);
+      if (scl) {
+        const result = await this.masaProvider.findEvenementScl({
+          systemeCollecteIds: [scl.systemeCollecteId],
+          year,
+          typeEvenementCodes: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+          page: 1,
+          pageSize: 500,
+        } satisfies EvenementSclFilters);
+        for (const evt of result.data) {
+          evenementByDate.set(evt.date, {
+            typeEvenementCode: evt.typeEvenementCode,
+            typeEvenementLibelle: evt.typeEvenementLibelle,
+            commentaire: evt.commentaire,
+          });
+        }
+      }
+    }
+
+    return MesureDonneesBrutesRows.map((row) => {
+      const dateKey = row.prelevementDate
+        ? `${row.prelevementDate.getFullYear()}-${String(row.prelevementDate.getMonth() + 1).padStart(2, '0')}-${String(row.prelevementDate.getDate()).padStart(2, '0')}`
+        : null;
+      const evt = dateKey ? evenementByDate.get(dateKey) : undefined;
+      return {
+        ...row,
+        typeEvenementCode: evt?.typeEvenementCode ?? null,
+        typeEvenementLibelle: evt?.typeEvenementLibelle ?? null,
+        commentaire: evt?.commentaire ?? null,
+      };
     });
   }
 

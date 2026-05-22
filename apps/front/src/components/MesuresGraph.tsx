@@ -12,12 +12,12 @@ import {
   type TooltipItem,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import type { MesureDto } from '@lib/dossier';
+import type { MesuresGraphItemDto } from '@lib/dossier';
 import { fr } from '@codegouvfr/react-dsfr';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip);
 
 interface MesuresGraphProps {
-  data: MesureDto[];
+  data: MesuresGraphItemDto[];
   parametreLabel: string;
 }
 
@@ -27,6 +27,7 @@ interface DataPoint {
   unite: string | null;
   finalite: string | null;
   evenementCommentaire?: string | null;
+  typeEvenement?: string | null;
 }
 
 export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
@@ -43,7 +44,14 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
   const values: DataPoint[] = sorted.map((row) => {
     const d = row.prelevementDate;
     if (!d) {
-      return { x: null, y: null, unite: null, finalite: null, evenementComment: null };
+      return {
+        x: null,
+        y: null,
+        unite: null,
+        finalite: null,
+        evenementCommentaire: null,
+        typeEvenement: null,
+      };
     }
     const date = typeof d === 'string' ? new Date(d) : d;
     return {
@@ -51,7 +59,8 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
       y: row.resultatAnalyseValeur ?? null,
       unite: row.uniteMesureSymbole,
       finalite: row.analyseFinalite,
-      // evenementCommentaire: row.evenementCommentaire,
+      evenementCommentaire: row.commentaire ?? null,
+      typeEvenement: row.typeEvenementCode != null ? `${row.typeEvenementCode} - ${row.typeEvenementLibelle}` : null,
     };
   });
 
@@ -79,7 +88,14 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
         callbacks: {
           label: (context: TooltipItem<'line'>) => {
             const item = values[context.dataIndex];
-            return [`Valeur: ${context.parsed.y} : ${item.unite ?? ''}`, `Finalité : ${item.finalite ?? ''}`];
+            const lines = [`Valeur: ${context.parsed.y} : ${item.unite ?? ''}`, `Finalité : ${item.finalite ?? ''}`];
+            if (item.typeEvenement) {
+              lines.push(`Événement : ${item.typeEvenement}`);
+            }
+            if (item.evenementCommentaire) {
+              lines.push(`Commentaire : ${item.evenementCommentaire}`);
+            }
+            return lines;
           },
         },
       },
@@ -102,7 +118,7 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
   };
 
   return (
-    <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
+    <div style={{ position: 'relative' }}>
       <Line ref={ref} data={chartData} options={options} />
     </div>
   );
