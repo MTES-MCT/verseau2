@@ -128,7 +128,8 @@ describe('EvenementService', () => {
 
     const result = await service.exportEvenementSteuCsv({
       authorizedSteuCdas: ['STEU1'],
-      year: 2024,
+      startDate: getStartOfYearAsUTCDate(2024),
+      endDate: getStartOfYearAsUTCDate(2025),
       page: 1,
       pageSize: 10,
     });
