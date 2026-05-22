@@ -1,5 +1,16 @@
 import { useRef } from 'react';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  type ChartData,
+  type ChartOptions,
+  type TooltipItem,
+} from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import type { MesureDto } from '@lib/dossier';
 import { fr } from '@codegouvfr/react-dsfr';
@@ -10,8 +21,16 @@ interface MesuresGraphProps {
   parametreLabel: string;
 }
 
+interface DataPoint {
+  x: string | null;
+  y: number | null;
+  unite: string | null;
+  finalite: string | null;
+  evenementCommentaire?: string | null;
+}
+
 export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
-  const ref = useRef<ChartJS<'line'>>(null);
+  const ref = useRef<ChartJS<'line', DataPoint[]>>(null);
 
   if (data.length === 0) {
     return <p className={fr.cx('fr-text--sm')}>Aucune donnée à afficher.</p>;
@@ -21,19 +40,22 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
     (a, b) => new Date(a.prelevementDate!).getTime() - new Date(b.prelevementDate!).getTime(),
   );
 
-  const labels = sorted.map((row) => {
+  const values: DataPoint[] = sorted.map((row) => {
     const d = row.prelevementDate;
     if (!d) {
-      return '';
+      return { x: null, y: null, unite: null, finalite: null, evenementComment: null };
     }
     const date = typeof d === 'string' ? new Date(d) : d;
-    return date.toLocaleDateString('fr-FR');
+    return {
+      x: date.toLocaleDateString('fr-FR'),
+      y: row.resultatAnalyseValeur ?? null,
+      unite: row.uniteMesureSymbole,
+      finalite: row.analyseFinalite,
+      // evenementCommentaire: row.evenementCommentaire,
+    };
   });
 
-  const values = sorted.map((row) => row.resultatAnalyseValeur);
-
-  const chartData = {
-    labels,
+  const chartData: ChartData<'line', DataPoint[], unknown> = {
     datasets: [
       {
         label: parametreLabel,
@@ -46,7 +68,7 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
     ],
   };
 
-  const options = {
+  const options: ChartOptions<'line'> = {
     responsive: true,
     plugins: {
       title: {
@@ -55,8 +77,9 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: { parsed: { y: number | null } }) => {
-            return context.parsed.y !== null ? `${context.parsed.y}` : '-';
+          label: (context: TooltipItem<'line'>) => {
+            const item = values[context.dataIndex];
+            return [`Valeur: ${context.parsed.y} : ${item.unite ?? ''}`, `Finalité : ${item.finalite ?? ''}`];
           },
         },
       },
@@ -64,7 +87,7 @@ export function MesuresGraph({ data, parametreLabel }: MesuresGraphProps) {
     scales: {
       x: {
         title: {
-          display: true,
+          display: false,
           text: 'Date de prélèvement',
         },
       },
