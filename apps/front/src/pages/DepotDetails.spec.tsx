@@ -29,12 +29,16 @@ vi.mock('../hooks/useStatuts', () => ({
 vi.mock('../hooks/useQualifications', () => ({
   useQualifications: vi.fn(),
 }));
+vi.mock('../components/MesuresGraph', () => ({
+  MesuresGraph: ({ parametreLabel }: { parametreLabel: string }) => <div>Graphique {parametreLabel}</div>,
+}));
 
 vi.mock('../api/mesures', async () => {
   const actual = await vi.importActual<typeof import('../api/mesures')>('../api/mesures');
   return {
     ...actual,
     downloadMesuresExport: vi.fn(),
+    fetchMesuresGraph: vi.fn(),
   };
 });
 
@@ -109,6 +113,7 @@ const makeMesure = (overrides = {}) => ({
 describe('DepotDetailsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([]);
     mockUseAsyncOuvragesSearch.mockReturnValue(
       emptyOuvragesResult as unknown as ReturnType<typeof useAsyncOuvragesSearch>,
     );
@@ -233,6 +238,251 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByRole('button', { name: /exporter csv/i })).toBeDisabled();
+  });
+
+  it('garde la vue graphique désactivée tant qu’aucune recherche valide n’a été lancée', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof usePointsMesure>);
+    mockUseParametresMesure.mockReturnValue({
+      data: [
+        {
+          parametreAnalyseCode: 'MES_CO',
+          parametreNomCourt: 'Matières en suspension',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useParametresMesure>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /point de mesure/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesure/i }));
+    fireEvent.click(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i }));
+    fireEvent.click(screen.getByRole('combobox', { name: /paramètre/i }));
+    fireEvent.click(screen.getByRole('option', { name: /matières en suspension/i }));
+
+    expect(screen.getByRole('button', { name: /vue graphique/i })).toBeDisabled();
+    expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
+  });
+
+  it('charge le graphe seulement au passage en vue graphique', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof usePointsMesure>);
+    mockUseParametresMesure.mockReturnValue({
+      data: [
+        {
+          parametreAnalyseCode: 'MES_CO',
+          parametreNomCourt: 'Matières en suspension',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useParametresMesure>);
+    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([
+      {
+        prelevementDate: '2024-06-15T00:00:00.000Z',
+        resultatAnalyseValeur: 12.5,
+        uniteMesureSymbole: 'mg/L',
+        analyseFinalite: null,
+        commentaire: null,
+        typeEvenementCode: null,
+        typeEvenementLibelle: null,
+      },
+    ]);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /point de mesure/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesure/i }));
+    fireEvent.click(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i }));
+    fireEvent.click(screen.getByRole('combobox', { name: /paramètre/i }));
+    fireEvent.click(screen.getByRole('option', { name: /matières en suspension/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /vue graphique/i })).toBeEnabled();
+    });
+
+    expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /vue graphique/i }));
+
+    await waitFor(() => {
+      expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: /vue tableau/i })).toBeInTheDocument();
+    });
+  });
+
+  it('charge seulement le tableau quand la vue tableau est active et que la recherche est lancée', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof usePointsMesure>);
+    mockUseParametresMesure.mockReturnValue({
+      data: [
+        {
+          parametreAnalyseCode: 'MES_CO',
+          parametreNomCourt: 'Matières en suspension',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useParametresMesure>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /point de mesure/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesure/i }));
+    fireEvent.click(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i }));
+    fireEvent.click(screen.getByRole('combobox', { name: /paramètre/i }));
+    fireEvent.click(screen.getByRole('option', { name: /matières en suspension/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    await waitFor(() => {
+      expect(mockUseMesures.mock.lastCall?.[1]).toBe(true);
+    });
+
+    expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
+  });
+
+  it('désactive la requête tableau quand la vue graphique est active et qu’une nouvelle recherche est lancée', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUsePointsMesure.mockReturnValue({
+      data: [
+        {
+          pointMesureId: 120,
+          pointMesureNumero: '120',
+          pointMesureLibelle: 'DO entrée station',
+          pointMesureLocalisationGlobale: 'A3',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof usePointsMesure>);
+    mockUseParametresMesure.mockReturnValue({
+      data: [
+        {
+          parametreAnalyseCode: 'MES_CO',
+          parametreNomCourt: 'Matières en suspension',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useParametresMesure>);
+    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([
+      {
+        prelevementDate: '2024-06-15T00:00:00.000Z',
+        resultatAnalyseValeur: 12.5,
+        uniteMesureSymbole: 'mg/L',
+        analyseFinalite: null,
+        commentaire: null,
+        typeEvenementCode: null,
+        typeEvenementLibelle: null,
+      },
+    ]);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /point de mesure/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('combobox', { name: /point de mesure/i }));
+    fireEvent.click(screen.getByRole('option', { name: /a3 - 120 - do entrée station/i }));
+    fireEvent.click(screen.getByRole('combobox', { name: /paramètre/i }));
+    fireEvent.click(screen.getByRole('option', { name: /matières en suspension/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /vue graphique/i })).toBeEnabled();
+    });
+
+    expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /vue graphique/i }));
+
+    await waitFor(() => {
+      expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: /vue tableau/i })).toBeInTheDocument();
+      expect(mockUseMesures.mock.lastCall?.[1]).toBe(false);
+    });
+
+    fireEvent.change(screen.getByLabelText(/date fin/i), { target: { value: '2024-12-30' } });
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    await waitFor(() => {
+      expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledTimes(2);
+      expect(mockUseMesures.mock.lastCall?.[1]).toBe(false);
+    });
   });
 
   it('shows error alert when fetch fails', () => {

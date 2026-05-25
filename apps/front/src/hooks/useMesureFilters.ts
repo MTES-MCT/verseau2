@@ -40,7 +40,7 @@ const INITIAL_FILTERS: FilterState = {
   sortOrder: undefined,
 };
 
-export function useMesureFilters() {
+export function useMesureFilters(tableEnabled = true) {
   const [form, setForm] = useState<FilterState>(INITIAL_FILTERS);
   const [submitted, setSubmitted] = useState<FilterState>(INITIAL_FILTERS);
   const [hasSearched, setHasSearched] = useState(false);
@@ -86,7 +86,7 @@ export function useMesureFilters() {
     pageSize: PAGE_SIZE,
   };
 
-  const { data, isLoading, isFetching, error } = useMesures(submittedQuery, hasSearched);
+  const { data, isLoading, isFetching, error } = useMesures(submittedQuery, hasSearched && tableEnabled);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 

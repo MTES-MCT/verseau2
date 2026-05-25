@@ -15,6 +15,7 @@ import { buildMesureTableHeaders, buildMesureTableRows } from '../helper/mesureT
 import { formatOption } from '../helper/optionsFormatter';
 import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
+import { ToggleSwitch } from '@codegouvfr/react-dsfr/ToggleSwitch';
 import { getPreviousSunday } from '@lib/shared';
 import { useState } from 'react';
 import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
@@ -23,6 +24,7 @@ import { downloadMesuresExport } from '../api/mesures';
 import { MesuresGraph } from '../components/MesuresGraph';
 
 export function DepotDetailsPage() {
+  const [showGraph, setShowGraph] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const {
@@ -61,7 +63,7 @@ export function DepotDetailsPage() {
     submitted,
     submittedQuery,
     hasSearched,
-  } = useMesureFilters();
+  } = useMesureFilters(!showGraph);
   const {
     download: downloadCsv,
     isLoading: isExportLoading,
@@ -148,11 +150,24 @@ export function DepotDetailsPage() {
     );
   });
 
-  const { showGraph, graphData, graphLoading, handleToggleGraph, canShowGraph } = useMesuresGraph(
+  const { graphData, graphLoading, canShowGraph, hasSubmittedGraphFilters } = useMesuresGraph(
     submittedQuery,
-    form.selectedPmoCdn,
-    form.selectedParametre,
+    showGraph,
+    hasSearched,
+    submitted.selectedPmoCdn,
+    submitted.selectedParametre,
   );
+
+  const handleToggleGraph = () => {
+    if (showGraph) {
+      setShowGraph(false);
+      return;
+    }
+
+    if (canShowGraph) {
+      setShowGraph(true);
+    }
+  };
 
   const canExport = hasSearched && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
@@ -163,6 +178,8 @@ export function DepotDetailsPage() {
 
     void downloadCsv(submittedQuery, `mesures-${submitted.ouvrageType}.csv`);
   };
+
+  const isRechercherDisabled = showGraph && (!form.selectedPmoCdn || !form.selectedParametre);
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -292,6 +309,7 @@ export function DepotDetailsPage() {
               }}
               iconId="fr-icon-search-line"
               iconPosition="right"
+              disabled={isRechercherDisabled}
             >
               Rechercher
             </Button>
@@ -379,29 +397,39 @@ export function DepotDetailsPage() {
       {!isLoading && !error && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <>
-            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <Button
-                type="button"
-                priority="secondary"
-                onClick={handleToggleGraph}
-                disabled={!canShowGraph || graphLoading}
-                nativeButtonProps={{
-                  title: !canShowGraph ? 'Sélectionner un Point de mesure et un Paramètre' : undefined,
-                }}
-              >
-                {showGraph ? 'Vue tableau' : 'Vue graphique'}
-              </Button>
-              <Button
-                type="button"
-                priority="secondary"
-                onClick={handleExport}
-                disabled={!canExport || isExportLoading || showGraph}
-              >
-                Exporter CSV
-              </Button>
+            <div className={fr.cx('fr-container')}>
+              <div className={fr.cx('fr-grid-row')}>
+                <div className={fr.cx('fr-col-4')}>
+                  <ToggleSwitch
+                    inputTitle="Afficher le graphique"
+                    label="Afficher le graphique"
+                    helperText={!hasSubmittedGraphFilters && 'Recherchez avec un Point de mesure et un Paramètre'}
+                    onChange={handleToggleGraph}
+                    disabled={!canShowGraph}
+                    showCheckedHint={false}
+                  />
+                </div>
+
+                <div className={fr.cx('fr-col-8')}>
+                  <div className={fr.cx('fr-grid-row', 'fr-grid-row--right')}>
+                    <Button
+                      type="button"
+                      priority="secondary"
+                      onClick={handleExport}
+                      disabled={!canExport || isExportLoading || showGraph}
+                    >
+                      Exporter CSV
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
-            {showGraph && graphData ? (
-              <MesuresGraph data={graphData} parametreLabel={parametreLabel} />
+            {showGraph ? (
+              graphLoading || graphData === undefined ? (
+                <p className={fr.cx('fr-text--sm')}>Chargement du graphique...</p>
+              ) : (
+                <MesuresGraph data={graphData} parametreLabel={parametreLabel} />
+              )
             ) : (
               <Table
                 caption="Liste des mesures d'autosurveillance"
