@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
-import { MesureDtoSchema, MesuresGraphItemDtoSchema, PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
+import {  MesuresGraphItemDtoSchema, PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 import { TypePointMesure } from '../shared/typePointMesure';
 
