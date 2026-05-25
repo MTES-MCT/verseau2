@@ -1,3 +1,4 @@
+import type { MesureDto, MesuresGraphItemDto } from '@lib/dossier';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepotDetailsPage } from './DepotDetails';
@@ -90,7 +91,7 @@ const emptyParametresResult = {
   error: null,
 };
 
-const makeMesure = (overrides = {}) => ({
+const makeMesure = (overrides: Partial<MesureDto> = {}): MesureDto => ({
   ouvrageDepollutionCode: 'STEU001',
   ouvrageDepollutionNom: 'Station test',
   systemeCollecteCode: 'SCL001',
@@ -99,7 +100,7 @@ const makeMesure = (overrides = {}) => ({
   pointAgenceEauNumero: 'AE001',
   pointMesureNumero: 'P1',
   pointMesureLibelle: 'Point 1',
-  prelevementDate: '2024-06-15T00:00:00.000Z',
+  prelevementDate: new Date('2024-06-15T00:00:00.000Z'),
   parametreAnalyseCode: 'MES_CO',
   parametreNomCourt: 'Matières en suspension',
   resultatAnalyseValeur: 12.5,
@@ -107,6 +108,14 @@ const makeMesure = (overrides = {}) => ({
   analyseFinalite: null,
   resultatAnalyseStatut: null,
   resultatAnalyseQualification: 'Brut',
+  ...overrides,
+});
+
+const makeGraphMesure = (overrides: Partial<MesuresGraphItemDto> = {}): MesuresGraphItemDto => ({
+  ...makeMesure({ prelevementDate: new Date('2024-06-15T00:00:00.000Z') }),
+  commentaire: null,
+  typeEvenementCode: null,
+  typeEvenementLibelle: null,
   ...overrides,
 });
 
@@ -315,17 +324,7 @@ describe('DepotDetailsPage', () => {
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useParametresMesure>);
-    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([
-      {
-        prelevementDate: '2024-06-15T00:00:00.000Z',
-        resultatAnalyseValeur: 12.5,
-        uniteMesureSymbole: 'mg/L',
-        analyseFinalite: null,
-        commentaire: null,
-        typeEvenementCode: null,
-        typeEvenementLibelle: null,
-      },
-    ]);
+    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([makeGraphMesure()]);
 
     renderWithQueryClient(<DepotDetailsPage />);
 
@@ -435,17 +434,7 @@ describe('DepotDetailsPage', () => {
       isLoading: false,
       error: null,
     } as unknown as ReturnType<typeof useParametresMesure>);
-    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([
-      {
-        prelevementDate: '2024-06-15T00:00:00.000Z',
-        resultatAnalyseValeur: 12.5,
-        uniteMesureSymbole: 'mg/L',
-        analyseFinalite: null,
-        commentaire: null,
-        typeEvenementCode: null,
-        typeEvenementLibelle: null,
-      },
-    ]);
+    vi.mocked(mesuresApi.fetchMesuresGraph).mockResolvedValue([makeGraphMesure()]);
 
     renderWithQueryClient(<DepotDetailsPage />);
 
@@ -578,7 +567,7 @@ describe('DepotDetailsPage', () => {
   });
 
   it('shows pagination component when total > pageSize', () => {
-    const data = Array.from({ length: 20 }, (_, i) => makeMesure({ alrCdn: i, parametreAnalyseCode: `PAR_${i}` }));
+    const data = Array.from({ length: 20 }, (_, i) => makeMesure({ parametreAnalyseCode: `PAR_${i}` }));
     mockUseMesures.mockReturnValue({
       data: { data, total: 45, page: 1, pageSize: 20 },
       isLoading: false,
