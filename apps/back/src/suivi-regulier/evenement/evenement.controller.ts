@@ -29,11 +29,12 @@ export class EvenementController {
     @Query(new ZodValidationPipe(listEvenementSteuRoute['query']))
     query: RouteQuery<typeof listEvenementSteuRoute>,
   ): Promise<RouteResponse<typeof listEvenementSteuRoute>> {
-    const startDate = getStartOfYearAsUTCDate(query.year);
-    const endDate = getStartOfYearAsUTCDate(query.year + 1);
+    const { year, ...filters } = query;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     return this.evenementService.listEvenementSteu({
       authorizedSteuCdas: req.authorizedSteuCdas!,
-      ...query,
+      ...filters,
       startDate,
       endDate,
     });
@@ -47,16 +48,17 @@ export class EvenementController {
     query: RouteQuery<typeof exportEvenementSteuRoute>,
     @Res() res: Response,
   ): Promise<void> {
-    const startDate = getStartOfYearAsUTCDate(query.year);
-    const endDate = getStartOfYearAsUTCDate(query.year + 1);
+    const { year, ...filters } = query;
+    const startDate = getStartOfYearAsUTCDate(year);
+    const endDate = getStartOfYearAsUTCDate(year + 1);
     const csv = await this.evenementService.exportEvenementSteuCsv({
       authorizedSteuCdas: req.authorizedSteuCdas!,
-      ...query,
+      ...filters,
       startDate,
       endDate,
     });
 
-    sendCsvResponse(res, `evenement-steu-${query.year}.csv`, csv);
+    sendCsvResponse(res, `evenement-steu-${year}.csv`, csv);
   }
 
   @Get('scl')

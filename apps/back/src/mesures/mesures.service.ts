@@ -142,10 +142,12 @@ export class MesuresService {
     >();
 
     const evenementRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const startDate = options.dateDebut ? new Date(`${options.dateDebut}T00:00:00+01:00`) : new Date();
+      const endDate = options.dateFin ? new Date(`${getNextDayAsISODate(options.dateFin)}T00:00:00+01:00`) : new Date();
       const filtresEvenement: ListEvenementSteuOptions = {
         authorizedSteuCdas: options.authorizedSteuCdas,
-        startDate: options.dateDebut ? new Date(options.dateDebut) : new Date(),
-        endDate: options.dateFin ? new Date(options.dateFin) : new Date(),
+        startDate,
+        endDate,
         ouvrageDepollutionCode: options.ouvrageDepollutionCodes?.[0],
         page,
         pageSize,
@@ -276,4 +278,10 @@ export class MesuresService {
   async listQualifications(): Promise<NomenclatureItem[]> {
     return this.masaProvider.findQualifications();
   }
+}
+
+function getNextDayAsISODate(value: string): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
 }
