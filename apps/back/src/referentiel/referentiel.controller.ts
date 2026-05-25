@@ -81,7 +81,7 @@ export class ReferentielController {
       return null;
     }
 
-    const detail = await this.masaProvider.findBilanSteuDetail(params.ouvrageDepollutionCode);
+    const detail = await this.masaProvider.findSteuDetail(params.ouvrageDepollutionCode);
     if (!detail) {
       return null;
     }
@@ -100,7 +100,7 @@ export class ReferentielController {
       return null;
     }
 
-    const detail = await this.masaProvider.findBilanSclDetail(params.systemeCollecteCode);
+    const detail = await this.masaProvider.findSclDetail(params.systemeCollecteCode);
     if (!detail) {
       return null;
     }

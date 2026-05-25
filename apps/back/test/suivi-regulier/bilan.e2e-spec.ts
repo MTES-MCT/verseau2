@@ -33,10 +33,10 @@ const mockMasaProvider = {
   findVSteuSclItvByItvRfa: jest.fn(),
   findSteuBatchBySandreCdas: jest.fn(),
   findBilanSteu: jest.fn(),
-  findBilanSteuDetail: jest.fn(),
+  findSteuDetail: jest.fn(),
   findSclBatchBySandreCdas: jest.fn(),
   findBilanScl: jest.fn(),
-  findBilanSclDetail: jest.fn(),
+  findSclDetail: jest.fn(),
 } as unknown as jest.Mocked<
   Pick<
     MasaProvider,
@@ -44,10 +44,10 @@ const mockMasaProvider = {
     | 'findVSteuSclItvByItvRfa'
     | 'findSteuBatchBySandreCdas'
     | 'findBilanSteu'
-    | 'findBilanSteuDetail'
+    | 'findSteuDetail'
     | 'findSclBatchBySandreCdas'
     | 'findBilanScl'
-    | 'findBilanSclDetail'
+    | 'findSclDetail'
   >
 >;
 
@@ -230,7 +230,7 @@ describe('BilanController (e2e)', () => {
           agenceEauSiret: null,
         },
       ]);
-      mockMasaProvider.findBilanSteuDetail.mockResolvedValue({
+      mockMasaProvider.findSteuDetail.mockResolvedValue({
         ouvrageDepollutionCode: 'STEU_TEST_001',
         dateMiseEnService: '2000-01-01',
         intervenants: [
@@ -345,7 +345,7 @@ describe('BilanController (e2e)', () => {
           agenceEauSiret: null,
         },
       ]);
-      mockMasaProvider.findBilanSclDetail.mockResolvedValue({
+      mockMasaProvider.findSclDetail.mockResolvedValue({
         systemeCollecteCode: 'SCL_TEST_001',
         intervenants: [
           { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },

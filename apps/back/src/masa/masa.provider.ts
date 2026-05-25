@@ -343,11 +343,13 @@ export class MasaProvider {
     return this.roseauBilanGateway.findBilanScl(filters);
   }
 
-  async findBilanSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null> {
+  // route: GET /api/steu/:ouvrageDepollutionCode/detail
+  async findSteuDetail(ouvrageDepollutionCode: string): Promise<SteuDetailRow | null> {
     return this.roseauGateway.findSteuDetail(ouvrageDepollutionCode);
   }
 
-  async findBilanSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null> {
+  // route: GET /api/systemes-collecte/:systemeCollecteCode/detail
+  async findSclDetail(systemeCollecteCode: string): Promise<SclDetailRow | null> {
     return this.roseauGateway.findSclDetail(systemeCollecteCode);
   }
 
