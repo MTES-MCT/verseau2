@@ -40,7 +40,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     }
 
     const sortBy = filters.sortBy ?? 'date';
-    const sortOrder = filters.sortOrder ?? 'ASC';
+    const sortOrder = filters.sortOrder === 'DESC' ? 'DESC' : 'ASC';
 
     const sortMap: Record<NonNullable<BilanSteuFilters['sortBy']>, string> = {
       date: 'date',
@@ -157,7 +157,7 @@ export class RoseauBilanRepository implements RoseauBilanGateway {
     }
 
     const sortBy = filters.sortBy ?? 'date';
-    const sortOrder = filters.sortOrder ?? 'ASC';
+    const sortOrder = filters.sortOrder === 'DESC' ? 'DESC' : 'ASC';
 
     const sortMap: Record<NonNullable<BilanSclFilters['sortBy']>, string> = {
       date: 'date',

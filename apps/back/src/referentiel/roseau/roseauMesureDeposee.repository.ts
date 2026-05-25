@@ -34,7 +34,7 @@ export class RoseauMesureDeposeeRepository implements RoseauMesureDeposeeGateway
       pageSize,
     } = filters;
     const sortBy = filters.sortBy ?? 'default';
-    const sortOrder = filters.sortOrder ?? 'ASC';
+    const sortOrder = filters.sortOrder === 'DESC' ? 'DESC' : 'ASC';
 
     const buildBaseQuery = () => {
       if (ouvrageType === 'scl') {

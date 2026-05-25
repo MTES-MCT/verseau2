@@ -107,7 +107,7 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
 
     const annee = year;
     const sortBy = filters.sortBy ?? 'ouvrageDepollutionCode';
-    const sortOrder = filters.sortOrder ?? 'ASC';
+    const sortOrder = filters.sortOrder === 'DESC' ? 'DESC' : 'ASC';
 
     const sortMap: Record<NonNullable<ConformiteSteuFilters['sortBy']>, string> = {
       ouvrageDepollutionCode: 'ouvrage_depollution_code',
@@ -260,7 +260,7 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
     }
 
     const sortBy = filters.sortBy ?? 'systemeCollecteCode';
-    const sortOrder = filters.sortOrder ?? 'ASC';
+    const sortOrder = filters.sortOrder === 'DESC' ? 'DESC' : 'ASC';
 
     const sortMap: Record<NonNullable<ConformiteSclFilters['sortBy']>, string> = {
       systemeCollecteCode: 'systeme_collecte_code',

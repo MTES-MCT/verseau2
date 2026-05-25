@@ -40,7 +40,7 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
     }
 
     const sortBy = filters.sortBy ?? 'nbJoursRetard';
-    const sortOrder = filters.sortOrder ?? 'DESC';
+    const sortOrder = filters.sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const sortMap: Record<NonNullable<TransmissionASRetardSteuFilters['sortBy']>, string> = {
       nbJoursRetard: 'nb_jours_retard',
@@ -227,7 +227,7 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
     }
 
     const sortBy = filters.sortBy ?? 'nbJoursRetard';
-    const sortOrder = filters.sortOrder ?? 'DESC';
+    const sortOrder = filters.sortOrder === 'ASC' ? 'ASC' : 'DESC';
 
     const sortMap: Record<NonNullable<TransmissionASRetardSclFilters['sortBy']>, string> = {
       nbJoursRetard: 'nb_jours_retard',
