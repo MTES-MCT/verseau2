@@ -292,7 +292,7 @@ describe('DepotDetailsPage', () => {
     fireEvent.click(screen.getByRole('combobox', { name: /paramètre/i }));
     fireEvent.click(screen.getByRole('option', { name: /matières en suspension/i }));
 
-    expect(screen.getByRole('button', { name: /vue graphique/i })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /afficher le graphique/i })).toBeDisabled();
     expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
   });
 
@@ -342,16 +342,16 @@ describe('DepotDetailsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /vue graphique/i })).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: /afficher le graphique/i })).toBeEnabled();
     });
 
     expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: /vue graphique/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /afficher le graphique/i }));
 
     await waitFor(() => {
       expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: /vue tableau/i })).toBeInTheDocument();
+      expect(screen.getByText(/graphique matières en suspension/i)).toBeInTheDocument();
     });
   });
 
@@ -452,16 +452,16 @@ describe('DepotDetailsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /vue graphique/i })).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: /afficher le graphique/i })).toBeEnabled();
     });
 
     expect(mesuresApi.fetchMesuresGraph).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: /vue graphique/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /afficher le graphique/i }));
 
     await waitFor(() => {
       expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: /vue tableau/i })).toBeInTheDocument();
+      expect(screen.getByText(/graphique matières en suspension/i)).toBeInTheDocument();
       expect(mockUseMesures.mock.lastCall?.[1]).toBe(false);
     });
 
