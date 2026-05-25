@@ -1,5 +1,6 @@
 import {
   exportMesures,
+  graphMesures,
   listMesures,
   listOuvrages,
   listSystemesCollecte,
@@ -66,6 +67,10 @@ export async function fetchStatuts() {
 
 export async function fetchQualifications() {
   return apiCall(listQualifications);
+}
+
+export async function fetchMesuresGraph(query: RouteQuery<typeof graphMesures>) {
+  return apiCall(graphMesures, { query });
 }
 
 export async function downloadMesuresExport(query: RouteQuery<typeof exportMesures>) {

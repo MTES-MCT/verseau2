@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getNYearsAgoAsISODate, getTodayAsISODate } from '@lib/shared';
+import { getStartOfPreviousYearAsISODate, getEndOfPreviousYearAsISODate } from '@lib/shared';
 import type { MesuresSortByValue, OuvrageTypeValue } from '@lib/dossier';
 import { useMesures } from './useMesures';
 import { usePointsMesure } from './usePointsMesure';
@@ -31,8 +31,8 @@ const INITIAL_FILTERS: FilterState = {
   selectedOuvrageCode: '',
   selectedPmoCdn: null,
   selectedParametre: '',
-  dateDebut: getNYearsAgoAsISODate(1),
-  dateFin: getTodayAsISODate(),
+  dateDebut: getStartOfPreviousYearAsISODate(),
+  dateFin: getEndOfPreviousYearAsISODate(),
   finalite: '',
   statut: '',
   qualification: '',
@@ -40,7 +40,7 @@ const INITIAL_FILTERS: FilterState = {
   sortOrder: undefined,
 };
 
-export function useMesureFilters() {
+export function useMesureFilters(tableEnabled = true) {
   const [form, setForm] = useState<FilterState>(INITIAL_FILTERS);
   const [submitted, setSubmitted] = useState<FilterState>(INITIAL_FILTERS);
   const [hasSearched, setHasSearched] = useState(false);
@@ -86,7 +86,7 @@ export function useMesureFilters() {
     pageSize: PAGE_SIZE,
   };
 
-  const { data, isLoading, isFetching, error } = useMesures(submittedQuery, hasSearched);
+  const { data, isLoading, isFetching, error } = useMesures(submittedQuery, hasSearched && tableEnabled);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
 

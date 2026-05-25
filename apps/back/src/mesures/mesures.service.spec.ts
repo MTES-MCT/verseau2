@@ -5,6 +5,7 @@ import { MesuresService } from './mesures.service';
 import { MasaProvider } from '@masa/masa.provider';
 import type { MesureRow } from '@masa/masa.dto';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
+import { EvenementService } from '../suivi-regulier/evenement/evenement.service';
 
 const makeMesureRow = (): MesureRow => ({
   ouvrageDepollutionCode: 'STEU001',
@@ -34,6 +35,14 @@ describe('MesuresService', () => {
   let service: MesuresService;
   let masaProvider: jest.Mocked<MasaProvider>;
   let csvGenerator: { generate: jest.Mock };
+  let evenementService: {
+    listEvenementSteu: jest.Mock;
+    exportEvenementSteuCsv: jest.Mock;
+    listEvenementScl: jest.Mock;
+    exportEvenementSclCsv: jest.Mock;
+    listEvenementTypes: jest.Mock;
+    listAvailablePointsMesure: jest.Mock;
+  };
 
   beforeEach(async () => {
     const mockMasaProvider: jest.Mocked<Partial<MasaProvider>> = {
@@ -50,6 +59,14 @@ describe('MesuresService', () => {
     };
 
     csvGenerator = { generate: jest.fn().mockReturnValue('csv-content') };
+    evenementService = {
+      listEvenementSteu: jest.fn(),
+      exportEvenementSteuCsv: jest.fn(),
+      listEvenementScl: jest.fn(),
+      exportEvenementSclCsv: jest.fn(),
+      listEvenementTypes: jest.fn(),
+      listAvailablePointsMesure: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +79,10 @@ describe('MesuresService', () => {
         {
           provide: CsvGenerator,
           useValue: csvGenerator,
+        },
+        {
+          provide: EvenementService,
+          useValue: evenementService,
         },
       ],
     }).compile();
@@ -282,6 +303,54 @@ describe('MesuresService', () => {
 
       expect(masaProvider.findSteuWithNamesBySandreCdasAndLabel).toHaveBeenCalledWith(['STEU001', 'STEU002'], 'sta');
       expect(result).toEqual([{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }]);
+    });
+  });
+
+  describe('getMesuresGraph', () => {
+    it('passes an exclusive upper-bound endDate to event filtering', async () => {
+      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
+      evenementService.listEvenementSteu.mockResolvedValue({
+        data: [
+          {
+            prisEnCompte: true,
+            date: '2024-01-15',
+            ouvrageDepollutionCode: 'STEU001',
+            ouvrageDepollutionNom: 'Station test',
+            typeEvenementCode: '1',
+            typeEvenementLibelle: 'Incident',
+            finalite: null,
+            commentaire: 'Commentaire test',
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 1000,
+      });
+
+      const result = await service.getMesuresGraph({
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        ouvrageDepollutionCodes: ['STEU001'],
+        dateDebut: '2024-01-01',
+        dateFin: '2024-01-31',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(evenementService.listEvenementSteu).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startDate: new Date('2024-01-01T00:00:00+01:00'),
+          endDate: new Date('2024-02-01T00:00:00+01:00'),
+        }),
+      );
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          typeEvenementCode: '1',
+          typeEvenementLibelle: 'Incident',
+          commentaire: 'Commentaire test',
+        }),
+      );
     });
   });
 

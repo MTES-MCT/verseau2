@@ -15,12 +15,16 @@ import { buildMesureTableHeaders, buildMesureTableRows } from '../helper/mesureT
 import { formatOption } from '../helper/optionsFormatter';
 import { buildPointMesureLabel } from '../helper/pointMesureLabel';
 import Notice from '@codegouvfr/react-dsfr/Notice';
+import { ToggleSwitch } from '@codegouvfr/react-dsfr/ToggleSwitch';
 import { getPreviousSunday } from '@lib/shared';
 import { useState } from 'react';
 import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
+import { useMesuresGraph } from '../hooks/useMesuresGraph';
 import { downloadMesuresExport } from '../api/mesures';
+import { MesuresGraph } from '../components/MesuresGraph';
 
 export function DepotDetailsPage() {
+  const [showGraph, setShowGraph] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const {
@@ -59,7 +63,7 @@ export function DepotDetailsPage() {
     submitted,
     submittedQuery,
     hasSearched,
-  } = useMesureFilters();
+  } = useMesureFilters(!showGraph);
   const {
     download: downloadCsv,
     isLoading: isExportLoading,
@@ -117,6 +121,9 @@ export function DepotDetailsPage() {
 
   const qualificationsOptions: AutocompleteOption[] = qualifications.map(formatOption);
 
+  const selectedParametreOption = parametres.find((p) => p.parametreAnalyseCode === submitted.selectedParametre);
+  const parametreLabel = selectedParametreOption?.parametreNomCourt ?? submitted.selectedParametre;
+
   const tableData = data ? buildMesureTableRows(data.data) : [];
   const headers = buildMesureTableHeaders().map((header) => {
     const sortFieldByProperty: Partial<Record<(typeof header)['property'], MesuresSortByValue>> = {
@@ -143,6 +150,25 @@ export function DepotDetailsPage() {
     );
   });
 
+  const { graphData, graphLoading, canShowGraph, hasSubmittedGraphFilters } = useMesuresGraph(
+    submittedQuery,
+    showGraph,
+    hasSearched,
+    submitted.selectedPmoCdn,
+    submitted.selectedParametre,
+  );
+
+  const handleToggleGraph = () => {
+    if (showGraph) {
+      setShowGraph(false);
+      return;
+    }
+
+    if (canShowGraph) {
+      setShowGraph(true);
+    }
+  };
+
   const canExport = hasSearched && !isLoading && !isFetching && (data?.total ?? 0) > 0;
 
   const handleExport = () => {
@@ -152,6 +178,8 @@ export function DepotDetailsPage() {
 
     void downloadCsv(submittedQuery, `mesures-${submitted.ouvrageType}.csv`);
   };
+
+  const isRechercherDisabled = showGraph && (!form.selectedPmoCdn || !form.selectedParametre);
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -275,7 +303,14 @@ export function DepotDetailsPage() {
           </div>
 
           <div className={fr.cx('fr-col-12', 'fr-col-md-2')} style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <Button onClick={handleSearch} iconId="fr-icon-search-line" iconPosition="right">
+            <Button
+              onClick={() => {
+                handleSearch();
+              }}
+              iconId="fr-icon-search-line"
+              iconPosition="right"
+              disabled={isRechercherDisabled}
+            >
               Rechercher
             </Button>
           </div>
@@ -362,27 +397,52 @@ export function DepotDetailsPage() {
       {!isLoading && !error && (
         <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <>
-            <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                type="button"
-                priority="secondary"
-                onClick={handleExport}
-                disabled={!canExport || isExportLoading}
-              >
-                Exporter CSV
-              </Button>
-            </div>
-            <Table
-              caption="Liste des mesures d'autosurveillance"
-              noCaption
-              bordered
-              headers={headers}
-              data={tableData}
-              noScroll={false}
-              className={fr.cx('fr-mb-1w')}
-            />
+            <div className={fr.cx('fr-container')}>
+              <div className={fr.cx('fr-grid-row')}>
+                <div className={fr.cx('fr-col-4')}>
+                  <ToggleSwitch
+                    inputTitle="Afficher le graphique"
+                    label="Afficher le graphique"
+                    helperText={!hasSubmittedGraphFilters && 'Recherchez avec un Point de mesure et un Paramètre'}
+                    onChange={handleToggleGraph}
+                    disabled={!canShowGraph}
+                    showCheckedHint={false}
+                  />
+                </div>
 
-            {data && (
+                <div className={fr.cx('fr-col-8')}>
+                  <div className={fr.cx('fr-grid-row', 'fr-grid-row--right')}>
+                    <Button
+                      type="button"
+                      priority="secondary"
+                      onClick={handleExport}
+                      disabled={!canExport || isExportLoading || showGraph}
+                    >
+                      Exporter CSV
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {showGraph ? (
+              graphLoading || graphData === undefined ? (
+                <p className={fr.cx('fr-text--sm')}>Chargement du graphique...</p>
+              ) : (
+                <MesuresGraph data={graphData} parametreLabel={parametreLabel} />
+              )
+            ) : (
+              <Table
+                caption="Liste des mesures d'autosurveillance"
+                noCaption
+                bordered
+                headers={headers}
+                data={tableData}
+                noScroll={false}
+                className={fr.cx('fr-mb-1w')}
+              />
+            )}
+
+            {data && !showGraph && (
               <div className={fr.cx('fr-mt-2w')}>
                 <p className={fr.cx('fr-text--sm')}>
                   {data.total === 0
@@ -392,7 +452,7 @@ export function DepotDetailsPage() {
               </div>
             )}
 
-            {totalPages > 1 && (
+            {totalPages > 1 && !showGraph && (
               <div className={fr.cx('fr-mt-4w')}>
                 <Pagination
                   count={totalPages}

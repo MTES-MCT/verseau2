@@ -46,7 +46,8 @@ export const useBilanFilters = () => {
       }
 
       if (
-        (newFilters.ouvrageDepollutionCode !== undefined && newFilters.ouvrageDepollutionCode !== prev.ouvrageDepollutionCode) ||
+        (newFilters.ouvrageDepollutionCode !== undefined &&
+          newFilters.ouvrageDepollutionCode !== prev.ouvrageDepollutionCode) ||
         (newFilters.year !== undefined && newFilters.year !== prev.year)
       ) {
         updated.parametreCode = '';

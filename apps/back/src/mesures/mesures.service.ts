@@ -2,6 +2,7 @@ import { Inject, Injectable, LOG_LEVELS } from '@nestjs/common';
 import { MasaProvider } from '@masa/masa.provider';
 import {
   buildPointDeMesure,
+  MesuresGraphItemDto,
   PaginatedMesuresResponse,
   PaginationQuery,
   MesuresSortByValue,
@@ -26,6 +27,7 @@ import {
 } from '@shared/csv/propertyToHeaderCsvColumns';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { TraceCalls } from '@shared/logger/traceCalls.decorator';
+import { EvenementService, ListEvenementSteuOptions } from '../suivi-regulier/evenement/evenement.service';
 
 export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
@@ -50,6 +52,7 @@ export class MesuresService {
     private readonly masaProvider: MasaProvider,
     private readonly paginatedExportService: PaginatedExportService,
     @Inject(CsvGenerator) private readonly csvGenerator: CsvGenerator,
+    private readonly evenementService: EvenementService,
   ) {}
 
   @TraceCalls(LOG_LEVELS[2])
@@ -122,6 +125,57 @@ export class MesuresService {
       page: rest.page,
       pageSize: rest.pageSize,
     };
+  }
+
+  @TraceCalls(LOG_LEVELS[2])
+  async getMesuresGraph(options: ListMesuresOptions): Promise<MesuresGraphItemDto[]> {
+    const mesureDonneesBrutesRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const result = await this.listMesures({ ...options, page, pageSize });
+      return { data: result.data, total: result.total };
+    });
+
+    if (mesureDonneesBrutesRows.length === 0) return [];
+
+    const evenementByDate = new Map<
+      string,
+      { typeEvenementCode: string; typeEvenementLibelle: string; commentaire: string | null }
+    >();
+
+    const evenementRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
+      const startDate = options.dateDebut ? new Date(`${options.dateDebut}T00:00:00+01:00`) : new Date();
+      const endDate = options.dateFin ? new Date(`${getNextDayAsISODate(options.dateFin)}T00:00:00+01:00`) : new Date();
+      const filtresEvenement: ListEvenementSteuOptions = {
+        authorizedSteuCdas: options.authorizedSteuCdas,
+        startDate,
+        endDate,
+        ouvrageDepollutionCode: options.ouvrageDepollutionCodes?.[0],
+        page,
+        pageSize,
+      };
+      const result = await this.evenementService.listEvenementSteu({ ...filtresEvenement, page, pageSize });
+      return { data: result.data, total: result.total };
+    });
+
+    for (const evt of evenementRows) {
+      evenementByDate.set(evt.date, {
+        typeEvenementCode: evt.typeEvenementCode,
+        typeEvenementLibelle: evt.typeEvenementLibelle,
+        commentaire: evt.commentaire,
+      });
+    }
+
+    return mesureDonneesBrutesRows.map((row) => {
+      const dateKey = row.prelevementDate
+        ? `${row.prelevementDate.getFullYear()}-${String(row.prelevementDate.getMonth() + 1).padStart(2, '0')}-${String(row.prelevementDate.getDate()).padStart(2, '0')}`
+        : null;
+      const evt = dateKey ? evenementByDate.get(dateKey) : undefined;
+      return {
+        ...row,
+        typeEvenementCode: evt?.typeEvenementCode ?? null,
+        typeEvenementLibelle: evt?.typeEvenementLibelle ?? null,
+        commentaire: evt?.commentaire ?? null,
+      };
+    });
   }
 
   @TraceCalls(LOG_LEVELS[2])
@@ -224,4 +278,10 @@ export class MesuresService {
   async listQualifications(): Promise<NomenclatureItem[]> {
     return this.masaProvider.findQualifications();
   }
+}
+
+function getNextDayAsISODate(value: string): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
 }

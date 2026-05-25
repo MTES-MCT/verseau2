@@ -120,6 +120,43 @@ describe('MesuresController', () => {
     });
   });
 
+  describe('getMesuresGraph', () => {
+    it('delegates graph query filters to service', async () => {
+      mesuresService.getMesuresGraph = jest.fn().mockResolvedValue([]);
+
+      const result = await controller.getMesuresGraph(makeRequest(['STEU001'], []), {
+        steuSandreCdas: ['STEU001'],
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
+        parametreCode: 'MES_CO',
+        qualification: 'Brut',
+        finalite: 'AUT',
+        page: 2,
+        pageSize: 10,
+        sortBy: 'date',
+        sortOrder: 'DESC',
+        ouvrageType: 'steu',
+      });
+
+      expect(mesuresService.getMesuresGraph).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authorizedSteuCdas: ['STEU001'],
+          ouvrageDepollutionCodes: ['STEU001'],
+          dateDebut: '2024-01-01',
+          dateFin: '2024-12-31',
+          parametreCode: 'MES_CO',
+          qualification: 'Brut',
+          finalite: 'AUT',
+          page: 2,
+          pageSize: 10,
+          sortBy: 'date',
+          sortOrder: 'DESC',
+        }),
+      );
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('listOuvrages', () => {
     it('delegates to service with authorized STEU codes from request', async () => {
       const ouvrages = [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }];

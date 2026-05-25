@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
-import { PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
+import {  MesuresGraphItemDtoSchema, PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 import { TypePointMesure } from '../shared/typePointMesure';
 
@@ -36,6 +36,13 @@ export const exportMesures = {
   method: 'GET',
   path: '/mesures/export',
   query: listMesures.query,
+} as const satisfies RouteDefinition;
+
+export const graphMesures = {
+  method: 'GET',
+  path: '/mesures/graph',
+  query: listMesures.query,
+  response: z.array(MesuresGraphItemDtoSchema),
 } as const satisfies RouteDefinition;
 
 export const listOuvrages = {
