@@ -75,12 +75,16 @@ export class SftpTestMock implements Sftp {
   shouldFail = false;
   failureMessage = 'SFTP send failed';
 
-  async sendToAgentVerseau(file: Buffer, fileName: string): Promise<void> {
+  async send(file: Buffer, fileName: string): Promise<void> {
     if (this.shouldFail) {
       throw new Error(this.failureMessage);
     }
     this.calls.push({ file, fileName });
     await Promise.resolve();
+  }
+
+  async sendToAgentVerseau(file: Buffer, fileName: string): Promise<void> {
+    await this.send(file, fileName);
   }
 
   /**

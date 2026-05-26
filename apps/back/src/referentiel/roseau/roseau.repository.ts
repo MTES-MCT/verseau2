@@ -17,6 +17,7 @@ import { AgacEntity } from './entities/agac.entity';
 import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
+import { ItvEntity } from '@referentiel/lanceleau/entities/itv.entity';
 import {
   SclDetailRow,
   SteuDetailRow,
@@ -79,6 +80,23 @@ export class RoseauRepository implements RoseauGateway {
 
   async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
+  }
+
+  async findAgenceEauSiretBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
+    if (!ouvrageDepollutionCode.trim()) {
+      return null;
+    }
+
+    const row = await this.steuRepository
+      .createQueryBuilder('steu')
+      .select("NULLIF(BTRIM(itv.itv_rfa), '')", 'agence_eau_siret')
+      .leftJoin(ItvEntity, 'itv', 'itv.itv_cdn = steu.ae_itv_cdn')
+      .where('RTRIM(steu.steu_sandre_cda) = BTRIM(:ouvrageDepollutionCode)', {
+        ouvrageDepollutionCode,
+      })
+      .getRawOne<{ agence_eau_siret: string | null }>();
+
+    return trimToNull(row?.agence_eau_siret);
   }
 
   async findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]> {

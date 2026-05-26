@@ -5,7 +5,7 @@ import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { NotificationGateway } from '@notification/notification.gateway';
 import { EmailTemplate, EmailRapportParams } from '@notification/notification';
 import { S3 } from '@infra/s3/s3';
-import { Sftp } from '@infra/sftp/sftp';
+import { SftpAgency } from '@infra/sftp/sftpAgency';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { MasaModel } from '@dossier/masa/masa.model';
@@ -13,6 +13,8 @@ import { DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
+import { parseScenarioAssainissementXml } from '@lib/parser';
+import { MasaProvider } from '@masa/masa.provider';
 
 interface DiffusionRapportProcessorData {
   depotId: string;
@@ -28,7 +30,8 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     @Inject(S3) private readonly s3: S3,
-    @Inject(Sftp) private readonly sftpService: Sftp,
+    @Inject(SftpAgency) private readonly sftpAgency: SftpAgency,
+    private readonly masaProvider: MasaProvider,
     private readonly pdfGenerator: RapportPdfGeneratorService,
     private readonly logger: LoggerService,
   ) {
@@ -126,23 +129,57 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     });
   }
 
-  private async sendToAgenceDeEauSftp(depot: DepotModel, _pdfBuffer: Buffer): Promise<void> {
+  private async sendToAgenceDeEauSftp(depot: DepotModel, pdfBuffer: Buffer): Promise<void> {
     try {
       if (!depot.path) {
         throw new Error(`No XML file path for depot: ${depot.id}`);
       }
-      const _xmlBuffer = await this.s3.download(depot.path);
+
+      const xmlBuffer = await this.s3.download(depot.path);
+      const parsed = await parseScenarioAssainissementXml(xmlBuffer.toString('utf8'));
+      const ouvrageDepollutionCode = parsed.ouvrages
+        .map((ouvrage) => ouvrage.cdOuvrageDepollution?.trim())
+        .find((code): code is string => Boolean(code));
+
+      if (!ouvrageDepollutionCode) {
+        this.logger.warn("No codeOuvrageDepollution found in XML, skipping Agence de l'eau SFTP upload", {
+          depotId: depot.id,
+          path: depot.path,
+        });
+        return;
+      }
+
+      const agenceEauSiret = await this.masaProvider.findAgenceEauSiretBySteuCode(ouvrageDepollutionCode);
+      if (!agenceEauSiret) {
+        this.logger.warn("No agence de l'eau SIRET found for ouvrage, skipping Agence de l'eau SFTP upload", {
+          depotId: depot.id,
+          ouvrageDepollutionCode,
+        });
+        return;
+      }
+
+      if (!this.sftpAgency.hasClient(agenceEauSiret)) {
+        this.logger.warn("No configured SFTP client for agence de l'eau, skipping upload", {
+          depotId: depot.id,
+          ouvrageDepollutionCode,
+          agenceEauSiret,
+          configuredAgencies: this.sftpAgency.getConfiguredAgencies(),
+        });
+        return;
+      }
+
+      const sftpClient = this.sftpAgency.getClient(agenceEauSiret);
 
       const remotePath = `verseau2/${depot.id}`;
+      await sftpClient.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
+      await sftpClient.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
 
-      // TODO: Send to different SFTP based on agency configuration
-      // // Send XML
-      // await this.sftpService.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
-
-      // // Send PDF
-      // await this.sftpService.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
-
-      this.logger.log("Files sent to Agence de l'eau SFTP", { remotePath });
+      this.logger.log("Files sent to Agence de l'eau SFTP", {
+        depotId: depot.id,
+        ouvrageDepollutionCode,
+        agenceEauSiret,
+        remotePath,
+      });
     } catch (error) {
       this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {
         depotId: depot.id,

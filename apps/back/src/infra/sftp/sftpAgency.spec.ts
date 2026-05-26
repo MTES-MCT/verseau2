@@ -12,13 +12,13 @@ describe('SftpAgencyService', () => {
 
     beforeEach(async () => {
       const configJson = JSON.stringify({
-        agence_01: {
+        '11111111111111': {
           host: 'sftp1.example.com',
           port: 22,
           username: 'user1',
           privateKey: 'key1',
         },
-        agence_02: {
+        '22222222222222': {
           host: 'sftp2.example.com',
           port: 2222,
           username: 'user2',
@@ -48,18 +48,19 @@ describe('SftpAgencyService', () => {
 
     it('devrait initialiser les clients correctement', () => {
       expect(service.getConfiguredAgencies()).toHaveLength(2);
-      expect(service.getConfiguredAgencies()).toContain('agence_01');
-      expect(service.getConfiguredAgencies()).toContain('agence_02');
+      expect(service.getConfiguredAgencies()).toContain('11111111111111');
+      expect(service.getConfiguredAgencies()).toContain('22222222222222');
     });
 
     it('devrait retourner un client pour une agence configurée', () => {
-      const client = service.getClient('agence_01');
+      const client = service.getClient('11111111111111');
       expect(client).toBeDefined();
+      expect(typeof client.send).toBe('function');
       expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
     it('devrait vérifier si un client existe', () => {
-      expect(service.hasClient('agence_01')).toBe(true);
+      expect(service.hasClient('11111111111111')).toBe(true);
       expect(service.hasClient('agence_inexistante')).toBe(false);
     });
 
@@ -110,7 +111,7 @@ describe('SftpAgencyService', () => {
 
     it('devrait lever une erreur si un champ requis manque', () => {
       const configJson = JSON.stringify({
-        agence_01: {
+        '11111111111111': {
           host: 'sftp1.example.com',
           // port manquant
           username: 'user1',
@@ -125,12 +126,12 @@ describe('SftpAgencyService', () => {
           } as unknown as ConfigService,
           logger,
         );
-      }).toThrow(/Configuration incomplète pour l'agence agence_01: port manquant/);
+      }).toThrow(/Configuration incomplète pour l'agence 11111111111111: port manquant/);
     });
 
     it("devrait lever une erreur si le port n'est pas un nombre", () => {
       const configJson = JSON.stringify({
-        agence_01: {
+        '11111111111111': {
           host: 'sftp1.example.com',
           port: '22', // string au lieu de number
           username: 'user1',
@@ -145,7 +146,7 @@ describe('SftpAgencyService', () => {
           } as unknown as ConfigService,
           logger,
         );
-      }).toThrow(/Port invalide pour l'agence agence_01: doit être un nombre/);
+      }).toThrow(/Port invalide pour l'agence 11111111111111: doit être un nombre/);
     });
   });
 });
@@ -158,7 +159,7 @@ describe('SftpAgencyMock', () => {
   });
 
   it("devrait retourner un client mock pour n'importe quelle agence", () => {
-    const client1 = mock.getClient('agence_01');
+    const client1 = mock.getClient('11111111111111');
     const client2 = mock.getClient('agence_inexistante');
 
     expect(client1).toBeDefined();
@@ -166,14 +167,14 @@ describe('SftpAgencyMock', () => {
   });
 
   it("devrait toujours indiquer qu'un client existe", () => {
-    expect(mock.hasClient('agence_01')).toBe(true);
+    expect(mock.hasClient('11111111111111')).toBe(true);
     expect(mock.hasClient('n_importe_quoi')).toBe(true);
   });
 
   it('devrait retourner la liste des agences par défaut', () => {
     const agencies: string[] = mock.getConfiguredAgencies();
     expect(agencies).toHaveLength(6);
-    expect(agencies).toContain('agence_01');
+    expect(agencies).toContain('11111111111111');
   });
 });
 

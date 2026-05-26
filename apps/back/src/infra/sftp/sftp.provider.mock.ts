@@ -8,7 +8,7 @@ export class SftpProviderMock implements Sftp {
     this.logger.setContext(SftpProviderMock.name);
   }
 
-  async sendToAgentVerseau(file: Buffer, remotePath: string): Promise<void> {
+  async send(file: Buffer, remotePath: string): Promise<void> {
     this.logger.log(`[MOCK] Uploading file to SFTP: ${remotePath}`);
     this.logger.log(`[MOCK] File size: ${file.length} bytes`);
 
@@ -16,5 +16,9 @@ export class SftpProviderMock implements Sftp {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     this.logger.log(`[MOCK] Upload complete: ${remotePath}`);
+  }
+
+  async sendToAgentVerseau(file: Buffer, remotePath: string): Promise<void> {
+    await this.send(file, `uploads/${remotePath}`);
   }
 }

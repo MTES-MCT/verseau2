@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import path from 'node:path';
 import Client from 'ssh2-sftp-client';
 import { Sftp } from './sftp';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -22,10 +23,7 @@ export class SftpService implements Sftp {
     this.logger.setContext(SftpService.name);
   }
 
-  async sendToAgentVerseau(file: Buffer, remotePath: string | undefined): Promise<void> {
-    if (!remotePath) {
-      throw new Error('Remote path is undefined');
-    }
+  async send(file: Buffer, remotePath: string): Promise<void> {
     try {
       await this.sftpClient.connect({
         host: this.config.host,
@@ -33,11 +31,24 @@ export class SftpService implements Sftp {
         username: this.config.username,
         privateKey: this.config.privateKey,
       });
-      const path = `uploads/${remotePath}`;
-      this.logger.log(`Uploading file to SFTP: ${path}`);
-      await this.sftpClient.put(file, path);
+
+      const remoteDirectory = path.posix.dirname(remotePath);
+      if (remoteDirectory !== '.') {
+        await this.sftpClient.mkdir(remoteDirectory, true);
+      }
+
+      this.logger.log(`Uploading file to SFTP: ${remotePath}`);
+      await this.sftpClient.put(file, remotePath);
     } finally {
       await this.sftpClient.end();
     }
+  }
+
+  async sendToAgentVerseau(file: Buffer, remotePath: string | undefined): Promise<void> {
+    if (!remotePath) {
+      throw new Error('Remote path is undefined');
+    }
+
+    await this.send(file, `uploads/${remotePath}`);
   }
 }

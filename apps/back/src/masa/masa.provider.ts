@@ -213,6 +213,11 @@ export class MasaProvider {
     return this.lanceleauGateway.findVSteuSclItvByCodes(steuCodes, sclCodes);
   }
 
+  // route: GET /api/steu/:ouvrageDepollutionCode/agence-eau
+  async findAgenceEauSiretBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
+    return this.roseauGateway.findAgenceEauSiretBySteuCode(ouvrageDepollutionCode);
+  }
+
   // ---------------------------------------------------------------------------
   // Indicateurs — Droits STEU/SCL par SIRET intervenant — données live verseau
   // TODO: Remplacer par appel à l'API MASA quand disponible
