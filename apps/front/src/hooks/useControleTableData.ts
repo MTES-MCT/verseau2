@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { EvenementType } from '@lib/dossier';
 import type { ControleView, ControleFilterSet } from '../types/controle.types';
+import { filterControlesByActiveFilters } from '../helper/controleFilterHelper';
 
 type SingleControleRow = {
   isGroup: false;
@@ -31,7 +32,7 @@ export function useControleTableData(
   return useMemo(() => {
     return Object.entries(groupedControles).flatMap(([name, group]) => {
       const stats = getGroupStats(group);
-      const filtered = filterControles(group, activeFilters);
+      const filtered = filterControlesByActiveFilters(group, activeFilters);
 
       if (filtered.length === 0) {
         return [];
@@ -61,25 +62,6 @@ export function useControleTableData(
       };
     });
   }, [groupedControles, activeFilters]);
-}
-
-function filterControles(group: ControleView[], activeFilters: ControleFilterSet): ControleView[] {
-  if (activeFilters.size === 0) {
-    return group;
-  }
-
-  return group.filter((controle) => {
-    if (activeFilters.has('success') && controle.success) {
-      return true;
-    }
-    if (activeFilters.has('warning') && controle.evenementType === EvenementType.AVERTISSEMENT) {
-      return true;
-    }
-    if (activeFilters.has('error') && controle.evenementType === EvenementType.ERREUR) {
-      return true;
-    }
-    return false;
-  });
 }
 
 function getGroupStats(group: ControleView[]) {
