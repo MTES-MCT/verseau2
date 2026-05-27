@@ -11,6 +11,7 @@ export interface SftpConfig {
   port: number;
   username: string;
   privateKey: string;
+  remotePath?: string;
 }
 
 @Injectable()
@@ -23,7 +24,7 @@ export class SftpService implements Sftp {
     this.logger.setContext(SftpService.name);
   }
 
-  async send(file: Buffer, remotePath: string): Promise<void> {
+  async send(file: Buffer, filePath: string): Promise<void> {
     try {
       await this.sftpClient.connect({
         host: this.config.host,
@@ -32,13 +33,17 @@ export class SftpService implements Sftp {
         privateKey: this.config.privateKey,
       });
 
-      const remoteDirectory = path.posix.dirname(remotePath);
+      // Prepend config remotePath if it exists
+      const basePath = this.config.remotePath || '';
+      const fullPath = basePath ? `${basePath}/${filePath}` : filePath;
+
+      const remoteDirectory = path.posix.dirname(fullPath);
       if (remoteDirectory !== '.') {
         await this.sftpClient.mkdir(remoteDirectory, true);
       }
 
-      this.logger.log(`Uploading file to SFTP: ${remotePath}`);
-      await this.sftpClient.put(file, remotePath);
+      this.logger.log(`Uploading file to SFTP: ${fullPath}`);
+      await this.sftpClient.put(file, fullPath);
     } finally {
       await this.sftpClient.end();
     }

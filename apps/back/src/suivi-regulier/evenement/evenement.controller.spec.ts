@@ -75,14 +75,18 @@ describe('EvenementController', () => {
     evenementService.exportEvenementSteuCsv.mockResolvedValue('csv');
     const res = { set: jest.fn(), send: jest.fn() } as never;
 
-    await controller.exportEvenementSteu(makeRequest(), {
-      year: 2024,
-      typeEvenementCode: '1',
-      ouvrageDepollutionCode: 'STEU001',
-      pointMesureId: 123,
-      page: 1,
-      pageSize: 20,
-    }, res);
+    await controller.exportEvenementSteu(
+      makeRequest(),
+      {
+        year: 2024,
+        typeEvenementCode: '1',
+        ouvrageDepollutionCode: 'STEU001',
+        pointMesureId: 123,
+        page: 1,
+        pageSize: 20,
+      },
+      res,
+    );
 
     expect(evenementService.exportEvenementSteuCsv).toHaveBeenCalledWith(
       expect.objectContaining({

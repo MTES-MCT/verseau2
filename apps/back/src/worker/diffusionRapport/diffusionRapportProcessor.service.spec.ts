@@ -166,8 +166,8 @@ describe('DiffusionRapportProcessorService', () => {
     expect(masaProvider.findAgenceEauSiretBySteuCode).toHaveBeenCalledWith('STEU001');
     expect(sftpAgency.hasClient).toHaveBeenCalledWith('12345678901234');
     expect(sftpAgency.getClient).toHaveBeenCalledWith('12345678901234');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, xmlBuffer, 'verseau2/dep_1/depot.xml');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, pdfBuffer, 'verseau2/dep_1/rapport-masa-dep_1.pdf');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, xmlBuffer, 'dep_1/depot.xml');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, pdfBuffer, 'dep_1/rapport-masa-dep_1.pdf');
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });

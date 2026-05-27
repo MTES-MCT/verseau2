@@ -170,15 +170,17 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       const sftpClient = this.sftpAgency.getClient(agenceEauSiret);
 
-      const remotePath = `verseau2/${depot.id}`;
-      await sftpClient.send(xmlBuffer, `${remotePath}/${depot.nomOriginalFichier}`);
-      await sftpClient.send(pdfBuffer, `${remotePath}/rapport-masa-${depot.id}.pdf`);
+      // The agency base path is now in sftpClient.config.remotePath
+      const filePath1 = `${depot.id}/${depot.nomOriginalFichier}`;
+      const filePath2 = `${depot.id}/rapport-masa-${depot.id}.pdf`;
+      await sftpClient.send(xmlBuffer, filePath1);
+      await sftpClient.send(pdfBuffer, filePath2);
 
       this.logger.log("Files sent to Agence de l'eau SFTP", {
         depotId: depot.id,
         ouvrageDepollutionCode,
         agenceEauSiret,
-        remotePath,
+        depot: depot.id,
       });
     } catch (error) {
       this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {

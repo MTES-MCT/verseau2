@@ -13,6 +13,7 @@ export interface SftpAgencyConfig {
   host: string;
   port: number;
   username: string;
+  remotePath?: string;
 }
 
 /**
@@ -56,6 +57,7 @@ export class SftpAgencyService implements SftpAgency {
             port: config.port,
             username: config.username,
             privateKey,
+            remotePath: config.remotePath,
           },
           this.logger,
         );

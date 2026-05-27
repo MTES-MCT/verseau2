@@ -3,17 +3,20 @@ SFTP_AGENCY_CONFIG=`{
     "11111111111111": {
       "host": "sftp1.example.com",
       "port": 22,
-      "username": "user1"
+      "username": "user1",
+      "remotePath": "test-agency-1"
     },
     "22222222222222": {
       "host": "sftp2.example.com",
       "port": 2222,
-      "username": "user2"
+      "username": "user2",
+      "remotePath": "test-agency-2"
     },
     "33333333333333": {
       "host": "sftp3.example.com",
       "port": 2223,
-      "username": "user3"
+      "username": "user3",
+      "remotePath": "test-agency-3"
     }
   }`
 SFTP_AGENCY_PROVIDER=real
