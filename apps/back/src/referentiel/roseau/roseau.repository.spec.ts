@@ -10,6 +10,7 @@ import { ResaEntity } from './entities/resa.entity';
 import { StchanEntity } from './entities/stchan.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
+import { CdbEntity } from '@referentiel/lanceleau/entities/cdb.entity';
 
 function createRoseauRepository(steuRepository: Repository<SteuEntity>): RoseauRepository {
   return new RoseauRepository(
@@ -23,6 +24,7 @@ function createRoseauRepository(steuRepository: Repository<SteuEntity>): RoseauR
     {} as Repository<StchanEntity>,
     {} as Repository<AlrEntity>,
     {} as Repository<PabEntity>,
+    {} as Repository<CdbEntity>,
   );
 }
 
