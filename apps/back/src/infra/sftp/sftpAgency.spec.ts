@@ -5,27 +5,28 @@ import { SftpAgencyMock } from './sftpAgency.mock';
 import { createSftpAgency } from './sftpAgency.factory';
 import { SharedModule } from '@shared/shared.module';
 import { loggerProviderMock, LoggerServiceMock } from '@shared/logger/logger.mock';
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Load test environment variables
+dotenv.config({
+  path: path.join(__dirname, 'test.envfile'),
+});
 
 describe('SftpAgencyService', () => {
   describe('avec configuration valide', () => {
     let service: SftpAgencyService;
+    const getConfigValue = (key: string): string | undefined => {
+      if (key === 'SFTP_AGENCY_CONFIG') {
+        return process.env.SFTP_AGENCY_CONFIG;
+      }
+      if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
+        return process.env[key];
+      }
+      return undefined;
+    };
 
     beforeEach(async () => {
-      const configJson = JSON.stringify({
-        '11111111111111': {
-          host: 'sftp1.example.com',
-          port: 22,
-          username: 'user1',
-          privateKey: 'key1',
-        },
-        '22222222222222': {
-          host: 'sftp2.example.com',
-          port: 2222,
-          username: 'user2',
-          privateKey: 'key2',
-        },
-      });
-
       const module: TestingModule = await Test.createTestingModule({
         imports: [SharedModule],
         providers: [
@@ -33,10 +34,7 @@ describe('SftpAgencyService', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn((key: string) => {
-                if (key === 'SFTP_AGENCY_CONFIG') return configJson;
-                return undefined;
-              }),
+              get: jest.fn(getConfigValue),
             },
           },
           loggerProviderMock,
@@ -47,9 +45,17 @@ describe('SftpAgencyService', () => {
     });
 
     it('devrait initialiser les clients correctement', () => {
-      expect(service.getConfiguredAgencies()).toHaveLength(2);
+      expect(service.getConfiguredAgencies()).toHaveLength(3);
       expect(service.getConfiguredAgencies()).toContain('11111111111111');
       expect(service.getConfiguredAgencies()).toContain('22222222222222');
+      expect(service.getConfiguredAgencies()).toContain('33333333333333');
+    });
+
+    it('devrait retourner un client pour la troisième agence configurée', () => {
+      const client = service.getClient('33333333333333');
+      expect(client).toBeDefined();
+      expect(typeof client.send).toBe('function');
+      expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
     it('devrait retourner un client pour une agence configurée', () => {
@@ -59,9 +65,26 @@ describe('SftpAgencyService', () => {
       expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
+    it('devrait avoir le bon privateKey pour lagence 11111111111111', () => {
+      const client = service.getClient('11111111111111');
+      expect((client as any).config.privateKey).toBe(`-----BEGIN OPENSSH PRIVATE KEY-----
+aaa
+-----END OPENSSH PRIVATE KEY-----`);
+    });
+
+    it('devrait avoir le bon privateKey pour lagence 22222222222222', () => {
+      const client = service.getClient('22222222222222');
+      expect((client as any).config.privateKey).toBe(`key2`);
+    });
+
     it('devrait vérifier si un client existe', () => {
       expect(service.hasClient('11111111111111')).toBe(true);
       expect(service.hasClient('agence_inexistante')).toBe(false);
+    });
+
+    it('devrait vérifier si le host du client est correct', () => {
+      const client = service.getClient('11111111111111');
+      expect((client as any).config.host).toBe('sftp1.example.com');
     });
 
     it('devrait lever une erreur pour une agence non configurée', () => {
@@ -179,10 +202,12 @@ describe('SftpAgencyMock', () => {
 });
 
 describe('createSftpAgency factory', () => {
-  it('devrait retourner SftpAgencyMock quand SFTP_AGENCES_PROVIDER=mock', () => {
+  it('devrait retourner SftpAgencyMock quand SFTP_AGENCY_PROVIDER=mock', () => {
     const configService = {
       get: jest.fn((key: string) => {
-        if (key === 'SFTP_AGENCY_PROVIDER') return 'mock';
+        if (key === 'SFTP_AGENCY_PROVIDER') {
+          return 'mock';
+        }
         return undefined;
       }),
     } as unknown as ConfigService;
@@ -191,11 +216,18 @@ describe('createSftpAgency factory', () => {
     expect(registry).toBeInstanceOf(SftpAgencyMock);
   });
 
-  it('devrait retourner SftpAgencyService quand SFTP_AGENCES_PROVIDER=real', () => {
+  it('devrait retourner SftpAgencyService quand SFTP_AGENCY_PROVIDER=real', () => {
     const configService = {
       get: jest.fn((key: string) => {
-        if (key === 'SFTP_AGENCES_PROVIDER') return 'real';
-        if (key === 'SFTP_AGENCES_CONFIG') return '{}';
+        if (key === 'SFTP_AGENCY_PROVIDER') {
+          return process.env.SFTP_AGENCY_PROVIDER;
+        }
+        if (key === 'SFTP_AGENCY_CONFIG') {
+          return process.env.SFTP_AGENCY_CONFIG;
+        }
+        if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
+          return process.env[key];
+        }
         return undefined;
       }),
     } as unknown as ConfigService;

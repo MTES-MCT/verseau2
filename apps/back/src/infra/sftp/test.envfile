@@ -1,0 +1,27 @@
+# SFTP Agency Configuration
+SFTP_AGENCY_CONFIG=`{
+    "11111111111111": {
+      "host": "sftp1.example.com",
+      "port": 22,
+      "username": "user1"
+    },
+    "22222222222222": {
+      "host": "sftp2.example.com",
+      "port": 2222,
+      "username": "user2"
+    },
+    "33333333333333": {
+      "host": "sftp3.example.com",
+      "port": 2223,
+      "username": "user3"
+    }
+  }`
+SFTP_AGENCY_PROVIDER=real
+
+SFTP_AGENCY_PRIVATE_KEY_11111111111111="-----BEGIN OPENSSH PRIVATE KEY-----
+aaa
+-----END OPENSSH PRIVATE KEY-----"
+
+SFTP_AGENCY_PRIVATE_KEY_22222222222222=key2
+
+SFTP_AGENCY_PRIVATE_KEY_33333333333333=key3

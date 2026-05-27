@@ -13,18 +13,17 @@ export interface SftpAgencyConfig {
   host: string;
   port: number;
   username: string;
-  privateKey: string;
 }
 
 /**
  * Format attendu de la variable d'environnement SFTP_AGENCY_CONFIG.
- * Exemple: {"11111111111111": {"host": "sftp1.example.com", "port": 22, "username": "user1", "privateKey": "..."}}
+ * Exemple: {"11111111111111": {"host": "sftp1.example.com", "port": 22, "username": "user1"}}
  */
 export type SftpAgenciesConfig = Record<string, SftpAgencyConfig>;
 
 @Injectable()
 export class SftpAgencyService implements SftpAgency {
-  private readonly clients: Map<string, Sftp> = new Map();
+  readonly clients: Map<string, Sftp> = new Map();
 
   constructor(
     private readonly configService: ConfigService,
@@ -46,7 +45,8 @@ export class SftpAgencyService implements SftpAgency {
       const agenciesConfig = JSON.parse(configJson) as SftpAgenciesConfig;
 
       for (const [agenceEauSiret, config] of Object.entries(agenciesConfig)) {
-        this.validateConfig(agenceEauSiret, config);
+        const privateKey = this.getPrivateKey(agenceEauSiret);
+        this.validateConfig(agenceEauSiret, { ...config, privateKey });
 
         const sftpClient = new Client();
         const sftpService = new SftpService(
@@ -55,7 +55,7 @@ export class SftpAgencyService implements SftpAgency {
             host: config.host,
             port: config.port,
             username: config.username,
-            privateKey: config.privateKey,
+            privateKey,
           },
           this.logger,
         );
@@ -71,6 +71,16 @@ export class SftpAgencyService implements SftpAgency {
       });
       throw new Error(`Configuration SFTP invalide: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  private getPrivateKey(agenceEauSiret: string): string {
+    const privateKey = this.configService.get<string>(`SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
+
+    if (!privateKey) {
+      throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: privateKey manquant`);
+    }
+
+    return privateKey;
   }
 
   private validateConfig(agenceEauSiret: string, config: unknown): asserts config is SftpAgencyConfig {
