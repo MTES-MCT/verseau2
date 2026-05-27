@@ -1,0 +1,9 @@
+# SFTP Agency Configuration
+SFTP_AGENCY_CONFIG={ "ARTOIS-PICARDIE": { "host": "sftp1.example.com", "port": 22, "username": "user1", "remotePath": "test-agency-1" }, "22222222222222": { "host": "sftp2.example.com", "port": 2222, "username": "user2", "remotePath": "test-agency-2" }, "33333333333333": { "host": "sftp3.example.com", "port": 2223, "username": "user3", "remotePath": "test-agency-3" } }
+SFTP_AGENCY_PROVIDER=real
+
+SFTP_AGENCY_PRIVATE_KEY_ARTOIS-PICARDIE=LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYWFhCi0tLS0tRU5EIE9QRU5TU0ggUFJJVkFURSBLRVktLS0tLQo=
+
+SFTP_AGENCY_PRIVATE_KEY_22222222222222=a2V5Mgo=
+
+SFTP_AGENCY_PRIVATE_KEY_33333333333333=a2V5Mwo=

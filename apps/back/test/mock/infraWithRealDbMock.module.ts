@@ -14,6 +14,7 @@ import { ConfigurationModule } from '@infra/config/configuration.module';
 import { PGBOSS, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
+import { SftpAgency } from '@infra/sftp/sftpAgency';
 
 // Minimal placeholder providers - tests should override these
 const minimalQueueProvider = {
@@ -28,7 +29,16 @@ const minimalS3Provider = {
 
 const minimalSftpProvider = {
   provide: Sftp,
-  useValue: { sendToAgentVerseau: jest.fn() },
+  useValue: { send: jest.fn(), sendToAgentVerseau: jest.fn() },
+};
+
+const minimalSftpAgencyProvider = {
+  provide: SftpAgency,
+  useValue: {
+    getClient: jest.fn(),
+    hasClient: jest.fn(),
+    getConfiguredAgencies: jest.fn().mockReturnValue([]),
+  },
 };
 
 const pgBossNullProvider = {
@@ -46,7 +56,13 @@ const pgBossNullProvider = {
     AuthenticationModule,
     ConfigurationModule,
   ],
-  providers: [minimalQueueProvider, minimalS3Provider, minimalSftpProvider, pgBossNullProvider],
-  exports: [ClsModule, AuthenticationModule, ConfigurationModule, QueueGateway, S3, Sftp, PGBOSS],
+  providers: [
+    minimalQueueProvider,
+    minimalS3Provider,
+    minimalSftpProvider,
+    minimalSftpAgencyProvider,
+    pgBossNullProvider,
+  ],
+  exports: [ClsModule, AuthenticationModule, ConfigurationModule, QueueGateway, S3, Sftp, SftpAgency, PGBOSS],
 })
 export class InfraWithRealDbMockModule {}

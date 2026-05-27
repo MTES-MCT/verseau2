@@ -12,8 +12,15 @@ import { LoggerService } from '@shared/logger/logger.service';
 export class SftpAgencyMock implements SftpAgency {
   private readonly mockClient: Sftp;
 
-  // Liste des agences mockées par défaut
-  private readonly defaultAgencies = ['agence_01', 'agence_02', 'agence_03', 'agence_04', 'agence_05', 'agence_06'];
+  // Liste d'exemple de codes CDB d'agences mockés par défaut
+  private readonly defaultAgencies = [
+    '11111111111111',
+    '22222222222222',
+    '33333333333333',
+    '44444444444444',
+    '55555555555555',
+    '66666666666666',
+  ];
 
   constructor(private readonly logger: LoggerService) {
     this.logger.setContext(SftpAgencyMock.name);
@@ -21,13 +28,13 @@ export class SftpAgencyMock implements SftpAgency {
     this.logger.log(`[MOCK] SftpAgency initialisé with ${this.defaultAgencies.length} agences mockées`);
   }
 
-  getClient(agencyId: string): Sftp {
-    this.logger.log(`[MOCK] Récupération du client SFTP pour l'agence: ${agencyId}`);
+  getClient(cdbRfa: string): Sftp {
+    this.logger.log(`[MOCK] Récupération du client SFTP pour le code CDB: ${cdbRfa}`);
     // Retourne toujours le même mock client pour toutes les agences
     return this.mockClient;
   }
 
-  hasClient(_agencyId: string): boolean {
+  hasClient(_cdbRfa: string): boolean {
     // En mode mock, on accepte toutes les agences par défaut
     return true;
   }

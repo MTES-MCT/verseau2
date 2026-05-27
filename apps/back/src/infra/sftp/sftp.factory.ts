@@ -5,7 +5,7 @@ import { Sftp } from './sftp';
 import { SftpProviderMock } from './sftp.provider.mock';
 import { LoggerService } from '@shared/logger/logger.service';
 
-export const createSftpService = (configService: ConfigService, sftpClient: Client): Sftp => {
+export const createSftpAgentVerseauService = (configService: ConfigService, sftpClient: Client): Sftp => {
   const logger = new LoggerService('sftp.factory');
 
   const sftpProvider = configService.get<string>('SFTP_PROVIDER');
@@ -19,8 +19,9 @@ export const createSftpService = (configService: ConfigService, sftpClient: Clie
   const port = configService.getOrThrow<number>('SFTP_PORT');
   const username = configService.getOrThrow<string>('SFTP_USERNAME');
   const privateKey = configService.getOrThrow<string>('SFTP_PRIVATE_KEY');
+  const remotePath = configService.get<string>('SFTP_REMOTE_PATH');
 
-  logger.log(`Using SFTP service with host: ${host}, port: ${port}, username: ${username}`);
+  logger.log(`Using SFTP service for Agent Verseau with host: ${host}, port: ${port}, username: ${username}`);
   return new SftpService(
     sftpClient,
     {
@@ -28,12 +29,13 @@ export const createSftpService = (configService: ConfigService, sftpClient: Clie
       port,
       username,
       privateKey,
+      remotePath,
     },
     logger,
   );
 };
 
-export const createSftpProviders = () => [
+export const createSftpAgentVerseauProviders = () => [
   {
     provide: SFTP_CLIENT,
     useFactory: () => {
@@ -43,6 +45,6 @@ export const createSftpProviders = () => [
   {
     provide: Sftp,
     inject: [ConfigService, SFTP_CLIENT],
-    useFactory: createSftpService,
+    useFactory: createSftpAgentVerseauService,
   },
 ];

@@ -17,6 +17,8 @@ import { AgacEntity } from './entities/agac.entity';
 import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
+import { ItvEntity } from '@referentiel/lanceleau/entities/itv.entity';
+import { CdbEntity } from '@referentiel/lanceleau/entities/cdb.entity';
 import {
   SclDetailRow,
   SteuDetailRow,
@@ -71,6 +73,8 @@ export class RoseauRepository implements RoseauGateway {
     private readonly alrRepository: Repository<AlrEntity>,
     @InjectRepository(PabEntity)
     private readonly pabRepository: Repository<PabEntity>,
+    @InjectRepository(CdbEntity)
+    private readonly cdbRepository: Repository<CdbEntity>,
   ) {}
 
   async findSteu(): Promise<SteuEntity[]> {
@@ -79,6 +83,21 @@ export class RoseauRepository implements RoseauGateway {
 
   async findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null> {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
+  }
+
+  async findAgenceEauNomBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
+    if (!ouvrageDepollutionCode.trim()) {
+      return null;
+    }
+
+    const row = await this.steuRepository
+      .createQueryBuilder('steu')
+      .select('cdb.cdbNomLb', 'cdbNomLb')
+      .leftJoin(CdbEntity, 'cdb', 'cdb.cdbRfa = steu.steuCdbRfa')
+      .where('steu.steuSandreCda = :ouvrageDepollutionCode', { ouvrageDepollutionCode })
+      .getRawOne<{ cdbNomLb: string | null }>();
+
+    return trimToNull(row?.cdbNomLb);
   }
 
   async findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]> {

@@ -21,6 +21,7 @@ describe('SftpAgentVerseauProcessorService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockSftp = {
+      send: jest.fn().mockResolvedValue(undefined),
       sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
     } as unknown as Sftp;
 

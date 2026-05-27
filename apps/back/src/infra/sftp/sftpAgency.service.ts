@@ -13,18 +13,18 @@ export interface SftpAgencyConfig {
   host: string;
   port: number;
   username: string;
-  privateKey: string;
+  remotePath?: string;
 }
 
 /**
  * Format attendu de la variable d'environnement SFTP_AGENCY_CONFIG.
- * Exemple: {"agence_01": {"host": "sftp1.example.com", "port": 22, "username": "user1", "privateKey": "..."}}
+ * Exemple: {"11111111111111": {"host": "sftp1.example.com", "port": 22, "username": "user1"}}
  */
 export type SftpAgenciesConfig = Record<string, SftpAgencyConfig>;
 
 @Injectable()
 export class SftpAgencyService implements SftpAgency {
-  private readonly clients: Map<string, Sftp> = new Map();
+  readonly clients: Map<string, Sftp> = new Map();
 
   constructor(
     private readonly configService: ConfigService,
@@ -45,8 +45,9 @@ export class SftpAgencyService implements SftpAgency {
     try {
       const agenciesConfig = JSON.parse(configJson) as SftpAgenciesConfig;
 
-      for (const [agencyId, config] of Object.entries(agenciesConfig)) {
-        this.validateConfig(agencyId, config);
+      for (const [agenceEauSiret, config] of Object.entries(agenciesConfig)) {
+        const privateKey = this.getPrivateKey(agenceEauSiret);
+        this.validateConfig(agenceEauSiret, { ...config, privateKey });
 
         const sftpClient = new Client();
         const sftpService = new SftpService(
@@ -55,16 +56,18 @@ export class SftpAgencyService implements SftpAgency {
             host: config.host,
             port: config.port,
             username: config.username,
-            privateKey: config.privateKey,
+            privateKey,
+            remotePath: config.remotePath,
           },
           this.logger,
         );
 
-        this.clients.set(agencyId, sftpService);
-        this.logger.log(`Client SFTP configuré pour l'agence: ${agencyId}`);
+        this.clients.set(agenceEauSiret, sftpService);
+        this.logger.log(`Client SFTP configuré pour l'agence: ${agenceEauSiret}`);
       }
 
       this.logger.log(`${this.clients.size} client(s) SFTP agence(s) configuré(s)`);
+      console.log(`Agences configurées: ${Array.from(this.clients.keys()).join(', ')}`);
     } catch (error) {
       this.logger.error('Erreur lors du parsing de SFTP_AGENCY_CONFIG', {
         error: error instanceof Error ? error.message : String(error),
@@ -73,31 +76,42 @@ export class SftpAgencyService implements SftpAgency {
     }
   }
 
-  private validateConfig(agencyId: string, config: unknown): asserts config is SftpAgencyConfig {
+  getPrivateKey(agenceEauSiret: string): string {
+    const privateKey = this.configService.get<string>(`SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
+
+    if (!privateKey) {
+      throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: privateKey manquant`);
+    }
+
+    const decodedKey = Buffer.from(privateKey, 'base64').toString('utf8');
+    return decodedKey;
+  }
+
+  private validateConfig(agenceEauSiret: string, config: unknown): asserts config is SftpAgencyConfig {
     if (!config || typeof config !== 'object') {
-      throw new Error(`Configuration invalide pour l'agence ${agencyId}: doit être un objet`);
+      throw new Error(`Configuration invalide pour l'agence ${agenceEauSiret}: doit être un objet`);
     }
 
     const configObj = config as Record<string, unknown>;
-    const requiredFields: (keyof SftpAgencyConfig)[] = ['host', 'port', 'username', 'privateKey'];
+    const requiredFields: (keyof SftpAgencyConfig)[] = ['host', 'port', 'username'];
 
     for (const field of requiredFields) {
       if (!configObj[field]) {
-        throw new Error(`Configuration incomplète pour l'agence ${agencyId}: ${field} manquant`);
+        throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: ${field} manquant`);
       }
     }
 
     if (typeof configObj.port !== 'number') {
-      throw new Error(`Port invalide pour l'agence ${agencyId}: doit être un nombre`);
+      throw new Error(`Port invalide pour l'agence ${agenceEauSiret}: doit être un nombre`);
     }
   }
 
-  getClient(agencyId: string): Sftp {
-    const client = this.clients.get(agencyId);
+  getClient(nomAgence: string): Sftp {
+    const client = this.clients.get(nomAgence);
 
     if (!client) {
       throw new Error(
-        `Aucun client SFTP configuré pour l'agence: ${agencyId}. ` +
+        `Aucun client SFTP configuré pour le code CDB: ${nomAgence}. ` +
           `Agences disponibles: ${Array.from(this.clients.keys()).join(', ')}`,
       );
     }
@@ -105,8 +119,8 @@ export class SftpAgencyService implements SftpAgency {
     return client;
   }
 
-  hasClient(agencyId: string): boolean {
-    return this.clients.has(agencyId);
+  hasClient(nomAgence: string): boolean {
+    return this.clients.has(nomAgence);
   }
 
   getConfiguredAgencies(): string[] {

@@ -112,12 +112,20 @@ OIDC_CLIENT_ID=your-client-id
 OIDC_MOCK=false
 OIDC_FAKE_TOKEN=change-me
 
-# SFTP Configuration
-SFTP_PROVIDER=mock # ou real
-SFTP_HOST=localhost
-SFTP_PORT=22
-SFTP_USERNAME=user
-SFTP_PRIVATE_KEY=key
+ # SFTP Configuration
+ SFTP_PROVIDER=mock # ou real
+ SFTP_HOST=localhost
+ SFTP_PORT=22
+ SFTP_USERNAME=user
+ SFTP_PRIVATE_KEY=key
+
+ # SFTP Agency Configuration
+ SFTP_AGENCY_PROVIDER=mock # ou real
+ # Configuration JSON des SFTP pour chaque agence de l'eau
+ # Format: {"agence_id": {"host": "hostname", "port": 22, "username": "user", "remotePath": "base/path"}}
+ SFTP_AGENCY_CONFIG={ "11111111111111": { "host": "sftp1.example.com", "port": 22, "username": "user1", "remotePath": "test-agency-1" } }
+ # Clés privées encodées en base64 pour chaque agence, le fournisseur Cloud ne gère pas les VE multi-ligne
+ SFTP_AGENCY_PRIVATE_KEY_11111111111111=base64
 ```
 
 ### Frontend
@@ -134,6 +142,7 @@ Démarrer les services avec Docker Compose :
 
 ```bash
 cd devops/local
+
 docker-compose up -d
 ```
 
