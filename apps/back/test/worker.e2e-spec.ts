@@ -30,6 +30,8 @@ import { UserService } from '@user/user.service';
 import { startPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
+import { SftpAgency } from '@infra/sftp/sftpAgency';
+import { MasaProvider } from '@masa/masa.provider';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 
 // Import shared mocks
@@ -44,6 +46,8 @@ import {
   NotificationGatewayTestMock,
   MasaGatewayTestMock,
   ControleGatewayTestMock,
+  SftpAgencyTestMock,
+  MasaProviderTestMock,
 } from './mock/shared-mocks';
 
 describe('Worker Service (e2e)', () => {
@@ -51,6 +55,8 @@ describe('Worker Service (e2e)', () => {
   let dataSource: DataSource;
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
+  let sftpAgencyMock: SftpAgencyTestMock;
+  let masaProviderMock: MasaProviderTestMock;
   let queueMock: QueueTestMock;
   let notificationMock: NotificationGatewayTestMock;
   let masaGatewayMock: MasaGatewayTestMock;
@@ -64,6 +70,8 @@ describe('Worker Service (e2e)', () => {
 
     s3Mock = new S3TestMock();
     sftpMock = new SftpTestMock();
+    sftpAgencyMock = new SftpAgencyTestMock();
+    masaProviderMock = new MasaProviderTestMock();
     queueMock = new QueueTestMock();
     notificationMock = new NotificationGatewayTestMock();
     masaGatewayMock = new MasaGatewayTestMock();
@@ -98,6 +106,8 @@ describe('Worker Service (e2e)', () => {
         { provide: ControleGateway, useValue: controleGatewayMock },
         { provide: S3, useValue: s3Mock },
         { provide: Sftp, useValue: sftpMock },
+        { provide: SftpAgency, useValue: sftpAgencyMock },
+        { provide: MasaProvider, useValue: masaProviderMock },
         { provide: QueueGateway, useValue: queueMock },
         { provide: ControleV1Service, useClass: ControleV1TestMock },
         { provide: RoseauGateway, useClass: RoseauGatewayTestMock },
@@ -317,6 +327,8 @@ describe('Worker Service (e2e)', () => {
       s3Mock.reset();
       notificationMock.reset();
       sftpMock.reset();
+      sftpAgencyMock.reset();
+      masaProviderMock.reset();
       // Seed original file for SFTP transfer simulation
       s3Mock.seed('rejected_file.xml', '<data>test</data>');
 
@@ -390,6 +402,8 @@ describe('Worker Service (e2e)', () => {
       s3Mock.reset();
       notificationMock.reset();
       sftpMock.reset();
+      sftpAgencyMock.reset();
+      masaProviderMock.reset();
       s3Mock.seed('valid_file.xml', '<data>test</data>');
       controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([]);
 

@@ -430,3 +430,45 @@ export class ControleGatewayTestMock {
     this.findControlesV2ByDepotId.mockClear().mockResolvedValue([]);
   }
 }
+
+/**
+ * Mock for SftpAgency.
+ */
+export class SftpAgencyTestMock {
+  private mockClient: jest.Mocked<any>;
+
+  constructor() {
+    this.mockClient = {
+      send: jest.fn().mockResolvedValue(undefined),
+      sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  getClient(_agenceEauSiret: string): jest.Mocked<any> {
+    return this.mockClient;
+  }
+
+  hasClient(_agenceEauSiret: string): boolean {
+    return true;
+  }
+
+  getConfiguredAgencies(): string[] {
+    return ['11111111111111', '22222222222222', '33333333333333'];
+  }
+
+  reset(): void {
+    this.mockClient.send.mockClear();
+    this.mockClient.sendToAgentVerseau.mockClear();
+  }
+}
+
+/**
+ * Mock for MasaProvider.
+ */
+export class MasaProviderTestMock {
+  findAgenceEauSiretBySteuCode = jest.fn().mockResolvedValue('11111111111111');
+
+  reset(): void {
+    this.findAgenceEauSiretBySteuCode.mockClear().mockResolvedValue('11111111111111');
+  }
+}
