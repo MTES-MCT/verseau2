@@ -67,6 +67,7 @@ export class SftpAgencyService implements SftpAgency {
       }
 
       this.logger.log(`${this.clients.size} client(s) SFTP agence(s) configuré(s)`);
+      console.log(`Agences configurées: ${Array.from(this.clients.keys()).join(', ')}`);
     } catch (error) {
       this.logger.error('Erreur lors du parsing de SFTP_AGENCY_CONFIG', {
         error: error instanceof Error ? error.message : String(error),
@@ -105,12 +106,12 @@ export class SftpAgencyService implements SftpAgency {
     }
   }
 
-  getClient(agenceEauSiret: string): Sftp {
-    const client = this.clients.get(agenceEauSiret);
+  getClient(nomAgence: string): Sftp {
+    const client = this.clients.get(nomAgence);
 
     if (!client) {
       throw new Error(
-        `Aucun client SFTP configuré pour l'agence: ${agenceEauSiret}. ` +
+        `Aucun client SFTP configuré pour le code CDB: ${nomAgence}. ` +
           `Agences disponibles: ${Array.from(this.clients.keys()).join(', ')}`,
       );
     }
@@ -118,8 +119,8 @@ export class SftpAgencyService implements SftpAgency {
     return client;
   }
 
-  hasClient(agenceEauSiret: string): boolean {
-    return this.clients.has(agenceEauSiret);
+  hasClient(nomAgence: string): boolean {
+    return this.clients.has(nomAgence);
   }
 
   getConfiguredAgencies(): string[] {

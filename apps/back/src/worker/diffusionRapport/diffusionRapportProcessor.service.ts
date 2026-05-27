@@ -137,6 +137,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       const xmlBuffer = await this.s3.download(depot.path);
       const parsed = await parseScenarioAssainissementXml(xmlBuffer.toString('utf8'));
+      console.log('Parsed XML:', parsed); // Debug: afficher le contenu parsé de l'XML
       const ouvrageDepollutionCode = parsed.ouvrages
         .map((ouvrage) => ouvrage.cdOuvrageDepollution?.trim())
         .find((code): code is string => Boolean(code));
@@ -149,26 +150,26 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
         return;
       }
 
-      const agenceEauSiret = await this.masaProvider.findAgenceEauSiretBySteuCode(ouvrageDepollutionCode);
-      if (!agenceEauSiret) {
-        this.logger.warn("No agence de l'eau SIRET found for ouvrage, skipping Agence de l'eau SFTP upload", {
+      const agenceEauNom = await this.masaProvider.findAgenceEauNomBySteuCode(ouvrageDepollutionCode);
+      if (!agenceEauNom) {
+        this.logger.warn("No agence de l'eau code found for ouvrage, skipping Agence de l'eau SFTP upload", {
           depotId: depot.id,
           ouvrageDepollutionCode,
         });
         return;
       }
 
-      if (!this.sftpAgency.hasClient(agenceEauSiret)) {
+      if (!this.sftpAgency.hasClient(agenceEauNom)) {
         this.logger.warn("No configured SFTP client for agence de l'eau, skipping upload", {
           depotId: depot.id,
           ouvrageDepollutionCode,
-          agenceEauSiret,
+          agenceEauNom,
           configuredAgencies: this.sftpAgency.getConfiguredAgencies(),
         });
         return;
       }
 
-      const sftpClient = this.sftpAgency.getClient(agenceEauSiret);
+      const sftpClient = this.sftpAgency.getClient(agenceEauNom);
 
       // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
 
@@ -180,7 +181,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       this.logger.log("Files sent to Agence de l'eau SFTP", {
         depotId: depot.id,
         ouvrageDepollutionCode,
-        agenceEauSiret,
+        agenceEauCode: agenceEauNom,
         depot: depot.id,
       });
     } catch (error) {

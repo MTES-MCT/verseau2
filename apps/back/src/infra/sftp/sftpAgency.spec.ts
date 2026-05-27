@@ -46,7 +46,7 @@ describe('SftpAgencyService', () => {
 
     it('devrait initialiser les clients correctement', () => {
       expect(service.getConfiguredAgencies()).toHaveLength(3);
-      expect(service.getConfiguredAgencies()).toContain('11111111111111');
+      expect(service.getConfiguredAgencies()).toContain('ARTOIS-PICARDIE');
       expect(service.getConfiguredAgencies()).toContain('22222222222222');
       expect(service.getConfiguredAgencies()).toContain('33333333333333');
     });
@@ -59,14 +59,14 @@ describe('SftpAgencyService', () => {
     });
 
     it('devrait retourner un client pour une agence configurée', () => {
-      const client = service.getClient('11111111111111');
+      const client = service.getClient('ARTOIS-PICARDIE');
       expect(client).toBeDefined();
       expect(typeof client.send).toBe('function');
       expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
-    it("devrait avoir le bon privateKey pour l'agence 11111111111111", () => {
-      const client = service.getClient('11111111111111');
+    it("devrait avoir le bon privateKey pour l'agence ARTOIS-PICARDIE", () => {
+      const client = service.getClient('ARTOIS-PICARDIE');
       expect((client as any).config.privateKey).toBe(
         `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`,
       );
@@ -80,19 +80,19 @@ describe('SftpAgencyService', () => {
     });
 
     it('devrait vérifier si un client existe', () => {
-      expect(service.hasClient('11111111111111')).toBe(true);
+      expect(service.hasClient('ARTOIS-PICARDIE')).toBe(true);
       expect(service.hasClient('agence_inexistante')).toBe(false);
     });
 
     it('devrait vérifier si le host du client est correct', () => {
-      const client = service.getClient('11111111111111');
+      const client = service.getClient('ARTOIS-PICARDIE');
       expect((client as any).config.host).toBe('sftp1.example.com');
     });
 
     it('devrait retourner la clé privée décodée pour une agence', () => {
       const expectedKey = `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`;
 
-      const privateKey = service.getPrivateKey('11111111111111');
+      const privateKey = service.getPrivateKey('ARTOIS-PICARDIE');
       expect(privateKey).toBe(expectedKey);
     });
 
@@ -104,7 +104,7 @@ describe('SftpAgencyService', () => {
 
     it('devrait lever une erreur pour une agence non configurée', () => {
       expect(() => service.getClient('agence_inexistante')).toThrow(
-        /Aucun client SFTP configuré pour l'agence: agence_inexistante/,
+        /Aucun client SFTP configuré pour le code CDB: agence_inexistante/,
       );
     });
   });

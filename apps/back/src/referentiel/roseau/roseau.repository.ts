@@ -18,6 +18,7 @@ import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
 import { ItvEntity } from '@referentiel/lanceleau/entities/itv.entity';
+import { CdbEntity } from '@referentiel/lanceleau/entities/cdb.entity';
 import {
   SclDetailRow,
   SteuDetailRow,
@@ -72,6 +73,8 @@ export class RoseauRepository implements RoseauGateway {
     private readonly alrRepository: Repository<AlrEntity>,
     @InjectRepository(PabEntity)
     private readonly pabRepository: Repository<PabEntity>,
+    @InjectRepository(CdbEntity)
+    private readonly cdbRepository: Repository<CdbEntity>,
   ) {}
 
   async findSteu(): Promise<SteuEntity[]> {
@@ -82,21 +85,19 @@ export class RoseauRepository implements RoseauGateway {
     return this.steuRepository.findOne({ where: { steuSandreCda: sandreCda } });
   }
 
-  async findAgenceEauSiretBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
+  async findAgenceEauNomBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
     if (!ouvrageDepollutionCode.trim()) {
       return null;
     }
 
     const row = await this.steuRepository
       .createQueryBuilder('steu')
-      .select("NULLIF(BTRIM(itv.itv_rfa), '')", 'agence_eau_siret')
-      .leftJoin(ItvEntity, 'itv', 'itv.itv_cdn = steu.ae_itv_cdn')
-      .where('RTRIM(steu.steu_sandre_cda) = BTRIM(:ouvrageDepollutionCode)', {
-        ouvrageDepollutionCode,
-      })
-      .getRawOne<{ agence_eau_siret: string | null }>();
+      .select('cdb.cdbNomLb', 'cdbNomLb')
+      .leftJoin(CdbEntity, 'cdb', 'cdb.cdbRfa = steu.steuCdbRfa')
+      .where('steu.steuSandreCda = :ouvrageDepollutionCode', { ouvrageDepollutionCode })
+      .getRawOne<{ cdbNomLb: string | null }>();
 
-    return trimToNull(row?.agence_eau_siret);
+    return trimToNull(row?.cdbNomLb);
   }
 
   async findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]> {

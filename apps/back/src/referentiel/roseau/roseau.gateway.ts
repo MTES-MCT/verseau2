@@ -19,7 +19,7 @@ import {
 export interface RoseauGateway {
   findSteu(): Promise<SteuEntity[]>;
   findSteuBySandreCda(sandreCda: string): Promise<SteuEntity | null>;
-  findAgenceEauSiretBySteuCode(ouvrageDepollutionCode: string): Promise<string | null>;
+  findAgenceEauNomBySteuCode(ouvrageDepollutionCode: string): Promise<string | null>;
   findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]>;
   findSclsBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SclRef[]>;
   findCxnAdmBySteuAndItv(steuCdn: number, itvCdn: number): Promise<CxnadmEntity | null>;

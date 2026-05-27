@@ -30,6 +30,7 @@ import { VSteuSclItvEntity } from '@referentiel/lanceleau/entities/vSteuSclItv.e
 import { AgEntity } from '@referentiel/lanceleau/entities/ag.entity';
 import { OrionRoleForPrincipalEntity } from '@referentiel/lanceleau/entities/orionRoleForPrincipal.entity';
 import { OrmEntity } from '@referentiel/roseau/entities/orm.entity';
+import { CdbEntity } from '@referentiel/lanceleau/entities/cdb.entity';
 
 export function initTestContainerImports(connectionUri: string) {
   return [
@@ -72,6 +73,7 @@ export function initTestContainerImports(connectionUri: string) {
         AgEntity,
         // Verseau entities
         VSteuSclItvEntity,
+        CdbEntity,
       ],
       synchronize: true,
     }),
@@ -106,6 +108,7 @@ export function initTestContainerImports(connectionUri: string) {
       OrionRoleForPrincipalEntity,
       AgEntity,
       VSteuSclItvEntity,
+      CdbEntity,
     ]),
   ];
 }

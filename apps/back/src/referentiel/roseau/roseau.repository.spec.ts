@@ -27,13 +27,13 @@ function createRoseauRepository(steuRepository: Repository<SteuEntity>): RoseauR
 }
 
 describe('RoseauRepository', () => {
-  describe('findAgenceEauSiretBySteuCode', () => {
-    it("should return the agence de l'eau SIRET", async () => {
+  describe('findAgenceEauNomBySteuCode', () => {
+    it("should return the agence de l'eau nom", async () => {
       const queryBuilder = {
         select: jest.fn().mockReturnThis(),
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue({ agence_eau_siret: '12345678901234' }),
+        getRawOne: jest.fn().mockResolvedValue({ cdbNomLb: 'agence_1' }),
       };
       const createQueryBuilder = jest.fn().mockReturnValue(queryBuilder);
       const steuRepository = {
@@ -41,11 +41,13 @@ describe('RoseauRepository', () => {
       } as unknown as Repository<SteuEntity>;
       const repository = createRoseauRepository(steuRepository);
 
-      await expect(repository.findAgenceEauSiretBySteuCode(' STEU001 ')).resolves.toBe('12345678901234');
+      await expect(repository.findAgenceEauNomBySteuCode('STEU001')).resolves.toBe('agence_1');
 
       expect(createQueryBuilder).toHaveBeenCalledWith('steu');
-      expect(queryBuilder.where).toHaveBeenCalledWith('RTRIM(steu.steu_sandre_cda) = BTRIM(:ouvrageDepollutionCode)', {
-        ouvrageDepollutionCode: ' STEU001 ',
+      expect(queryBuilder.select).toHaveBeenCalledWith('cdb.cdbNomLb', 'cdbNomLb');
+      expect(queryBuilder.leftJoin).toHaveBeenCalledWith(expect.any(Function), 'cdb', 'cdb.cdbRfa = steu.steuCdbRfa');
+      expect(queryBuilder.where).toHaveBeenCalledWith('steu.steuSandreCda = :ouvrageDepollutionCode', {
+        ouvrageDepollutionCode: 'STEU001',
       });
     });
 
@@ -56,7 +58,7 @@ describe('RoseauRepository', () => {
       } as unknown as Repository<SteuEntity>;
       const repository = createRoseauRepository(steuRepository);
 
-      await expect(repository.findAgenceEauSiretBySteuCode('   ')).resolves.toBeNull();
+      await expect(repository.findAgenceEauNomBySteuCode('   ')).resolves.toBeNull();
       expect(createQueryBuilder).not.toHaveBeenCalled();
     });
 
@@ -65,14 +67,29 @@ describe('RoseauRepository', () => {
         select: jest.fn().mockReturnThis(),
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue({ agence_eau_siret: null }),
+        getRawOne: jest.fn().mockResolvedValue({ cdbNomLb: null }),
       };
       const steuRepository = {
         createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
       } as unknown as Repository<SteuEntity>;
       const repository = createRoseauRepository(steuRepository);
 
-      await expect(repository.findAgenceEauSiretBySteuCode('STEU001')).resolves.toBeNull();
+      await expect(repository.findAgenceEauNomBySteuCode('STEU001')).resolves.toBeNull();
+    });
+
+    it('should return null when cdbNomLb is empty', async () => {
+      const queryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ cdbNomLb: '   ' }),
+      };
+      const steuRepository = {
+        createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      } as unknown as Repository<SteuEntity>;
+      const repository = createRoseauRepository(steuRepository);
+
+      await expect(repository.findAgenceEauNomBySteuCode('STEU001')).resolves.toBeNull();
     });
   });
 });

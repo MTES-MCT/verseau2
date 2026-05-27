@@ -126,7 +126,7 @@ describe('DiffusionRapportProcessorService', () => {
     } as unknown as jest.Mocked<RapportPdfGeneratorService>;
 
     masaProvider = {
-      findAgenceEauSiretBySteuCode: jest.fn().mockResolvedValue('12345678901234'),
+      findAgenceEauNomBySteuCode: jest.fn().mockResolvedValue('agence_1'),
     } as unknown as jest.Mocked<MasaProvider>;
 
     logger = {
@@ -163,9 +163,9 @@ describe('DiffusionRapportProcessorService', () => {
   it('should upload XML and PDF to the agency-specific SFTP client', async () => {
     await service.process({ depotId: 'dep_1' });
 
-    expect(masaProvider.findAgenceEauSiretBySteuCode).toHaveBeenCalledWith('STEU001');
-    expect(sftpAgency.hasClient).toHaveBeenCalledWith('12345678901234');
-    expect(sftpAgency.getClient).toHaveBeenCalledWith('12345678901234');
+    expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
+    expect(sftpAgency.hasClient).toHaveBeenCalledWith('agence_1');
+    expect(sftpAgency.getClient).toHaveBeenCalledWith('agence_1');
     expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, xmlBuffer, 'dep_1/depot.xml');
     expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, pdfBuffer, 'dep_1/rapport-masa-dep_1.pdf');
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
@@ -182,18 +182,18 @@ describe('DiffusionRapportProcessorService', () => {
       "No codeOuvrageDepollution found in XML, skipping Agence de l'eau SFTP upload",
       expect.objectContaining({ depotId: 'dep_1' }),
     );
-    expect(masaProvider.findAgenceEauSiretBySteuCode).not.toHaveBeenCalled();
+    expect(masaProvider.findAgenceEauNomBySteuCode).not.toHaveBeenCalled();
     expect(agencySftpClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
   it('should warn and continue when no agency is found for the ouvrage code', async () => {
-    masaProvider.findAgenceEauSiretBySteuCode.mockResolvedValue(null);
+    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue(null);
 
     await service.process({ depotId: 'dep_1' });
 
     expect(logger.warn).toHaveBeenCalledWith(
-      "No agence de l'eau SIRET found for ouvrage, skipping Agence de l'eau SFTP upload",
+      "No agence de l'eau code found for ouvrage, skipping Agence de l'eau SFTP upload",
       expect.objectContaining({ depotId: 'dep_1', ouvrageDepollutionCode: 'STEU001' }),
     );
     expect(agencySftpClient.send).not.toHaveBeenCalled();
@@ -209,10 +209,10 @@ describe('DiffusionRapportProcessorService', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       "No configured SFTP client for agence de l'eau, skipping upload",
       expect.objectContaining({
+        agenceEauNom: 'agence_1',
+        configuredAgencies: ['99999999999999'],
         depotId: 'dep_1',
         ouvrageDepollutionCode: 'STEU001',
-        agenceEauSiret: '12345678901234',
-        configuredAgencies: ['99999999999999'],
       }),
     );
     expect(sftpAgency.getClient).not.toHaveBeenCalled();

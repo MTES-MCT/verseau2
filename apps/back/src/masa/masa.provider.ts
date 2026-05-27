@@ -214,8 +214,8 @@ export class MasaProvider {
   }
 
   // route: GET /api/steu/:ouvrageDepollutionCode/agence-eau
-  async findAgenceEauSiretBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
-    return this.roseauGateway.findAgenceEauSiretBySteuCode(ouvrageDepollutionCode);
+  async findAgenceEauNomBySteuCode(ouvrageDepollutionCode: string): Promise<string | null> {
+    return this.roseauGateway.findAgenceEauNomBySteuCode(ouvrageDepollutionCode);
   }
 
   // ---------------------------------------------------------------------------

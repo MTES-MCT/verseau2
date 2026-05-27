@@ -2,16 +2,16 @@ import { Sftp } from './sftp';
 
 /**
  * Registry pour gérer plusieurs clients SFTP pour les différentes agences de l'eau.
- * Les clés de configuration attendues sont les SIRETs des agences.
+ * Les clés de configuration attendues sont les codes CDB des agences.
  */
 export interface SftpAgency {
   /**
    * Récupère un client SFTP pour une agence donnée.
-   * @param agenceEauSiret SIRET de l'agence de l'eau
+   * @param cdbRfa Code CDB de l'agence de l'eau
    * @returns Client SFTP configuré pour cette agence
    * @throws Error si l'agence n'est pas configurée
    */
-  getClient(agenceEauSiret: string): Sftp;
+  getClient(cdbRfa: string): Sftp;
 
   /**
    * Vérifie si une agence est configurée.
