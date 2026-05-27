@@ -89,7 +89,7 @@ export class SftpAgencyService implements SftpAgency {
     }
 
     const configObj = config as Record<string, unknown>;
-    const requiredFields: (keyof SftpAgencyConfig)[] = ['host', 'port', 'username', 'privateKey'];
+    const requiredFields: (keyof SftpAgencyConfig)[] = ['host', 'port', 'username'];
 
     for (const field of requiredFields) {
       if (!configObj[field]) {
