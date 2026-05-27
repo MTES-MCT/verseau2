@@ -65,16 +65,18 @@ describe('SftpAgencyService', () => {
       expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
-    it('devrait avoir le bon privateKey pour lagence 11111111111111', () => {
+    it("devrait avoir le bon privateKey pour l'agence 11111111111111", () => {
       const client = service.getClient('11111111111111');
-      expect((client as any).config.privateKey).toBe(`-----BEGIN OPENSSH PRIVATE KEY-----
-aaa
------END OPENSSH PRIVATE KEY-----`);
+      expect((client as any).config.privateKey).toBe(
+        `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`,
+      );
     });
 
-    it('devrait avoir le bon privateKey pour lagence 22222222222222', () => {
+    it("devrait avoir le bon privateKey pour l'agence 22222222222222", () => {
       const client = service.getClient('22222222222222');
-      expect((client as any).config.privateKey).toBe(`key2`);
+      console.log('Client config:', (client as any).config); // Debug: afficher la configuration du client
+
+      expect((client as any).config.privateKey).toBe(`key2\n`);
     });
 
     it('devrait vérifier si un client existe', () => {
@@ -85,6 +87,19 @@ aaa
     it('devrait vérifier si le host du client est correct', () => {
       const client = service.getClient('11111111111111');
       expect((client as any).config.host).toBe('sftp1.example.com');
+    });
+
+    it('devrait retourner la clé privée décodée pour une agence', () => {
+      const expectedKey = `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`;
+
+      const privateKey = service.getPrivateKey('11111111111111');
+      expect(privateKey).toBe(expectedKey);
+    });
+
+    it('devrait lever une erreur si la clé privée est manquante', () => {
+      expect(() => service.getPrivateKey('agence_sans_cle')).toThrow(
+        /Configuration incomplète pour l'agence agence_sans_cle: privateKey manquant/,
+      );
     });
 
     it('devrait lever une erreur pour une agence non configurée', () => {

@@ -75,14 +75,15 @@ export class SftpAgencyService implements SftpAgency {
     }
   }
 
-  private getPrivateKey(agenceEauSiret: string): string {
+  getPrivateKey(agenceEauSiret: string): string {
     const privateKey = this.configService.get<string>(`SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
 
     if (!privateKey) {
       throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: privateKey manquant`);
     }
 
-    return privateKey;
+    const decodedKey = Buffer.from(privateKey, 'base64').toString('utf8');
+    return decodedKey;
   }
 
   private validateConfig(agenceEauSiret: string, config: unknown): asserts config is SftpAgencyConfig {
