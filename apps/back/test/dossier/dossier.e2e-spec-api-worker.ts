@@ -50,7 +50,8 @@ import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../use
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 
 // Import shared mocks for infrastructure dependencies
-import { S3TestMock, SftpTestMock, NotificationGatewayTestMock } from '../mock/shared-mocks';
+import { S3TestMock, SftpTestMock, NotificationGatewayTestMock, SftpAgencyTestMock } from '../mock/shared-mocks';
+import { SftpAgency } from '@infra/sftp/sftpAgency';
 import { DepotError } from '@dossier/depot/depotError';
 import { seedDepotFull } from '../depot.helper';
 import { clearControles } from '../controle.helper';
@@ -102,6 +103,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   let authService: Authentication;
   let s3Mock: S3TestMock;
   let sftpMock: SftpTestMock;
+  let sftpAgencyMock: SftpAgencyTestMock;
   let notificationMock: NotificationGatewayTestMock;
   let sandreService: SandreService;
   let testUserId: string;
@@ -209,6 +211,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
     s3Mock = new S3TestMock();
     sftpMock = new SftpTestMock();
+    sftpAgencyMock = new SftpAgencyTestMock();
     notificationMock = new NotificationGatewayTestMock();
 
     // Create real PgBoss instance
@@ -251,6 +254,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
       .useValue(s3Mock)
       .overrideProvider(Sftp)
       .useValue(sftpMock)
+      .overrideProvider(SftpAgency)
+      .useValue(sftpAgencyMock)
       .overrideProvider(NotificationGateway)
       .useValue(notificationMock)
       .overrideProvider(LoggerService)
