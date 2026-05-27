@@ -170,7 +170,8 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       const sftpClient = this.sftpAgency.getClient(agenceEauSiret);
 
-      // The agency base path is now in sftpClient.config.remotePath
+      // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
+
       const filePath1 = `${depot.id}/${depot.nomOriginalFichier}`;
       const filePath2 = `${depot.id}/rapport-masa-${depot.id}.pdf`;
       await sftpClient.send(xmlBuffer, filePath1);
