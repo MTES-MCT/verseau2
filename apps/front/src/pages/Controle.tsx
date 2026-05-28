@@ -63,7 +63,7 @@ export function ControlePage() {
   const masaStatistics = useMemo(() => getMasaStatistics(masa), [masa]);
   const hasVisibleRoseauRows = filterControlesByActiveFilters(controlesV1, activeFilters).length > 0;
   const hasVisibleSandreRows = filterSandreControlesByActiveFilters(sandreControlesMapped, activeFilters).length > 0;
-  const hasVisibleMasaRow = matchesMasaFilters(masa, activeFilters);
+  const hasVisibleMasaRow = masa === null || matchesMasaFilters(masa, activeFilters);
   const hasAnyResult = controlesV1.length > 0 || sandreControlesMapped.length > 0 || masa !== null;
 
   const visibleSections: ReactElement[] = [];
@@ -133,7 +133,6 @@ export function ControlePage() {
     );
   }
 
-  console.log('visibleSections.length && activeFilters.entries.length', visibleSections.length, activeFilters.size);
   return (
     <div className="fr-pb-6w">
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">

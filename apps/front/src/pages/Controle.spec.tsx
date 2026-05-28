@@ -179,4 +179,17 @@ describe('ControlePage', () => {
     expect(screen.getByTestId('clickable-stat-card-Erreur')).toBeInTheDocument();
     expect(screen.queryByTestId('no-controls-alert')).not.toBeInTheDocument();
   });
+
+  it('shows the MASA unavailable message when integration data is missing', async () => {
+    mockFetchMasa.mockResolvedValue(null);
+
+    renderControlePage();
+
+    await waitForLoadedPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /intégration des données/i, level: 2 })).toBeInTheDocument();
+      expect(screen.getByText(/aucune donnée d'intégration/i)).toBeInTheDocument();
+    });
+  });
 });

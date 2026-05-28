@@ -15,11 +15,21 @@ type MasaIntegrationStatusProps = {
 };
 
 export function MasaIntegrationStatus({ title, masa, activeFilters }: MasaIntegrationStatusProps) {
-  if (!matchesMasaFilters(masa, activeFilters)) {
-    return null;
+  if (!masa) {
+    return (
+      <div>
+        <h2 className={fr.cx('fr-h4', 'fr-mb-2w')}>{title}</h2>
+        <Alert
+          severity="info"
+          title="Aucune donnée d'intégration"
+          description="Les données d'intégration vers Verseau 1 ne sont pas encore disponibles pour ce dépôt."
+          small
+        />
+      </div>
+    );
   }
 
-  if (!masa) {
+  if (!matchesMasaFilters(masa, activeFilters)) {
     return null;
   }
 
