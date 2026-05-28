@@ -393,9 +393,11 @@ describe('Worker Service (e2e)', () => {
       masaGatewayMock.findById.mockResolvedValue({
         id: 'masa_001',
         statut: 'INTEGRE',
+        statutMasa: 'Intégré',
         numeroDepotVerseau1: 'V1-999',
         rapport: 'Ok',
         createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       // Mock dependencies

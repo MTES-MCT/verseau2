@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards, UsePipes } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { MasaService } from './masa.service';
 import { MasaApiKeyGuard } from './masaApiKey.guard';
@@ -13,6 +13,7 @@ export class MasaController {
 
   @UseGuards(MasaApiKeyGuard, MasaIpGuard)
   @Post('agent-verseau')
+  @HttpCode(200)
   @UsePipes(new ZodValidationPipe(masaPayloadSchema))
   async processRetourAgentVerseau(@Body() payload: MasaWebhookPayloadDto) {
     return await this.masaService.processRetourAgentVerseau(payload);

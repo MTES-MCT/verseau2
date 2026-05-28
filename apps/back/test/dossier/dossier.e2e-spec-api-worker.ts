@@ -26,6 +26,7 @@ import { PgBoss } from 'pg-boss';
 
 import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStatus, DepotStep, ControleStatus, ControleSandreStatus, ErrorCode, MasaStatus } from '@lib/dossier';
+import { MasaWebhookStatus } from '@dossier/masa/masa.model';
 import { MasaService } from '@dossier/masa/masa.service';
 import { QueueGateway, PGBOSS, QueueName, Queue } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
@@ -616,7 +617,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       await masaService.processRetourAgentVerseau({
         verseau2DepotId: depotId,
         numeroDepotVerseau1: 'V1-REFUSE-123',
-        statut: MasaStatus.REFUSE,
+        statut: MasaWebhookStatus.REJETE,
         rapport: 'Depot refuse par MASA',
       });
 

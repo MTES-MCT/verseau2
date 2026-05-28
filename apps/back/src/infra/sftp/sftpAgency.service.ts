@@ -67,7 +67,6 @@ export class SftpAgencyService implements SftpAgency {
       }
 
       this.logger.log(`${this.clients.size} client(s) SFTP agence(s) configuré(s)`);
-      console.log(`Agences configurées: ${Array.from(this.clients.keys()).join(', ')}`);
     } catch (error) {
       this.logger.error('Erreur lors du parsing de SFTP_AGENCY_CONFIG', {
         error: error instanceof Error ? error.message : String(error),

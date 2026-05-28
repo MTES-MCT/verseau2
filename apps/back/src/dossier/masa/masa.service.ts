@@ -5,6 +5,7 @@ import { DepotGateway } from '../depot/depot.gateway';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { LoggerService } from '@shared/logger/logger.service';
+import { mapWebhookStatusToMasaStatus } from './masa.mapper';
 
 @Injectable()
 export class MasaService {
@@ -32,7 +33,8 @@ export class MasaService {
     const masaData = await this.masaGateway.saveMasaRetour({
       depotId: payload.verseau2DepotId,
       numeroDepotVerseau1: payload.numeroDepotVerseau1,
-      statut: payload.statut,
+      statut: mapWebhookStatusToMasaStatus(payload.statut),
+      statutMasa: payload.statut,
       rapport: payload.rapport,
     });
 

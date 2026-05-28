@@ -1,5 +1,5 @@
 import { RapportPdfGeneratorService } from './rapportPdfGenerator.service';
-import { MasaModel, MasaStatus } from '../masa/masa.model';
+import { MasaModel, MasaStatus, MasaWebhookStatus } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '../controle/controle.model';
 import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
@@ -34,6 +34,7 @@ async function generateDummyPdf() {
     depotId: 'dep_67890',
     numeroDepotVerseau1: '12345',
     statut: MasaStatus.INTEGRE,
+    statutMasa: MasaWebhookStatus.INTEGRE,
     rapport:
       'Intégration effectuée avec succès.\nAucune anomalie majeure détectée lors du traitement MASA.\nLe fichier a été transmis correctement.',
     createdAt: new Date(),
