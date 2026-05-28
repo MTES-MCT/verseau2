@@ -148,7 +148,9 @@ export class RapportPdfGeneratorService {
     doc.moveDown(0.5);
 
     doc.fontSize(10).fillColor(COLORS.TEXT).text(`Statut MASA: ${masa.statut}`);
-    doc.text(`Numéro dépôt Verseau 1: ${masa.numeroDepotVerseau1}`);
+    if (masa.numeroDepotVerseau1) {
+      doc.text(`Numéro dépôt Verseau 1: ${masa.numeroDepotVerseau1}`);
+    }
     doc.moveDown(0.5);
 
     if (masa.rapport) {

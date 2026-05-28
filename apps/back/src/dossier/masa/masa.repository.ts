@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { MasaEntity } from './masa.entity';
 import { MasaGateway } from './masa.gateway';
-import { MasaModel, MasaStatus } from './masa.model';
+import { MasaModel, MasaStatus, MasaWebhookStatus } from './masa.model';
 
 @Injectable()
 export class MasaRepository extends Repository<MasaEntity> implements MasaGateway {
@@ -12,14 +12,16 @@ export class MasaRepository extends Repository<MasaEntity> implements MasaGatewa
 
   async saveMasaRetour(data: {
     depotId: string;
-    numeroDepotVerseau1: string;
+    numeroDepotVerseau1?: string | null;
     statut: MasaStatus;
+    statutMasa: MasaWebhookStatus;
     rapport: string;
   }): Promise<MasaModel> {
     const masa = this.create({
       depotId: data.depotId,
       numeroDepotVerseau1: data.numeroDepotVerseau1,
       statut: data.statut,
+      statutMasa: data.statutMasa,
       rapport: data.rapport,
     });
     return await this.save(masa);

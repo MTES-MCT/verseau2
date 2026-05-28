@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { MasaStatus } from './masa.model';
+import { MasaWebhookStatus } from './masa.model';
 
 export const masaPayloadSchema = z
   .object({
     verseau2DepotId: z.string(),
-    numeroDepotVerseau1: z.string(),
-    statut: z.enum(MasaStatus),
+    numeroDepotVerseau1: z.string().nullable(),
+    statut: z.enum(MasaWebhookStatus),
     rapport: z.string(),
   })
   .required()

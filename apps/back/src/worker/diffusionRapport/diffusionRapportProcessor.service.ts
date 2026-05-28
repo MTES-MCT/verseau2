@@ -100,7 +100,9 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       return;
     }
 
-    const subject = masa ? `Rapport du dépôt ${masa.numeroDepotVerseau1}` : `Rapport de rejet du dépôt`;
+    const subject = masa?.numeroDepotVerseau1
+      ? `Rapport du dépôt ${masa.numeroDepotVerseau1}`
+      : `Rapport de rejet du dépôt`;
 
     await this.notificationService.sendEmail<EmailRapportParams>(
       {

@@ -1,7 +1,7 @@
 import { BaseEntity } from '@shared/repository/base-entity';
 import { BeforeInsert, Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
 import { DepotEntity } from '../depot/depot.entity';
-import { MasaStatus } from './masa.model';
+import { MasaStatus, MasaWebhookStatus } from './masa.model';
 
 @Entity('masa')
 export class MasaEntity extends BaseEntity {
@@ -16,13 +16,16 @@ export class MasaEntity extends BaseEntity {
   depot: DepotEntity;
 
   @Column({ type: 'varchar', name: 'numero_depot_verseau_1', nullable: true })
-  numeroDepotVerseau1: string;
+  numeroDepotVerseau1: string | null;
 
   @Column({ type: 'enum', enum: MasaStatus })
   statut: MasaStatus;
 
+  @Column({ type: 'varchar', name: 'statut_masa', nullable: true })
+  statutMasa: MasaWebhookStatus | null;
+
   @Column({ type: 'text', nullable: true })
-  rapport: string;
+  rapport: string | null;
 
   @BeforeInsert()
   setId() {
