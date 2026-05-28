@@ -19,7 +19,7 @@ SFTP_PRIVATE_KEY=key
 JWT_SECRET=unsupersecret
 
 # MASA webhook
-MASA_API_KEY=private-toke
+MASA_API_KEY=private-token
 
 SANDRE_POLL_INTERVAL_SECONDS=0
 

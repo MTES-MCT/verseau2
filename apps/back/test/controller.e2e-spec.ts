@@ -24,7 +24,7 @@ import { loggerValueMock } from '@shared/logger/logger.mock';
 import { MasaProvider } from '@masa/masa.provider';
 import { ThrottlerConfigModule } from '@infra/throttler/throttler.module';
 import { DataSource } from 'typeorm';
-import { DepotStatus } from '@lib/dossier';
+import { DepotStatus, MasaStatus } from '@lib/dossier';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import {
@@ -36,10 +36,13 @@ import {
   clearUserData,
   clearDepotData,
 } from './createReferentielDataset';
+import { MasaService } from '@dossier/masa/masa.service';
+import { MasaWebhookStatus } from '@dossier/masa/masa.model';
 
 describe('Controller (e2e) - Unauthorized', () => {
   let app: INestApplication<App>;
   let authService: Authentication;
+  let masaService: MasaService;
   beforeAll(async () => {
     await startPostgresContainer();
     const connectionUri = getPostgresConnectionUri();
@@ -59,6 +62,7 @@ describe('Controller (e2e) - Unauthorized', () => {
     app.use(cookieParser());
     await app.init();
     authService = app.get<Authentication>(Authentication);
+    masaService = app.get<MasaService>(MasaService);
   });
 
   afterAll(async () => {
@@ -153,15 +157,48 @@ describe('Controller (e2e) - Unauthorized', () => {
       return request(app.getHttpServer()).post('/webhook/masa/agent-verseau').expect(401);
     });
 
-    it.skip('/webhook/masa/agent-verseau (POST) - Should return 200 OK', async () => {
-      //MASA_API_KEY=private-token
+    it('/webhook/masa/agent-verseau (POST) - Should return 200 OK', async () => {
+      jest.spyOn(masaService, 'processRetourAgentVerseau').mockResolvedValue({
+        id: 'masa-id-123',
+        depotId: 'dep_test_001',
+        numeroDepotVerseau1: '1234567890',
+        statut: MasaStatus.INTEGRE,
+        statutMasa: MasaWebhookStatus.INTEGRE,
+        rapport: 'test',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       const response = await request(app.getHttpServer())
         .post('/webhook/masa/agent-verseau')
         .set('x-api-key', 'private-token')
         .send({
           verseau2DepotId: 'dep_test_001',
           numeroDepotVerseau1: '1234567890',
-          statut: 'Intégré',
+          statut: MasaWebhookStatus.INTEGRE,
+          rapport: 'test',
+        })
+        .expect(200);
+      return response;
+    });
+
+    it('/webhook/masa/agent-verseau (POST) - Should return 200 OK when numeroDepotVerseau1 is null', async () => {
+      jest.spyOn(masaService, 'processRetourAgentVerseau').mockResolvedValue({
+        id: 'masa-id-123',
+        depotId: 'dep_test_001',
+        numeroDepotVerseau1: null,
+        statut: MasaStatus.INTEGRE,
+        statutMasa: MasaWebhookStatus.INTEGRE,
+        rapport: 'test',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const response = await request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send({
+          verseau2DepotId: 'dep_test_001',
+          numeroDepotVerseau1: null,
+          statut: MasaWebhookStatus.INTEGRE,
           rapport: 'test',
         })
         .expect(200);
