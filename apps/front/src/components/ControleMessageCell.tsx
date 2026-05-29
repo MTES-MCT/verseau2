@@ -7,6 +7,7 @@ import { useState, memo } from 'react';
 import type { TableDataRow } from '../hooks/useControleTableData';
 import type { ControleFilterSet } from '../types/controle.types';
 import { getIconInfo } from '../helper/controleIconHelper';
+import { matchesControleFilters } from '../helper/controleFilterHelper';
 
 type ControleMessageCellProps = {
   row: TableDataRow;
@@ -30,30 +31,10 @@ export const ControleMessageCell = memo(function ControleMessageCell({ row, acti
 
   const messageGroups = controls.reduce(
     (acc, ctrl) => {
-      if (activeFilters.size === 0) {
-        const msg = ctrl.message || '-';
-        const status = ctrl.success ? 'success' : ctrl.evenementType || 'error';
-        const key = `${status}-${msg}`;
-        if (!acc[key]) {
-          acc[key] = {
-            message: msg,
-            count: 0,
-            success: ctrl.success,
-            evenementType: ctrl.evenementType,
-          };
-        }
-        acc[key].count++;
+      if (!matchesControleFilters(ctrl, activeFilters)) {
         return acc;
       }
 
-      const shouldShow =
-        (activeFilters.has('success') && ctrl.success) ||
-        (activeFilters.has('warning') && ctrl.evenementType === EvenementType.AVERTISSEMENT) ||
-        (activeFilters.has('error') && ctrl.evenementType === EvenementType.ERREUR);
-
-      if (!shouldShow) {
-        return acc;
-      }
       const msg = ctrl.message || '-';
       const status = ctrl.success ? 'success' : ctrl.evenementType || 'error';
       const key = `${status}-${msg}`;

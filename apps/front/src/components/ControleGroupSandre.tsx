@@ -2,18 +2,18 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
-import { EvenementType, type ControleDto } from '@lib/dossier';
+import { EvenementType } from '@lib/dossier';
 import { useMemo } from 'react';
 import './ControleGroup.css';
 import { getIconInfo } from '../helper/controleIconHelper';
+import { filterSandreControlesByActiveFilters } from '../helper/controleFilterHelper';
+import type { ControleFilterSet, ControleSandreView } from '../types/controle.types';
 
 type ControleGroupSandreProps = {
   title: string;
   controles: ControleSandreView[];
-  defaultExpanded?: boolean;
+  activeFilters: ControleFilterSet;
 };
-
-export type ControleSandreView = Pick<ControleDto, 'name' | 'success'> & { message: string };
 
 function getResultBadge(success: boolean) {
   if (success) {
@@ -30,18 +30,10 @@ function getResultBadge(success: boolean) {
   );
 }
 
-export function ControleSandreGroup({ title, controles }: ControleGroupSandreProps) {
-  const { filteredControles } = useMemo(() => {
-    const success = controles.filter((controle) => controle.success).length;
-    const errors = controles.filter((controle) => !controle.success).length;
-    const filtered = controles;
-
-    return {
-      successCount: success,
-      errorCount: errors,
-      filteredControles: filtered,
-    };
-  }, [controles]);
+export function ControleSandreGroup({ title, controles, activeFilters }: ControleGroupSandreProps) {
+  const filteredControles = useMemo(() => {
+    return filterSandreControlesByActiveFilters(controles, activeFilters);
+  }, [controles, activeFilters]);
 
   const groupedControles = useMemo(() => {
     return filteredControles.reduce(
@@ -112,7 +104,7 @@ export function ControleSandreGroup({ title, controles }: ControleGroupSandrePro
     });
   }, [groupedControles]);
 
-  if (controles.length === 0) {
+  if (filteredControles.length === 0) {
     return null;
   }
 
