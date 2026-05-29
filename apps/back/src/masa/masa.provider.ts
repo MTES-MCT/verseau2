@@ -498,7 +498,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // route: GET /api/ouvrages/:type/:ouvrageCode/points-mesure/:pmoCdn/parametres
+  // route: GET /api/ouvrages/:ouvrageCode/parametres?ouvrageType=:ouvrageType&pmoCdn=:pmoCdn
   async findParametresByOuvrageAndPmo(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,
