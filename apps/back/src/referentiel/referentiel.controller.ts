@@ -67,7 +67,7 @@ export class ReferentielController {
       localisationCodes,
     });
 
-    return { points };
+    return points;
   }
 
   @Get('steu/:ouvrageDepollutionCode/detail')

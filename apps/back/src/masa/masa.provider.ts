@@ -535,7 +535,7 @@ export class MasaProvider {
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // route: POST /api/ouvrages/:type/:ouvrageCode/points-mesure/referentiel
+  // route: GET /api/referentiel/points-mesure
   async findPointsMesureReferentiel(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,

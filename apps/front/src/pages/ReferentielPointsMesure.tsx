@@ -22,7 +22,7 @@ function buildSignalerText(point: PointMesureReferentiel): string {
     '',
     'Je souhaite signaler une incohérence concernant le point de mesure suivant :',
     '',
-    `- Ouvrage : ${point.ouvrageDepollutionCode}${point.ouvrageDepollutionNom ? ` / ${point.ouvrageDepollutionNom}` : ''}`,
+    `- Ouvrage : ${point.ouvrageCode}${point.ouvrageNom ? ` / ${point.ouvrageNom}` : ''}`,
     `- Numéro de point : ${point.pointMesureNumero ?? 'non renseigné'}`,
     `- Nom du point : ${point.pointMesureLibelle ?? 'non renseigné'}`,
     `- Localisation : ${point.pointMesureLocalisationCode ?? 'non renseignée'}${point.pointMesureLocalisationLibelle ? ` / ${point.pointMesureLocalisationLibelle}` : ''}`,
@@ -135,10 +135,8 @@ export function ReferentielPointsMesurePage() {
     '',
   ];
 
-  const tableData = (data?.points ?? []).map((point) => [
-    point.ouvrageDepollutionNom
-      ? `${point.ouvrageDepollutionCode} - ${point.ouvrageDepollutionNom}`
-      : point.ouvrageDepollutionCode,
+  const tableData = (data ?? []).map((point) => [
+    point.ouvrageNom ? `${point.ouvrageCode} - ${point.ouvrageNom}` : point.ouvrageCode,
     point.pointAgenceEauNumero ?? '',
     point.pointMesureNumero ?? '',
     point.pointMesureLibelle ?? '',
@@ -148,7 +146,7 @@ export function ReferentielPointsMesurePage() {
     point.pointMesureValiditeDebutDate ?? '',
     point.pointMesureValiditeFinDate ?? '',
     <SignalerButton
-      key={`signaler-${point.ouvrageDepollutionCode}-${point.pointMesureNumero}`}
+      key={`signaler-${point.ouvrageCode}-${point.pointMesureNumero}`}
       point={point}
       onClick={(success) => setIsCopiedNoticeVisible(success)}
       onFallback={setFallbackText}
@@ -334,9 +332,9 @@ export function ReferentielPointsMesurePage() {
 
           <div className={fr.cx('fr-mt-2w')}>
             <p className={fr.cx('fr-text--sm')}>
-              {data.points.length === 0
+              {data.length === 0
                 ? 'Aucun point de mesure trouvé.'
-                : `${data.points.length} point${data.points.length > 1 ? 's' : ''} de mesure trouvé${data.points.length > 1 ? 's' : ''}.`}
+                : `${data.length} point${data.length > 1 ? 's' : ''} de mesure trouvé${data.length > 1 ? 's' : ''}.`}
             </p>
           </div>
         </div>

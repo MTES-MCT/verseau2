@@ -65,8 +65,8 @@ export class RoseauReferentielPointMesureRepository implements RoseauReferentiel
     }>();
 
     return rows.map((r) => ({
-      ouvrageDepollutionCode: r.ouvrage_sandre_cda?.trim() ?? '',
-      ouvrageDepollutionNom: r.ouvrage_nom?.trim() ?? null,
+      ouvrageCode: r.ouvrage_sandre_cda?.trim() ?? '',
+      ouvrageNom: r.ouvrage_nom?.trim() ?? null,
       pointAgenceEauNumero: r.identifiant_agence?.trim() ?? null,
       pointMesureNumero: r.numero_point?.trim() ?? null,
       pointMesureLibelle: r.nom_point?.trim() ?? null,
@@ -120,8 +120,8 @@ export class RoseauReferentielPointMesureRepository implements RoseauReferentiel
     }>();
 
     return rows.map((r) => ({
-      ouvrageDepollutionCode: r.ouvrage_sandre_cda?.trim() ?? '',
-      ouvrageDepollutionNom: r.ouvrage_nom?.trim() ?? null,
+      ouvrageCode: r.ouvrage_sandre_cda?.trim() ?? '',
+      ouvrageNom: r.ouvrage_nom?.trim() ?? null,
       pointAgenceEauNumero: r.identifiant_agence?.trim() ?? null,
       pointMesureNumero: r.numero_point?.trim() ?? null,
       pointMesureLibelle: r.nom_point?.trim() ?? null,
