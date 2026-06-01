@@ -586,8 +586,8 @@ describe('ReferentielController (e2e) - points-mesure', () => {
     ]);
     jest.spyOn(masaProvider, 'findPointsMesureReferentiel').mockResolvedValue([
       {
-        ouvrageDepollutionCode: STEU_CODE,
-        ouvrageDepollutionNom: 'Station test',
+        ouvrageCode: STEU_CODE,
+        ouvrageNom: 'Station test',
         pointAgenceEauNumero: 'AG001',
         pointMesureNumero: 'P1',
         pointMesureLibelle: 'Point entrée',
@@ -605,22 +605,20 @@ describe('ReferentielController (e2e) - points-mesure', () => {
       .set('Cookie', ['access_token=token-user-1'])
       .expect(200);
 
-    expect(response.body).toEqual({
-      points: [
-        {
-          ouvrageDepollutionCode: STEU_CODE,
-          ouvrageDepollutionNom: 'Station test',
-          pointAgenceEauNumero: 'AG001',
-          pointMesureNumero: 'P1',
-          pointMesureLibelle: 'Point entrée',
-          pointMesureLocalisationCode: 'ENT',
-          pointMesureLocalisationLibelle: 'Entrée',
-          pointMesureCategorieSystemeCollecte: 'REG',
-          pointMesureValiditeDebutDate: '2020-01-01',
-          pointMesureValiditeFinDate: null,
-        },
-      ],
-    });
+    expect(response.body).toEqual([
+      {
+        ouvrageCode: STEU_CODE,
+        ouvrageNom: 'Station test',
+        pointAgenceEauNumero: 'AG001',
+        pointMesureNumero: 'P1',
+        pointMesureLibelle: 'Point entrée',
+        pointMesureLocalisationCode: 'ENT',
+        pointMesureLocalisationLibelle: 'Entrée',
+        pointMesureCategorieSystemeCollecte: 'REG',
+        pointMesureValiditeDebutDate: '2020-01-01',
+        pointMesureValiditeFinDate: null,
+      },
+    ]);
   });
 });
 

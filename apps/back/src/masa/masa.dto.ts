@@ -261,8 +261,8 @@ export interface NomenclatureItem {
 
 /** Point de mesure du référentiel — utilisé pour la page référentiel */
 export interface PointMesureReferentielRow {
-  ouvrageDepollutionCode: string;
-  ouvrageDepollutionNom: string | null;
+  ouvrageCode: string;
+  ouvrageNom: string | null;
   pointAgenceEauNumero: string | null;
   pointMesureNumero: string | null;
   pointMesureLibelle: string | null;

@@ -31,8 +31,8 @@ export const listParametresReferentiel = {
 // --- Points de mesure du référentiel ---
 
 export const PointMesureReferentielSchema = z.object({
-  ouvrageDepollutionCode: z.string(),
-  ouvrageDepollutionNom: z.string().nullable(),
+  ouvrageCode: z.string(),
+  ouvrageNom: z.string().nullable(),
   pointAgenceEauNumero: z.string().nullable(),
   pointMesureNumero: z.string().nullable(),
   pointMesureLibelle: z.string().nullable(),
@@ -56,9 +56,7 @@ export const listPointsMesureReferentiel = {
     dateFin: z.string().optional(),
     typePoint: TypePointMesure.default('tous'),
   }),
-  response: z.object({
-    points: z.array(PointMesureReferentielSchema),
-  }),
+  response: z.array(PointMesureReferentielSchema),
 } as const satisfies RouteDefinition;
 
 export const getSteuDetail = {
