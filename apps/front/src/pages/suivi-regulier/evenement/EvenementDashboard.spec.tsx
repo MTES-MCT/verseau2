@@ -130,6 +130,7 @@ describe('EvenementDashboard', () => {
     expect(screen.queryByRole('region', { name: /filtres avancés/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/type de point/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/point de mesures/i)).not.toBeInTheDocument();
+    expect(mockUsePointsMesure).toHaveBeenCalledWith('steu', null, 'tous');
   });
 
   it('n’envoie pas pointMesureId dans la requête STEU', () => {

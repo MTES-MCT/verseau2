@@ -32,7 +32,7 @@ export const EvenementDashboard = () => {
 
   const { data: types } = useEvenementTypes();
   const pointsMesureOuvrageType = isScl ? 'scl' : 'steu';
-  const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : filters.ouvrageDepollutionCode || null;
+  const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : null;
   const { data: pmos = [] } = usePointsMesure(
     pointsMesureOuvrageType,
     pointsMesureOuvrageCode,
