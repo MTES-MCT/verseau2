@@ -34,7 +34,6 @@ export interface ListEvenementSteuOptions extends PaginationQuery {
   endDate: Date;
   typeEvenementCode?: string | null;
   ouvrageDepollutionCode?: string;
-  pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
 }
 
@@ -62,7 +61,6 @@ export class EvenementService {
       endDate,
       typeEvenementCode,
       ouvrageDepollutionCode,
-      pointMesureId,
       page,
       pageSize,
       sortBy,
@@ -89,7 +87,6 @@ export class EvenementService {
       page,
       pageSize,
       typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
-      ...(pointMesureId ? { pointMesureId } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };
@@ -226,16 +223,8 @@ export class EvenementService {
     page: number,
     pageSize: number,
   ): Promise<EvenementSteuFilters | null> {
-    const {
-      authorizedSteuCdas,
-      startDate,
-      endDate,
-      typeEvenementCode,
-      ouvrageDepollutionCode,
-      pointMesureId,
-      sortBy,
-      sortOrder,
-    } = options;
+    const { authorizedSteuCdas, startDate, endDate, typeEvenementCode, ouvrageDepollutionCode, sortBy, sortOrder } =
+      options;
     const cdasToQuery = ouvrageDepollutionCode
       ? [ouvrageDepollutionCode].filter((code) => authorizedSteuCdas.includes(code))
       : authorizedSteuCdas;
@@ -256,7 +245,6 @@ export class EvenementService {
       page,
       pageSize,
       typeEvenementCodes: this.normalizeTypeEvenementCodes(typeEvenementCode),
-      ...(pointMesureId ? { pointMesureId } : {}),
       ...(sortBy ? { sortBy } : {}),
       ...(sortOrder ? { sortOrder } : {}),
     };

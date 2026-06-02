@@ -40,7 +40,7 @@ describe('EvenementService', () => {
     service = module.get<EvenementService>(EvenementService);
   });
 
-  it('passes pointMesureId to masaProvider for STEU when provided', async () => {
+  it('does not pass pointMesureId to masaProvider for STEU', async () => {
     (masaProviderMock.findSteuBatchBySandreCdas as jest.Mock).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
     (masaProviderMock.findEvenementSteu as jest.Mock).mockResolvedValue({ data: [], total: 0 });
 
@@ -48,7 +48,6 @@ describe('EvenementService', () => {
       authorizedSteuCdas: ['STEU1'],
       startDate: getStartOfYearAsUTCDate(2024),
       endDate: getStartOfYearAsUTCDate(2025),
-      pointMesureId: 45,
       page: 1,
       pageSize: 10,
     });
@@ -58,7 +57,6 @@ describe('EvenementService', () => {
       startDate: getStartOfYearAsUTCDate(2024),
       endDate: getStartOfYearAsUTCDate(2025),
       typeEvenementCodes: DEFAULT_TYPE_EVENEMENT_CODES,
-      pointMesureId: 45,
       page: 1,
       pageSize: 10,
     });

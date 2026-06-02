@@ -30,7 +30,6 @@ export interface EvenementSteuFilters extends PaginationQuery {
   startDate: Date;
   endDate: Date;
   typeEvenementCodes: string[];
-  pointMesureId?: number;
   sortBy?: EvenementSteuSortByValue;
 }
 
