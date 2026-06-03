@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FctAssain xmlns="http://xml.sandre.eaufrance.fr/scenario/fct_assain/4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xml.sandre.eaufrance.fr/scenario/fct_assain/4 http://xml.sandre.eaufrance.fr/scenario/fct_assain/4/sandre_sc_fct_assain.xsd">
+    <Scenario>
+        <CodeScenario>FCT_ASSAIN</CodeScenario>
+        <VersionScenario>4</VersionScenario>
+        <DateDebutReference>2024-01-01</DateDebutReference>
+        <DateFinReference>2024-12-31</DateFinReference>
+        <Emetteur>
+            <CdIntervenant schemeAgencyID="SIRET">00000000000000</CdIntervenant>
+            <NomIntervenant>Emetteur Test</NomIntervenant>
+        </Emetteur>
+    </Scenario>
+    <OuvrageDepollution>
+        <CdOuvrageDepollution>STEU_XML_WARN</CdOuvrageDepollution>
+        <TypeOuvrageDepollution>4</TypeOuvrageDepollution>
+        <NomOuvrageDepollution>Station Avertissement</NomOuvrageDepollution>
+        <PointMesure>
+            <NumeroPointMesure>PM_A3</NumeroPointMesure>
+            <LbPointMesure>Entree</LbPointMesure>
+            <LocGlobalePointMesure>A3</LocGlobalePointMesure>
+            <Prlvt>
+                <DatePrlvt>2024-06-15</DatePrlvt>
+                <Support><CdSupport>3</CdSupport></Support>
+                <Analyse>
+                    <RsAnalyse>50</RsAnalyse>
+                    <Parametre><CdParametre>1314</CdParametre></Parametre>
+                </Analyse>
+            </Prlvt>
+        </PointMesure>
+        <PointMesure>
+            <NumeroPointMesure>PM_A4</NumeroPointMesure>
+            <LbPointMesure>Sortie</LbPointMesure>
+            <LocGlobalePointMesure>A4</LocGlobalePointMesure>
+            <Prlvt>
+                <DatePrlvt>2024-06-15</DatePrlvt>
+                <Support><CdSupport>3</CdSupport></Support>
+                <Analyse>
+                    <RsAnalyse>950</RsAnalyse>
+                    <Parametre><CdParametre>1552</CdParametre></Parametre>
+                    <UniteMesure><CdUniteMesure>120</CdUniteMesure></UniteMesure>
+                </Analyse>
+            </Prlvt>
+        </PointMesure>
+    </OuvrageDepollution>
+</FctAssain>
