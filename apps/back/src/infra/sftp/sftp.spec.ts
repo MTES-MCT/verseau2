@@ -39,15 +39,27 @@ describe('SftpModule', () => {
 
   it('should provide SftpService when SFTP_PROVIDER is not mock', async () => {
     mockConfigService.get.mockImplementation((key: string) => {
-      if (key === 'SFTP_PROVIDER') return 'real';
-      if (key === 'SFTP_AGENCY_PROVIDER') return 'mock';
+      if (key === 'SFTP_PROVIDER') {
+        return 'real';
+      }
+      if (key === 'SFTP_AGENCY_PROVIDER') {
+        return 'mock';
+      }
       return null;
     });
     mockConfigService.getOrThrow.mockImplementation((key: string) => {
-      if (key === 'SFTP_HOST') return 'localhost';
-      if (key === 'SFTP_PORT') return 22;
-      if (key === 'SFTP_USERNAME') return 'user';
-      if (key === 'SFTP_PRIVATE_KEY') return 'key';
+      if (key === 'SFTP_HOST') {
+        return 'localhost';
+      }
+      if (key === 'SFTP_PORT') {
+        return 22;
+      }
+      if (key === 'SFTP_USERNAME') {
+        return 'user';
+      }
+      if (key === 'SFTP_PRIVATE_KEY') {
+        return 'key';
+      }
       return null;
     });
 

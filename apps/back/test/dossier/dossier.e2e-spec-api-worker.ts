@@ -264,15 +264,25 @@ describe('Dossier E2E - Real Queue Processing', () => {
       .overrideProvider(ConfigService)
       .useValue({
         get: (key: string) => {
-          if (key === 'DATABASE_URL') return connectionUri;
-          if (key === 'MASA_API_KEY') return 'private-token';
+          if (key === 'DATABASE_URL') {
+            return connectionUri;
+          }
+          if (key === 'MASA_API_KEY') {
+            return 'private-token';
+          }
           return process.env[key] ?? null;
         },
         getOrThrow: (key: string) => {
-          if (key === 'DATABASE_URL') return connectionUri;
-          if (key === 'MASA_API_KEY') return 'private-token';
+          if (key === 'DATABASE_URL') {
+            return connectionUri;
+          }
+          if (key === 'MASA_API_KEY') {
+            return 'private-token';
+          }
           const val = process.env[key];
-          if (!val) throw new Error(`Config key ${key} missing`);
+          if (!val) {
+            throw new Error(`Config key ${key} missing`);
+          }
           return val;
         },
       })

@@ -129,7 +129,9 @@ export class ControleV1Service {
       }
 
       const steu = await this.roseauGateway.findSteuBySandreCda(cdOuvrageDepollution);
-      if (!steu) continue;
+      if (!steu) {
+        continue;
+      }
 
       const itv = await this.lanceleauGateway.findItvByRfa(cdIntervenant);
       if (!itv) {
@@ -175,7 +177,9 @@ export class ControleV1Service {
       }
 
       const steu = findSteu(steus, cdOuvrageDepollution);
-      if (!steu) continue;
+      if (!steu) {
+        continue;
+      }
 
       const itv = findItv(itvs, cdIntervenant);
       if (!itv) {
@@ -208,13 +212,17 @@ export class ControleV1Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) continue;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
 
       for (const pmo of ouvrage.pointMesure) {
         const numeroPointMesure = pmo.numeroPointMesure;
         const locGlobalePointMesure = pmo.locGlobalePointMesure;
 
-        if (!locGlobalePointMesure) continue;
+        if (!locGlobalePointMesure) {
+          continue;
+        }
 
         if (!pmoSet.has(`${cdOuvrageDepollution}:${numeroPointMesure}:${locGlobalePointMesure}`)) {
           errors.push({
@@ -737,7 +745,9 @@ export class ControleV1Service {
 
     for (const scl of fctAssainissement.systemesCollecte) {
       const cdSystemeCollecte = scl.cdSystemeCollecte;
-      if (!cdSystemeCollecte) continue;
+      if (!cdSystemeCollecte) {
+        continue;
+      }
       const cdAgglomerationAssainissement = scl.agglomerationAssainissement?.cdAgglomerationAssainissement;
       if (!cdAgglomerationAssainissement) {
         continue;
@@ -764,7 +774,9 @@ export class ControleV1Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const typeOuvrageDepollution = ouvrage.typeOuvrageDepollution;
-      if (!typeOuvrageDepollution) continue;
+      if (!typeOuvrageDepollution) {
+        continue;
+      }
 
       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_01', typeOuvrageDepollution);
       if (!tlref) {
@@ -790,7 +802,9 @@ export class ControleV1Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const natureSystTraitementEauxUsees = ouvrage.natureSystTraitementEauxUsees;
-      if (!natureSystTraitementEauxUsees) continue;
+      if (!natureSystTraitementEauxUsees) {
+        continue;
+      }
 
       const tlref = await this.roseauGateway.findTlrefByRfaAndCda('LREF_09', natureSystTraitementEauxUsees);
       if (!tlref) {

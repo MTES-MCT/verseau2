@@ -75,11 +75,21 @@ describe('AuthenticationService', () => {
     mockConfigService = {
       get: jest.fn(),
       getOrThrow: jest.fn((key: string) => {
-        if (key === 'OIDC_REDIRECT_URI') return 'https://app.example.com/api/auth/callback';
-        if (key === 'OIDC_CLIENT_ID') return 'test-client-id';
-        if (key === 'OIDC_CLIENT_SECRET') return 'test-client-secret';
-        if (key === 'OIDC_ISSUER_URL') return 'https://auth.example.com';
-        if (key === 'JWT_SECRET') return JWT_SECRET;
+        if (key === 'OIDC_REDIRECT_URI') {
+          return 'https://app.example.com/api/auth/callback';
+        }
+        if (key === 'OIDC_CLIENT_ID') {
+          return 'test-client-id';
+        }
+        if (key === 'OIDC_CLIENT_SECRET') {
+          return 'test-client-secret';
+        }
+        if (key === 'OIDC_ISSUER_URL') {
+          return 'https://auth.example.com';
+        }
+        if (key === 'JWT_SECRET') {
+          return JWT_SECRET;
+        }
         throw new Error(`Config key ${key} not found`);
       }),
     } as unknown as jest.Mocked<ConfigService>;

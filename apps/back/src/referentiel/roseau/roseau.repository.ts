@@ -101,7 +101,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findSteusBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SteuRef[]> {
-    if (sandreCdas.length === 0) return [];
+    if (sandreCdas.length === 0) {
+      return [];
+    }
 
     const query = this.steuRepository
       .createQueryBuilder('steu')
@@ -128,7 +130,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findSclsBySandreCdas(sandreCdas: string[], search?: string, limit?: number): Promise<SclRef[]> {
-    if (sandreCdas.length === 0) return [];
+    if (sandreCdas.length === 0) {
+      return [];
+    }
 
     const query = this.sclRepository
       .createQueryBuilder('scl')
@@ -159,7 +163,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async checkExpSteuLinksBatch(links: { steuCdn: number; itvCdn: number }[]): Promise<Set<string>> {
-    if (links.length === 0) return new Set();
+    if (links.length === 0) {
+      return new Set();
+    }
     const rows = await this.cxnadmRepository
       .createQueryBuilder('a')
       .select('a.exp_steu_cdn', 'steu_cdn')
@@ -178,7 +184,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async checkPmoExistenceBatch(queries: { cdSteu: string; numPmo: string; locPoint: string }[]): Promise<Set<string>> {
-    if (queries.length === 0) return new Set();
+    if (queries.length === 0) {
+      return new Set();
+    }
     const rows = await this.pmoRepository
       .createQueryBuilder('pmo')
       .select('s.steu_sandre_cda', 'steu_sandre_cda')
@@ -206,7 +214,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async checkSclAgglomerationLinksBatch(links: { cdScl: string; cdAga: string }[]): Promise<Set<string>> {
-    if (links.length === 0) return new Set();
+    if (links.length === 0) {
+      return new Set();
+    }
     const cdScls = [...new Set(links.map((l) => l.cdScl))];
     const cdAgas = [...new Set(links.map((l) => l.cdAga))];
     const rows = await this.sclRepository
@@ -616,7 +626,9 @@ export class RoseauRepository implements RoseauGateway {
   }
 
   async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
-    if (systemeCollecteIds.length === 0) return [];
+    if (systemeCollecteIds.length === 0) {
+      return [];
+    }
 
     const rows = await this.pmoRepository
       .createQueryBuilder('pmo')

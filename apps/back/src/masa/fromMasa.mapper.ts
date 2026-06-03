@@ -24,7 +24,9 @@ export function mapSteuRefsToSteuWithName(steus: SteuRef[]): SteuWithName[] {
 
 export function mapSclRefsToSystemeCollecte(scls: SclRef[]): SystemeCollecte | null {
   const scl = scls[0];
-  if (!scl) return null;
+  if (!scl) {
+    return null;
+  }
 
   return {
     systemeCollecteId: scl.systemeCollecteId,

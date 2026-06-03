@@ -193,7 +193,9 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
     );
 
     const formatDate = (value: Date | string | null) => {
-      if (!value) return null;
+      if (!value) {
+        return null;
+      }
       return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
     };
 
@@ -382,7 +384,9 @@ export class RoseauTransmissionRepository implements RoseauTransmissionGateway {
     );
 
     const formatDate = (value: Date | string | null) => {
-      if (!value) return null;
+      if (!value) {
+        return null;
+      }
       return typeof value === 'string' ? value.split('T')[0] : value.toISOString().split('T')[0];
     };
 

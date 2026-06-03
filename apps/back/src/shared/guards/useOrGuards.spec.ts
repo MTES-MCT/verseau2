@@ -40,7 +40,9 @@ const mockContext = {} as ExecutionContext;
 function getWith(guards: Type<CanActivate>[]) {
   return jest.fn().mockImplementation((G: Type<CanActivate>) => {
     const match = guards.find((g) => g === G);
-    if (!match) throw new Error(`Guard ${G.name} non attendu`);
+    if (!match) {
+      throw new Error(`Guard ${G.name} non attendu`);
+    }
     return new match();
   });
 }

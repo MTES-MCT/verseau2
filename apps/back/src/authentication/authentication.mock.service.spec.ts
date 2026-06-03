@@ -20,11 +20,15 @@ describe('AuthenticationMockService', () => {
 
     mockConfigService = {
       get: jest.fn((key: string) => {
-        if (key === 'OIDC_MOCK_EMAIL') return 'real.user@example.com';
+        if (key === 'OIDC_MOCK_EMAIL') {
+          return 'real.user@example.com';
+        }
         return null;
       }),
       getOrThrow: jest.fn((key: string) => {
-        if (key === 'JWT_SECRET') return JWT_SECRET;
+        if (key === 'JWT_SECRET') {
+          return JWT_SECRET;
+        }
         throw new Error(`Missing config: ${key}`);
       }),
     } as unknown as jest.Mocked<ConfigService>;

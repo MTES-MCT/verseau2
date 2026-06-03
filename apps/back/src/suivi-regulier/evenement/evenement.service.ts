@@ -194,18 +194,24 @@ export class EvenementService {
 
   async listAvailablePointsMesure(authorizedSclCdas: string[]) {
     const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
-    if (systemeCollecteIds.length === 0) return [];
+    if (systemeCollecteIds.length === 0) {
+      return [];
+    }
     return this.masaProvider.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }
 
   private async resolveAuthorizedSteuCdns(authorizedSteuCdas: string[]): Promise<number[]> {
-    if (authorizedSteuCdas.length === 0) return [];
+    if (authorizedSteuCdas.length === 0) {
+      return [];
+    }
     const steus = await this.masaProvider.findSteuBatchBySandreCdas(authorizedSteuCdas);
     return [...new Set(steus.map((s) => s.ouvrageDepollutionId))];
   }
 
   private async resolveAuthorizedSclCdns(authorizedSclCdas: string[]): Promise<number[]> {
-    if (authorizedSclCdas.length === 0) return [];
+    if (authorizedSclCdas.length === 0) {
+      return [];
+    }
     const scls = await this.masaProvider.findSclBatchBySandreCdas(authorizedSclCdas);
     return [...new Set(scls.map((s) => s.systemeCollecteId))];
   }

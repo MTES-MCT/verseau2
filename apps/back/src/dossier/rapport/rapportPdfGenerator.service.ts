@@ -192,7 +192,9 @@ export class RapportPdfGeneratorService {
       doc.moveDown(1);
 
       successControls.forEach((c) => {
-        if (doc.y > doc.page.height - 50) doc.addPage();
+        if (doc.y > doc.page.height - 50) {
+          doc.addPage();
+        }
         const msg = ControleDescription[c.name];
         doc.fillColor(COLORS.TEXT).fontSize(8).text(`• ${c.name} - ${msg}`, { indent: 20 });
       });
@@ -210,7 +212,9 @@ export class RapportPdfGeneratorService {
       });
 
       Object.keys(groupedFailures).forEach((controlName) => {
-        if (doc.y > doc.page.height - 100) doc.addPage();
+        if (doc.y > doc.page.height - 100) {
+          doc.addPage();
+        }
 
         const group = groupedFailures[controlName];
 
@@ -222,7 +226,9 @@ export class RapportPdfGeneratorService {
         doc.moveDown(0.3);
 
         group.forEach((c) => {
-          if (doc.y > doc.page.height - 50) doc.addPage();
+          if (doc.y > doc.page.height - 50) {
+            doc.addPage();
+          }
           const msg = buildMessage(c.error, c.errorParams || []);
           const isError = c.evenementType === EvenementType.ERREUR;
           const prefix = isError ? '[ERREUR]' : '[AVERTISSEMENT]';
@@ -245,7 +251,9 @@ export class RapportPdfGeneratorService {
     doc.moveDown(1);
 
     const reponse = reponsesSandre[reponsesSandre.length - 1]; // get the latest one
-    if (!reponse) return;
+    if (!reponse) {
+      return;
+    }
 
     let statusText = 'En attente / En cours';
     if (reponse.acceptationStatus === SandreAcceptationStatus.CONFORMANT) {
@@ -263,7 +271,9 @@ export class RapportPdfGeneratorService {
       doc.moveDown(0.3);
 
       reponse.errors.forEach((err) => {
-        if (doc.y > doc.page.height - 50) doc.addPage();
+        if (doc.y > doc.page.height - 50) {
+          doc.addPage();
+        }
 
         let msg = err.message || err.code || 'Erreur inconnue';
         if (err.location) {
