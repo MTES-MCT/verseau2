@@ -33,7 +33,6 @@ export const listEvenementSteu = {
       year: EvenementYearSchema,
       typeEvenementCode: z.string().optional(),
       ouvrageDepollutionCode: z.string().optional(),
-      pointMesureId: z.coerce.number().optional(),
     })
     .extend(createPaginationQuerySchema(EvenementSteuSortBy).shape),
   response: PaginatedEvenementSteuResponseSchema,

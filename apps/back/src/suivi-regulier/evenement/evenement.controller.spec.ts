@@ -7,6 +7,7 @@ import { EvenementService } from './evenement.service';
 
 describe('EvenementController', () => {
   let controller: EvenementController;
+  const anyDate = expect.any(Date) as unknown as Date;
   const evenementService = {
     listEvenementSteu: jest.fn(),
     exportEvenementSteuCsv: jest.fn(),
@@ -53,7 +54,6 @@ describe('EvenementController', () => {
       year: 2024,
       typeEvenementCode: '1',
       ouvrageDepollutionCode: 'STEU001',
-      pointMesureId: 123,
       page: 1,
       pageSize: 20,
     });
@@ -63,9 +63,8 @@ describe('EvenementController', () => {
         authorizedSteuCdas: ['STEU001'],
         typeEvenementCode: '1',
         ouvrageDepollutionCode: 'STEU001',
-        pointMesureId: 123,
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
+        startDate: anyDate,
+        endDate: anyDate,
       }),
     );
     expect(evenementService.listEvenementSteu).not.toHaveBeenCalledWith(expect.objectContaining({ year: 2024 }));
@@ -81,7 +80,6 @@ describe('EvenementController', () => {
         year: 2024,
         typeEvenementCode: '1',
         ouvrageDepollutionCode: 'STEU001',
-        pointMesureId: 123,
         page: 1,
         pageSize: 20,
       },
@@ -93,9 +91,8 @@ describe('EvenementController', () => {
         authorizedSteuCdas: ['STEU001'],
         typeEvenementCode: '1',
         ouvrageDepollutionCode: 'STEU001',
-        pointMesureId: 123,
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
+        startDate: anyDate,
+        endDate: anyDate,
       }),
     );
     expect(evenementService.exportEvenementSteuCsv).not.toHaveBeenCalledWith(expect.objectContaining({ year: 2024 }));

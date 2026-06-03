@@ -124,7 +124,16 @@ describe('EvenementDashboard', () => {
     expect(screen.getByLabelText(/point de mesures/i)).toBeDisabled();
   });
 
-  it('passe pointMesureId dans la requête STEU', () => {
+  it('n’affiche pas les filtres avancés en mode STEU', () => {
+    renderWithQueryClient(<EvenementDashboard />);
+
+    expect(screen.queryByRole('region', { name: /filtres avancés/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/type de point/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/point de mesures/i)).not.toBeInTheDocument();
+    expect(mockUsePointsMesure).toHaveBeenCalledWith('steu', null, 'tous');
+  });
+
+  it('n’envoie pas pointMesureId dans la requête STEU', () => {
     mockUseEvenementFilters.mockReturnValue(
       defaultFilters({
         filters: {
@@ -141,20 +150,49 @@ describe('EvenementDashboard', () => {
 
     renderWithQueryClient(<EvenementDashboard />);
 
-    expect(mockUseEvenementSteu).toHaveBeenLastCalledWith(expect.objectContaining({ pointMesureId: 12 }), true);
+    const lastSteuQuery = mockUseEvenementSteu.mock.calls.at(-1)?.[0];
+    expect(lastSteuQuery).toMatchObject({ year: CURRENT_EVENEMENT_YEAR, ouvrageDepollutionCode: 'STEU001' });
+    expect(lastSteuQuery).not.toHaveProperty('pointMesureId');
   });
 
-  it('affiche les filtres type de point et point de mesures dans le bloc filtres avancés', () => {
+  it('affiche les filtres avancés en mode SCL', () => {
+    mockUseEvenementFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_EVENEMENT_YEAR,
+          typeEvenementCode: '',
+          typePointMesure: 'tous' as const,
+          pointMesureId: '',
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: 'SCL001',
+        },
+      }),
+    );
+
     renderWithQueryClient(<EvenementDashboard />);
 
     const advancedFilters = screen.getByRole('region', { name: /filtres avancés/i });
 
     expect(within(advancedFilters).getByLabelText(/type de point/i)).toBeInTheDocument();
     expect(within(advancedFilters).getByLabelText(/point de mesures/i)).toBeInTheDocument();
-    expect(within(advancedFilters).queryByLabelText(/type d'événement/i)).not.toBeInTheDocument();
   });
 
   it('affiche des libellés de type de point cohérents avec le filtrage backend', () => {
+    mockUseEvenementFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_EVENEMENT_YEAR,
+          typeEvenementCode: '',
+          typePointMesure: 'tous' as const,
+          pointMesureId: '',
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: 'SCL001',
+        },
+      }),
+    );
+
     renderWithQueryClient(<EvenementDashboard />);
 
     const typePointSelect = screen.getByLabelText(/type de point/i);
@@ -164,6 +202,19 @@ describe('EvenementDashboard', () => {
   });
 
   it('préfixe les options de point de mesure avec la localisation globale', () => {
+    mockUseEvenementFilters.mockReturnValue(
+      defaultFilters({
+        filters: {
+          mode: 'scl',
+          year: CURRENT_EVENEMENT_YEAR,
+          typeEvenementCode: '',
+          typePointMesure: 'tous' as const,
+          pointMesureId: '',
+          ouvrageDepollutionCode: '',
+          systemeCollecteCode: 'SCL001',
+        },
+      }),
+    );
     mockUsePointsMesure.mockReturnValue({
       data: [
         {

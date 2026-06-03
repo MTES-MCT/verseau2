@@ -32,7 +32,7 @@ export const EvenementDashboard = () => {
 
   const { data: types } = useEvenementTypes();
   const pointsMesureOuvrageType = isScl ? 'scl' : 'steu';
-  const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : filters.ouvrageDepollutionCode || null;
+  const pointsMesureOuvrageCode = isScl ? filters.systemeCollecteCode || null : null;
   const { data: pmos = [] } = usePointsMesure(
     pointsMesureOuvrageType,
     pointsMesureOuvrageCode,
@@ -100,7 +100,6 @@ export const EvenementDashboard = () => {
     year: filters.year,
     ...(filters.typeEvenementCode ? { typeEvenementCode: filters.typeEvenementCode } : {}),
     ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
-    ...(filters.pointMesureId ? { pointMesureId: Number(filters.pointMesureId) } : {}),
     ...(filters.sortBy ? { sortBy: filters.sortBy as EvenementSteuSortByValue } : {}),
     ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
   };
@@ -279,39 +278,43 @@ export const EvenementDashboard = () => {
         </div>
       </div>
 
-      <h2 id="evenement-filtres-avances-title" className={fr.cx('fr-h6', 'fr-mb-2w')} style={{ textAlign: 'left' }}>
-        Filtres avancés
-      </h2>
-      <section aria-labelledby="evenement-filtres-avances-title" className={fr.cx('fr-mb-4w')}>
-        <div className="fr-grid-row fr-grid-row--gutters">
-          <div className="fr-col-12 fr-col-lg-3 fr-col-xl-2">
-            <Select
-              label="Type de point"
-              hint={<br />}
-              disabled={!hasOuvrageSelected}
-              nativeSelectProps={{
-                value: filters.typePointMesure,
-                onChange: handleTypePointMesureChange,
-              }}
-            >
-              <option value="tous">Tous</option>
-              <option value="reglementaire">Réglementaire (A/M)</option>
-              <option value="logique">Logique (R/S)</option>
-            </Select>
-          </div>
-          <div className="fr-col-12 fr-col-lg-6 fr-col-xl-4">
-            <SelectAutocomplete
-              label="Point de mesures"
-              hintText={<br />}
-              placeholder="Rechercher un point de mesure"
-              options={pointMesureOptions}
-              value={filters.pointMesureId || null}
-              onChange={handlePointMesureChange}
-              disabled={!hasOuvrageSelected}
-            />
-          </div>
-        </div>
-      </section>
+      {isScl && (
+        <>
+          <h2 id="evenement-filtres-avances-title" className={fr.cx('fr-h6', 'fr-mb-2w')} style={{ textAlign: 'left' }}>
+            Filtres avancés
+          </h2>
+          <section aria-labelledby="evenement-filtres-avances-title" className={fr.cx('fr-mb-4w')}>
+            <div className="fr-grid-row fr-grid-row--gutters">
+              <div className="fr-col-12 fr-col-lg-3 fr-col-xl-2">
+                <Select
+                  label="Type de point"
+                  hint={<br />}
+                  disabled={!hasOuvrageSelected}
+                  nativeSelectProps={{
+                    value: filters.typePointMesure,
+                    onChange: handleTypePointMesureChange,
+                  }}
+                >
+                  <option value="tous">Tous</option>
+                  <option value="reglementaire">Réglementaire (A/M)</option>
+                  <option value="logique">Logique (R/S)</option>
+                </Select>
+              </div>
+              <div className="fr-col-12 fr-col-lg-6 fr-col-xl-4">
+                <SelectAutocomplete
+                  label="Point de mesures"
+                  hintText={<br />}
+                  placeholder="Rechercher un point de mesure"
+                  options={pointMesureOptions}
+                  value={filters.pointMesureId || null}
+                  onChange={handlePointMesureChange}
+                  disabled={!hasOuvrageSelected}
+                />
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       <TableLoader
         isLoading={isLoading && hasOuvrageSelected}
