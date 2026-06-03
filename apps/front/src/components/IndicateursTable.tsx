@@ -47,18 +47,27 @@ export function IndicateursTable() {
   };
 
   const tableData = indicateurs
-    ? indicateurs.map((ind) => {
-        const isEvaluated = ind.dateValidationConformite !== null;
+    ? indicateurs.map((indicateur) => {
+        const isEvaluated = indicateur.dateValidationConformite !== null;
         return [
-          ind.nomSteu || ind.codeSandreSteu,
-          ind.pc95Retenu !== null ? `${ind.pc95Retenu.toLocaleString('fr-FR')} m³/j` : '-',
-          ind.tailleAggloEhAnN !== null ? `${ind.tailleAggloEhAnN.toLocaleString('fr-FR')} EH` : '-',
-          ind.debitReference !== null ? `${ind.debitReference.toLocaleString('fr-FR')} m³/j` : '-',
-          ind.capaciteNominaleEhAnN !== null ? `${ind.capaciteNominaleEhAnN.toLocaleString('fr-FR')} EH` : '-',
-          ind.dateValidationConformite ?? 'Non évalué',
-          formatConfNumber(ind.volumeDeverse5ansPc, isEvaluated, ' %'),
-          formatConfNumber(ind.fluxDeverse5ansPc, isEvaluated, ' %'),
-          formatConfNumber(ind.joursDeversement5ansMoy, isEvaluated),
+          <a
+            key={indicateur.codeSandreSteu}
+            href={`https://assainissement.developpement-durable.gouv.fr/pages/data/fiche-${indicateur.codeSandreSteu}`}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            {indicateur.nomSteu || indicateur.codeSandreSteu}
+          </a>,
+          indicateur.pc95Retenu !== null ? `${indicateur.pc95Retenu.toLocaleString('fr-FR')} m³/j` : '-',
+          indicateur.tailleAggloEhAnN !== null ? `${indicateur.tailleAggloEhAnN.toLocaleString('fr-FR')} EH` : '-',
+          indicateur.debitReference !== null ? `${indicateur.debitReference.toLocaleString('fr-FR')} m³/j` : '-',
+          indicateur.capaciteNominaleEhAnN !== null
+            ? `${indicateur.capaciteNominaleEhAnN.toLocaleString('fr-FR')} EH`
+            : '-',
+          indicateur.dateValidationConformite ?? 'Non évalué',
+          formatConfNumber(indicateur.volumeDeverse5ansPc, isEvaluated, ' %'),
+          formatConfNumber(indicateur.fluxDeverse5ansPc, isEvaluated, ' %'),
+          formatConfNumber(indicateur.joursDeversement5ansMoy, isEvaluated),
         ];
       })
     : [];
