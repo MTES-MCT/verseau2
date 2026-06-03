@@ -36,7 +36,9 @@ export class LanceleauRepository implements LanceleauGateway {
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
     const itv = await this.itvRepository.findOne({ where: { itvCdn } });
-    if (!itv) return null;
+    if (!itv) {
+      return null;
+    }
     return {
       intervenantId: itv.itvCdn,
       intervenantNom: itv.itvNomLb,
@@ -49,7 +51,9 @@ export class LanceleauRepository implements LanceleauGateway {
   }
 
   async findItvBatchByRfas(rfas: string[]): Promise<ItvCdnByRfa[]> {
-    if (rfas.length === 0) return [];
+    if (rfas.length === 0) {
+      return [];
+    }
     const rows = await this.itvRepository
       .createQueryBuilder('itv')
       .where('itv.itv_rfa IN (:...rfas)', { rfas })
@@ -93,7 +97,9 @@ export class LanceleauRepository implements LanceleauGateway {
       .where('TRIM(oc.mail) = :email', { email: email.trim() })
       .getOne();
 
-    if (!ag) return null;
+    if (!ag) {
+      return null;
+    }
     return {
       intervenantId: ag.itvCdn,
       principalIdentifiant: ag.prCdn,

@@ -134,7 +134,9 @@ export class MesuresService {
       return { data: result.data, total: result.total };
     });
 
-    if (mesureDonneesBrutesRows.length === 0) return [];
+    if (mesureDonneesBrutesRows.length === 0) {
+      return [];
+    }
 
     const evenementByDate = new Map<
       string,
@@ -205,7 +207,9 @@ export class MesuresService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listOuvrages(authorizedSteuCdas: string[], search?: string): Promise<SteuWithName[]> {
-    if (authorizedSteuCdas.length === 0) return [];
+    if (authorizedSteuCdas.length === 0) {
+      return [];
+    }
 
     if (search) {
       const normalizedLabel = search.trim();
@@ -220,7 +224,9 @@ export class MesuresService {
 
   @TraceCalls(LOG_LEVELS[2])
   async listSystemesCollecte(authorizedSclCdas: string[], search?: string): Promise<SclWithName[]> {
-    if (authorizedSclCdas.length === 0) return [];
+    if (authorizedSclCdas.length === 0) {
+      return [];
+    }
 
     if (search) {
       const normalizedLabel = search.trim();
@@ -242,9 +248,13 @@ export class MesuresService {
     filters?: { localisationCodes?: string[] },
   ): Promise<PointMesure[]> {
     if (ouvrageType === 'scl') {
-      if (!authorizedSclCdas.includes(ouvrageCode)) return [];
+      if (!authorizedSclCdas.includes(ouvrageCode)) {
+        return [];
+      }
     } else {
-      if (!authorizedSteuCdas.includes(ouvrageCode)) return [];
+      if (!authorizedSteuCdas.includes(ouvrageCode)) {
+        return [];
+      }
     }
 
     return this.masaProvider.findPointsMesureByOuvrage(ouvrageType, ouvrageCode, filters);
@@ -259,9 +269,13 @@ export class MesuresService {
     pmoCdn?: number,
   ): Promise<ParametreMesure[]> {
     if (ouvrageType === 'scl') {
-      if (!authorizedSclCdas.includes(ouvrageCode)) return [];
+      if (!authorizedSclCdas.includes(ouvrageCode)) {
+        return [];
+      }
     } else {
-      if (!authorizedSteuCdas.includes(ouvrageCode)) return [];
+      if (!authorizedSteuCdas.includes(ouvrageCode)) {
+        return [];
+      }
     }
 
     return this.masaProvider.findParametresByOuvrageAndPmo(ouvrageType, ouvrageCode, pmoCdn);

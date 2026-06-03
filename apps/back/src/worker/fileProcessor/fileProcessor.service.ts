@@ -58,7 +58,9 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
           isFluxQualifie(parsed),
         );
       } catch (rightsError) {
-        if (!(rightsError instanceof DepotRightsException)) throw rightsError;
+        if (!(rightsError instanceof DepotRightsException)) {
+          throw rightsError;
+        }
         this.logger.warn(`Depot ${fichierDeDepot.depotId} - Rights check failed: ${rightsError.code}`);
         await this.depotService.update(fichierDeDepot.depotId, {
           status: DepotStatus.REJETE,
@@ -100,10 +102,14 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     const cdOuvrageDepollutionList = new Set<string>();
     const cdSystemeCollecteList = new Set<string>();
     parsed.ouvrages?.forEach((o) => {
-      if (o.cdOuvrageDepollution) cdOuvrageDepollutionList.add(o.cdOuvrageDepollution);
+      if (o.cdOuvrageDepollution) {
+        cdOuvrageDepollutionList.add(o.cdOuvrageDepollution);
+      }
     });
     parsed.systemesCollecte?.forEach((s) => {
-      if (s.cdSystemeCollecte) cdSystemeCollecteList.add(s.cdSystemeCollecte);
+      if (s.cdSystemeCollecte) {
+        cdSystemeCollecteList.add(s.cdSystemeCollecte);
+      }
     });
     return {
       cdOuvrageDepollutionList: Array.from(cdOuvrageDepollutionList),

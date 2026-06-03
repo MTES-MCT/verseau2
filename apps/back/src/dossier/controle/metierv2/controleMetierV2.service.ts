@@ -490,8 +490,12 @@ export class ControleMetierV2Service {
       const val1 = this.extractAnalyseValue(analyses, param1Code);
       const val2 = this.extractAnalyseValue(analyses, param2Code);
 
-      if (val1 !== undefined) group.val1 = val1;
-      if (val2 !== undefined) group.val2 = val2;
+      if (val1 !== undefined) {
+        group.val1 = val1;
+      }
+      if (val2 !== undefined) {
+        group.val2 = val2;
+      }
     });
 
     return groups;
@@ -525,7 +529,9 @@ export class ControleMetierV2Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) continue;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
 
       // Récupérer la capacité nominale en EH depuis Roseau
       const capaciteEH = await this.roseauGateway.findCapaciteNominaleBySteuSandreAndYear(cdOuvrageDepollution, year);
@@ -539,14 +545,20 @@ export class ControleMetierV2Service {
 
       for (const pointMesure of ouvrage.pointMesure) {
         const locGlobale = pointMesure.locGlobalePointMesure;
-        if (locGlobale !== 'A3' && locGlobale !== 'A4') continue;
+        if (locGlobale !== 'A3' && locGlobale !== 'A4') {
+          continue;
+        }
 
         for (const prelevement of pointMesure.prelevement) {
           const datePrlvt = prelevement.datePrlvt;
-          if (!datePrlvt) continue;
+          if (!datePrlvt) {
+            continue;
+          }
 
           const volumeValue = this.extractAnalyseValue(prelevement.analyse, volumeParamCode);
-          if (volumeValue === undefined) continue;
+          if (volumeValue === undefined) {
+            continue;
+          }
 
           if (!volumesByDate.has(datePrlvt)) {
             volumesByDate.set(datePrlvt, {});
@@ -623,7 +635,9 @@ export class ControleMetierV2Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) continue;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
 
       const dbo5ValueNmoins1 = findCmaValue(cmas, cdOuvrageDepollution, dbo5Code);
       const dcoValueNmoins1 = findCmaValue(cmas, cdOuvrageDepollution, dcoCode);
@@ -633,10 +647,14 @@ export class ControleMetierV2Service {
       }
 
       for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3') continue;
+        if (pointMesure.locGlobalePointMesure !== 'A3') {
+          continue;
+        }
 
         for (const prelevement of pointMesure.prelevement) {
-          if (prelevement.cdSupport !== '3') continue;
+          if (prelevement.cdSupport !== '3') {
+            continue;
+          }
 
           const datePrlvt = prelevement.datePrlvt ?? '';
           const dbo5Value = this.extractAnalyseValue(prelevement.analyse, dbo5Code);
@@ -779,10 +797,14 @@ export class ControleMetierV2Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) continue;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
 
       const comparison = comparisons.find((c) => c.ouvrageDepollutionCode === cdOuvrageDepollution);
-      if (!comparison) continue;
+      if (!comparison) {
+        continue;
+      }
 
       const {
         chargeEntranteMaximaleEHN: chargeMaxN,
@@ -849,7 +871,9 @@ export class ControleMetierV2Service {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution || '';
 
       for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A4') continue;
+        if (pointMesure.locGlobalePointMesure !== 'A4') {
+          continue;
+        }
 
         for (const prelevement of pointMesure.prelevement) {
           const datePrlvt = prelevement.datePrlvt ?? '';
@@ -881,14 +905,18 @@ export class ControleMetierV2Service {
 
       for (const pointMesure of systemeCollecte.pointMesure) {
         const locGlobale = pointMesure.locGlobalePointMesure ?? '';
-        if (locGlobale !== 'A1' && locGlobale !== 'R1') continue;
+        if (locGlobale !== 'A1' && locGlobale !== 'R1') {
+          continue;
+        }
 
         for (const prelevement of pointMesure.prelevement) {
           const datePrlvt = prelevement.datePrlvt ?? '';
           const cdSupport = prelevement.cdSupport ?? '';
           const pluvioValue = this.extractAnalyseValue(prelevement.analyse, pluvioCode);
 
-          if (pluvioValue === undefined) continue;
+          if (pluvioValue === undefined) {
+            continue;
+          }
 
           if (pluvioValue > 1000) {
             errors.push({
@@ -1047,7 +1075,9 @@ export class ControleMetierV2Service {
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) continue;
+      if (!cdOuvrageDepollution) {
+        continue;
+      }
 
       const capaciteEH = findCapaciteNominale(capacitesNominales, cdOuvrageDepollution);
 
@@ -1059,7 +1089,9 @@ export class ControleMetierV2Service {
 
       // Collecter les volumes et DBO5 en A3 par date de prélèvement
       for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3') continue;
+        if (pointMesure.locGlobalePointMesure !== 'A3') {
+          continue;
+        }
 
         for (const prelevement of pointMesure.prelevement) {
           const datePrlvt = prelevement.datePrlvt ?? '';

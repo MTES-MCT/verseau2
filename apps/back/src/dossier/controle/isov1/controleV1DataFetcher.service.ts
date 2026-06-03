@@ -58,7 +58,9 @@ export class ControleV1DataFetcherService {
   ): { cdSteu: string; numPmo: string; locPoint: string }[] {
     return fctAssainissement.ouvrages.flatMap((ouvrage) => {
       const cdSteu = ouvrage.cdOuvrageDepollution;
-      if (!cdSteu) return [];
+      if (!cdSteu) {
+        return [];
+      }
       return ouvrage.pointMesure
         .filter((pmo) => !!pmo.locGlobalePointMesure)
         .map((pmo) => ({ cdSteu, numPmo: pmo.numeroPointMesure, locPoint: pmo.locGlobalePointMesure as string }));
@@ -69,7 +71,9 @@ export class ControleV1DataFetcherService {
     return fctAssainissement.systemesCollecte.flatMap((scl) => {
       const cdScl = scl.cdSystemeCollecte;
       const cdAga = scl.agglomerationAssainissement?.cdAgglomerationAssainissement;
-      if (!cdScl || !cdAga) return [];
+      if (!cdScl || !cdAga) {
+        return [];
+      }
       return [{ cdScl, cdAga }];
     });
   }
@@ -82,7 +86,9 @@ export class ControleV1DataFetcherService {
     return fctAssainissement.ouvrages.flatMap((ouvrage) => {
       const steu = steus.find((s) => s.ouvrageDepollutionCode === ouvrage.cdOuvrageDepollution);
       const itv = itvs.find((i) => i.intervenantSiret === ouvrage.exploitant?.cdIntervenant);
-      if (!steu || !itv) return [];
+      if (!steu || !itv) {
+        return [];
+      }
       return [{ steuCdn: steu.ouvrageDepollutionId, itvCdn: itv.intervenantId }];
     });
   }
