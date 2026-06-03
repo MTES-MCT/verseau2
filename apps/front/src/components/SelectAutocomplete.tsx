@@ -20,6 +20,7 @@ export interface SelectAutocompleteProps {
   value?: string | null;
   onChange: (value: string | null) => void;
   onInputChange?: (inputValue: string) => void;
+  clientSideFilter?: boolean;
   placeholder?: string;
   id?: string;
   required?: boolean;
@@ -35,6 +36,7 @@ export const SelectAutocomplete = ({
   value,
   onChange,
   onInputChange,
+  clientSideFilter = true,
   placeholder,
   id: idProp,
   required,
@@ -89,7 +91,7 @@ export const SelectAutocomplete = ({
   const displayedValue = isOpen && searchText !== null ? searchText : selectedLabel;
 
   const filteredOptions =
-    isOpen && searchText !== null
+    clientSideFilter && isOpen && searchText !== null
       ? options.filter((option) => option.label.toLowerCase().includes(searchText.toLowerCase()))
       : options;
 

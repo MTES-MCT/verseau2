@@ -151,6 +151,17 @@ describe('SelectAutocomplete', () => {
     expect(screen.queryByText('Paris')).not.toBeInTheDocument();
   });
 
+  it('does not filter current options when client-side filtering is disabled', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} clientSideFilter={false} />);
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'pa' } });
+
+    const listbox = screen.getByRole('listbox');
+    expect(within(listbox).getByText('Paris')).toBeInTheDocument();
+    expect(within(listbox).getByText('Lyon')).toBeInTheDocument();
+    expect(within(listbox).getByText('Marseille')).toBeInTheDocument();
+  });
+
   // ---------------------------------------------------------------------------
   // Selection via click
   // ---------------------------------------------------------------------------

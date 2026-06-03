@@ -233,6 +233,7 @@ export function DepotDetailsPage() {
                 value={form.selectedOuvrageCode || null}
                 onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
                 onInputChange={isScl ? setSclSearch : setOuvrageSearch}
+                clientSideFilter={false}
                 state={ouvrageError ? 'error' : 'default'}
                 stateRelatedMessage={ouvrageError || undefined}
               />

@@ -256,6 +256,7 @@ export const EvenementDashboard = () => {
             value={currentOuvrageValue || null}
             onChange={handleOuvrageChange}
             onInputChange={isScl ? setSclSearch : setOuvrageSearch}
+            clientSideFilter={false}
           />
         </div>
         <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
