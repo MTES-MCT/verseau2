@@ -163,6 +163,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL058, // verifyVolumesNegatifs
         ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
         ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
+        ControleName.CTL061, // verifyDebitA3A4SameDate
       ]);
     });
 
@@ -208,7 +209,7 @@ describe('ControleMetierV2Service', () => {
       expect(masaProvider.findProductionBoueZeroBatch).toHaveBeenCalledWith(['STEU1'], 2024);
     });
 
-    it('should produce 13 controls even when all data is valid (no errors)', async () => {
+    it('should produce 14 controls even when all data is valid (no errors)', async () => {
       controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
       controleGateway.createControles.mockResolvedValue([]);
 
@@ -217,7 +218,7 @@ describe('ControleMetierV2Service', () => {
       const [, , calledControles] = controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
       const typedControles = calledControles;
 
-      expect(typedControles).toHaveLength(13);
+      expect(typedControles).toHaveLength(14);
       // Each control should have an errors array (possibly empty)
       for (const controle of typedControles) {
         expect(controle).toHaveProperty('name');
