@@ -25,6 +25,17 @@ export default function CallbackPage() {
 
       // Handle OIDC errors
       if (errorParam) {
+        const wasSilentLogin = authService.consumeSilentLoginAttempt();
+        if (wasSilentLogin && authService.isSilentLoginFallbackError(errorParam)) {
+          try {
+            await authService.login({ silent: false, skipLocalRefresh: true });
+          } catch (err) {
+            console.error('Interactive login fallback failed:', err);
+            setError(err instanceof Error ? err.message : "Échec de l'authentification");
+          }
+          return;
+        }
+
         setError(`Erreur d'authentification: ${errorParam} - ${errorDescription || 'Aucune description'}`);
         return;
       }

@@ -49,13 +49,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(async () => {
     setIsLoading(true);
     try {
-      await authService.login();
+      const sessionResumed = await authService.login();
+      if (sessionResumed) {
+        await refreshUser();
+      }
     } catch (error) {
       console.error('Login failed:', error);
       setIsLoading(false);
       throw error;
     }
-  }, []);
+  }, [refreshUser]);
 
   const logout = useCallback(async () => {
     setIsLoading(true);

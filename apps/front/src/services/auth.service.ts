@@ -23,20 +23,34 @@ interface OIDCConfiguration {
   scope: string;
 }
 
+interface LoginOptions {
+  silent?: boolean;
+  skipLocalRefresh?: boolean;
+}
+
 const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
 const NONCE_KEY = 'oidc_nonce';
+const SILENT_LOGIN_KEY = 'oidc_silent_login';
+const SILENT_LOGIN_FALLBACK_ERRORS = new Set([
+  'account_selection_required',
+  'consent_required',
+  'interaction_required',
+  'login_required',
+]);
 
-class AuthService {
+export class AuthService {
   private storage: Storage;
   private sessionStorage: Storage;
+  private redirectTo: (url: string) => void;
 
   /** Shared promise so concurrent refreshes trigger only one request. */
   private refreshPromise: Promise<void> | null = null;
 
-  constructor() {
+  constructor(redirectTo: (url: string) => void = (url) => window.location.assign(url)) {
     this.storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage);
     this.sessionStorage = typeof window !== 'undefined' ? window.sessionStorage : ({} as Storage);
+    this.redirectTo = redirectTo;
   }
 
   /**
@@ -47,9 +61,25 @@ class AuthService {
   }
 
   /**
-   * Initiate the OIDC login flow
+   * Initiate login. First try to resume the local Verseau2 session from the
+   * refresh-token cookie, then fall back to Cerbere SSO.
+   * Returns true when the session was resumed without redirecting.
    */
-  async login(): Promise<void> {
+  async login(options: LoginOptions = {}): Promise<boolean> {
+    if (!options.skipLocalRefresh) {
+      try {
+        await this.refreshToken();
+        return true;
+      } catch {
+        this.clearSession();
+      }
+    }
+
+    await this.redirectToAuthorizationEndpoint(options.silent ?? true);
+    return false;
+  }
+
+  private async redirectToAuthorizationEndpoint(silent: boolean): Promise<void> {
     // Get OIDC configuration from backend
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'GET',
@@ -78,8 +108,15 @@ class AuthService {
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('nonce', nonce);
 
+    if (silent) {
+      authUrl.searchParams.set('prompt', 'none');
+      this.sessionStorage.setItem(SILENT_LOGIN_KEY, 'true');
+    } else {
+      this.sessionStorage.removeItem(SILENT_LOGIN_KEY);
+    }
+
     // Redirect to authorization endpoint
-    window.location.href = authUrl.toString();
+    this.redirectTo(authUrl.toString());
   }
 
   /**
@@ -93,6 +130,7 @@ class AuthService {
     // Clean up
     this.sessionStorage.removeItem(STATE_KEY);
     this.sessionStorage.removeItem(NONCE_KEY);
+    this.sessionStorage.removeItem(SILENT_LOGIN_KEY);
 
     // Validate state
     if (!expectedState || state !== expectedState) {
@@ -275,6 +313,16 @@ class AuthService {
     } catch (error) {
       console.error('Failed to clear session:', error);
     }
+  }
+
+  consumeSilentLoginAttempt(): boolean {
+    const wasSilentLogin = this.sessionStorage.getItem(SILENT_LOGIN_KEY) === 'true';
+    this.sessionStorage.removeItem(SILENT_LOGIN_KEY);
+    return wasSilentLogin;
+  }
+
+  isSilentLoginFallbackError(error: string): boolean {
+    return SILENT_LOGIN_FALLBACK_ERRORS.has(error);
   }
 }
 
