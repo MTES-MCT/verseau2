@@ -114,6 +114,20 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_061 (A3 manquant)', () => {
+    const result = buildMessage(ErrorCode.E2_061, ['A3', '2024-01-15']);
+    expect(result).toBe(
+      "Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit d'entrée manque pour la date 2024-01-15, alors que le débit de sortie pour la date 2024-01-15 existe.",
+    );
+  });
+
+  it('devrait retourner le message pour E2_061 (A4 manquant)', () => {
+    const result = buildMessage(ErrorCode.E2_061, ['A4', '2024-06-01']);
+    expect(result).toBe(
+      "Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit de sortie manque pour la date 2024-06-01, alors que le débit d'entrée pour la date 2024-06-01 existe.",
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');
