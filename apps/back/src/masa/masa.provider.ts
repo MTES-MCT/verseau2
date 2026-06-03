@@ -434,14 +434,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   async findSteuBatchBySandreCdas(cdas: string[]): Promise<SteuCdnBySandreCda[]> {
-    const cacheKey = `findSteuBatchBySandreCdas:${cdas.join(',')}`;
-    const cachedResult = await this.cacheManager.get<SteuCdnBySandreCda[]>(cacheKey);
-    if (cachedResult) {
-      return cachedResult;
-    }
-    const result = mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
-    await this.cacheManager.set(cacheKey, result, 3_600_000);
-    return result;
+    return mapSteuRefsToSteuCdnBySandreCda(await this.roseauGateway.findSteusBySandreCdas(cdas));
   }
 
   // sandreCdas could be as many as 6000
