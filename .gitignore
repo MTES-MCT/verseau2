@@ -88,4 +88,4 @@ script/
 .dolt/
 *.db
 .playwright-cli/
-**/graphify-out/
+.understand-anything/
