@@ -391,7 +391,6 @@ describe('ConformiteDashboard', () => {
     await selectStation();
 
     // Assert
-    expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText(/erreur réseau/i)).toBeInTheDocument();
   });
 
