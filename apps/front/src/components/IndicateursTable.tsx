@@ -29,7 +29,7 @@ export function IndicateursTable() {
     "Système d'assainissement",
     'PC95 (m³/j)',
     'CBPO (EH)',
-    'Débit de référence (m³/j)',
+    'Maximum entre PC95 et débit de référence (m³/j)',
     'Capacité nominale (EH)',
     'Date validation critère conf.',
     '% volume déversé tps de pluie',

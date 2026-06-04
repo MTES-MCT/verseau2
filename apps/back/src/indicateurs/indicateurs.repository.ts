@@ -64,7 +64,10 @@ SELECT
     RTRIM(steu.steu_sandre_cda)                AS code_sandre_steu,
     steu.steu_nom_lb                           AS nom_steu,
     cpy.cpy_eh_trait_nom_cap_mt                AS capacite_nominale_eh_an_n,
-    cpy.cpy_ref_debit_mt                       AS debit_reference,
+    GREATEST(
+        COALESCE(ROUND(stchan.stchan_r_5ans_jr_deb_95_perc_val, 2), 0),
+        cpy.cpy_ref_debit_mt
+    )                                            AS debit_reference,
     stchan.stchan_r_eh_max_chg_val             AS charge_entrante_eh_an_n,
     CASE
         WHEN stchan.stchan_r_5ans_jr_deb_95_perc_val IS NOT NULL THEN ROUND(stchan.stchan_r_5ans_jr_deb_95_perc_val, 2)
