@@ -56,6 +56,8 @@ export function IndicateursTable() {
             href={`https://assainissement.developpement-durable.gouv.fr/pages/data/fiche-${indicateur.codeSandreSteu}`}
             target="_blank"
             rel="noreferrer noopener"
+            className="truncate-cell"
+            title={indicateur.nomSteu || indicateur.codeSandreSteu}
           >
             {indicateur.nomSteu || indicateur.codeSandreSteu}
           </a>,
