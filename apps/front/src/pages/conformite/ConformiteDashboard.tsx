@@ -65,6 +65,7 @@ export function ConformiteDashboard() {
     PAGE_SIZE,
     yearOptions,
   } = useConformiteFilters();
+  const [infoBannerVisible, setInfoBannerVisible] = useState(true);
   const [selectedDetailKey, setSelectedDetailKey] = useState<string | null>(null);
   const [ouvrageSearch, setOuvrageSearch] = useState('');
   const [sclSearch, setSclSearch] = useState('');
@@ -321,6 +322,16 @@ export function ConformiteDashboard() {
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
+      {infoBannerVisible && (
+        <Alert
+          severity="info"
+          title="À Conformité réglementaire : information importante"
+          description="La conformité réglementaire affichée pour l'année en cours est provisoire. Elle est calculée uniquement sur la base des bilans d'autosurveillance actuellement disponibles et pourra être réévaluée par le SPE. La conformité annuelle finale tient également compte d'autres informations, comme les déversements en tête de station, les événements d'exploitation et la qualification de l'autosurveillance."
+          closable
+          onClose={() => setInfoBannerVisible(false)}
+          className={fr.cx('fr-mb-2w')}
+        />
+      )}
       <Notice
         title="Les données ne sont pas en temps réel"
         description={` - Données mises à jour le ${getPreviousSunday()}`}
