@@ -1,3 +1,4 @@
+import { formatDate } from '@lib/shared';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { useIndicateursSteu } from '../hooks/useIndicateursSteu';
@@ -64,7 +65,7 @@ export function IndicateursTable() {
           indicateur.capaciteNominaleEhAnN !== null
             ? `${indicateur.capaciteNominaleEhAnN.toLocaleString('fr-FR')} EH`
             : '-',
-          indicateur.dateValidationConformite ?? 'Non évalué',
+          indicateur.dateValidationConformite ? formatDate(indicateur.dateValidationConformite) : 'Non évalué',
           formatConfNumber(indicateur.volumeDeverse5ansPc, isEvaluated, ' %'),
           formatConfNumber(indicateur.fluxDeverse5ansPc, isEvaluated, ' %'),
           formatConfNumber(indicateur.joursDeversement5ansMoy, isEvaluated),
