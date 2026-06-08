@@ -1416,6 +1416,46 @@ describe('ControleMetierV2Service', () => {
       expect(result.errors).toHaveLength(0);
     });
 
+    it('should not trigger error when DBO5 exceeds CMA N-1 by less than 10%', () => {
+      const xmlObj: FctAssainissement = {
+        scenario: {
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-06-15',
+                    cdSupport: '3',
+                    analyse: [
+                      { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '164' }, // 164 vs CMA 150 = 9.3% (< 10%)
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const cmas: CmaBySandreCdaAndParam[] = [
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DBO5.toString(),
+          resultatAnnuelConcentrationMoyenne: 150,
+        },
+      ];
+
+      const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
+
+      expect(result.errors).toHaveLength(0);
+    });
+
     it('should skip comparison when no CMA found', () => {
       const xmlObj: FctAssainissement = {
         scenario: {
