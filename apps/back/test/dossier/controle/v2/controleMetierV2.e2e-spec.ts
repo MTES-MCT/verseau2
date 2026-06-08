@@ -886,7 +886,7 @@ describe('ControleMetierV2Service (e2e)', () => {
                   {
                     datePrlvt: '2024-02-10',
                     cdSupport: '3',
-                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '151')],
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '166')],
                   },
                 ],
               },
@@ -900,7 +900,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       expect(ctlErrors).toHaveLength(1);
       expect(ctlErrors[0].error).toBe(ErrorCode.E2_052);
-      expect(ctlErrors[0].errorParams).toEqual(['DBO5', 'STEU002', '2024-02-10', '151.00', '150.00']);
+      expect(ctlErrors[0].errorParams).toEqual(['DBO5', 'STEU002', '2024-02-10', '166.00', '150.00']);
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
@@ -1047,7 +1047,7 @@ describe('ControleMetierV2Service (e2e)', () => {
                     datePrlvt: '2024-06-01',
                     cdSupport: '3',
                     analyse: [
-                      createTestAnalyse(CodeParametre.DBO5.toString(), '101'),
+                      createTestAnalyse(CodeParametre.DBO5.toString(), '111'),
                       createTestAnalyse(CodeParametre.DCO.toString(), '201'),
                     ],
                   },
@@ -1063,7 +1063,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       expect(ctlErrors).toHaveLength(2);
       expect(ctlErrors[0].error).toBe(ErrorCode.E2_052);
-      expect(ctlErrors[0].errorParams).toEqual(['DBO5', 'STEU006', '2024-06-01', '101.00', '100.00']);
+      expect(ctlErrors[0].errorParams).toEqual(['DBO5', 'STEU006', '2024-06-01', '111.00', '100.00']);
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
       expect(ctlErrors[1].error).toBe(ErrorCode.E2_052);
       expect(ctlErrors[1].errorParams).toEqual(['DCO', 'STEU006', '2024-06-01', '201.00', '200.00']);
