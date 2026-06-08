@@ -65,7 +65,17 @@ SELECT
     steu.steu_nom_lb                           AS nom_steu,
     cpy.cpy_eh_trait_nom_cap_mt                AS capacite_nominale_eh_an_n,
     GREATEST(
-        COALESCE(ROUND(stchan.stchan_r_5ans_jr_deb_95_perc_val, 2), 0),
+        COALESCE(
+            CASE
+                WHEN stchan.stchan_r_5ans_jr_deb_95_perc_val IS NOT NULL THEN ROUND(stchan.stchan_r_5ans_jr_deb_95_perc_val, 2)
+                WHEN stchan.stchan_r_4ans_jr_deb_95_perc_val IS NOT NULL THEN ROUND(stchan.stchan_r_4ans_jr_deb_95_perc_val, 2)
+                WHEN stchan.stchan_r_3ans_jr_deb_95_perc_val IS NOT NULL THEN ROUND(stchan.stchan_r_3ans_jr_deb_95_perc_val, 2)
+                WHEN stchan.stchan_r_2ans_jr_deb_95_perc_val IS NOT NULL THEN ROUND(stchan.stchan_r_2ans_jr_deb_95_perc_val, 2)
+                WHEN stchan.stchan_r_1an_jr_deb_95_perc_val IS NOT NULL THEN ROUND(stchan.stchan_r_1an_jr_deb_95_perc_val, 2)
+                ELSE NULL
+            END,
+            0
+        ),
         cpy.cpy_ref_debit_mt
     )                                            AS debit_reference,
     stchan.stchan_r_eh_max_chg_val             AS charge_entrante_eh_an_n,
