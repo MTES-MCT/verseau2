@@ -577,6 +577,7 @@ describe('ControleMetierV2Service', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-01',
@@ -595,7 +596,7 @@ describe('ControleMetierV2Service', () => {
       expect(result.name).toBe(ControleName.CTL041);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '200']);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '200']);
     });
 
     it('should return an error when DCO is above range (DCO >= 1700)', () => {
@@ -606,6 +607,7 @@ describe('ControleMetierV2Service', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-01',
@@ -623,7 +625,7 @@ describe('ControleMetierV2Service', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '1800']);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '1800']);
     });
 
     it('should return no error when DCO is within range (300 < DCO < 1700)', () => {
@@ -634,6 +636,7 @@ describe('ControleMetierV2Service', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-01',
@@ -660,6 +663,7 @@ describe('ControleMetierV2Service', () => {
             pointMesure: [
               {
                 numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
                 prelevement: [
                   {
                     datePrlvt: '2024-01-01',
@@ -676,6 +680,38 @@ describe('ControleMetierV2Service', () => {
       const result = service.verifyDcoRange(xmlObj);
 
       expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('verifyDbo5Range', () => {
+    it('should return an error when DBO5 is below range on A3 and cdSupport 3', () => {
+      const xmlObj: FctAssainissement = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM1',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-01',
+                    cdSupport: '3',
+                    analyse: [{ cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '100' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      const result = service.verifyDbo5Range(xmlObj);
+
+      expect(result.name).toBe(ControleName.CTL042);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe(ErrorCode.E2_042);
+      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '100']);
     });
   });
 
