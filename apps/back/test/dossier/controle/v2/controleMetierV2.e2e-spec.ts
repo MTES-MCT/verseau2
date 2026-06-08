@@ -674,6 +674,34 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors[0].errorParams).toEqual(['STEU002', 'A3', '2024-01-16', '3', '1700']);
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
+
+    it('should not report error when DCO is out of range on A4', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '1700')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL041);
+
+      expect(ctlErrors).toHaveLength(0);
+    });
   });
 
   describe('CTL042 - verifyDbo5Range', () => {
@@ -762,6 +790,34 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors[0].error).toBe(ErrorCode.E2_042);
       expect(ctlErrors[0].errorParams).toEqual(['STEU002', 'A3', '2024-01-16', '3', '800']);
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should not report error when DBO5 is out of range on A4', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU002',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM002',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '800')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL042);
+
+      expect(ctlErrors).toHaveLength(0);
     });
   });
 
