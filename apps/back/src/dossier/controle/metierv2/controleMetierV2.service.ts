@@ -91,6 +91,7 @@ export class ControleMetierV2Service {
       Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
       Promise.resolve(this.verifyConcentrationsNegativesOuNulles(dataWithLocGlobalePointMesureSAAndCdSupprt345)),
       this.verifyChargePollutionVsCapaciteNominale(xmlObj),
+      Promise.resolve(this.verifyDebitA3A4SameDate(xmlObj)),
     ]);
     // Filtrer les contrôles nuls (certains contrôles ne sont pas applicables et renvoient null), afin qu'ils ne soient pas enregistrés ni affichés en SUCCESS
     // TODO: Les contrôles qui ne sont pas effectués car pas de point de mesure ou de valeur doivent renvoyer null
@@ -1121,6 +1122,63 @@ export class ControleMetierV2Service {
     }
 
     return { name: ControleName.CTL060, errors };
+  }
+  // CTL061: Vérification que les débits A3/A4 du paramètre 1552 sont renseignés à la même date
+  verifyDebitA3A4SameDate(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+    const errors: ControleError[] = [];
+    const volumeCode = String(CodeParametre.Volume);
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const datesA3 = new Set<string>();
+      const datesA4 = new Set<string>();
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const locGlobale = pointMesure.locGlobalePointMesure;
+        if (locGlobale !== 'A3' && locGlobale !== 'A4') {
+          continue;
+        }
+
+        for (const prelevement of pointMesure.prelevement) {
+          const datePrlvt = prelevement.datePrlvt;
+          if (!datePrlvt) {
+            continue;
+          }
+
+          const volumeValue = this.extractAnalyseValue(prelevement.analyse, volumeCode);
+          if (volumeValue === undefined) {
+            continue;
+          }
+
+          if (locGlobale === 'A3') {
+            datesA3.add(datePrlvt);
+          } else if (locGlobale === 'A4') {
+            datesA4.add(datePrlvt);
+          }
+        }
+      }
+
+      for (const date of datesA4) {
+        if (!datesA3.has(date)) {
+          errors.push({
+            code: ErrorCode.E2_061,
+            params: ['A3', date],
+            evenementType: EvenementType.AVERTISSEMENT,
+          });
+        }
+      }
+
+      for (const date of datesA3) {
+        if (!datesA4.has(date)) {
+          errors.push({
+            code: ErrorCode.E2_061,
+            params: ['A4', date],
+            evenementType: EvenementType.AVERTISSEMENT,
+          });
+        }
+      }
+    }
+
+    return { name: ControleName.CTL061, errors };
   }
 }
 

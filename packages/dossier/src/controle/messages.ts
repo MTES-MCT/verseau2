@@ -164,6 +164,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage59(params);
     case ErrorCode.E2_060:
       return buildErrorMessage60(params);
+    case ErrorCode.E2_061:
+      return buildErrorMessage61(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -329,4 +331,12 @@ const buildErrorMessage59 = (params: string[]) => {
 const buildErrorMessage60 = (params: string[]) => {
   const [cdOuvrage, chargeEH, capaciteNominale, seuilEH, date] = params as ErrorParamsMap[ErrorCode.E2_060];
   return `La charge de pollution à traiter (${chargeEH} EH) dépasse 1,5 fois la capacité nominale (${capaciteNominale} EH, seuil = ${seuilEH} EH) pour l'ouvrage ${cdOuvrage}, à la date du ${date}.`;
+};
+
+const buildErrorMessage61 = (params: string[]) => {
+  const [missingPoint, datePrlvt] = params as ErrorParamsMap[ErrorCode.E2_061];
+  if (missingPoint === 'A3') {
+    return `Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit d'entrée manque pour la date ${datePrlvt}, alors que le débit de sortie pour la date ${datePrlvt} existe.`;
+  }
+  return `Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit de sortie manque pour la date ${datePrlvt}, alors que le débit d'entrée pour la date ${datePrlvt} existe.`;
 };

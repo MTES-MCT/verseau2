@@ -32,6 +32,7 @@ import {
 import { CodeParametre, CodeUniteMesure } from '@lib/dossier';
 
 import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { parseScenarioAssainissementXml } from '@lib/parser';
 import { LoggerService } from '@shared/logger/logger.service';
 import { startPostgresContainer, getPostgresConnectionUri } from '../../../testcontainer.config';
 import {
@@ -50,6 +51,8 @@ import { SandreScenarioCode, SandreScenarioVersion } from '@lib/parser/src/sandr
 import { initTestContainerImports } from '../../../init/initTestContainer';
 import { ControleModel } from '@dossier/controle/controle.model';
 import { createTestFctAssainissement, createTestAnalyse } from '../../../fixtures/fctAssainissement.fixture';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const TEST_DEPOT_ID = '00000000-0000-0000-0000-000000000001';
 /** Helper: extract only the error rows (success=false) for a given ControleName */
@@ -2748,5 +2751,279 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
-  /////
+  describe('CTL061 - verifyDebitA3A4SameDate', () => {
+    it('should pass when A3 and A4 have 1552 at the same date', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '1000')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '800')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(0);
+    });
+
+    it('should warn when A4 exists at a date but A3 does not (A3 missing)', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse('9999', '100')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '800')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(1);
+      expect(ctlErrors[0].error).toBe(ErrorCode.E2_061);
+      expect(ctlErrors[0].errorParams).toEqual(['A3', '2024-01-15']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should warn when A3 exists at a date but A4 does not (A4 missing)', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '1000')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse('9999', '100')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(1);
+      expect(ctlErrors[0].error).toBe(ErrorCode.E2_061);
+      expect(ctlErrors[0].errorParams).toEqual(['A4', '2024-01-15']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+
+    it('should warn twice when A3 and A4 are on different dates', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-14',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '1000')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.Volume.toString(), '800')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(2);
+      expect(ctlErrors.map((e) => e.errorParams)).toEqual(
+        expect.arrayContaining([
+          ['A4', '2024-01-14'],
+          ['A3', '2024-01-15'],
+        ]),
+      );
+      ctlErrors.forEach((e) => {
+        expect(e.evenementType).toBe(EvenementType.AVERTISSEMENT);
+      });
+    });
+
+    it('should ignore parameters other than 1552', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '500')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DBO5.toString(), '200')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(0);
+    });
+
+    it('should pass when A3 and A4 both lack 1552 entirely', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU001',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '500')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse(CodeParametre.DCO.toString(), '200')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(0);
+    });
+
+    it('should parse real XML and pass when A3 and A4 have 1552 at the same date', async () => {
+      const xmlPath = path.join(__dirname, '..', '..', '..', 'fixtures', 'xml', 'ctl061-a3-a4-meme-date.xml');
+      const xml = fs.readFileSync(xmlPath, 'utf-8');
+      const fctAssainissement = await parseScenarioAssainissementXml(xml);
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(0);
+    });
+
+    it('should parse real XML and warn when A4 has 1552 on a date without A3', async () => {
+      const xmlPath = path.join(__dirname, '..', '..', '..', 'fixtures', 'xml', 'ctl061-a4-sans-a3.xml');
+      const xml = fs.readFileSync(xmlPath, 'utf-8');
+      const fctAssainissement = await parseScenarioAssainissementXml(xml);
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+
+      expect(ctlErrors).toHaveLength(1);
+      expect(ctlErrors[0].error).toBe(ErrorCode.E2_061);
+      expect(ctlErrors[0].errorParams).toEqual(['A3', '2024-06-15']);
+      expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+    });
+  });
 });

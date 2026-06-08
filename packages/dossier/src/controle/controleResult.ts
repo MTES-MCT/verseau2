@@ -80,6 +80,7 @@ export enum ControleName {
   CTL058 = 'CTL058',
   CTL059 = 'CTL059',
   CTL060 = 'CTL060',
+  CTL061 = 'CTL061',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -138,5 +139,7 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL059]: 'Contrôle sur les concentrations négatives ou nulles sur tous les points de mesure',
   [ControleName.CTL060]:
     'Contrôle sur la charge de pollution à traiter vs capacité nominale de la station (≥ 2 000 EH)',
+  [ControleName.CTL061]:
+    'Vérification que les débits A3/A4 du paramètre 1552 sont renseignés à la même date',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };
