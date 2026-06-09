@@ -663,7 +663,7 @@ export class ControleMetierV2Service {
 
           // Comparer DBO5 avec CMA N-1
           if (dbo5Value !== undefined && dbo5ValueNmoins1 !== undefined) {
-            if (dbo5Value > dbo5ValueNmoins1) {
+            if (dbo5Value > dbo5ValueNmoins1 * 1.1) {
               errors.push({
                 code: ErrorCode.E2_052,
                 params: ['DBO5', cdOuvrageDepollution, datePrlvt, dbo5Value.toFixed(2), dbo5ValueNmoins1.toFixed(2)],
