@@ -10,9 +10,10 @@ import { S3 } from '@infra/s3/s3';
 import { SftpAgency } from '@infra/sftp/sftpAgency';
 import { Sftp } from '@infra/sftp/sftp';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
+import type { DepotModel } from '@dossier/depot/depot.model';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MasaProvider } from '@masa/masa.provider';
-import { DepotStep } from '@lib/dossier';
+import { DepotStatus, DepotStep } from '@lib/dossier';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import type { FctAssainissement } from '@lib/parser';
 
@@ -47,13 +48,14 @@ describe('DiffusionRapportProcessorService', () => {
     id: 'dep_1',
     path: 'depots/dep_1.xml',
     nomOriginalFichier: 'depot.xml',
+    status: DepotStatus.INTEGRE,
     user: {
       id: 'user_1',
       email: 'john.doe@example.com',
       prenom: 'John',
       nom: 'Doe',
     },
-  } as never;
+  } as DepotModel;
 
   function createParsedXml(ouvrageDepollutionCode?: string): FctAssainissement {
     return {
@@ -112,6 +114,7 @@ describe('DiffusionRapportProcessorService', () => {
 
     agencySftpClient = {
       send: jest.fn().mockResolvedValue(undefined),
+      sendRejection: jest.fn().mockResolvedValue(undefined),
       sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<Sftp>;
 
@@ -168,9 +171,25 @@ describe('DiffusionRapportProcessorService', () => {
     expect(sftpAgency.getClient).toHaveBeenCalledWith('agence_1');
     expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, xmlBuffer, 'dep_1/depot.xml');
     expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, pdfBuffer, 'dep_1/rapport-masa-dep_1.pdf');
+    expect(agencySftpClient.sendRejection).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
+  });
+
+  it('should upload rejected XML and PDF to the agency rejection SFTP folder', async () => {
+    depotGateway.findDepotByIdWithUser.mockResolvedValue({
+      ...depot,
+      status: DepotStatus.REJETE,
+    });
+
+    await service.process({ depotId: 'dep_1' });
+
+    expect(sftpAgency.getClient).toHaveBeenCalledWith('agence_1');
+    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agencySftpClient.sendRejection).toHaveBeenNthCalledWith(1, xmlBuffer, 'dep_1/depot.xml');
+    expect(agencySftpClient.sendRejection).toHaveBeenNthCalledWith(2, pdfBuffer, 'dep_1/rapport-masa-dep_1.pdf');
+    expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
   it('should warn and continue when no ouvrage code is found in XML', async () => {

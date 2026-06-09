@@ -12,6 +12,7 @@ export interface SftpConfig {
   username: string;
   privateKey: string;
   remotePath?: string;
+  rejectionRemotePath?: string;
 }
 
 @Injectable()
@@ -25,6 +26,14 @@ export class SftpService implements Sftp {
   }
 
   async send(file: Buffer, filePath: string): Promise<void> {
+    await this.sendWithRemotePath(file, filePath, this.config.remotePath);
+  }
+
+  async sendRejection(file: Buffer, filePath: string): Promise<void> {
+    await this.sendWithRemotePath(file, filePath, this.config.rejectionRemotePath ?? this.config.remotePath);
+  }
+
+  private async sendWithRemotePath(file: Buffer, filePath: string, remotePath: string | undefined): Promise<void> {
     try {
       await this.sftpClient.connect({
         host: this.config.host,
@@ -33,8 +42,8 @@ export class SftpService implements Sftp {
         privateKey: this.config.privateKey,
       });
 
-      // Prepend config remotePath if it exists
-      const basePath = this.config.remotePath || '';
+      // Prepend the selected remote base path if it exists.
+      const basePath = remotePath || '';
       const fullPath = basePath ? `${basePath}/${filePath}` : filePath;
 
       const remoteDirectory = path.posix.dirname(fullPath);

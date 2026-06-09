@@ -55,6 +55,7 @@ describe('SftpAgencyService', () => {
       const client = service.getClient('33333333333333');
       expect(client).toBeDefined();
       expect(typeof client.send).toBe('function');
+      expect(typeof client.sendRejection).toBe('function');
       expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
@@ -62,7 +63,38 @@ describe('SftpAgencyService', () => {
       const client = service.getClient('ARTOIS-PICARDIE');
       expect(client).toBeDefined();
       expect(typeof client.send).toBe('function');
+      expect(typeof client.sendRejection).toBe('function');
       expect(typeof client.sendToAgentVerseau).toBe('function');
+    });
+
+    it('devrait configurer le dossier de rejet optionnel pour une agence', () => {
+      const configJson = JSON.stringify({
+        'AGENCE-REJET': {
+          host: 'sftp-rejet.example.com',
+          port: 22,
+          username: 'user-rejet',
+          remotePath: 'uploads',
+          rejectionRemotePath: 'rejets',
+        },
+      });
+
+      const serviceWithRejectionPath = new SftpAgencyService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'SFTP_AGENCY_CONFIG') {
+              return configJson;
+            }
+            if (key === 'SFTP_AGENCY_PRIVATE_KEY_AGENCE-REJET') {
+              return Buffer.from('key-rejet\n').toString('base64');
+            }
+            return undefined;
+          }),
+        } as unknown as ConfigService,
+        new LoggerServiceMock(),
+      );
+
+      const client = serviceWithRejectionPath.getClient('AGENCE-REJET');
+      expect((client as any).config.rejectionRemotePath).toBe('rejets');
     });
 
     it("devrait avoir le bon privateKey pour l'agence ARTOIS-PICARDIE", () => {
@@ -74,7 +106,6 @@ describe('SftpAgencyService', () => {
 
     it("devrait avoir le bon privateKey pour l'agence 22222222222222", () => {
       const client = service.getClient('22222222222222');
-      console.log('Client config:', (client as any).config); // Debug: afficher la configuration du client
 
       expect((client as any).config.privateKey).toBe(`key2\n`);
     });

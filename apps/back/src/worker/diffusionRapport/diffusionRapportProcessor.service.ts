@@ -9,7 +9,7 @@ import { SftpAgency } from '@infra/sftp/sftpAgency';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { MasaModel } from '@dossier/masa/masa.model';
-import { DepotStep } from '@lib/dossier';
+import { DepotStatus, DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
@@ -139,7 +139,6 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       const xmlBuffer = await this.s3.download(depot.path);
       const parsed = await parseScenarioAssainissementXml(xmlBuffer.toString('utf8'));
-      console.log('Parsed XML:', parsed); // Debug: afficher le contenu parsé de l'XML
       const ouvrageDepollutionCode = parsed.ouvrages
         .map((ouvrage) => ouvrage.cdOuvrageDepollution?.trim())
         .find((code): code is string => Boolean(code));
@@ -177,8 +176,13 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       const filePath1 = `${depot.id}/${depot.nomOriginalFichier}`;
       const filePath2 = `${depot.id}/rapport-masa-${depot.id}.pdf`;
-      await sftpClient.send(xmlBuffer, filePath1);
-      await sftpClient.send(pdfBuffer, filePath2);
+      if (depot.status === DepotStatus.REJETE) {
+        await sftpClient.sendRejection(xmlBuffer, filePath1);
+        await sftpClient.sendRejection(pdfBuffer, filePath2);
+      } else {
+        await sftpClient.send(xmlBuffer, filePath1);
+        await sftpClient.send(pdfBuffer, filePath2);
+      }
 
       this.logger.log("Files sent to Agence de l'eau SFTP", {
         depotId: depot.id,

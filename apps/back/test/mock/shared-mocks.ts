@@ -83,6 +83,10 @@ export class SftpTestMock implements Sftp {
     await Promise.resolve();
   }
 
+  async sendRejection(file: Buffer, fileName: string): Promise<void> {
+    await this.send(file, fileName);
+  }
+
   async sendToAgentVerseau(file: Buffer, fileName: string): Promise<void> {
     await this.send(file, fileName);
   }
@@ -440,6 +444,7 @@ export class SftpAgencyTestMock {
   constructor() {
     this.mockClient = {
       send: jest.fn().mockResolvedValue(undefined),
+      sendRejection: jest.fn().mockResolvedValue(undefined),
       sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
     };
   }
@@ -458,6 +463,7 @@ export class SftpAgencyTestMock {
 
   reset(): void {
     this.mockClient.send.mockClear();
+    this.mockClient.sendRejection.mockClear();
     this.mockClient.sendToAgentVerseau.mockClear();
   }
 }

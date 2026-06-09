@@ -29,7 +29,7 @@ const minimalS3Provider = {
 
 const minimalSftpProvider = {
   provide: Sftp,
-  useValue: { send: jest.fn(), sendToAgentVerseau: jest.fn() },
+  useValue: { send: jest.fn(), sendRejection: jest.fn(), sendToAgentVerseau: jest.fn() },
 };
 
 const minimalSftpAgencyProvider = {
