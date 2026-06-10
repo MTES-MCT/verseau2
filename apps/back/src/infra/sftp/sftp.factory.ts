@@ -18,7 +18,7 @@ export const createSftpAgentVerseauService = (configService: ConfigService, sftp
   const host = configService.getOrThrow<string>('SFTP_HOST');
   const port = configService.getOrThrow<number>('SFTP_PORT');
   const username = configService.getOrThrow<string>('SFTP_USERNAME');
-  const privateKey = configService.getOrThrow<string>('SFTP_PRIVATE_KEY');
+  const privateKey = Buffer.from(configService.getOrThrow<string>('SFTP_PRIVATE_KEY'), 'base64').toString('utf8');
   const remotePath = configService.get<string>('SFTP_REMOTE_PATH');
 
   logger.log(`Using SFTP service for Agent Verseau with host: ${host}, port: ${port}, username: ${username}`);

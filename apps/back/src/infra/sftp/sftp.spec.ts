@@ -11,6 +11,8 @@ import { loggerValueMock } from '@shared/logger/logger.mock';
 describe('SftpModule', () => {
   let module: TestingModule;
   let sftp: Sftp;
+  const privateKey = `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`;
+  const encodedPrivateKey = Buffer.from(privateKey, 'utf8').toString('base64');
 
   const mockConfigService = {
     get: jest.fn(),
@@ -58,7 +60,7 @@ describe('SftpModule', () => {
         return 'user';
       }
       if (key === 'SFTP_PRIVATE_KEY') {
-        return 'key';
+        return encodedPrivateKey;
       }
       return null;
     });
@@ -72,5 +74,6 @@ describe('SftpModule', () => {
 
     sftp = module.get<Sftp>(Sftp);
     expect(sftp).toBeInstanceOf(SftpService);
+    expect((sftp as any).config.privateKey).toBe(privateKey);
   });
 });
