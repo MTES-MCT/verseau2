@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { generateKeyPairSync } from 'node:crypto';
 import { SftpModule } from './sftp.module';
 import { Sftp } from './sftp';
 import { SftpService } from './sftp.service';
@@ -7,10 +8,18 @@ import { SftpProviderMock } from './sftp.provider.mock';
 import { SharedModule } from '@shared/shared.module';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
+import { decodeSftpPrivateKey } from './sftp.factory';
+
+const createTestPrivateKey = (): string => {
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  return privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
+};
 
 describe('SftpModule', () => {
   let module: TestingModule;
   let sftp: Sftp;
+  const privateKey = createTestPrivateKey();
+  const encodedPrivateKey = Buffer.from(privateKey, 'utf8').toString('base64');
 
   const mockConfigService = {
     get: jest.fn(),
@@ -58,7 +67,7 @@ describe('SftpModule', () => {
         return 'user';
       }
       if (key === 'SFTP_PRIVATE_KEY') {
-        return 'key';
+        return encodedPrivateKey;
       }
       return null;
     });
@@ -71,6 +80,15 @@ describe('SftpModule', () => {
       .compile();
 
     sftp = module.get<Sftp>(Sftp);
+    const sftpConfig = (sftp as unknown as { config: { privateKey: string } }).config;
+
     expect(sftp).toBeInstanceOf(SftpService);
+    expect(sftpConfig.privateKey).toBe(privateKey);
+  });
+
+  it('should reject invalid SFTP_PRIVATE_KEY values with ssh2 parser', () => {
+    const invalidPrivateKey = Buffer.from('not a private key', 'utf8').toString('base64');
+
+    expect(() => decodeSftpPrivateKey(invalidPrivateKey)).toThrow(/Invalid SFTP_PRIVATE_KEY: Unsupported key format/);
   });
 });

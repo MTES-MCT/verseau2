@@ -4,6 +4,7 @@ import Client from 'ssh2-sftp-client';
 import { SftpAgency } from './sftpAgency';
 import { Sftp } from './sftp';
 import { SftpService } from './sftp.service';
+import { decodeSftpPrivateKey } from './sftp.factory';
 import { LoggerService } from '@shared/logger/logger.service';
 
 /**
@@ -82,8 +83,7 @@ export class SftpAgencyService implements SftpAgency {
       throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: privateKey manquant`);
     }
 
-    const decodedKey = Buffer.from(privateKey, 'base64').toString('utf8');
-    return decodedKey;
+    return decodeSftpPrivateKey(privateKey, `SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
   }
 
   private validateConfig(agenceEauSiret: string, config: unknown): asserts config is SftpAgencyConfig {

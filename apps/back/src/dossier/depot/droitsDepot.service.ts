@@ -79,6 +79,7 @@ export class DroitsDepotService {
       const matchesForCode = matches.filter((m) => m.ouvrageDepollutionCode === code);
 
       if (matchesForCode.length === 0) {
+        this.logger.log('No matching VSteuSclItv found for ouvrage depollution code', code);
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
 
@@ -89,6 +90,7 @@ export class DroitsDepotService {
           m.agenceEauSiret === userSiret,
       );
       if (!hasRights) {
+        this.logger.log('User does not have rights for ouvrage depollution code', code, { userSiret });
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
     }
@@ -97,6 +99,7 @@ export class DroitsDepotService {
       const matchesForCode = matches.filter((m) => m.systemeCollecteCode === code);
 
       if (matchesForCode.length === 0) {
+        this.logger.log('No matching VSteuSclItv found for systeme collecte code', code);
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
 
@@ -107,6 +110,7 @@ export class DroitsDepotService {
           m.agenceEauSiret === userSiret,
       );
       if (!hasRights) {
+        this.logger.log('User does not have rights for systeme collecte code', code, { userSiret });
         throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
       }
     }

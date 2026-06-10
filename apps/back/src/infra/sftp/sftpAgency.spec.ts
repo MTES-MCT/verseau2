@@ -1,27 +1,55 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { generateKeyPairSync } from 'node:crypto';
 import { SftpAgencyService } from './sftpAgency.service';
 import { SftpAgencyMock } from './sftpAgency.mock';
 import { createSftpAgency } from './sftpAgency.factory';
 import { SharedModule } from '@shared/shared.module';
 import { loggerProviderMock, LoggerServiceMock } from '@shared/logger/logger.mock';
-import * as dotenv from 'dotenv';
-import path from 'path';
 
-// Load test environment variables
-dotenv.config({
-  path: path.join(__dirname, 'test.envfile'),
+const createTestPrivateKey = (): string => {
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  return privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
+};
+
+const artoisPicardiePrivateKey = createTestPrivateKey();
+const agence22222222222222PrivateKey = createTestPrivateKey();
+const agence33333333333333PrivateKey = createTestPrivateKey();
+const encodedArtoisPicardiePrivateKey = Buffer.from(artoisPicardiePrivateKey, 'utf8').toString('base64');
+const encodedAgence22222222222222PrivateKey = Buffer.from(agence22222222222222PrivateKey, 'utf8').toString('base64');
+const encodedAgence33333333333333PrivateKey = Buffer.from(agence33333333333333PrivateKey, 'utf8').toString('base64');
+const sftpAgencyConfig = JSON.stringify({
+  'ARTOIS-PICARDIE': {
+    host: 'sftp1.example.com',
+    port: 22,
+    username: 'user1',
+  },
+  '22222222222222': {
+    host: 'sftp2.example.com',
+    port: 22,
+    username: 'user2',
+  },
+  '33333333333333': {
+    host: 'sftp3.example.com',
+    port: 22,
+    username: 'user3',
+  },
 });
+const sftpAgencyPrivateKeys: Record<string, string> = {
+  'SFTP_AGENCY_PRIVATE_KEY_ARTOIS-PICARDIE': encodedArtoisPicardiePrivateKey,
+  'SFTP_AGENCY_PRIVATE_KEY_22222222222222': encodedAgence22222222222222PrivateKey,
+  'SFTP_AGENCY_PRIVATE_KEY_33333333333333': encodedAgence33333333333333PrivateKey,
+};
 
 describe('SftpAgencyService', () => {
   describe('avec configuration valide', () => {
     let service: SftpAgencyService;
     const getConfigValue = (key: string): string | undefined => {
       if (key === 'SFTP_AGENCY_CONFIG') {
-        return process.env.SFTP_AGENCY_CONFIG;
+        return sftpAgencyConfig;
       }
       if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
-        return process.env[key];
+        return sftpAgencyPrivateKeys[key];
       }
       return undefined;
     };
@@ -67,16 +95,13 @@ describe('SftpAgencyService', () => {
 
     it("devrait avoir le bon privateKey pour l'agence ARTOIS-PICARDIE", () => {
       const client = service.getClient('ARTOIS-PICARDIE');
-      expect((client as any).config.privateKey).toBe(
-        `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`,
-      );
+      expect((client as any).config.privateKey).toBe(artoisPicardiePrivateKey);
     });
 
     it("devrait avoir le bon privateKey pour l'agence 22222222222222", () => {
       const client = service.getClient('22222222222222');
-      console.log('Client config:', (client as any).config); // Debug: afficher la configuration du client
 
-      expect((client as any).config.privateKey).toBe(`key2\n`);
+      expect((client as any).config.privateKey).toBe(agence22222222222222PrivateKey);
     });
 
     it('devrait vérifier si un client existe', () => {
@@ -90,10 +115,8 @@ describe('SftpAgencyService', () => {
     });
 
     it('devrait retourner la clé privée décodée pour une agence', () => {
-      const expectedKey = `-----BEGIN OPENSSH PRIVATE KEY-----\naaa\n-----END OPENSSH PRIVATE KEY-----\n`;
-
       const privateKey = service.getPrivateKey('ARTOIS-PICARDIE');
-      expect(privateKey).toBe(expectedKey);
+      expect(privateKey).toBe(artoisPicardiePrivateKey);
     });
 
     it('devrait lever une erreur si la clé privée est manquante', () => {
@@ -160,7 +183,15 @@ describe('SftpAgencyService', () => {
       expect(() => {
         new SftpAgencyService(
           {
-            get: jest.fn(() => configJson),
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
+                return encodedArtoisPicardiePrivateKey;
+              }
+              return undefined;
+            }),
           } as unknown as ConfigService,
           logger,
         );
@@ -180,11 +211,47 @@ describe('SftpAgencyService', () => {
       expect(() => {
         new SftpAgencyService(
           {
-            get: jest.fn(() => configJson),
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
+                return encodedArtoisPicardiePrivateKey;
+              }
+              return undefined;
+            }),
           } as unknown as ConfigService,
           logger,
         );
       }).toThrow(/Port invalide pour l'agence 11111111111111: doit être un nombre/);
+    });
+
+    it('devrait lever une erreur si la clé privée est invalide', () => {
+      const configJson = JSON.stringify({
+        '11111111111111': {
+          host: 'sftp1.example.com',
+          port: 22,
+          username: 'user1',
+        },
+      });
+      const invalidPrivateKey = Buffer.from('not a private key', 'utf8').toString('base64');
+
+      expect(() => {
+        new SftpAgencyService(
+          {
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              if (key === 'SFTP_AGENCY_PRIVATE_KEY_11111111111111') {
+                return invalidPrivateKey;
+              }
+              return undefined;
+            }),
+          } as unknown as ConfigService,
+          logger,
+        );
+      }).toThrow(/Invalid SFTP_AGENCY_PRIVATE_KEY_11111111111111: Unsupported key format/);
     });
   });
 });
@@ -235,13 +302,13 @@ describe('createSftpAgency factory', () => {
     const configService = {
       get: jest.fn((key: string) => {
         if (key === 'SFTP_AGENCY_PROVIDER') {
-          return process.env.SFTP_AGENCY_PROVIDER;
+          return 'real';
         }
         if (key === 'SFTP_AGENCY_CONFIG') {
-          return process.env.SFTP_AGENCY_CONFIG;
+          return sftpAgencyConfig;
         }
         if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
-          return process.env[key];
+          return sftpAgencyPrivateKeys[key];
         }
         return undefined;
       }),
