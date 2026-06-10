@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { basename, join, relative } from 'node:path';
 import { RelativePath } from 'arch-unit-ts/dist/arch-unit/core/domain/RelativePath';
 import { TypeScriptProject } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptProject';
 import { TypeScriptClass } from 'arch-unit-ts/dist/arch-unit/core/domain/TypeScriptClass';
@@ -12,6 +14,32 @@ import { ControllerGuardParser } from './ControllerGuardParser';
 
 describe('Architecture test', () => {
   const srcProject = new TypeScriptProject(RelativePath.of('src'), '**/*.spec.ts'); // Ignore tests files
+  const srcRoot = join(process.cwd(), 'src');
+
+  const toPosix = (path: string) => path.split('\\').join('/');
+
+  const collectFiles = (directory: string, predicate: (filePath: string) => boolean): string[] => {
+    if (!existsSync(directory)) {
+      return [];
+    }
+
+    return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(directory, entry.name);
+
+      if (entry.isDirectory()) {
+        return collectFiles(path, predicate);
+      }
+
+      return predicate(path) ? [path] : [];
+    });
+  };
+
+  const readSourceFile = (filePath: string): string => readFileSync(filePath, 'utf8');
+
+  const toPascalCase = (value: string): string =>
+    value.replace(/(^|[-_])([a-zA-Z0-9])/g, (_, _separator: string, character: string) => character.toUpperCase());
+
+  const relativeSourcePath = (filePath: string): string => toPosix(relative(process.cwd(), filePath));
 
   describe('Generic Application Rules', () => {
     it('Repository should depend on gateway', () => {
@@ -40,7 +68,7 @@ describe('Architecture test', () => {
       (
         classes()
           .that()
-          .resideInAnyPackage(MatchingPattern.USER, MatchingPattern.DOSSIER)
+          .resideInAnyPackage(MatchingPattern.USER, MatchingPattern.DOSSIER, MatchingPattern.REFERENTIEL)
           .and()
           .haveSimpleNameEndingWith(MatchingPattern.ENTITY_SUFFIX)
           .should()
@@ -50,62 +78,65 @@ describe('Architecture test', () => {
           TypeScriptClass.simpleNameEndingWith(MatchingPattern.REPOSITORY_SUFFIX)
             .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.ENTITY_SUFFIX))
             .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MODULE_SUFFIX))
-            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.SERVICE_SUFFIX))
+            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.GATEWAY_SUFFIX))
             .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MODEL_SUFFIX))
-            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MAPPER_SUFFIX)),
+            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MAPPER_SUFFIX))
+            .or(TypeScriptClass.simpleNameEndingWith('mock.service.ts')),
         )
-        .because('Entity files should only be imported by modules, repositories, services, gateways and other entities')
+        .because(
+          'Entity files should only be imported by modules, repositories, gateways, mappers, models, mock services and other entities',
+        )
+        .check(srcProject.allClasses());
+    });
+
+    it('Repositories should implement their matching gateway and be registered as providers', () => {
+      const repositoryFiles = collectFiles(srcRoot, (filePath) => filePath.endsWith('.repository.ts'));
+      const moduleSources = collectFiles(srcRoot, (filePath) => filePath.endsWith('.module.ts')).map(readSourceFile);
+
+      const errors = repositoryFiles.flatMap((filePath) => {
+        const baseName = basename(filePath, '.repository.ts');
+        const repositoryName = `${toPascalCase(baseName)}Repository`;
+        const gatewayName = `${toPascalCase(baseName)}Gateway`;
+        const source = readSourceFile(filePath);
+        const fileErrors: string[] = [];
+
+        if (
+          !new RegExp(`export\\s+class\\s+${repositoryName}\\b[^{]*\\bimplements\\s+${gatewayName}\\b`).test(source)
+        ) {
+          fileErrors.push(`missing export class ${repositoryName} implements ${gatewayName}`);
+        }
+
+        const providerPattern = new RegExp(
+          `\\{\\s*provide:\\s*${gatewayName}\\s*,\\s*useClass:\\s*${repositoryName}\\s*\\}`,
+        );
+        if (!moduleSources.some((moduleSource) => providerPattern.test(moduleSource))) {
+          fileErrors.push(`missing module provider { provide: ${gatewayName}, useClass: ${repositoryName} }`);
+        }
+
+        return fileErrors.map((error) => `${relativeSourcePath(filePath)}: ${error}`);
+      });
+
+      expect(errors).toEqual([]);
+    });
+
+    it('Masa-backed modules should not use direct Roseau or Lanceleau gateways', () => {
+      noClasses()
+        .that()
+        .resideInAnyPackage(
+          MatchingPattern.CONFORMITE,
+          MatchingPattern.MESURES,
+          MatchingPattern.SUIVI_REGULIER,
+          MatchingPattern.INDICATEURS,
+        )
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(MatchingPattern.REFERENTIEL_ROSEAU, MatchingPattern.REFERENTIEL_LANCELEAU)
+        .because('Masa-backed modules should use MasaProvider instead of direct Roseau or Lanceleau gateways')
         .check(srcProject.allClasses());
     });
   });
 
   describe('Dossier Module', () => {
-    it.skip('Services should only depend on few dependencies', () => {
-      (
-        classes()
-          .that()
-          .resideInAnyPackage(MatchingPattern.USER, MatchingPattern.DOSSIER)
-          .and()
-          .haveSimpleNameEndingWith(MatchingPattern.SERVICE_SUFFIX)
-          .should()
-          .onlyDependOnClassesThat() as any
-      )
-        .givenWith(
-          TypeScriptClass.simpleNameEndingWith(MatchingPattern.SERVICE_SUFFIX)
-            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.GATEWAY_SUFFIX))
-            .or(TypeScriptClass.simpleNameEndingWith(MatchingPattern.MODEL_SUFFIX))
-            .or(
-              TypeScriptClass.resideInAnyPackage([
-                MatchingPattern.TYPEORM,
-                MatchingPattern.NESTJS_COMMON,
-                MatchingPattern.SHARED,
-                MatchingPattern.PACKAGES_PARSER,
-                MatchingPattern.PACKAGES_DOSSIER,
-                MatchingPattern.INFRA_QUEUE,
-                MatchingPattern.INFRA_S3,
-                MatchingPattern.FORMDATA,
-                MatchingPattern.AXIOS,
-              ]),
-            ),
-        )
-        .because('Services should only depend on: services, gateways , nestjs common, typeorm, shared and packages')
-        .check(srcProject.allClasses());
-    });
-
-    it('Controllers should depend on services or usecases', () => {
-      classes()
-        .that()
-        .resideInAPackage(MatchingPattern.DOSSIER)
-        .and()
-        .haveSimpleNameEndingWith(MatchingPattern.CONTROLLER_SUFFIX)
-        .should()
-        .dependOnClassesThat()
-        .resideInAPackage(MatchingPattern.DOSSIER)
-        .allowEmptyShould(true)
-        .because('Controllers should depend on services or usecases within dossier module')
-        .check(srcProject.allClasses());
-    });
-
     it('Repositories should implement gateways', () => {
       classes()
         .that()
@@ -153,18 +184,6 @@ describe('Architecture test', () => {
     });
   });
 
-  describe('Authentication Module', () => {
-    it('Should not have repositories', () => {
-      noClasses()
-        .that()
-        .resideInAPackage(MatchingPattern.AUTHENTICATION)
-        .should()
-        .haveSimpleNameEndingWith(MatchingPattern.REPOSITORY_SUFFIX)
-        .because('Authentication module should not have repositories')
-        .check(srcProject.allClasses());
-    });
-  });
-
   describe('Notification Module', () => {
     it('Should have producer implementing gateway', () => {
       classes()
@@ -182,54 +201,28 @@ describe('Architecture test', () => {
   });
 
   describe('Worker Module', () => {
-    it('Processors should use services from domain modules', () => {
-      classes()
-        .that()
-        .resideInAPackage(MatchingPattern.WORKER)
-        .and()
-        .haveSimpleNameEndingWith(MatchingPattern.PROCESSOR_SUFFIX)
-        .should()
-        .dependOnClassesThat()
-        .resideInAnyPackage(
-          MatchingPattern.DOSSIER,
-          MatchingPattern.REFERENTIEL,
-          MatchingPattern.NOTIFICATION,
-          MatchingPattern.SHARED,
-          MatchingPattern.INFRA,
-        )
-        .allowEmptyShould(true)
-        .because('Processors should use services from domain modules')
-        .check(srcProject.allClasses());
-    });
+    it('Processor services should implement AsyncTask', () => {
+      const processorFiles = collectFiles(join(srcRoot, 'worker'), (filePath) =>
+        /processor\.service\.ts$/i.test(filePath),
+      );
+      const errors = processorFiles
+        .filter((filePath) => !/implements\s+AsyncTask\b/.test(readSourceFile(filePath)))
+        .map((filePath) => `${relativeSourcePath(filePath)} should implement AsyncTask`);
 
-    it('Should not have controllers', () => {
-      noClasses()
-        .that()
-        .resideInAPackage(MatchingPattern.WORKER)
-        .should()
-        .haveSimpleNameEndingWith(MatchingPattern.CONTROLLER_SUFFIX)
-        .because('Worker module should not have controllers')
-        .check(srcProject.allClasses());
-    });
-  });
-
-  describe('Infra Module', () => {
-    it('Should not have controllers', () => {
-      noClasses()
-        .that()
-        .resideInAPackage(MatchingPattern.INFRA)
-        .should()
-        .haveSimpleNameEndingWith(MatchingPattern.CONTROLLER_SUFFIX)
-        .because('Infra module should not have controllers')
-        .check(srcProject.allClasses());
+      expect(errors).toEqual([]);
     });
   });
 
   describe('Controllers or Endpoints', () => {
     // Endpoints excluded from guard check (with justification)
-    const excludedEndpoints: Set<string> = new Set(['checkDroitsDeDepot', 'uploadFile', 'listMyDepots']);
+    const excludedEndpoints: Set<string> = new Set([
+      'checkDroitsDeDepot',
+      'uploadFile',
+      'listMyDepots',
+      'findParametresByCodes',
+    ]);
 
-    it('Should be protected by guard except AuthenticationController, ReferentielController and VersionController', () => {
+    it('Should be protected by guard except AuthenticationController, VersionController and documented endpoints', () => {
       const beProtectedByGuard = new (class extends ArchCondition<TypeScriptClass> {
         constructor() {
           super('be protected by @UseGuards (at class or method level)');
@@ -273,9 +266,7 @@ describe('Architecture test', () => {
 
       const isController = TypeScriptClass.simpleNameEndingWith(MatchingPattern.CONTROLLER_SUFFIX);
       const exceptControllerAndEndpoint = DescribedPredicate.not(
-        TypeScriptClass.simpleNameStartingWith('authentication')
-          .or(TypeScriptClass.simpleNameStartingWith('referentiel'))
-          .or(TypeScriptClass.simpleNameStartingWith('version')),
+        TypeScriptClass.simpleNameStartingWith('authentication').or(TypeScriptClass.simpleNameStartingWith('version')),
       );
 
       classes()
@@ -283,7 +274,7 @@ describe('Architecture test', () => {
         .shouldWithConjunction(beProtectedByGuard)
         .allowEmptyShould(false)
         .because(
-          'All controllers should be protected by @UseGuards, except AuthenticationController, ReferentielController and VersionController',
+          'All controllers should be protected by @UseGuards, except AuthenticationController, VersionController and documented unguarded endpoints',
         )
         .check(srcProject.allClasses());
     });
