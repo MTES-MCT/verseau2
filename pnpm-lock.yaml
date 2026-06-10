@@ -137,6 +137,9 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      ssh2:
+        specifier: 1.17.0
+        version: 1.17.0
       ssh2-sftp-client:
         specifier: ^12.0.1
         version: 12.1.1
@@ -180,6 +183,9 @@ importers:
       '@types/pdfkit':
         specifier: ^0.17.4
         version: 0.17.5
+      '@types/ssh2':
+        specifier: 1.15.5
+        version: 1.15.5
       '@types/ssh2-sftp-client':
         specifier: ^9.0.6
         version: 9.0.6

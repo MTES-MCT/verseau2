@@ -139,7 +139,6 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       const xmlBuffer = await this.s3.download(depot.path);
       const parsed = await parseScenarioAssainissementXml(xmlBuffer.toString('utf8'));
-      console.log('Parsed XML:', parsed); // Debug: afficher le contenu parsé de l'XML
       const ouvrageDepollutionCode = parsed.ouvrages
         .map((ouvrage) => ouvrage.cdOuvrageDepollution?.trim())
         .find((code): code is string => Boolean(code));
