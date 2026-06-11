@@ -551,7 +551,7 @@ describe('DepotDetailsPage', () => {
   it('shows "Aucune mesure trouvée" when total is 0', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
-    expect(screen.getByText(/aucune mesure trouvée/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/aucune mesure trouvée/i)).toHaveLength(2);
   });
 
   it('shows pagination info text when data is present', () => {
@@ -564,6 +564,18 @@ describe('DepotDetailsPage', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     expect(screen.getByText(/affichage de 1 à 1 sur 1 mesure/i)).toBeInTheDocument();
+  });
+
+  it('shows the total number of mesures above the table', () => {
+    mockUseMesures.mockReturnValue({
+      data: { data: [makeMesure()], total: 365, page: 1, pageSize: 20 },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useMesures>);
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    expect(screen.getByText('Liste des mesures (365 mesures)')).toBeInTheDocument();
   });
 
   it('shows pagination component when total > pageSize', () => {
