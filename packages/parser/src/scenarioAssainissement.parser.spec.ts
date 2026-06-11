@@ -208,4 +208,25 @@ describe('Sandre Parser', () => {
     expect(xml).toContain(`<NomContact>${nomContact}</NomContact>`);
     expect(xml).toEqual(expectedXml);
   });
+
+  it('should preserve CRLF line endings when adding the NomContact tag', () => {
+    const nomContact = 'Pierre Dupont';
+    const originalXml = [
+      '<?xml version="1.0" encoding="utf-8"?>',
+      '<FctAssain>',
+      '  <Scenario>',
+      '    <Emetteur>',
+      '      <CdIntervenant schemeAgencyID="SIRET">33937998401008</CdIntervenant>',
+      '      <NomIntervenant>SAUR</NomIntervenant>',
+      '    </Emetteur>',
+      '  </Scenario>',
+      '</FctAssain>',
+    ].join('\r\n');
+
+    const xml = addNameTagToXml(originalXml, nomContact);
+
+    expect(xml).toContain(`<NomContact>${nomContact}</NomContact>`);
+    expect(xml).toContain(`\r\n      <Contact>\r\n        <NomContact>${nomContact}</NomContact>\r\n      </Contact>`);
+    expect(xml).not.toMatch(/(?<!\r)\n/);
+  });
 });
