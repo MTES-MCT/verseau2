@@ -399,18 +399,30 @@ export function DepotDetailsPage() {
           <>
             <div className={fr.cx('fr-container')}>
               <div className={fr.cx('fr-grid-row')}>
-                <div className={fr.cx('fr-col-4')}>
-                  <ToggleSwitch
-                    inputTitle="Afficher le graphique"
-                    label="Afficher le graphique"
-                    helperText={!hasSubmittedGraphFilters && 'Recherchez avec un Point de mesure et un Paramètre'}
-                    onChange={handleToggleGraph}
-                    disabled={!canShowGraph}
-                    showCheckedHint={false}
-                  />
+                <div className={fr.cx('fr-col-8')}>
+                  <div className={fr.cx('fr-grid-row')}>
+                    <div className={fr.cx('fr-col-6')}>
+                      <ToggleSwitch
+                        inputTitle="Afficher le graphique"
+                        label="Afficher le graphique"
+                        helperText={!hasSubmittedGraphFilters && 'Recherchez avec un Point de mesure et un Paramètre'}
+                        onChange={handleToggleGraph}
+                        disabled={!canShowGraph}
+                        showCheckedHint={false}
+                      />
+                    </div>
+
+                    {data && (
+                      <div className={fr.cx('fr-col-6')}>
+                        {data.total === 0
+                          ? 'Aucune mesure trouvée.'
+                          : `Liste des mesures (${data.total} mesure${data.total > 1 ? 's' : ''})`}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className={fr.cx('fr-col-8')}>
+                <div className={fr.cx('fr-col-4')}>
                   <div className={fr.cx('fr-grid-row', 'fr-grid-row--right')}>
                     <Button
                       type="button"
@@ -432,7 +444,7 @@ export function DepotDetailsPage() {
               )
             ) : (
               <Table
-                caption="Liste des mesures d'autosurveillance"
+                caption="Liste des mesures"
                 noCaption
                 bordered
                 headers={headers}
