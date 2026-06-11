@@ -1,6 +1,7 @@
 import { formatDate } from '@lib/shared';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
+import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { useIndicateursSteu } from '../hooks/useIndicateursSteu';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useState } from 'react';
@@ -93,7 +94,7 @@ export function IndicateursTable() {
   });
 
   return (
-    <div className={fr.cx('fr-mb-4w')}>
+    <div className={fr.cx('fr-mb-4w', 'fr-mt-4w')}>
       <div className="fr-grid-row fr-grid-row--middle fr-mb-2w">
         <div className="fr-col">
           <h2 className="fr-h4 fr-mb-0">Principaux indicateurs</h2>
@@ -105,6 +106,12 @@ export function IndicateursTable() {
           <span className="fr-badge fr-badge--info fr-badge--no-icon">Par système d'assainissement</span>
         </div>
       </div>
+      <Notice
+        title="Indicateurs pour les réseaux uniquement de type mixtes/unitaires"
+        description="(sont exclus les réseaux 100% séparatif)"
+        severity="info"
+        className={fr.cx('fr-mb-2w')}
+      />
       <Table headers={headers} data={isLoading ? loadingData : displayedTableData} noCaption />
 
       {totalPages > 1 && (
