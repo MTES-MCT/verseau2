@@ -47,6 +47,7 @@ async function main() {
     console.log('\n=== Step 4/4: Atomic swap ===');
     const dumpSource = path.basename(tempFilePath);
     await schemaManager.swapStagingToLive(dumpSource, rowCounts, startedAt);
+    await schemaManager.createVSteuSclItvMaterializedView();
 
     // Cleanup temp file
     console.log('\nCleaning up temporary file...');

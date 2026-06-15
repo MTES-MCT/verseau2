@@ -88,7 +88,7 @@ export async function seedVSteuSclItv(
   aeItvRfa?: string,
 ): Promise<void> {
   await dataSource.query(
-    `INSERT INTO verseau.v_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa, sat_itv_rfa, ae_itv_rfa) VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO verseau.mv_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa, sat_itv_rfa, ae_itv_rfa) VALUES ($1, $2, $3, $4, $5)`,
     [steuCda, sclCda, moItvRfa, satItvRfa ?? '', aeItvRfa ?? ''],
   );
 }
@@ -150,6 +150,6 @@ export async function clearUserWithDroits(dataSource: DataSource): Promise<void>
   await dataSource.query(`DELETE FROM masa`);
   await dataSource.query(`DELETE FROM depot`);
   await dataSource.query(`DELETE FROM "user"`);
-  await dataSource.query(`DELETE FROM verseau.v_steu_scl_itv`);
+  await dataSource.query(`DELETE FROM verseau.mv_steu_scl_itv`);
   await clearLanceleauData(dataSource);
 }

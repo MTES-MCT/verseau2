@@ -235,11 +235,10 @@ export class MasaProvider {
     if (inFlight) {
       return inFlight;
     }
-
     const promise = this.lanceleauGateway
       .findVSteuSclItvByItvRfa(itvRfa)
       .then(async (result) => {
-        await this.cacheManager.set(cacheKey, result, 3_600_000);
+        await this.cacheManager.set(cacheKey, result, 60_000);
         return result;
       })
       .finally(() => {
