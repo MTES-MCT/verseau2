@@ -167,27 +167,24 @@ export function Dashboard() {
             />
           </div>
         )}
-        <div className={fr.cx('fr-mb-4w', 'fr-mt-4w')}>
-          <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
-          {tableData.length > 0 ? (
-            <FixedHeightTable
-              caption="Liste des dépôts d'auto-surveillance"
-              noCaption
-              bordered
-              headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
-              data={tableData}
-              isFetching={isFetching && !isLoading}
-              pageSize={pageSize}
-              rowHeight="two-lines"
-              noScroll={false}
-              className={fr.cx('fr-mb-1w')}
-            />
-          ) : (
-            'Aucun dépôt trouvé.'
-          )}
-        </div>
+        <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
+        {tableData.length > 0 ? (
+          <FixedHeightTable
+            caption="Liste des dépôts d'auto-surveillance"
+            noCaption
+            bordered
+            headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
+            data={tableData}
+            isFetching={isFetching && !isLoading}
+            pageSize={pageSize}
+            rowHeight="two-lines"
+            noScroll={false}
+            className={fr.cx('fr-mb-1w')}
+          />
+        ) : (
+          'Aucun dépôt trouvé.'
+        )}
 
-        <hr></hr>
         {totalPages > 1 && (
           <div className="fr-mt-4w">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -207,6 +204,8 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      <hr></hr>
 
       <div className={fr.cx('fr-my-4w')}>
         <IndicateursTable />
