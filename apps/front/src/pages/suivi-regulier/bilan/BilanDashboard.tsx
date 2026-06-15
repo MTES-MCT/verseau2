@@ -408,7 +408,13 @@ export const BilanDashboard = () => {
             Exporter CSV
           </Button>
         </div>
-        <FixedHeightTable data={tableData} headers={headers} pageSize={pageSize} rowHeight="one-line" />
+        <FixedHeightTable
+          data={tableData}
+          headers={headers}
+          isFetching={isFetching}
+          pageSize={pageSize}
+          rowHeight="one-line"
+        />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
             count={Math.ceil((data?.total || 0) / pageSize)}

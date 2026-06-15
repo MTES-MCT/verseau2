@@ -328,6 +328,7 @@ export const EvenementDashboard = () => {
         </div>
         <FixedHeightTable
           data={(data?.data || []).map(getTableData)}
+          isFetching={isFetching}
           pageSize={pageSize}
           rowHeight="two-lines"
           headers={[

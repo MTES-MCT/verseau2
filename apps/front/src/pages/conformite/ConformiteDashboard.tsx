@@ -463,6 +463,7 @@ export function ConformiteDashboard() {
             <FixedHeightTable
               headers={headers}
               data={tableData}
+              isFetching={isFetching}
               pageSize={PAGE_SIZE}
               rowHeight="two-lines"
               noCaption

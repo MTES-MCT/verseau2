@@ -62,7 +62,7 @@ function formatDate(date: Date | string): string {
 }
 
 export function Dashboard() {
-  const { data: depots = [], isLoading, error, isExpertNational } = useDepots();
+  const { data: depots = [], isLoading, isFetching, error, isExpertNational } = useDepots();
 
   const { downloadingDepotId, handleDownload, downloadingXmlId, handleDownloadXml, downloadError, setDownloadError } =
     useRapportAndXmlDownload(isExpertNational);
@@ -167,19 +167,27 @@ export function Dashboard() {
             />
           </div>
         )}
-        <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
-        <FixedHeightTable
-          caption="Liste des dépôts d'auto-surveillance"
-          noCaption
-          bordered
-          headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
-          data={tableData}
-          pageSize={pageSize}
-          rowHeight="two-lines"
-          noScroll={false}
-          className={fr.cx('fr-mb-1w')}
-        />
+        <div className={fr.cx('fr-mb-4w', 'fr-mt-4w')}>
+          <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
+          {tableData.length > 0 ? (
+            <FixedHeightTable
+              caption="Liste des dépôts d'auto-surveillance"
+              noCaption
+              bordered
+              headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
+              data={tableData}
+              isFetching={isFetching && !isLoading}
+              pageSize={pageSize}
+              rowHeight="two-lines"
+              noScroll={false}
+              className={fr.cx('fr-mb-1w')}
+            />
+          ) : (
+            'Aucun dépôt trouvé.'
+          )}
+        </div>
 
+        <hr></hr>
         {totalPages > 1 && (
           <div className="fr-mt-4w">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -10,6 +10,15 @@
   height: var(--fixed-height-table-row-height);
 }
 
+.fixed-height-table table {
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.fixed-height-table--fetching table {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
 .fixed-height-table th,
 .fixed-height-table td {
   vertical-align: middle;

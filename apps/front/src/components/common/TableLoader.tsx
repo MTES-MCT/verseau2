@@ -41,8 +41,6 @@ export function TableLoader({ isLoading, isFetching, hasOuvrageSelected, childre
   return (
     <div
       style={{
-        opacity: isFetching ? 0.5 : 1,
-        transition: 'opacity 0.15s ease',
         position: 'relative',
       }}
     >

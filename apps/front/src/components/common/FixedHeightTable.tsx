@@ -8,6 +8,7 @@ type FixedHeightTableRowHeight = 'one-line' | 'two-lines';
 
 interface FixedHeightTableProps extends Omit<TableProps, 'data'> {
   data: ReactNode[][];
+  isFetching?: boolean;
   pageSize: number;
   rowHeight: FixedHeightTableRowHeight;
 }
@@ -32,7 +33,15 @@ function wrapCell(cell: ReactNode, rowIndex: number, cellIndex: number): ReactNo
   );
 }
 
-export function FixedHeightTable({ data, pageSize, rowHeight, className, ...tableProps }: FixedHeightTableProps) {
+export function FixedHeightTable({
+  data,
+  isFetching = false,
+  pageSize,
+  rowHeight,
+  className,
+  style,
+  ...tableProps
+}: FixedHeightTableProps) {
   const rowHeightRem = ROW_HEIGHT_REM[rowHeight];
   const minHeightRem = HEADER_HEIGHT_REM + pageSize * rowHeightRem;
   const wrappedData = data.map((row, rowIndex) => row.map((cell, cellIndex) => wrapCell(cell, rowIndex, cellIndex)));
@@ -40,9 +49,21 @@ export function FixedHeightTable({ data, pageSize, rowHeight, className, ...tabl
     '--fixed-height-table-min-height': `${minHeightRem}rem`,
     '--fixed-height-table-row-height': `${rowHeightRem}rem`,
   } as CSSProperties;
-  const fixedTableClassName = ['fixed-height-table', `fixed-height-table--${rowHeight}`, className]
+  const fixedTableClassName = [
+    'fixed-height-table',
+    `fixed-height-table--${rowHeight}`,
+    isFetching && 'fixed-height-table--fetching',
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 
-  return <Table {...tableProps} className={fixedTableClassName} data={wrappedData} style={fixedTableStyle} />;
+  return (
+    <Table
+      {...tableProps}
+      className={fixedTableClassName}
+      data={wrappedData}
+      style={{ ...style, ...fixedTableStyle }}
+    />
+  );
 }

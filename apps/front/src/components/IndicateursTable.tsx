@@ -14,7 +14,7 @@ const SKELETON_WIDTHS = ['100px', '80px', '60px', '80px', '80px', '120px', '150p
 
 export function IndicateursTable() {
   const [currentPage, setCurrentPage] = useState(1);
-  const { data, isLoading, error } = useIndicateursSteu({ page: currentPage, pageSize: PAGE_SIZE });
+  const { data, isLoading, isFetching, error } = useIndicateursSteu({ page: currentPage, pageSize: PAGE_SIZE });
   const indicateurs = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -106,6 +106,7 @@ export function IndicateursTable() {
       <FixedHeightTable
         headers={headers}
         data={isLoading ? loadingData : tableData}
+        isFetching={isFetching && !isLoading}
         pageSize={PAGE_SIZE}
         rowHeight="two-lines"
         noCaption

@@ -393,9 +393,9 @@ export function DepotDetailsPage() {
         />
       )}
 
-      {/* Table — stays mounted while paginating; opacity signals background refresh */}
+      {/* Table stays mounted while paginating so previous results remain visible during refresh. */}
       {!isLoading && !error && (
-        <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
+        <div>
           <>
             <div className={fr.cx('fr-container')}>
               <div className={fr.cx('fr-grid-row')}>
@@ -449,6 +449,7 @@ export function DepotDetailsPage() {
                 bordered
                 headers={headers}
                 data={tableData}
+                isFetching={isFetching}
                 pageSize={PAGE_SIZE}
                 rowHeight="two-lines"
                 noScroll={false}

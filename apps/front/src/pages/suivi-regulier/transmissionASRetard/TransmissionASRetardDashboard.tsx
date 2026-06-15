@@ -273,7 +273,13 @@ export const TransmissionASRetardDashboard = () => {
             Exporter CSV
           </Button>
         </div>
-        <FixedHeightTable data={tableData} headers={finalHeaders} pageSize={pageSize} rowHeight="two-lines" />
+        <FixedHeightTable
+          data={tableData}
+          headers={finalHeaders}
+          isFetching={isFetching}
+          pageSize={pageSize}
+          rowHeight="two-lines"
+        />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
             count={Math.ceil((data?.total || 0) / pageSize)}
