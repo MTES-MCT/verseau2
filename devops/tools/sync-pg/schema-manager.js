@@ -228,6 +228,31 @@ class SchemaManager {
     }
   }
 
+  async createVSteuSclItvMaterializedView() {
+    console.log('Creating verseau.mv_steu_scl_itv materialized view...');
+    const client = await this._getClient();
+
+    try {
+      console.log('Dropping existing materialized view verseau.mv_steu_scl_itv if it exists...');
+      await client.query(`DROP MATERIALIZED VIEW IF EXISTS verseau.mv_steu_scl_itv;`);
+      console.log('Creating new materialized view verseau.mv_steu_scl_itv ...');
+      await client.query(`
+        CREATE MATERIALIZED VIEW verseau.mv_steu_scl_itv AS
+        SELECT *
+        FROM verseau.v_steu_scl_itv;
+      `);
+      console.log('Creating indexes on materialized view verseau.mv_steu_scl_itv...');
+      await client.query(`CREATE INDEX idx_mv_steu_scl_itv_steu_cda ON verseau.mv_steu_scl_itv (steu_cda);`);
+      await client.query(`CREATE INDEX idx_mv_steu_scl_itv_scl_cda ON verseau.mv_steu_scl_itv (scl_cda);`);
+      await client.query(`CREATE INDEX idx_mv_steu_scl_itv_mo_itv_rfa ON verseau.mv_steu_scl_itv (mo_itv_rfa);`);
+      await client.query(`CREATE INDEX idx_mv_steu_scl_itv_sat_itv_rfa ON verseau.mv_steu_scl_itv (sat_itv_rfa);`);
+      await client.query(`CREATE INDEX idx_mv_steu_scl_itv_ae_itv_rfa ON verseau.mv_steu_scl_itv (ae_itv_rfa);`);
+      console.log('✅ verseau.mv_steu_scl_itv materialized view created.');
+    } finally {
+      await client.end();
+    }
+  }
+
   /**
    * @param {Client} client
    * @param {string} schemaName

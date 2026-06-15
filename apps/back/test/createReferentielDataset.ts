@@ -370,9 +370,9 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
 export async function createVerseauTables(dataSource: DataSource): Promise<void> {
   await dataSource.query(`CREATE SCHEMA IF NOT EXISTS verseau`);
 
-  await dataSource.query(`DROP TABLE IF EXISTS verseau.v_steu_scl_itv CASCADE`);
+  await dataSource.query(`DROP TABLE IF EXISTS verseau.mv_steu_scl_itv CASCADE`);
   await dataSource.query(`
-    CREATE TABLE verseau.v_steu_scl_itv (
+    CREATE TABLE verseau.mv_steu_scl_itv (
       steu_cda VARCHAR,
       scl_cda VARCHAR,
       mo_itv_rfa VARCHAR,
@@ -413,7 +413,7 @@ export async function clearReferentielData(dataSource: DataSource): Promise<void
   await dataSource.query(`DELETE FROM lanceleau.par`);
   await dataSource.query(`DELETE FROM lanceleau.urf`);
   await dataSource.query(`DELETE FROM lanceleau.itv`);
-  await dataSource.query(`DELETE FROM verseau.v_steu_scl_itv`);
+  await dataSource.query(`DELETE FROM verseau.mv_steu_scl_itv`);
 }
 
 // ============= Seed Data Functions =============

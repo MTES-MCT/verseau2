@@ -91,7 +91,7 @@ describe('MesuresController (e2e)', () => {
   afterEach(async () => {
     jest.restoreAllMocks();
     await clearReferentielData(dataSource);
-    await dataSource.query(`DELETE FROM verseau.v_steu_scl_itv`);
+    await dataSource.query(`DELETE FROM verseau.mv_steu_scl_itv`);
   });
 
   // -------------------------------------------------------------------
@@ -113,9 +113,9 @@ describe('MesuresController (e2e)', () => {
     await seedPle(dataSource, PLE_CDN, PMO_CDN, '2024-06-15');
     await seedAlr(dataSource, ALR_CDN, PLE_CDN, PAR_RFA, 'mg/L', 42.5);
 
-    // Seed v_steu_scl_itv: lien SIRET → STEU
+    // Seed mv_steu_scl_itv: lien SIRET → STEU
     await dataSource.query(
-      `INSERT INTO verseau.v_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa, sat_itv_rfa, ae_itv_rfa)
+      `INSERT INTO verseau.mv_steu_scl_itv (steu_cda, scl_cda, mo_itv_rfa, sat_itv_rfa, ae_itv_rfa)
        VALUES ($1, $2, $3, $4, $5)`,
       [STEU_SANDRE_CDA, 'SCL_TEST_001', ITV_RFA, null, null],
     );

@@ -1,6 +1,6 @@
 import { ViewColumn, ViewEntity } from 'typeorm';
 
-@ViewEntity({ name: 'v_steu_scl_itv', schema: 'verseau', synchronize: false })
+@ViewEntity({ name: 'mv_steu_scl_itv', schema: 'verseau', synchronize: false })
 export class VSteuSclItvEntity {
   @ViewColumn({ name: 'steu_cda' })
   steuCda: string;
