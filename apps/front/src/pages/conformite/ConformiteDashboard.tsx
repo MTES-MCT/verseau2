@@ -5,7 +5,6 @@ import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import {
   type ConformiteSclDto,
   type ConformiteSclSortByValue,
@@ -30,6 +29,7 @@ import { useConformiteFilters } from '../../hooks/useConformiteFilters';
 import { TableLoader } from '../../components/common/TableLoader';
 import { useCsvExportDownload } from '../../hooks/useCsvExportDownload';
 import { downloadConformiteSclExport, downloadConformiteSteuExport } from '../../api/conformite';
+import { FixedHeightTable } from '../../components/common/FixedHeightTable';
 
 type ConformiteSteuRow = ConformiteSteuDto;
 
@@ -460,9 +460,11 @@ export function ConformiteDashboard() {
                 Exporter CSV
               </Button>
             </div>
-            <Table
+            <FixedHeightTable
               headers={headers}
               data={tableData}
+              pageSize={PAGE_SIZE}
+              rowHeight="two-lines"
               noCaption
               bordered
               noScroll={false}

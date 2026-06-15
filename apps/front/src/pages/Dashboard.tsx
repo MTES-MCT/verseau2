@@ -2,7 +2,6 @@ import { Link } from 'react-router';
 import { type ControleLocationState } from './Controle';
 import { getControleRoute } from '../routes';
 
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -16,6 +15,7 @@ import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
 import { IndicateursTable } from '../components/IndicateursTable';
 import { useDepots } from '../hooks/useDepots';
+import { FixedHeightTable } from '../components/common/FixedHeightTable';
 
 const PAGE_SIZE = 5;
 
@@ -168,12 +168,14 @@ export function Dashboard() {
           </div>
         )}
         <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
-        <Table
+        <FixedHeightTable
           caption="Liste des dépôts d'auto-surveillance"
           noCaption
           bordered
           headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
           data={tableData}
+          pageSize={pageSize}
+          rowHeight="two-lines"
           noScroll={false}
           className={fr.cx('fr-mb-1w')}
         />

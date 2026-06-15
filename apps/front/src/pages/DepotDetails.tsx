@@ -5,7 +5,6 @@ import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { SortableHeader } from '../components/SortableHeader';
 import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
@@ -22,6 +21,7 @@ import { useCsvExportDownload } from '../hooks/useCsvExportDownload';
 import { useMesuresGraph } from '../hooks/useMesuresGraph';
 import { downloadMesuresExport } from '../api/mesures';
 import { MesuresGraph } from '../components/MesuresGraph';
+import { FixedHeightTable } from '../components/common/FixedHeightTable';
 
 export function DepotDetailsPage() {
   const [showGraph, setShowGraph] = useState(false);
@@ -443,12 +443,14 @@ export function DepotDetailsPage() {
                 <MesuresGraph data={graphData} parametreLabel={parametreLabel} />
               )
             ) : (
-              <Table
+              <FixedHeightTable
                 caption="Liste des mesures"
                 noCaption
                 bordered
                 headers={headers}
                 data={tableData}
+                pageSize={PAGE_SIZE}
+                rowHeight="two-lines"
                 noScroll={false}
                 className={fr.cx('fr-mb-1w')}
               />

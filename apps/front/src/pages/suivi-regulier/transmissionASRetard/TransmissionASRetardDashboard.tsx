@@ -8,7 +8,6 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useTransmissionASRetardSteu, useTransmissionASRetardScl } from '../../../hooks/useTransmissionASRetard';
 import { useTransmissionASRetardFilters } from '../../../hooks/useTransmissionASRetardFilters';
@@ -29,6 +28,7 @@ import {
   downloadTransmissionASRetardSclExport,
   downloadTransmissionASRetardSteuExport,
 } from '../../../api/transmissionASRetard';
+import { FixedHeightTable } from '../../../components/common/FixedHeightTable';
 
 export const TransmissionASRetardDashboard = () => {
   const { filters, updateFilter, page, setPage } = useTransmissionASRetardFilters();
@@ -273,7 +273,7 @@ export const TransmissionASRetardDashboard = () => {
             Exporter CSV
           </Button>
         </div>
-        <Table data={tableData} headers={finalHeaders} />
+        <FixedHeightTable data={tableData} headers={finalHeaders} pageSize={pageSize} rowHeight="two-lines" />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
             count={Math.ceil((data?.total || 0) / pageSize)}

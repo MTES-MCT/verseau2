@@ -1,11 +1,11 @@
 import { formatDate } from '@lib/shared';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { useIndicateursSteu } from '../hooks/useIndicateursSteu';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useState } from 'react';
 import { SkeletonLine } from './common/Skeleton';
+import { FixedHeightTable } from './common/FixedHeightTable';
 import './IndicateursTable.css';
 
 const PAGE_SIZE = 10;
@@ -14,7 +14,7 @@ const SKELETON_WIDTHS = ['100px', '80px', '60px', '80px', '80px', '120px', '150p
 
 export function IndicateursTable() {
   const [currentPage, setCurrentPage] = useState(1);
-  const { data, isLoading, isFetching, error } = useIndicateursSteu({ page: currentPage, pageSize: PAGE_SIZE });
+  const { data, isLoading, error } = useIndicateursSteu({ page: currentPage, pageSize: PAGE_SIZE });
   const indicateurs = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -76,15 +76,6 @@ export function IndicateursTable() {
       })
     : [];
 
-  const isPageTransition = isFetching && !isLoading && tableData.length > 0;
-  const displayedTableData = isPageTransition
-    ? tableData.map((row, rowIndex) =>
-        row.map((_, cellIndex) => (
-          <SkeletonLine key={`page-${rowIndex}-cell-${cellIndex}`} width={SKELETON_WIDTHS[cellIndex]} />
-        )),
-      )
-    : tableData;
-
   const getPageLinkProps = (pageNumber: number) => ({
     href: `#indicateurs-page-${pageNumber}`,
     onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -112,7 +103,13 @@ export function IndicateursTable() {
         severity="info"
         className={fr.cx('fr-mb-2w')}
       />
-      <Table headers={headers} data={isLoading ? loadingData : displayedTableData} noCaption />
+      <FixedHeightTable
+        headers={headers}
+        data={isLoading ? loadingData : tableData}
+        pageSize={PAGE_SIZE}
+        rowHeight="two-lines"
+        noCaption
+      />
 
       {totalPages > 1 && (
         <div className="fr-mt-4w">

@@ -1,0 +1,55 @@
+.fixed-height-table {
+  min-height: var(--fixed-height-table-min-height);
+}
+
+.fixed-height-table table {
+  display: table;
+}
+
+.fixed-height-table tbody tr {
+  height: var(--fixed-height-table-row-height);
+}
+
+.fixed-height-table th,
+.fixed-height-table td {
+  vertical-align: middle;
+}
+
+.fixed-height-table td {
+  overflow: hidden;
+}
+
+.fixed-height-table__cell-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fixed-height-table--one-line .fixed-height-table__cell-content {
+  display: block;
+  white-space: nowrap;
+}
+
+.fixed-height-table--two-lines .fixed-height-table__cell-content,
+.fixed-height-table--two-lines .truncate-cell {
+  display: -webkit-box;
+  max-height: 3rem;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.fixed-height-table--two-lines .truncate-cell {
+  background-image: none;
+  text-decoration-line: underline;
+  text-decoration-thickness: 0.0625em;
+  text-underline-offset: 0.25em;
+  width: fit-content;
+}
+
+.fixed-height-table--one-line .truncate-cell {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

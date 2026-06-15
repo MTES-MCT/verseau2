@@ -7,7 +7,6 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import {
   useBilanSteu,
@@ -35,6 +34,7 @@ import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
 import { downloadBilanSclExport, downloadBilanSteuExport } from '../../../api/bilan';
 import { formatOption } from '../../../helper/optionsFormatter';
+import { FixedHeightTable } from '../../../components/common/FixedHeightTable';
 
 function formatInfoDate(value: string | null | undefined) {
   if (!value) {
@@ -408,7 +408,7 @@ export const BilanDashboard = () => {
             Exporter CSV
           </Button>
         </div>
-        <Table data={tableData} headers={headers} />
+        <FixedHeightTable data={tableData} headers={headers} pageSize={pageSize} rowHeight="one-line" />
         {Math.ceil((data?.total || 0) / pageSize) > 1 && (
           <Pagination
             count={Math.ceil((data?.total || 0) / pageSize)}
