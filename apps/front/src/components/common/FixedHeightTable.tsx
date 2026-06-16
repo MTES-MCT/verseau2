@@ -4,7 +4,7 @@ import './FixedHeightTable.css';
 
 type TableProps = ComponentProps<typeof Table>;
 
-type FixedHeightTableRowHeight = 'one-line' | 'two-lines';
+type FixedHeightTableRowHeight = 'one-line' | 'two-lines' | 'three-lines';
 type FixedHeightTableHeaderWithWidth = { key: ReactNode; width: number };
 type FixedHeightTableHeader = ReactNode[] | FixedHeightTableHeaderWithWidth[];
 
@@ -20,7 +20,9 @@ interface FixedHeightTableProps extends Omit<TableProps, 'data' | 'headers'> {
 const ROW_HEIGHT_REM: Record<FixedHeightTableRowHeight, number> = {
   'one-line': 3.5,
   'two-lines': 5,
+  'three-lines': 7.5,
 };
+const COLUMN_WIDTH_FRACTIONS = 100;
 
 function isHeaderWithWidth(
   header: ReactNode | FixedHeightTableHeaderWithWidth,
@@ -71,7 +73,7 @@ export function FixedHeightTable({
   const minHeightRem = ROW_HEIGHT_REM['one-line'] + pageSize * rowHeightRem;
   const columnWidthStyle = headers.reduce<Record<string, string>>((acc, header, headerIndex) => {
     if (isHeaderWithWidth(header)) {
-      acc[`--fixed-height-table-column-${headerIndex + 1}-width`] = `${header.width}px`;
+      acc[`--fixed-height-table-column-${headerIndex + 1}-width`] = `${(header.width / COLUMN_WIDTH_FRACTIONS) * 100}%`;
     }
 
     return acc;

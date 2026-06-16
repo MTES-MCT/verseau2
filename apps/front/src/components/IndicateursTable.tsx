@@ -4,13 +4,10 @@ import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { useIndicateursSteu } from '../hooks/useIndicateursSteu';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useState } from 'react';
-import { SkeletonLine } from './common/Skeleton';
 import { FixedHeightTable } from './common/FixedHeightTable';
 import './IndicateursTable.css';
 
 const PAGE_SIZE = 10;
-
-const SKELETON_WIDTHS = ['100px', '80px', '60px', '80px', '80px', '120px', '150px', '150px', '150px'];
 
 export function IndicateursTable() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,18 +25,16 @@ export function IndicateursTable() {
   }
 
   const headers = [
-    { key: "Système d'assainissement", width: 220 },
-    { key: 'PC95 (m³/j)', width: 100 },
-    { key: 'CBPO (EH)', width: 100 },
-    { key: 'Maximum entre PC95 et débit de référence (m³/j)', width: 180 },
-    { key: 'Capacité nominale (EH)', width: 120 },
-    { key: 'Date validation critère conf.', width: 140 },
-    { key: '% volume déversé tps de pluie', width: 120 },
-    { key: '% flux déversé tps de pluie', width: 120 },
-    { key: 'Nb jours de déversement moyen (5 ans)', width: 100 },
+    { key: "Système d'assainissement", width: 15 },
+    { key: 'PC95 (m³/j)', width: 10 },
+    { key: 'CBPO (EH)', width: 10 },
+    { key: 'Maximum entre PC95 et débit de référence (m³/j)', width: 15 },
+    { key: 'Capacité nominale (EH)', width: 10 },
+    { key: 'Date validation critère conf.', width: 10 },
+    { key: '% volume déversé tps de pluie', width: 10 },
+    { key: '% flux déversé tps de pluie', width: 10 },
+    { key: 'Nb jours de déversement moyen (5 ans)', width: 10 },
   ];
-
-  const loadingData = [SKELETON_WIDTHS.map((width, index) => <SkeletonLine key={`loading-${index}`} width={width} />)];
 
   const formatConfNumber = (value: number | null, isEvaluated: boolean, suffix = '') => {
     if (value !== null && value !== undefined) {
@@ -105,7 +100,7 @@ export function IndicateursTable() {
       />
       <FixedHeightTable
         headers={headers}
-        data={isLoading ? loadingData : tableData}
+        data={tableData}
         isFetching={isFetching && !isLoading}
         pageSize={PAGE_SIZE}
         rowHeight="two-lines"
