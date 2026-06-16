@@ -451,7 +451,7 @@ export function DepotDetailsPage() {
                 data={tableData}
                 isFetching={isFetching}
                 pageSize={PAGE_SIZE}
-                rowHeight="two-lines"
+                rowHeight="one-line"
                 noScroll={false}
                 className={fr.cx('fr-mb-1w')}
               />
