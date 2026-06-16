@@ -8,6 +8,7 @@ import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Button } from '@codegouvfr/react-dsfr/Button';
+import { Tooltip } from '@codegouvfr/react-dsfr/Tooltip';
 import {
   useBilanSteu,
   useBilanScl,
@@ -229,6 +230,14 @@ export const BilanDashboard = () => {
     });
   } else {
     headers = buildBilanSteuTableHeaders().map((header) => {
+      if (header.property === 'hcnf') {
+        return (
+          <span key="hcnf">
+            {header.label} <Tooltip title="Hors condition normale de fonctionnement (Débit A3 > Débit de référence)" />
+          </span>
+        );
+      }
+
       if (header.property !== 'date') {
         return header.label;
       }
