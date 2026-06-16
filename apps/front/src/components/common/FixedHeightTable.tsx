@@ -5,20 +5,28 @@ import './FixedHeightTable.css';
 type TableProps = ComponentProps<typeof Table>;
 
 type FixedHeightTableRowHeight = 'one-line' | 'two-lines';
+type FixedHeightTableHeaderWithWidth = { key: ReactNode; width: number };
+type FixedHeightTableHeader = ReactNode[] | FixedHeightTableHeaderWithWidth[];
 
 interface FixedHeightTableProps extends Omit<TableProps, 'data' | 'headers'> {
   data: ReactNode[][];
-  headers: ReactNode[];
+  headers: FixedHeightTableHeader;
   isFetching?: boolean;
   pageSize: number;
   rowHeight: FixedHeightTableRowHeight;
+  headerHeight?: FixedHeightTableRowHeight;
 }
 
-const HEADER_HEIGHT_REM = 3.5;
 const ROW_HEIGHT_REM: Record<FixedHeightTableRowHeight, number> = {
   'one-line': 3.5,
   'two-lines': 5,
 };
+
+function isHeaderWithWidth(
+  header: ReactNode | FixedHeightTableHeaderWithWidth,
+): header is FixedHeightTableHeaderWithWidth {
+  return typeof header === 'object' && header !== null && 'key' in header && 'width' in header;
+}
 
 function wrapCell(cell: ReactNode, rowIndex: number, cellIndex: number): ReactNode {
   if (typeof cell !== 'string' && typeof cell !== 'number') {
@@ -54,22 +62,35 @@ export function FixedHeightTable({
   isFetching = false,
   pageSize,
   rowHeight,
+  headerHeight,
   className,
   style,
   ...tableProps
 }: FixedHeightTableProps) {
   const rowHeightRem = ROW_HEIGHT_REM[rowHeight];
-  const minHeightRem = HEADER_HEIGHT_REM + pageSize * rowHeightRem;
-  const wrappedHeaders = headers.map(wrapHeader);
+  const minHeightRem = ROW_HEIGHT_REM['one-line'] + pageSize * rowHeightRem;
+  const columnWidthStyle = headers.reduce<Record<string, string>>((acc, header, headerIndex) => {
+    if (isHeaderWithWidth(header)) {
+      acc[`--fixed-height-table-column-${headerIndex + 1}-width`] = `${header.width}px`;
+    }
+
+    return acc;
+  }, {});
+  const hasColumnWidths = Object.keys(columnWidthStyle).length > 0;
+  const wrappedHeaders = headers.map((header, headerIndex) =>
+    wrapHeader(isHeaderWithWidth(header) ? header.key : header, headerIndex),
+  );
   const wrappedData = data.map((row, rowIndex) => row.map((cell, cellIndex) => wrapCell(cell, rowIndex, cellIndex)));
   const fixedTableStyle = {
-    '--fixed-height-table-header-height': `${HEADER_HEIGHT_REM}rem`,
+    '--fixed-height-table-header-height': `${ROW_HEIGHT_REM[headerHeight ?? 'one-line']}rem`,
     '--fixed-height-table-min-height': `${minHeightRem}rem`,
     '--fixed-height-table-row-height': `${rowHeightRem}rem`,
+    ...columnWidthStyle,
   } as CSSProperties;
   const fixedTableClassName = [
     'fixed-height-table',
     `fixed-height-table--${rowHeight}`,
+    hasColumnWidths && 'fixed-height-table--with-column-widths',
     isFetching && 'fixed-height-table--fetching',
     className,
   ]

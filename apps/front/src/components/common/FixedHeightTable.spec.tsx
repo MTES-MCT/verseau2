@@ -37,4 +37,25 @@ describe('FixedHeightTable', () => {
     expect(tableWrapper).toHaveStyle('--fixed-height-table-header-height: 3.5rem');
     expect(tableWrapper).toHaveStyle('--fixed-height-table-row-height: 3.5rem');
   });
+
+  it('applies declared column widths from headers', () => {
+    render(
+      <FixedHeightTable
+        headers={[
+          { key: 'Nom', width: 240 },
+          { key: 'Statut', width: 120 },
+        ]}
+        data={[['Station', 'Active']]}
+        pageSize={1}
+        rowHeight="one-line"
+      />,
+    );
+
+    const tableWrapper = screen.getByTitle('Station').closest('.fixed-height-table');
+
+    expect(screen.getByTitle('Nom')).toBeInTheDocument();
+    expect(tableWrapper).toHaveClass('fixed-height-table--with-column-widths');
+    expect(tableWrapper).toHaveStyle('--fixed-height-table-column-1-width: 240px');
+    expect(tableWrapper).toHaveStyle('--fixed-height-table-column-2-width: 120px');
+  });
 });

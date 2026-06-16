@@ -37,6 +37,106 @@
   overflow: hidden;
 }
 
+.fixed-height-table--with-column-widths th:nth-child(1),
+.fixed-height-table--with-column-widths td:nth-child(1) {
+  width: var(--fixed-height-table-column-1-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(2),
+.fixed-height-table--with-column-widths td:nth-child(2) {
+  width: var(--fixed-height-table-column-2-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(3),
+.fixed-height-table--with-column-widths td:nth-child(3) {
+  width: var(--fixed-height-table-column-3-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(4),
+.fixed-height-table--with-column-widths td:nth-child(4) {
+  width: var(--fixed-height-table-column-4-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(5),
+.fixed-height-table--with-column-widths td:nth-child(5) {
+  width: var(--fixed-height-table-column-5-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(6),
+.fixed-height-table--with-column-widths td:nth-child(6) {
+  width: var(--fixed-height-table-column-6-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(7),
+.fixed-height-table--with-column-widths td:nth-child(7) {
+  width: var(--fixed-height-table-column-7-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(8),
+.fixed-height-table--with-column-widths td:nth-child(8) {
+  width: var(--fixed-height-table-column-8-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(9),
+.fixed-height-table--with-column-widths td:nth-child(9) {
+  width: var(--fixed-height-table-column-9-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(10),
+.fixed-height-table--with-column-widths td:nth-child(10) {
+  width: var(--fixed-height-table-column-10-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(11),
+.fixed-height-table--with-column-widths td:nth-child(11) {
+  width: var(--fixed-height-table-column-11-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(12),
+.fixed-height-table--with-column-widths td:nth-child(12) {
+  width: var(--fixed-height-table-column-12-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(13),
+.fixed-height-table--with-column-widths td:nth-child(13) {
+  width: var(--fixed-height-table-column-13-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(14),
+.fixed-height-table--with-column-widths td:nth-child(14) {
+  width: var(--fixed-height-table-column-14-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(15),
+.fixed-height-table--with-column-widths td:nth-child(15) {
+  width: var(--fixed-height-table-column-15-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(16),
+.fixed-height-table--with-column-widths td:nth-child(16) {
+  width: var(--fixed-height-table-column-16-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(17),
+.fixed-height-table--with-column-widths td:nth-child(17) {
+  width: var(--fixed-height-table-column-17-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(18),
+.fixed-height-table--with-column-widths td:nth-child(18) {
+  width: var(--fixed-height-table-column-18-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(19),
+.fixed-height-table--with-column-widths td:nth-child(19) {
+  width: var(--fixed-height-table-column-19-width);
+}
+
+.fixed-height-table--with-column-widths th:nth-child(20),
+.fixed-height-table--with-column-widths td:nth-child(20) {
+  width: var(--fixed-height-table-column-20-width);
+}
+
 .fixed-height-table__header-content {
   display: block;
   max-width: 100%;

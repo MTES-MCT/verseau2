@@ -28,15 +28,15 @@ export function IndicateursTable() {
   }
 
   const headers = [
-    "Système d'assainissement",
-    'PC95 (m³/j)',
-    'CBPO (EH)',
-    'Maximum entre PC95 et débit de référence (m³/j)',
-    'Capacité nominale (EH)',
-    'Date validation critère conf.',
-    '% volume déversé tps de pluie',
-    '% flux déversé tps de pluie',
-    'Nb jours de déversement moyen (5 ans)',
+    { key: "Système d'assainissement", width: 220 },
+    { key: 'PC95 (m³/j)', width: 100 },
+    { key: 'CBPO (EH)', width: 100 },
+    { key: 'Maximum entre PC95 et débit de référence (m³/j)', width: 180 },
+    { key: 'Capacité nominale (EH)', width: 120 },
+    { key: 'Date validation critère conf.', width: 140 },
+    { key: '% volume déversé tps de pluie', width: 120 },
+    { key: '% flux déversé tps de pluie', width: 120 },
+    { key: 'Nb jours de déversement moyen (5 ans)', width: 100 },
   ];
 
   const loadingData = [SKELETON_WIDTHS.map((width, index) => <SkeletonLine key={`loading-${index}`} width={width} />)];
@@ -109,6 +109,7 @@ export function IndicateursTable() {
         isFetching={isFetching && !isLoading}
         pageSize={PAGE_SIZE}
         rowHeight="two-lines"
+        headerHeight="two-lines"
         noCaption
       />
 
