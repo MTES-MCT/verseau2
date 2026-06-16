@@ -70,7 +70,7 @@ export function FixedHeightTable({
   ...tableProps
 }: FixedHeightTableProps) {
   const rowHeightRem = ROW_HEIGHT_REM[rowHeight];
-  const minHeightRem = ROW_HEIGHT_REM['one-line'] + pageSize * rowHeightRem;
+  const minHeightRem = ROW_HEIGHT_REM[headerHeight ?? 'one-line'] + pageSize * rowHeightRem;
   const columnWidthStyle = headers.reduce<Record<string, string>>((acc, header, headerIndex) => {
     if (isHeaderWithWidth(header)) {
       acc[`--fixed-height-table-column-${headerIndex + 1}-width`] = `${(header.width / COLUMN_WIDTH_FRACTIONS) * 100}%`;
@@ -100,12 +100,13 @@ export function FixedHeightTable({
     .join(' ');
 
   return (
-    <Table
-      {...tableProps}
-      className={fixedTableClassName}
-      data={wrappedData}
-      headers={wrappedHeaders}
-      style={{ ...style, ...fixedTableStyle }}
-    />
+    <div className={fixedTableClassName} style={{ ...style, ...fixedTableStyle }}>
+      <Table {...tableProps} data={wrappedData} headers={wrappedHeaders} />
+      {isFetching && (
+        <div className="fixed-height-table__overlay">
+          <span className="fixed-height-table__spinner" />
+        </div>
+      )}
+    </div>
   );
 }

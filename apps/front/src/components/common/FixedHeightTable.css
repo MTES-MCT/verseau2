@@ -1,5 +1,6 @@
 .fixed-height-table {
   min-height: var(--fixed-height-table-min-height);
+  position: relative;
 }
 
 .fixed-height-table table {
@@ -14,13 +15,36 @@
   height: var(--fixed-height-table-row-height);
 }
 
-.fixed-height-table table {
-  transition: opacity 0.15s ease, filter 0.15s ease;
+.fixed-height-table--fetching {
+  opacity: 0.5;
 }
 
-.fixed-height-table--fetching table {
-  filter: grayscale(1);
-  opacity: 0.5;
+.fixed-height-table--fetching .fixed-height-table__overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.fixed-height-table__overlay {
+  display: none;
+}
+
+@keyframes fixed-height-table-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fixed-height-table__spinner {
+  width: 6rem;
+  height: 6rem;
+  border: 2px solid #666;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: fixed-height-table-spin 0.6s linear infinite;
 }
 
 .fixed-height-table th,
