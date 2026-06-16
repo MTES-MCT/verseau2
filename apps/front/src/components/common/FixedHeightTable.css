@@ -6,6 +6,10 @@
   display: table;
 }
 
+.fixed-height-table thead tr {
+  height: var(--fixed-height-table-header-height);
+}
+
 .fixed-height-table tbody tr {
   height: var(--fixed-height-table-row-height);
 }
@@ -24,8 +28,21 @@
   vertical-align: middle;
 }
 
+.fixed-height-table th {
+  max-width: 0;
+  overflow: hidden;
+}
+
 .fixed-height-table td {
   overflow: hidden;
+}
+
+.fixed-height-table__header-content {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fixed-height-table__cell-content {

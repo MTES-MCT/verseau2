@@ -34,6 +34,7 @@ describe('FixedHeightTable', () => {
     const tableWrapper = screen.getByTitle('Station').closest('.fixed-height-table');
 
     expect(tableWrapper).toHaveStyle({ marginTop: '1rem' });
+    expect(tableWrapper).toHaveStyle('--fixed-height-table-header-height: 3.5rem');
     expect(tableWrapper).toHaveStyle('--fixed-height-table-row-height: 3.5rem');
   });
 });
