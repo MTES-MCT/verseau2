@@ -50,4 +50,5 @@ jobs:
         run: pnpm --filter ${{ matrix.workspace }} run --if-present test
 
       - name: Run E2E tests API and Worker
+        if: matrix.workspace == 'back'
         run: pnpm --filter ${{ matrix.workspace }} run --if-present test:e2e:api-worker
