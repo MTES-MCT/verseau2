@@ -2,7 +2,6 @@ import { Link } from 'react-router';
 import { type ControleLocationState } from './Controle';
 import { getControleRoute } from '../routes';
 
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
@@ -16,6 +15,7 @@ import { useRapportAndXmlDownload } from '../hooks/useRapportAndXmlDownload';
 import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services/depot.service';
 import { IndicateursTable } from '../components/IndicateursTable';
 import { useDepots } from '../hooks/useDepots';
+import { FixedHeightTable } from '../components/common/FixedHeightTable';
 
 const PAGE_SIZE = 5;
 
@@ -62,7 +62,7 @@ function formatDate(date: Date | string): string {
 }
 
 export function Dashboard() {
-  const { data: depots = [], isLoading, error, isExpertNational } = useDepots();
+  const { data: depots = [], isLoading, isFetching, error, isExpertNational } = useDepots();
 
   const { downloadingDepotId, handleDownload, downloadingXmlId, handleDownloadXml, downloadError, setDownloadError } =
     useRapportAndXmlDownload(isExpertNational);
@@ -168,15 +168,22 @@ export function Dashboard() {
           </div>
         )}
         <h2 className="fr-h4 fr-mb-0">Suivi des bilans déposés</h2>
-        <Table
-          caption="Liste des dépôts d'auto-surveillance"
-          noCaption
-          bordered
-          headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
-          data={tableData}
-          noScroll={false}
-          className={fr.cx('fr-mb-1w')}
-        />
+        {tableData.length > 0 ? (
+          <FixedHeightTable
+            caption="Liste des dépôts d'auto-surveillance"
+            noCaption
+            bordered
+            headers={['Numéro de dépôt', 'Fichier', 'Statut', 'Étape', 'Déposé le', 'Actions']}
+            data={tableData}
+            isFetching={isFetching && !isLoading}
+            pageSize={pageSize}
+            rowHeight="two-lines"
+            noScroll={false}
+            className={fr.cx('fr-mb-1w')}
+          />
+        ) : (
+          'Aucun dépôt trouvé.'
+        )}
 
         {totalPages > 1 && (
           <div className="fr-mt-4w">
@@ -197,6 +204,8 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      <hr></hr>
 
       <div className={fr.cx('fr-my-4w')}>
         <IndicateursTable />

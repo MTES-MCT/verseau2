@@ -5,7 +5,6 @@ import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Checkbox } from '@codegouvfr/react-dsfr/Checkbox';
 import { Input } from '@codegouvfr/react-dsfr/Input';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { createModal } from '@codegouvfr/react-dsfr/Modal';
 import { SelectAutocomplete } from '../components/SelectAutocomplete';
 import type { AutocompleteOption } from '../components/SelectAutocomplete';
@@ -13,6 +12,7 @@ import type { PointMesureReferentiel } from '@lib/dossier';
 import { useReferentielFilters } from '../hooks/useReferentielFilters';
 import Notice from '@codegouvfr/react-dsfr/Notice';
 import { getPreviousSunday } from '@lib/shared';
+import { FixedHeightTable } from '../components/common/FixedHeightTable';
 
 const clipboardFallbackModal = createModal({ id: 'clipboard-fallback-modal', isOpenedByDefault: false });
 
@@ -319,13 +319,16 @@ export function ReferentielPointsMesurePage() {
 
       {/* Results table */}
       {!isLoading && !error && data && (
-        <div style={{ opacity: isFetching ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
-          <Table
+        <div>
+          <FixedHeightTable
             caption="Référentiel des points de mesure"
             noCaption
             bordered
             headers={headers}
             data={tableData}
+            isFetching={isFetching}
+            pageSize={Math.max(tableData.length, 1)}
+            rowHeight="two-lines"
             noScroll={false}
             className={fr.cx('fr-mb-1w')}
           />

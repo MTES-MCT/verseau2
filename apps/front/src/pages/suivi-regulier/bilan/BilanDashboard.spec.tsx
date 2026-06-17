@@ -449,17 +449,12 @@ describe('BilanDashboard', () => {
 
     renderPage();
 
-    expect(mockUseBilanSteu).toHaveBeenCalledWith(
-      expect.objectContaining({ parametreCode: '1313' }),
-      true,
-    );
+    expect(mockUseBilanSteu).toHaveBeenCalledWith(expect.objectContaining({ parametreCode: '1313' }), true);
 
     fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
 
     await waitFor(() => {
-      expect(mockDownloadBilanSteuExport).toHaveBeenCalledWith(
-        expect.objectContaining({ parametreCode: '1313' }),
-      );
+      expect(mockDownloadBilanSteuExport).toHaveBeenCalledWith(expect.objectContaining({ parametreCode: '1313' }));
     });
   });
 

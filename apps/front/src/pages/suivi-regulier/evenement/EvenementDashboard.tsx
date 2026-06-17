@@ -6,7 +6,6 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { useEvenementSteu, useEvenementScl, useEvenementTypes } from '../../../hooks/useEvenement';
 import { useEvenementFilters } from '../../../hooks/useEvenementFilters';
@@ -22,6 +21,7 @@ import { TableLoader } from '../../../components/common/TableLoader';
 import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
 import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
 import { downloadEvenementSclExport, downloadEvenementSteuExport } from '../../../api/evenement';
+import { FixedHeightTable } from '../../../components/common/FixedHeightTable';
 
 export const EvenementDashboard = () => {
   const { filters, updateFilter, page, setPage } = useEvenementFilters();
@@ -326,8 +326,11 @@ export const EvenementDashboard = () => {
             Exporter CSV
           </Button>
         </div>
-        <Table
+        <FixedHeightTable
           data={(data?.data || []).map(getTableData)}
+          isFetching={isFetching}
+          pageSize={pageSize}
+          rowHeight="two-lines"
           headers={[
             'Pris en compte',
             'Code Sandre',

@@ -1,16 +1,13 @@
 import { formatDate } from '@lib/shared';
-import { Table } from '@codegouvfr/react-dsfr/Table';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { useIndicateursSteu } from '../hooks/useIndicateursSteu';
 import { fr } from '@codegouvfr/react-dsfr';
 import { useState } from 'react';
-import { SkeletonLine } from './common/Skeleton';
+import { FixedHeightTable } from './common/FixedHeightTable';
 import './IndicateursTable.css';
 
 const PAGE_SIZE = 10;
-
-const SKELETON_WIDTHS = ['100px', '80px', '60px', '80px', '80px', '120px', '150px', '150px', '150px'];
 
 export function IndicateursTable() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,18 +25,16 @@ export function IndicateursTable() {
   }
 
   const headers = [
-    "Système d'assainissement",
-    'PC95 (m³/j)',
-    'CBPO (EH)',
-    'Maximum entre PC95 et débit de référence (m³/j)',
-    'Capacité nominale (EH)',
-    'Date validation critère conf.',
-    '% volume déversé tps de pluie',
-    '% flux déversé tps de pluie',
-    'Nb jours de déversement moyen (5 ans)',
+    { key: "Système d'assainissement", width: 15 },
+    { key: 'PC95 (m³/j)', width: 10 },
+    { key: 'CBPO (EH)', width: 10 },
+    { key: 'Maximum entre PC95 et débit de référence (m³/j)', width: 15 },
+    { key: 'Capacité nominale (EH)', width: 10 },
+    { key: 'Date validation critère conf.', width: 10 },
+    { key: '% volume déversé tps de pluie', width: 10 },
+    { key: '% flux déversé tps de pluie', width: 10 },
+    { key: 'Nb jours de déversement moyen (5 ans)', width: 10 },
   ];
-
-  const loadingData = [SKELETON_WIDTHS.map((width, index) => <SkeletonLine key={`loading-${index}`} width={width} />)];
 
   const formatConfNumber = (value: number | null, isEvaluated: boolean, suffix = '') => {
     if (value !== null && value !== undefined) {
@@ -76,15 +71,6 @@ export function IndicateursTable() {
       })
     : [];
 
-  const isPageTransition = isFetching && !isLoading && tableData.length > 0;
-  const displayedTableData = isPageTransition
-    ? tableData.map((row, rowIndex) =>
-        row.map((_, cellIndex) => (
-          <SkeletonLine key={`page-${rowIndex}-cell-${cellIndex}`} width={SKELETON_WIDTHS[cellIndex]} />
-        )),
-      )
-    : tableData;
-
   const getPageLinkProps = (pageNumber: number) => ({
     href: `#indicateurs-page-${pageNumber}`,
     onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -112,7 +98,15 @@ export function IndicateursTable() {
         severity="info"
         className={fr.cx('fr-mb-2w')}
       />
-      <Table headers={headers} data={isLoading ? loadingData : displayedTableData} noCaption />
+      <FixedHeightTable
+        headers={headers}
+        data={tableData}
+        isFetching={isFetching && !isLoading}
+        pageSize={PAGE_SIZE}
+        rowHeight="two-lines"
+        headerHeight="two-lines"
+        noCaption
+      />
 
       {totalPages > 1 && (
         <div className="fr-mt-4w">
