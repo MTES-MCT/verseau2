@@ -46,9 +46,10 @@ jobs:
       - name: Build ${{ matrix.workspace }}
         run: pnpm --filter ${{ matrix.workspace }} run --if-present build
 
-      - name: Run tests
-        run: pnpm --filter ${{ matrix.workspace }} run --if-present test
-
-      - name: Run E2E tests API and Worker
+      - name: Run backend tests
         if: matrix.workspace == 'back'
-        run: pnpm --filter ${{ matrix.workspace }} run --if-present test:e2e:api-worker
+        run: pnpm --filter back run --if-present test:ci
+
+      - name: Run tests
+        if: matrix.workspace != 'back'
+        run: pnpm --filter ${{ matrix.workspace }} run --if-present test
