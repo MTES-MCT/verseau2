@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { searchSystemesCollecte } from '../api/mesures';
 
@@ -15,5 +15,6 @@ export function useAsyncSystemesCollecteSearch(search: string) {
     queryKey: ['mesures-systemes-collecte-search', debouncedSearch],
     queryFn: () => searchSystemesCollecte(debouncedSearch),
     enabled: debouncedSearch.length >= 2,
+    placeholderData: debouncedSearch.length >= 2 ? keepPreviousData : undefined,
   });
 }
