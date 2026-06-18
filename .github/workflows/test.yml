@@ -9,11 +9,78 @@ on:
       - main
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      has_changes: ${{ steps.matrix.outputs.has_changes }}
+      workspaces: ${{ steps.matrix.outputs.workspaces }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changed areas
+        id: filter
+        uses: dorny/paths-filter@v4.0.1
+        with:
+          filters: |
+            all:
+              - '.github/workflows/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '**/package.json'
+              - 'packages/dossier/**'
+              - 'packages/parser/**'
+              - 'packages/shared/**'
+            front:
+              - 'apps/front/**'
+            back:
+              - 'apps/back/**'
+
+      - name: Select workspaces to test
+        id: matrix
+        run: |
+          workspaces=()
+
+          if [[ "${{ steps.filter.outputs.all }}" == "true" ]]; then
+            workspaces=(front back parser dossier)
+          else
+            if [[ "${{ steps.filter.outputs.front }}" == "true" ]]; then
+              workspaces+=(front)
+            fi
+
+            if [[ "${{ steps.filter.outputs.back }}" == "true" ]]; then
+              workspaces+=(back)
+            fi
+          fi
+
+          if [[ ${#workspaces[@]} -eq 0 ]]; then
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+            echo 'workspaces=["noop"]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          json="["
+          for workspace in "${workspaces[@]}"; do
+            if [[ "$json" != "[" ]]; then
+              json+=","
+            fi
+            json+="\"$workspace\""
+          done
+          json+="]"
+
+          echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+          echo "workspaces=$json" >> "$GITHUB_OUTPUT"
+
   build-and-tests:
+    needs: changes
+    if: needs.changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        workspace: [front, back, parser, dossier]
+        workspace: ${{ fromJson(needs.changes.outputs.workspaces) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
