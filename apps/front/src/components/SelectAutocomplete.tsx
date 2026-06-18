@@ -25,6 +25,7 @@ export interface SelectAutocompleteProps {
   id?: string;
   required?: boolean;
   disabled?: boolean;
+  isFetching?: boolean;
 }
 
 export const SelectAutocomplete = ({
@@ -41,6 +42,7 @@ export const SelectAutocomplete = ({
   id: idProp,
   required,
   disabled,
+  isFetching = false,
 }: SelectAutocompleteProps) => {
   const generatedId = useId();
   const id = idProp ?? generatedId;
@@ -117,6 +119,10 @@ export const SelectAutocomplete = ({
   };
 
   const selectOption = (option: AutocompleteOption) => {
+    if (isFetching) {
+      return;
+    }
+
     onChange(option.value);
     if (onInputChange) {
       onInputChange(option.label);
@@ -317,14 +323,15 @@ export const SelectAutocomplete = ({
                 id={`${id}-option-${index}`}
                 role="option"
                 aria-selected={option.value === value}
+                aria-disabled={isFetching || undefined}
                 onMouseDown={(e) => e.preventDefault()} // prevent blur before click
                 onClick={() => selectOption(option)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 style={{
                   padding: '0.5rem 1rem',
-                  cursor: 'pointer',
+                  cursor: isFetching ? 'not-allowed' : 'pointer',
                   backgroundColor: isHighlighted ? 'var(--background-alt-blue-france)' : 'transparent',
-                  color: 'var(--text-default-grey)',
+                  color: isFetching ? 'var(--text-disabled-grey)' : 'var(--text-default-grey)',
                 }}
               >
                 {option.render ?? option.label}

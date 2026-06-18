@@ -236,6 +236,7 @@ export function DepotDetailsPage() {
                 clientSideFilter={false}
                 state={ouvrageError ? 'error' : 'default'}
                 stateRelatedMessage={ouvrageError || undefined}
+                isFetching={ouvragesLoadingCurrent}
               />
             </div>
 

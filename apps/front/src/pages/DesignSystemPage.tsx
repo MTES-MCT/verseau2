@@ -310,6 +310,7 @@ export function DesignSystemPage() {
                 onInputChange={searchAsync}
                 clientSideFilter={false}
                 placeholder="Saisir le début du nom"
+                isFetching={asyncLoading}
               />
               {selectedAsync && (
                 <p className={fr.cx('fr-mt-1w', 'fr-text--sm')}>

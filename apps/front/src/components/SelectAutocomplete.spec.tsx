@@ -252,6 +252,23 @@ describe('SelectAutocomplete', () => {
     expect(onChange).toHaveBeenCalledWith('marseille');
   });
 
+  it('disables option selection while fetching', () => {
+    const onChange = vi.fn();
+    render(<SelectAutocomplete label="Ville" options={options} onChange={onChange} isFetching />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.click(input);
+
+    const parisOption = screen.getByRole('option', { name: 'Paris' });
+    expect(parisOption).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(parisOption);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('ArrowUp does not go below index 0', () => {
     render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} />);
 
