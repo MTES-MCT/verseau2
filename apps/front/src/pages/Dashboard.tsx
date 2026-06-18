@@ -91,7 +91,7 @@ export function Dashboard() {
       </div>
     );
   }
-  //
+
   const tableData = paginatedData.map((depot: DepotDto) => [
     depot.numeroDepotVerseau1,
     depot.nomOriginalFichier,
