@@ -259,6 +259,7 @@ export const TransmissionASRetardDashboard = () => {
             value={currentOuvrageValue}
             onChange={handleOuvrageChange}
             onInputChange={isScl ? setSclSearch : setOuvrageSearch}
+            clientSideFilter={false}
           />
         </div>
       </div>

@@ -49,8 +49,9 @@ export function useMesureFilters(tableEnabled = true) {
   const [ouvrageSearch, setOuvrageSearch] = useState('');
   const [sclSearch, setSclSearch] = useState('');
 
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
+  const { data: ouvrages = [], isFetching: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isFetching: systemesCollecteLoading } =
+    useAsyncSystemesCollecteSearch(sclSearch);
   const { data: pointsMesure = [], isLoading: pointsMesureLoading } = usePointsMesure(
     form.ouvrageType,
     form.selectedOuvrageCode || null,

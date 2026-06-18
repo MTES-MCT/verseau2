@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { searchOuvrages } from '../api/mesures';
 
@@ -15,5 +15,6 @@ export function useAsyncOuvragesSearch(search: string) {
     queryKey: ['mesures-ouvrages-search', debouncedSearch],
     queryFn: () => searchOuvrages(debouncedSearch),
     enabled: debouncedSearch.length >= 2,
+    placeholderData: debouncedSearch.length >= 2 ? keepPreviousData : undefined,
   });
 }

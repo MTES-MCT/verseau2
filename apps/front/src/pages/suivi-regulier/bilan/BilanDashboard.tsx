@@ -69,8 +69,9 @@ export const BilanDashboard = () => {
 
   const { data: pmos = [] } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode || null : null);
   const { data: parametres = [], isLoading: parametresLoading } = useBilanSteuParametres();
-  const { data: ouvrages = [], isLoading: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
-  const { data: systemesCollecte = [], isLoading: systemesCollecteLoading } = useAsyncSystemesCollecteSearch(sclSearch);
+  const { data: ouvrages = [], isFetching: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isFetching: systemesCollecteLoading } =
+    useAsyncSystemesCollecteSearch(sclSearch);
 
   const yearOptions = useMemo(
     () =>
@@ -336,6 +337,8 @@ export const BilanDashboard = () => {
             value={currentOuvrageValue || null}
             onChange={handleOuvrageChange}
             onInputChange={isScl ? setSclSearch : setOuvrageSearch}
+            clientSideFilter={false}
+            isFetching={ouvragesLoadingCurrent}
           />
         </div>
         {!isScl && (

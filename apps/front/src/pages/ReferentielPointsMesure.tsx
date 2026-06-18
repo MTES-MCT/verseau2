@@ -243,6 +243,7 @@ export function ReferentielPointsMesurePage() {
               value={form.selectedOuvrageCode || null}
               onChange={(v) => updateForm('selectedOuvrageCode', v ?? '')}
               onInputChange={isScl ? undefined : setOuvrageSearch}
+              clientSideFilter={isScl}
               state={ouvrageError ? 'error' : 'default'}
               stateRelatedMessage={ouvrageError || undefined}
             />

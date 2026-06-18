@@ -399,6 +399,7 @@ export function ConformiteDashboard() {
               value={form.ouvrageCode || null}
               onChange={handleOuvrageChange}
               onInputChange={isScl ? setSclSearch : setOuvrageSearch}
+              clientSideFilter={false}
             />
           </div>
 

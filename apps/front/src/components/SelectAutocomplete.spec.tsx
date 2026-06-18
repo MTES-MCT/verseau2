@@ -151,6 +151,17 @@ describe('SelectAutocomplete', () => {
     expect(screen.queryByText('Paris')).not.toBeInTheDocument();
   });
 
+  it('does not filter current options when client-side filtering is disabled', () => {
+    render(<SelectAutocomplete label="Ville" options={options} onChange={vi.fn()} clientSideFilter={false} />);
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'pa' } });
+
+    const listbox = screen.getByRole('listbox');
+    expect(within(listbox).getByText('Paris')).toBeInTheDocument();
+    expect(within(listbox).getByText('Lyon')).toBeInTheDocument();
+    expect(within(listbox).getByText('Marseille')).toBeInTheDocument();
+  });
+
   // ---------------------------------------------------------------------------
   // Selection via click
   // ---------------------------------------------------------------------------
@@ -239,6 +250,23 @@ describe('SelectAutocomplete', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(onChange).toHaveBeenCalledWith('marseille');
+  });
+
+  it('disables option selection while fetching', () => {
+    const onChange = vi.fn();
+    render(<SelectAutocomplete label="Ville" options={options} onChange={onChange} isFetching />);
+
+    const input = screen.getByRole('combobox');
+    fireEvent.click(input);
+
+    const parisOption = screen.getByRole('option', { name: 'Paris' });
+    expect(parisOption).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(parisOption);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('ArrowUp does not go below index 0', () => {
