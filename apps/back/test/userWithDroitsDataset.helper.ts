@@ -123,6 +123,34 @@ export async function seedUserExpertBassin(dataSource: DataSource, data: UserWit
 }
 
 /**
+ * Seeds a user with role 308 and ITV/SIRET but no deposant role (301).
+ * Used to test that role 308 users go through ouvrage-level rights checks.
+ */
+export async function seedUserRole308(dataSource: DataSource, data: UserWithDroitsData): Promise<string> {
+  const userId = `user_${Date.now()}`;
+  const prCdn = data.prCdn ?? 1000;
+
+  await dataSource.query(
+    `
+    INSERT INTO "user" (id, sub, email, nom, prenom)
+    VALUES ($1, $2, $3, $4, $5)
+  `,
+    [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
+  );
+
+  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub);
+  await seedAg(dataSource, prCdn, data.itvCdn);
+
+  if (data.itvRfa) {
+    await seedItv(dataSource, data.itvCdn, data.itvRfa);
+  }
+
+  await seedOrionRoleForPrincipal(dataSource, prCdn, 308);
+
+  return userId;
+}
+
+/**
  * Seeds a user without lanceleau linking (no ITV access).
  * Useful for testing 403 Forbidden scenarios.
  */
