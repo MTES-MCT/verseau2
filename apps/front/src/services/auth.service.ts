@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../appConfig';
+import { reportError } from '../monitoring/sentry';
 import type { AuthenticatedUser, AuthenticatedUserWithIntervenant } from '../types/auth.types';
 
 /** Only the access-token expiration timestamp needs to live in localStorage.
@@ -250,7 +251,7 @@ class AuthService {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
-      console.error('Failed to store session:', error);
+      reportError(error, { source: 'AuthService.storeSession' });
     }
   }
 
@@ -262,7 +263,7 @@ class AuthService {
       }
       return JSON.parse(stored) as SessionStorage;
     } catch (error) {
-      console.error('Failed to parse session:', error);
+      reportError(error, { source: 'AuthService.getSession' });
       return null;
     }
   }
@@ -273,7 +274,7 @@ class AuthService {
       // Also remove the legacy key if it exists (migration)
       this.storage.removeItem('oidc_tokens');
     } catch (error) {
-      console.error('Failed to clear session:', error);
+      reportError(error, { source: 'AuthService.clearSession' });
     }
   }
 }

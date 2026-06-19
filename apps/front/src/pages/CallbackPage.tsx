@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { authService } from '../services/auth.service';
 import { useAuth } from '../hooks/useAuth';
 import { AppRoutes } from '../routes';
+import { reportError } from '../monitoring/sentry';
 
 export default function CallbackPage() {
   const [searchParams] = useSearchParams();
@@ -47,7 +48,7 @@ export default function CallbackPage() {
           returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : AppRoutes.DASHBOARD;
         navigate(safeReturnTo, { replace: true });
       } catch (err) {
-        console.error('Callback error:', err);
+        reportError(err, { source: 'CallbackPage.handleCallback' });
         setError(err instanceof Error ? err.message : "Échec de l'authentification");
       }
     };

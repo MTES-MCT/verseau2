@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { authService } from '../services/auth.service';
 import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
+import { reportError } from '../monitoring/sentry';
 
 interface AuthContextValue {
   authenticatedUser: AuthenticatedUserWithIntervenant | null;
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setAuthenticatedUser(null);
       }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
+      reportError(error, { source: 'AuthContext.refreshUser' });
       setAuthenticatedUser(null);
     } finally {
       setIsLoading(false);
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await authService.login();
     } catch (error) {
-      console.error('Login failed:', error);
+      reportError(error, { source: 'AuthContext.login' });
       setIsLoading(false);
       throw error;
     }
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authService.logout();
       setAuthenticatedUser(null);
     } catch (error) {
-      console.error('Logout failed:', error);
+      reportError(error, { source: 'AuthContext.logout' });
       setAuthenticatedUser(null);
     } finally {
       setIsLoading(false);

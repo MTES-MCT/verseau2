@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 import path from 'node:path';
 
@@ -16,6 +17,7 @@ const normalizeViteBasePath = (basePath: string | undefined) => {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const appEnv = env.VITE_APP_ENV;
+  const shouldUploadSourcemaps = Boolean(env.SENTRY_AUTH_TOKEN && env.SENTRY_ORG && env.SENTRY_PROJECT);
 
   let titleSuffix = '';
   if (appEnv && appEnv.toLowerCase() !== 'production' && appEnv.toLowerCase() !== 'prod') {
@@ -36,7 +38,17 @@ export default defineConfig(({ mode }) => {
           return html.replace(/<title>(.*?)<\/title>/i, `<title>Verseau 2.0${titleSuffix}</title>`);
         },
       },
+      shouldUploadSourcemaps
+        ? sentryVitePlugin({
+            authToken: env.SENTRY_AUTH_TOKEN,
+            org: env.SENTRY_ORG,
+            project: env.SENTRY_PROJECT,
+          })
+        : undefined,
     ],
+    build: {
+      sourcemap: 'hidden',
+    },
     resolve: {
       alias: {
         '@lib/parser': path.resolve(__dirname, '../../packages/parser/src/index.ts'),

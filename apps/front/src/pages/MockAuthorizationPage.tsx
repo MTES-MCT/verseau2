@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { authService } from '../services/auth.service';
 import { useAuth } from '../hooks/useAuth';
 import { AppRoutes } from '../routes';
+import { reportError } from '../monitoring/sentry';
 
 /**
  * Page de simulation d'authentification OIDC
@@ -35,7 +36,7 @@ export default function MockAuthorizationPage() {
       // Redirige vers le dashboard après succès
       navigate(AppRoutes.DASHBOARD, { replace: true });
     } catch (err) {
-      console.error('Simulation authentication failed:', err);
+      reportError(err, { source: 'MockAuthorizationPage.handleSimulateAuth' });
       setError(err instanceof Error ? err.message : 'Échec de la simulation');
     } finally {
       setIsLoading(false);
