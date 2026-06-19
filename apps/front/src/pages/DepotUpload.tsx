@@ -5,6 +5,7 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { RecapCard } from './depot-upload-recap/components';
 import { FileDropZone } from '../components/FileDropZone';
+import { reportError } from '../monitoring/sentry';
 
 const steps = ['Sélection du flux et fichier', 'Récapitulatif', 'Envoi du fichier'];
 
@@ -32,7 +33,7 @@ export function DepotUploadPage() {
       });
     } catch (e) {
       setError("Le fichier n'a pas pu être lu. Vérifiez que le XML est valide.");
-      console.error(e);
+      reportError(e, { source: 'DepotUploadPage.handleNext' });
     }
   };
 
