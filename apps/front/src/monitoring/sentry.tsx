@@ -13,11 +13,16 @@ export function initSentry() {
     return;
   }
 
-  Sentry.init({
+  const options: Parameters<typeof Sentry.init>[0] = {
     dsn: SENTRY_DSN,
     environment: APP_ENV || undefined,
-    release: SENTRY_RELEASE || undefined,
-  });
+  };
+
+  if (SENTRY_RELEASE) {
+    options.release = SENTRY_RELEASE;
+  }
+
+  Sentry.init(options);
   isSentryEnabled = true;
 }
 

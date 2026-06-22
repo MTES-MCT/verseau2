@@ -14,3 +14,6 @@ Build-only variables for sourcemap upload, without the `VITE_` prefix:
 - `SENTRY_AUTH_TOKEN`
 - `SENTRY_ORG`
 - `SENTRY_PROJECT`
+- `SENTRY_RELEASE`: same release identifier as `VITE_SENTRY_RELEASE`.
+
+Production builds fail when `VITE_SENTRY_DSN` is set without the Sentry upload variables. Sourcemaps are generated in hidden mode, uploaded by the Sentry Vite plugin, then deleted from `dist` after upload.

@@ -14,10 +14,21 @@ const normalizeViteBasePath = (basePath: string | undefined) => {
 };
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const appEnv = env.VITE_APP_ENV;
-  const shouldUploadSourcemaps = Boolean(env.SENTRY_AUTH_TOKEN && env.SENTRY_ORG && env.SENTRY_PROJECT);
+  const sentryRelease = env.SENTRY_RELEASE || env.VITE_SENTRY_RELEASE;
+  const hasSentryUploadConfig = Boolean(env.SENTRY_AUTH_TOKEN && env.SENTRY_ORG && env.SENTRY_PROJECT);
+
+  if (command === 'build' && env.VITE_SENTRY_DSN && !hasSentryUploadConfig) {
+    const missingVariables = ['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT'].filter((name) => !env[name]);
+
+    throw new Error(
+      `VITE_SENTRY_DSN is set, but Sentry sourcemap upload is not configured. Missing: ${missingVariables.join(', ')}`,
+    );
+  }
+
+  const shouldUploadSourcemaps = command === 'build' && hasSentryUploadConfig;
 
   let titleSuffix = '';
   if (appEnv && appEnv.toLowerCase() !== 'production' && appEnv.toLowerCase() !== 'prod') {
@@ -43,6 +54,10 @@ export default defineConfig(({ mode }) => {
             authToken: env.SENTRY_AUTH_TOKEN,
             org: env.SENTRY_ORG,
             project: env.SENTRY_PROJECT,
+            release: sentryRelease ? { name: sentryRelease, inject: true } : { inject: true },
+            sourcemaps: {
+              filesToDeleteAfterUpload: ['./dist/**/*.map'],
+            },
           })
         : undefined,
     ],
