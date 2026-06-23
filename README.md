@@ -124,8 +124,10 @@ OIDC_FAKE_TOKEN=change-me
  # Configuration JSON des SFTP pour chaque agence de l'eau
  # Format: {"agence_id": {"host": "hostname", "port": 22, "username": "user", "remotePath": "base/path"}}
  SFTP_AGENCY_CONFIG={ "11111111111111": { "host": "sftp1.example.com", "port": 22, "username": "user1", "remotePath": "test-agency-1" } }
+ # Pour chaque agence, fournir soit une clé privée, soit un mot de passe
  # Clés privées encodées en base64 pour chaque agence, le fournisseur Cloud ne gère pas les VE multi-ligne
  SFTP_AGENCY_PRIVATE_KEY_11111111111111=base64
+ SFTP_AGENCY_PASSWORD_22222222222222=mot-de-passe
 ```
 
 ### Frontend

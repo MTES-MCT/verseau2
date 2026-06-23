@@ -6,13 +6,24 @@ import { LoggerService } from '@shared/logger/logger.service';
 
 export const SFTP_CLIENT = Symbol('SFTP_CLIENT');
 
-export interface SftpConfig {
+interface SftpConnectionConfig {
   host: string;
   port: number;
   username: string;
-  privateKey: string;
   remotePath?: string;
 }
+
+export type SftpCredentials =
+  | {
+      privateKey: string;
+      password?: never;
+    }
+  | {
+      password: string;
+      privateKey?: never;
+    };
+
+export type SftpConfig = SftpConnectionConfig & SftpCredentials;
 
 @Injectable()
 export class SftpService implements Sftp {
@@ -30,7 +41,7 @@ export class SftpService implements Sftp {
         host: this.config.host,
         port: this.config.port,
         username: this.config.username,
-        privateKey: this.config.privateKey,
+        ...(this.config.privateKey ? { privateKey: this.config.privateKey } : { password: this.config.password }),
       });
 
       // Prepend config remotePath if it exists
