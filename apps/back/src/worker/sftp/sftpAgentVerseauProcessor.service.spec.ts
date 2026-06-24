@@ -77,9 +77,9 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
 
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
-    expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'John Doe');
+    expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
 
-    const expectedXml = `${originalXml}<!-- added John Doe -->`;
+    const expectedXml = `${originalXml}<!-- added DOE John -->`;
     expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'remote/path.xml');
     expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
 
