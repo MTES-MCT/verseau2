@@ -35,7 +35,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       let fileToSend = file;
       if (depot.user) {
         const xmlContent = file.toString('utf-8');
-        const fullName = `${depot.user.prenom || ''} ${depot.user.nom || ''}`.trim();
+        const fullName = `${depot.user.nom.toUpperCase() || ''} ${depot.user.prenom || ''} `.trim();
         if (fullName) {
           const modifiedXml = addNameTagToXml(xmlContent, fullName);
           fileToSend = Buffer.from(modifiedXml, 'utf-8');
