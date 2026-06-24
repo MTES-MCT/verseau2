@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import Client from 'ssh2-sftp-client';
 import { SftpAgency } from './sftpAgency';
 import { Sftp } from './sftp';
-import { SftpService } from './sftp.service';
+import { SftpCredentials, SftpService } from './sftp.service';
 import { decodeSftpPrivateKey } from './sftp.factory';
 import { LoggerService } from '@shared/logger/logger.service';
 
@@ -47,8 +47,8 @@ export class SftpAgencyService implements SftpAgency {
       const agenciesConfig = JSON.parse(configJson) as SftpAgenciesConfig;
 
       for (const [agenceEauSiret, config] of Object.entries(agenciesConfig)) {
-        const privateKey = this.getPrivateKey(agenceEauSiret);
-        this.validateConfig(agenceEauSiret, { ...config, privateKey });
+        const credentials = this.getCredentials(agenceEauSiret);
+        this.validateConfig(agenceEauSiret, config);
 
         const sftpClient = new Client();
         const sftpService = new SftpService(
@@ -57,8 +57,8 @@ export class SftpAgencyService implements SftpAgency {
             host: config.host,
             port: config.port,
             username: config.username,
-            privateKey,
             remotePath: config.remotePath,
+            ...credentials,
           },
           this.logger,
         );
@@ -76,14 +76,22 @@ export class SftpAgencyService implements SftpAgency {
     }
   }
 
-  getPrivateKey(agenceEauSiret: string): string {
+  private getCredentials(agenceEauSiret: string): SftpCredentials {
     const privateKey = this.configService.get<string>(`SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
 
-    if (!privateKey) {
-      throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: privateKey manquant`);
+    if (privateKey) {
+      return {
+        privateKey: decodeSftpPrivateKey(privateKey, `SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`),
+      };
     }
 
-    return decodeSftpPrivateKey(privateKey, `SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
+    const password = this.configService.get<string>(`SFTP_AGENCY_PASSWORD_${agenceEauSiret}`);
+
+    if (password) {
+      return { password };
+    }
+
+    throw new Error(`Configuration incomplète pour l'agence ${agenceEauSiret}: privateKey ou password manquant`);
   }
 
   private validateConfig(agenceEauSiret: string, config: unknown): asserts config is SftpAgencyConfig {

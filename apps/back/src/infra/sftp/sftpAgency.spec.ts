@@ -14,10 +14,8 @@ const createTestPrivateKey = (): string => {
 
 const artoisPicardiePrivateKey = createTestPrivateKey();
 const agence22222222222222PrivateKey = createTestPrivateKey();
-const agence33333333333333PrivateKey = createTestPrivateKey();
 const encodedArtoisPicardiePrivateKey = Buffer.from(artoisPicardiePrivateKey, 'utf8').toString('base64');
 const encodedAgence22222222222222PrivateKey = Buffer.from(agence22222222222222PrivateKey, 'utf8').toString('base64');
-const encodedAgence33333333333333PrivateKey = Buffer.from(agence33333333333333PrivateKey, 'utf8').toString('base64');
 const sftpAgencyConfig = JSON.stringify({
   'ARTOIS-PICARDIE': {
     host: 'sftp1.example.com',
@@ -37,8 +35,10 @@ const sftpAgencyConfig = JSON.stringify({
 });
 const sftpAgencyPrivateKeys: Record<string, string> = {
   'SFTP_AGENCY_PRIVATE_KEY_ARTOIS-PICARDIE': encodedArtoisPicardiePrivateKey,
-  'SFTP_AGENCY_PRIVATE_KEY_22222222222222': encodedAgence22222222222222PrivateKey,
-  'SFTP_AGENCY_PRIVATE_KEY_33333333333333': encodedAgence33333333333333PrivateKey,
+  SFTP_AGENCY_PRIVATE_KEY_22222222222222: encodedAgence22222222222222PrivateKey,
+};
+const sftpAgencyPasswords: Record<string, string> = {
+  SFTP_AGENCY_PASSWORD_33333333333333: 'agency-password-333',
 };
 
 describe('SftpAgencyService', () => {
@@ -50,6 +50,9 @@ describe('SftpAgencyService', () => {
       }
       if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
         return sftpAgencyPrivateKeys[key];
+      }
+      if (key.startsWith('SFTP_AGENCY_PASSWORD_')) {
+        return sftpAgencyPasswords[key];
       }
       return undefined;
     };
@@ -104,6 +107,13 @@ describe('SftpAgencyService', () => {
       expect((client as any).config.privateKey).toBe(agence22222222222222PrivateKey);
     });
 
+    it("devrait avoir le bon password pour l'agence 33333333333333", () => {
+      const client = service.getClient('33333333333333');
+
+      expect((client as any).config.password).toBe('agency-password-333');
+      expect((client as any).config.privateKey).toBeUndefined();
+    });
+
     it('devrait vérifier si un client existe', () => {
       expect(service.hasClient('ARTOIS-PICARDIE')).toBe(true);
       expect(service.hasClient('agence_inexistante')).toBe(false);
@@ -112,17 +122,6 @@ describe('SftpAgencyService', () => {
     it('devrait vérifier si le host du client est correct', () => {
       const client = service.getClient('ARTOIS-PICARDIE');
       expect((client as any).config.host).toBe('sftp1.example.com');
-    });
-
-    it('devrait retourner la clé privée décodée pour une agence', () => {
-      const privateKey = service.getPrivateKey('ARTOIS-PICARDIE');
-      expect(privateKey).toBe(artoisPicardiePrivateKey);
-    });
-
-    it('devrait lever une erreur si la clé privée est manquante', () => {
-      expect(() => service.getPrivateKey('agence_sans_cle')).toThrow(
-        /Configuration incomplète pour l'agence agence_sans_cle: privateKey manquant/,
-      );
     });
 
     it('devrait lever une erreur pour une agence non configurée', () => {
@@ -253,6 +252,61 @@ describe('SftpAgencyService', () => {
         );
       }).toThrow(/Invalid SFTP_AGENCY_PRIVATE_KEY_11111111111111: Unsupported key format/);
     });
+
+    it("devrait lever une erreur si aucun credential agence n'est fourni", () => {
+      const configJson = JSON.stringify({
+        '11111111111111': {
+          host: 'sftp1.example.com',
+          port: 22,
+          username: 'user1',
+        },
+      });
+
+      expect(() => {
+        new SftpAgencyService(
+          {
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              return undefined;
+            }),
+          } as unknown as ConfigService,
+          logger,
+        );
+      }).toThrow(/Configuration incomplète pour l'agence 11111111111111: privateKey ou password manquant/);
+    });
+
+    it('devrait prioriser la clé privée quand clé privée et mot de passe sont définis', () => {
+      const configJson = JSON.stringify({
+        '11111111111111': {
+          host: 'sftp1.example.com',
+          port: 22,
+          username: 'user1',
+        },
+      });
+
+      const service = new SftpAgencyService(
+        {
+          get: jest.fn((key: string) => {
+            if (key === 'SFTP_AGENCY_CONFIG') {
+              return configJson;
+            }
+            if (key === 'SFTP_AGENCY_PRIVATE_KEY_11111111111111') {
+              return encodedArtoisPicardiePrivateKey;
+            }
+            if (key === 'SFTP_AGENCY_PASSWORD_11111111111111') {
+              return 'fallback-password';
+            }
+            return undefined;
+          }),
+        } as unknown as ConfigService,
+        logger,
+      );
+
+      expect((service.getClient('11111111111111') as any).config.privateKey).toBe(artoisPicardiePrivateKey);
+      expect((service.getClient('11111111111111') as any).config.password).toBeUndefined();
+    });
   });
 });
 
@@ -309,6 +363,9 @@ describe('createSftpAgency factory', () => {
         }
         if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
           return sftpAgencyPrivateKeys[key];
+        }
+        if (key.startsWith('SFTP_AGENCY_PASSWORD_')) {
+          return sftpAgencyPasswords[key];
         }
         return undefined;
       }),

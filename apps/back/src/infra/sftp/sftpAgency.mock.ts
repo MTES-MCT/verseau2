@@ -25,11 +25,11 @@ export class SftpAgencyMock implements SftpAgency {
   constructor(private readonly logger: LoggerService) {
     this.logger.setContext(SftpAgencyMock.name);
     this.mockClient = new SftpProviderMock(this.logger);
-    this.logger.log(`[MOCK] SftpAgency initialisé with ${this.defaultAgencies.length} agences mockées`);
+    this.logger.warn(`[MOCK] SftpAgency initialisé with ${this.defaultAgencies.length} agences mockées`);
   }
 
   getClient(cdbRfa: string): Sftp {
-    this.logger.log(`[MOCK] Récupération du client SFTP pour le code CDB: ${cdbRfa}`);
+    this.logger.warn(`[MOCK] Récupération du client SFTP pour le code CDB: ${cdbRfa}`);
     // Retourne toujours le même mock client pour toutes les agences
     return this.mockClient;
   }
