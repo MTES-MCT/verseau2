@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DepotCoordinatorService } from './depotCoordinator.service';
 import { DepotService } from './depot.service';
-import { QueueName, QueueGateway } from '@queue/queue';
+import { QueueName, QueueGateway, RapportDestinataire } from '@queue/queue';
 import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus, DepotDto } from '@lib/dossier';
 import { DepotModel } from './depot.model';
 
@@ -142,7 +142,10 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
       });
-      expect(queueService.send).toHaveBeenCalledWith(QueueName.diffusion_rapport, { depotId });
+      expect(queueService.send).toHaveBeenCalledWith(QueueName.diffusion_rapport, {
+        depotId,
+        destinataires: [RapportDestinataire.DEPOSANT],
+      });
     });
 
     it('should fail the depot if Controle Sandre fails', async () => {
@@ -164,7 +167,10 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
       });
-      expect(queueService.send).toHaveBeenCalledWith(QueueName.diffusion_rapport, { depotId });
+      expect(queueService.send).toHaveBeenCalledWith(QueueName.diffusion_rapport, {
+        depotId,
+        destinataires: [RapportDestinataire.DEPOSANT],
+      });
     });
 
     it('should prioritize V1 failure over Sandre failure if both fail', async () => {

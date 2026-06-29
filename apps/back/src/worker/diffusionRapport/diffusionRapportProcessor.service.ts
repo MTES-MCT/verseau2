@@ -15,14 +15,11 @@ import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import { MasaProvider } from '@masa/masa.provider';
-
-interface DiffusionRapportProcessorData {
-  depotId: string;
-  masaId?: string;
-}
+import { RapportDestinataire } from '@queue/queue';
+import type { DiffusionRapportJobData } from '@queue/queue';
 
 @Injectable()
-export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapportProcessorData> {
+export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapportJobData> {
   constructor(
     @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
     @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
@@ -38,9 +35,9 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     this.logger.setContext(DiffusionRapportProcessorService.name);
   }
 
-  async process(data: DiffusionRapportProcessorData): Promise<void> {
-    const { depotId, masaId } = data;
-    this.logger.log(`Processing diffusion rapport`, { depotId, masaId });
+  async process(data: DiffusionRapportJobData): Promise<void> {
+    const { depotId, masaId, destinataires } = data;
+    this.logger.log(`Processing diffusion rapport`, { depotId, masaId, destinataires });
 
     try {
       const depot = await this.depotGateway.findDepotByIdWithUser(depotId);
@@ -74,16 +71,21 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       await this.depotGateway.updateDepot(depotId, { rapportPath: pdfPath });
 
       // 3. Send to Agence de l'eau SFTP
-      await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
+      if (destinataires.includes(RapportDestinataire.AGENCE_EAU)) {
+        await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
+      }
 
       // 4. Send email to déposant
-      await this.sendEmailToDeposant(depot, pdfBuffer, masa ?? undefined);
+      if (destinataires.includes(RapportDestinataire.DEPOSANT)) {
+        await this.sendEmailToDeposant(depot, pdfBuffer, masa ?? undefined);
+      }
 
-      this.logger.log(`Diffusion rapport processing completed`, { depotId, masaId });
+      this.logger.log(`Diffusion rapport processing completed`, { depotId, masaId, destinataires });
     } catch (error) {
       this.logger.error(`Failed to process diffusion rapport`, {
         depotId,
         masaId,
+        destinataires,
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });

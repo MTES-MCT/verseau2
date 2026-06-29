@@ -2,7 +2,7 @@ import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { CustomClsStore } from '@shared/logger/cls-store.interface';
 import { QueueGateway, QueueName, QueueOptions } from '@queue/queue';
-import type { EmailJobData, Queue } from '@queue/queue';
+import type { DiffusionRapportJobData, EmailJobData, Queue } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -197,7 +197,7 @@ export class WorkerService implements OnModuleInit {
           );
           break;
         case QueueName.diffusion_rapport:
-          await this.queueService.work<{ depotId: string; masaId?: string; correlationId?: string }>(
+          await this.queueService.work<DiffusionRapportJobData & { correlationId?: string }>(
             queueName,
             options,
             async ([job]) => {

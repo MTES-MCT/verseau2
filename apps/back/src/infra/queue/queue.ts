@@ -46,3 +46,14 @@ export interface EmailJobData {
   params: EmailParams;
   template: EmailTemplate;
 }
+
+export enum RapportDestinataire {
+  DEPOSANT = 'DEPOSANT',
+  AGENCE_EAU = 'AGENCE_EAU',
+}
+
+export interface DiffusionRapportJobData {
+  depotId: string;
+  masaId?: string;
+  destinataires: RapportDestinataire[];
+}

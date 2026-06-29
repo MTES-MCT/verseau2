@@ -28,7 +28,7 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStatus, DepotStep, ControleStatus, ControleSandreStatus, ErrorCode, MasaStatus } from '@lib/dossier';
 import { MasaWebhookStatus } from '@dossier/masa/masa.model';
 import { MasaService } from '@dossier/masa/masa.service';
-import { QueueGateway, PGBOSS, QueueName, Queue } from '@infra/queue/queue';
+import { QueueGateway, PGBOSS, QueueName, Queue, RapportDestinataire } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
 import { NotificationGateway } from '@notification/notification.gateway';
@@ -308,6 +308,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
     // Reset mocks
     s3Mock.reset();
     sftpMock.reset();
+    sftpAgencyMock.reset();
     notificationMock.reset();
     (sandreService as ConfigurableSandreMock).defaultBehavior = 'conformant';
     (sandreService as ConfigurableSandreMock).clearValidationResults?.();
@@ -647,6 +648,11 @@ describe('Dossier E2E - Real Queue Processing', () => {
         pollIntervalMs: 200,
       });
       expect(diffusionRapportResult.status).toBe('completed');
+      expect(diffusionRapportResult.job?.data).toMatchObject({
+        depotId,
+        destinataires: [RapportDestinataire.DEPOSANT],
+      });
+      expect(sftpAgencyMock.getClient('11111111111111').send).not.toHaveBeenCalled();
 
       const finalDepot = await findDepotOrFail(depotId);
       expect(finalDepot.status).toBe(DepotStatus.REJETE);

@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DepotService } from './depot.service';
-import { QueueGateway, QueueName } from '@queue/queue';
-import type { Queue } from '@queue/queue';
+import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
+import type { DiffusionRapportJobData, Queue } from '@queue/queue';
 import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { LoggerService } from '@shared/logger/logger.service';
 
@@ -9,8 +9,8 @@ import { LoggerService } from '@shared/logger/logger.service';
  * Ce service a pour rôle d'orchestrer la suite du traitement d'un dépôt une fois les contrôles terminés.
  * Étant donné que les contrôles métier (V1/V2) et les contrôles SANDRE s'exécutent de manière asynchrone et en parallèle,
  * ce coordinateur vérifie si les deux flux sont achevés.
- * - Si les deux contrôles réussissent, il déclenche l'envoi vers le SFTP de l'Agence de l'Eau.
- * - Si l'un des deux échoue (erreur métier, erreur SANDRE), il passe le dépôt en statut REJETE et déclenche l'envoi du rapport d'erreur. Les erreurs techniques ne déclenchent pas de rapport.
+ * - Si les deux contrôles réussissent, il déclenche l'envoi vers le SFTP de du MASA.
+ * - Si l'un des deux échoue (erreur métier, erreur SANDRE), il passe le dépôt en statut REJETE et déclenche l'envoi du rapport d'erreur au déposant uniquement. Les erreurs techniques ne déclenchent pas de rapport.
  */
 @Injectable()
 export class DepotCoordinatorService {
@@ -82,8 +82,9 @@ export class DepotCoordinatorService {
       });
 
       if (!depot.error) {
-        await this.queueService.send(QueueName.diffusion_rapport, {
+        await this.queueService.send<DiffusionRapportJobData>(QueueName.diffusion_rapport, {
           depotId,
+          destinataires: [RapportDestinataire.DEPOSANT],
         });
       } else {
         this.logger.log(`Depot ${depotId} - Technical error detected, skipping diffusion_rapport`, {

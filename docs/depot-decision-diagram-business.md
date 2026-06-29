@@ -35,14 +35,19 @@ flowchart TD
         direction TB
         P1[Generate PDF report]
         P2[PDF stored in S3]
+        PDEST{Agency destination?}
         P3[Agency SFTP transfer attempted]
         P4[Email with report sent to depositor]
-        P1 --> P2 --> P3 --> P4
+        P1 --> P2
+        P2 --> PDEST
+        PDEST -->|Yes, MASA integrated or partially integrated| P3
+        PDEST -->|No, failed controls or MASA refused| P4
+        P3 --> P4
     end
-    R1 --> P1
-    O1 --> P1
-    O2 --> P1
-    O3 --> P1
+    R1 -->|Depositor only| P1
+    O1 -->|Depositor only| P1
+    O2 -->|Depositor and agency| P1
+    O3 -->|Depositor and agency| P1
     P4 --> END([End])
     RTECH --> END
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
@@ -53,6 +58,6 @@ flowchart TD
     class A,B,C,D,E,F,G,H,I,N,O,P1,P2,P3,P4 process;
     class FKO,FTECH,GKO,GTECH,R1,RTECH,O1 error;
     class FOK,GOK,O2,O3,END success;
-    class E,H,O decision;
+    class E,H,O,PDEST decision;
     class STOP1,STOP2,STOP3,STOP4,STOP5 terminal;
 ```

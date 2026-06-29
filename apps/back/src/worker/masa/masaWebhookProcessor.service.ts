@@ -5,8 +5,8 @@ import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { MasaStatus } from '@dossier/masa/masa.model';
 import { DepotStatus, DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
-import { QueueGateway, QueueName } from '@queue/queue';
-import type { Queue } from '@queue/queue';
+import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
+import type { DiffusionRapportJobData, Queue } from '@queue/queue';
 
 interface MasaProcessorData {
   masaId: string;
@@ -48,10 +48,11 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         etapeMetier: null,
       });
 
-      // 3. Déléguer l'export à l'agence de l'eau
-      await this.queueService.send<{ depotId: string; masaId: string }>(QueueName.diffusion_rapport, {
+      // 3. Déléguer la diffusion du rapport selon le statut MASA.
+      await this.queueService.send<DiffusionRapportJobData>(QueueName.diffusion_rapport, {
         depotId,
         masaId,
+        destinataires: this.getRapportDestinataires(masa.statut),
       });
 
       this.logger.log(`MASA report processing completed, delegated to diffusion_rapport`, { masaId, depotId });
@@ -78,5 +79,13 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         throw new Error(`Unknown MASA status: ${masaStatus}`);
     }
+  }
+
+  private getRapportDestinataires(masaStatus: MasaStatus): RapportDestinataire[] {
+    if (masaStatus === MasaStatus.REFUSE) {
+      return [RapportDestinataire.DEPOSANT];
+    }
+
+    return [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU];
   }
 }
