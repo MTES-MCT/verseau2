@@ -15,6 +15,7 @@ import { MasaProvider } from '@masa/masa.provider';
 import { DepotStep } from '@lib/dossier';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import type { FctAssainissement } from '@lib/parser';
+import { RapportDestinataire } from '@queue/queue';
 
 jest.mock('@lib/parser', () => ({
   parseScenarioAssainissementXml: jest.fn(),
@@ -160,8 +161,25 @@ describe('DiffusionRapportProcessorService', () => {
     jest.mocked(parseScenarioAssainissementXml).mockResolvedValue(createParsedXml('STEU001'));
   });
 
+  it('should send the report to the deposant only', async () => {
+    await service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] });
+
+    expect(s3.download).not.toHaveBeenCalled();
+    expect(parseScenarioAssainissementXml).not.toHaveBeenCalled();
+    expect(masaProvider.findAgenceEauNomBySteuCode).not.toHaveBeenCalled();
+    expect(sftpAgency.hasClient).not.toHaveBeenCalled();
+    expect(sftpAgency.getClient).not.toHaveBeenCalled();
+    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(notificationGateway.sendEmail).toHaveBeenCalled();
+    expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
+    expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
+  });
+
   it('should upload XML and PDF to the agency-specific SFTP client', async () => {
-    await service.process({ depotId: 'dep_1' });
+    await service.process({
+      depotId: 'dep_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
 
     expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
     expect(sftpAgency.hasClient).toHaveBeenCalledWith('agence_1');
@@ -176,7 +194,10 @@ describe('DiffusionRapportProcessorService', () => {
   it('should warn and continue when no ouvrage code is found in XML', async () => {
     jest.mocked(parseScenarioAssainissementXml).mockResolvedValue(createParsedXml(undefined));
 
-    await service.process({ depotId: 'dep_1' });
+    await service.process({
+      depotId: 'dep_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
 
     expect(logger.warn).toHaveBeenCalledWith(
       "No codeOuvrageDepollution found in XML, skipping Agence de l'eau SFTP upload",
@@ -190,7 +211,10 @@ describe('DiffusionRapportProcessorService', () => {
   it('should warn and continue when no agency is found for the ouvrage code', async () => {
     masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue(null);
 
-    await service.process({ depotId: 'dep_1' });
+    await service.process({
+      depotId: 'dep_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
 
     expect(logger.warn).toHaveBeenCalledWith(
       "No agence de l'eau code found for ouvrage, skipping Agence de l'eau SFTP upload",
@@ -204,7 +228,10 @@ describe('DiffusionRapportProcessorService', () => {
     sftpAgency.hasClient.mockReturnValue(false);
     sftpAgency.getConfiguredAgencies.mockReturnValue(['99999999999999']);
 
-    await service.process({ depotId: 'dep_1' });
+    await service.process({
+      depotId: 'dep_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
 
     expect(logger.warn).toHaveBeenCalledWith(
       "No configured SFTP client for agence de l'eau, skipping upload",

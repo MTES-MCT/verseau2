@@ -50,8 +50,8 @@ flowchart TD
     COORD{Coordinator:<br/>both controleStatus and controleSandreStatus are no longer PENDING?}
     COORD -->|No| WAIT[Return only<br/>no depot change]
     COORD -->|Yes and both SUCCESS| READY[status=EN_COURS_DE_TRAITEMENT<br/>step=READY_FOR_SFTP<br/>etapeMetier=FINALISATION_IMPORT<br/>enqueue send_to_sftp]
-    COORD -->|Yes and V1 or V2 functional failure| REJMETIER[status=REJETE<br/>step=CONTROLE_FAILED<br/>enqueue diffusion_rapport]
-    COORD -->|Yes and SANDRE functional failure| REJSANDRE[status=REJETE<br/>step=CONTROLE_SANDRE_FAILED<br/>enqueue diffusion_rapport]
+    COORD -->|Yes and V1 or V2 functional failure| REJMETIER[status=REJETE<br/>step=CONTROLE_FAILED<br/>enqueue diffusion_rapport<br/>destinataires=DEPOSANT]
+    COORD -->|Yes and SANDRE functional failure| REJSANDRE[status=REJETE<br/>step=CONTROLE_SANDRE_FAILED<br/>enqueue diffusion_rapport<br/>destinataires=DEPOSANT]
     COORD -->|Yes and technical error| REJTECH[status=REJETE<br/>step=CONTROLE_FAILED or CONTROLE_SANDRE_FAILED<br/>skip diffusion_rapport]
     subgraph SFTP["Agent Verseau SFTP"]
       READY --> FTP0[send_to_sftp job]
@@ -64,9 +64,9 @@ flowchart TD
     MASAWAIT --> WEBHOOK[Save MASA payload<br/>enqueue process_after_masa_webhook]
     subgraph M2["After MASA webhook"]
       WEBHOOK --> MASA0[process_after_masa_webhook job]
-      MASA0 -->|statut INTEGRE| MASAOK[status=INTEGRE<br/>step=MASA_CALLED_ENPOINT<br/>etapeMetier=null<br/>enqueue diffusion_rapport]
-      MASA0 -->|statut INTEGRATION_PARTIELLE| MASAPART[status=INTEGRE_PARTIELLEMENT<br/>step=MASA_CALLED_ENPOINT<br/>etapeMetier=null<br/>enqueue diffusion_rapport]
-      MASA0 -->|statut REFUSE| MASAREF[status=REJETE<br/>step=MASA_CALLED_ENPOINT<br/>etapeMetier=null<br/>enqueue diffusion_rapport]
+      MASA0 -->|statut INTEGRE| MASAOK[status=INTEGRE<br/>step=MASA_CALLED_ENPOINT<br/>etapeMetier=null<br/>enqueue diffusion_rapport<br/>destinataires=DEPOSANT,AGENCE_EAU]
+      MASA0 -->|statut INTEGRATION_PARTIELLE| MASAPART[status=INTEGRE_PARTIELLEMENT<br/>step=MASA_CALLED_ENPOINT<br/>etapeMetier=null<br/>enqueue diffusion_rapport<br/>destinataires=DEPOSANT,AGENCE_EAU]
+      MASA0 -->|statut REFUSE| MASAREF[status=REJETE<br/>step=MASA_CALLED_ENPOINT<br/>etapeMetier=null<br/>enqueue diffusion_rapport<br/>destinataires=DEPOSANT]
     end
     REJMETIER --> RAP0
     REJSANDRE --> RAP0
@@ -77,10 +77,14 @@ flowchart TD
     subgraph R["diffusion_rapport"]
       RAP0[diffusion_rapport job] --> RAP1[Generate PDF from depot and V2 controls<br/>and MASA when present]
       RAP1 --> RAP2[Upload PDF to S3<br/>update rapportPath]
-      RAP2 --> RAP3[Attempt Agence de l eau SFTP<br/>errors are only logged]
-      RAP3 --> RAP4{Deposant email available?}
-      RAP4 -->|Yes| RAP5[Send email with PDF<br/>step=SEND_EMAIL_TO_DEPOSANT]
-      RAP4 -->|No| RAP6[Log error and skip email<br/>no step change]
+      RAP2 --> RAP3{AGENCE_EAU in destinataires?}
+      RAP3 -->|Yes| RAPAGENCE[Attempt Agence de l eau SFTP<br/>XML and PDF<br/>errors are only logged]
+      RAP3 -->|No| RAP4{DEPOSANT in destinataires?}
+      RAPAGENCE --> RAP4
+      RAP4 -->|Yes| RAPMAIL{Deposant email available?}
+      RAP4 -->|No| END
+      RAPMAIL -->|Yes| RAP5[Send email with PDF<br/>step=SEND_EMAIL_TO_DEPOSANT]
+      RAPMAIL -->|No| RAP6[Log error and skip email<br/>no step change]
     end
     RAP5 --> END([End])
     RAP6 --> END
@@ -93,5 +97,5 @@ flowchart TD
     class BERR,DERR,ERIGHTS,ETECH,MFAIL,MTECH,SUPLOADFAIL,STIMEOUT,SFAIL,STECHFAIL,REJMETIER,REJSANDRE,REJTECH,FTPERR,MASAREF,ENDNOREPORT error;
     class MOK,SOK,READY,FTP2,MASAOK,RAP5 success;
     class SPOLLQ,SPOLL,SPOLLRETRY,SPOLLERRRETRY,WAIT,MASAWAIT,MASAPART,COORD,RAP6 warning;
-    class B,C,D,E,E0,E1,SPLIT,M0,S0,M1,S1,FTP0,FTP1,WEBHOOK,MASA0,RAP0,RAP1,RAP2,RAP3,RAP4 info;
+    class B,C,D,E,E0,E1,SPLIT,M0,S0,M1,S1,FTP0,FTP1,WEBHOOK,MASA0,RAP0,RAP1,RAP2,RAP3,RAPAGENCE,RAP4,RAPMAIL info;
 ```

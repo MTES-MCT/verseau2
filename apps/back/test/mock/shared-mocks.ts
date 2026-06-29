@@ -467,8 +467,10 @@ export class SftpAgencyTestMock {
  */
 export class MasaProviderTestMock {
   findAgenceEauSiretBySteuCode = jest.fn().mockResolvedValue('11111111111111');
+  findAgenceEauNomBySteuCode = jest.fn().mockResolvedValue('11111111111111');
 
   reset(): void {
     this.findAgenceEauSiretBySteuCode.mockClear().mockResolvedValue('11111111111111');
+    this.findAgenceEauNomBySteuCode.mockClear().mockResolvedValue('11111111111111');
   }
 }

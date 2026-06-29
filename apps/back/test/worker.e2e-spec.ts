@@ -16,7 +16,7 @@ import { NotificationGateway } from '@notification/notification.gateway';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { S3 } from '@infra/s3/s3';
 import { Sftp } from '@infra/sftp/sftp';
-import { QueueName, QueueGateway } from '@infra/queue/queue';
+import { QueueName, QueueGateway, RapportDestinataire } from '@infra/queue/queue';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { UserEntity } from '@user/user.entity';
@@ -344,7 +344,10 @@ describe('Worker Service (e2e)', () => {
       ]);
 
       // Process the diffusion rapport (no masaId provided)
-      await diffusionRapportProcessorService.process({ depotId: depot.id });
+      await diffusionRapportProcessorService.process({
+        depotId: depot.id,
+        destinataires: [RapportDestinataire.DEPOSANT],
+      });
 
       // Verify PDF was generated and uploaded
       expect(s3Mock.uploads.length).toBeGreaterThan(0);
@@ -410,7 +413,11 @@ describe('Worker Service (e2e)', () => {
       controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([]);
 
       // Process the diffusion rapport with MASA
-      await diffusionRapportProcessorService.process({ depotId: depot.id, masaId: 'masa_001' });
+      await diffusionRapportProcessorService.process({
+        depotId: depot.id,
+        masaId: 'masa_001',
+        destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+      });
 
       // Verify Email was sent to Deposant with MASA subject
       expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
