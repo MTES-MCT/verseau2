@@ -11,11 +11,16 @@ import { SftpAgency } from '@infra/sftp/sftpAgency';
 import { Sftp } from '@infra/sftp/sftp';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { LoggerService } from '@shared/logger/logger.service';
+import { Zip } from '@shared/zip/zip';
+import { ZipService } from '@shared/zip/zip.service';
 import { MasaProvider } from '@masa/masa.provider';
 import { DepotStep } from '@lib/dossier';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import type { FctAssainissement } from '@lib/parser';
 import { RapportDestinataire } from '@queue/queue';
+import { unzipSync } from 'fflate';
+import { MasaStatus } from '@dossier/masa/masa.model';
+import type { MasaModel } from '@dossier/masa/masa.model';
 
 jest.mock('@lib/parser', () => ({
   parseScenarioAssainissementXml: jest.fn(),
@@ -55,6 +60,16 @@ describe('DiffusionRapportProcessorService', () => {
       nom: 'Doe',
     },
   } as never;
+  const masa: MasaModel = {
+    id: 'masa_1',
+    depotId: 'dep_1',
+    numeroDepotVerseau1: '1234',
+    statut: MasaStatus.INTEGRE,
+    statutMasa: null,
+    rapport: null,
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
 
   function createParsedXml(ouvrageDepollutionCode?: string): FctAssainissement {
     return {
@@ -74,7 +89,7 @@ describe('DiffusionRapportProcessorService', () => {
     jest.clearAllMocks();
 
     masaGateway = {
-      findById: jest.fn(),
+      findById: jest.fn().mockResolvedValue(masa),
       findByDepotId: jest.fn(),
       saveMasaRetour: jest.fn(),
     } as unknown as jest.Mocked<MasaGateway>;
@@ -119,7 +134,7 @@ describe('DiffusionRapportProcessorService', () => {
     sftpAgency = {
       getClient: jest.fn().mockReturnValue(agencySftpClient),
       hasClient: jest.fn().mockReturnValue(true),
-      getConfiguredAgencies: jest.fn().mockReturnValue(['12345678901234']),
+      getConfiguredAgencies: jest.fn().mockReturnValue(['SEINE-NORMANDIE']),
     } as unknown as jest.Mocked<SftpAgency>;
 
     pdfGenerator = {
@@ -127,7 +142,7 @@ describe('DiffusionRapportProcessorService', () => {
     } as unknown as jest.Mocked<RapportPdfGeneratorService>;
 
     masaProvider = {
-      findAgenceEauNomBySteuCode: jest.fn().mockResolvedValue('agence_1'),
+      findAgenceEauNomBySteuCode: jest.fn().mockResolvedValue('SEINE-NORMANDIE'),
     } as unknown as jest.Mocked<MasaProvider>;
 
     logger = {
@@ -149,6 +164,8 @@ describe('DiffusionRapportProcessorService', () => {
         { provide: ReponseSandreGateway, useValue: reponseSandreGateway },
         { provide: S3, useValue: s3 },
         { provide: SftpAgency, useValue: sftpAgency },
+        ZipService,
+        { provide: Zip, useExisting: ZipService },
         { provide: RapportPdfGeneratorService, useValue: pdfGenerator },
         { provide: MasaProvider, useValue: masaProvider },
         { provide: LoggerService, useValue: logger },
@@ -160,6 +177,14 @@ describe('DiffusionRapportProcessorService', () => {
 
     jest.mocked(parseScenarioAssainissementXml).mockResolvedValue(createParsedXml('STEU001'));
   });
+
+  function expectFirstSftpCallToContainZipEntries(): void {
+    const zipBufferSent = agencySftpClient.send.mock.calls[0]?.[0];
+    const zipEntries = unzipSync(zipBufferSent);
+
+    expect(Buffer.from(zipEntries['depot.xml']).toString('utf8')).toBe(xmlBuffer.toString('utf8'));
+    expect(Buffer.from(zipEntries['rapport-masa-dep_1.pdf']).toString('utf8')).toBe(pdfBuffer.toString('utf8'));
+  }
 
   it('should send the report to the deposant only', async () => {
     await service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] });
@@ -175,20 +200,104 @@ describe('DiffusionRapportProcessorService', () => {
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
   });
 
-  it('should upload XML and PDF to the agency-specific SFTP client', async () => {
+  it('should upload ZIP and ACK to the agency-specific SFTP client for SEINE-NORMANDIE', async () => {
     await service.process({
       depotId: 'dep_1',
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
 
     expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
-    expect(sftpAgency.hasClient).toHaveBeenCalledWith('agence_1');
-    expect(sftpAgency.getClient).toHaveBeenCalledWith('agence_1');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, xmlBuffer, 'dep_1/depot.xml');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, pdfBuffer, 'dep_1/rapport-masa-dep_1.pdf');
+    expect(sftpAgency.hasClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
+    expect(sftpAgency.getClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'depot.xml.zip');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot.xml.zip.ack');
+    expectFirstSftpCallToContainZipEntries();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
+  });
+
+  it.each(['RHONE-MEDITERRANEE', 'ADOUR-GARONNE'])(
+    'should upload ZIP and ACK with standard naming for %s',
+    async (agenceEauNom) => {
+      masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue(agenceEauNom);
+
+      await service.process({
+        depotId: 'dep_1',
+        masaId: 'masa_1',
+        destinataires: [RapportDestinataire.AGENCE_EAU],
+      });
+
+      expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'depot.xml.zip');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot.xml.zip.ack');
+    },
+  );
+
+  it.each(['RHIN-MEUSE', 'LOIRE-BRETAGNE'])(
+    'should upload ZIP and ACK with DEPOT naming for %s',
+    async (agenceEauNom) => {
+      masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue(agenceEauNom);
+
+      await service.process({
+        depotId: 'dep_1',
+        masaId: 'masa_1',
+        destinataires: [RapportDestinataire.AGENCE_EAU],
+      });
+
+      expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'ACK_DEPOT1234_depot.xml.zip');
+    },
+  );
+
+  it('should warn and continue when a DEPOT naming agency has no numeroDepotVerseau1', async () => {
+    masaGateway.findById.mockResolvedValue({ ...masa, numeroDepotVerseau1: null });
+    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('RHIN-MEUSE');
+
+    await service.process({
+      depotId: 'dep_1',
+      masaId: 'masa_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "No SFTP filename rule for agence de l'eau, skipping upload",
+      expect.objectContaining({
+        agenceEauNom: 'RHIN-MEUSE',
+        depotId: 'dep_1',
+        numeroDepotVerseau1: null,
+        ouvrageDepollutionCode: 'STEU001',
+      }),
+    );
+    expect(sftpAgency.hasClient).not.toHaveBeenCalled();
+    expect(sftpAgency.getClient).not.toHaveBeenCalled();
+    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(notificationGateway.sendEmail).toHaveBeenCalled();
+  });
+
+  it('should warn and continue when the agency has no SFTP filename rule', async () => {
+    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('ARTOIS-PICARDIE');
+
+    await service.process({
+      depotId: 'dep_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
+
+    expect(sftpAgency.hasClient).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      "No SFTP filename rule for agence de l'eau, skipping upload",
+      expect.objectContaining({
+        agenceEauNom: 'ARTOIS-PICARDIE',
+        depotId: 'dep_1',
+        ouvrageDepollutionCode: 'STEU001',
+      }),
+    );
+    expect(sftpAgency.getClient).not.toHaveBeenCalled();
+    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
   it('should warn and continue when no ouvrage code is found in XML', async () => {
@@ -236,7 +345,7 @@ describe('DiffusionRapportProcessorService', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       "No configured SFTP client for agence de l'eau, skipping upload",
       expect.objectContaining({
-        agenceEauNom: 'agence_1',
+        agenceEauNom: 'SEINE-NORMANDIE',
         configuredAgencies: ['99999999999999'],
         depotId: 'dep_1',
         ouvrageDepollutionCode: 'STEU001',
