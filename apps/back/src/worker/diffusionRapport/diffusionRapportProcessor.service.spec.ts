@@ -203,14 +203,15 @@ describe('DiffusionRapportProcessorService', () => {
   it('should upload ZIP and ACK to the agency-specific SFTP client for SEINE-NORMANDIE', async () => {
     await service.process({
       depotId: 'dep_1',
+      masaId: 'masa_1',
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
 
     expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
     expect(sftpAgency.hasClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
     expect(sftpAgency.getClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'depot.xml.zip');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot.xml.zip.ack');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
     expectFirstSftpCallToContainZipEntries();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
@@ -218,7 +219,7 @@ describe('DiffusionRapportProcessorService', () => {
   });
 
   it.each(['RHONE-MEDITERRANEE', 'ADOUR-GARONNE'])(
-    'should upload ZIP and ACK with standard naming for %s',
+    'should upload ZIP and ACK with DEPOT-prefixed naming for %s',
     async (agenceEauNom) => {
       masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue(agenceEauNom);
 
@@ -230,13 +231,13 @@ describe('DiffusionRapportProcessorService', () => {
 
       expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
       expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'depot.xml.zip');
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot.xml.zip.ack');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
     },
   );
 
   it.each(['RHIN-MEUSE', 'LOIRE-BRETAGNE'])(
-    'should upload ZIP and ACK with DEPOT naming for %s',
+    'should upload ZIP and ACK with DEPOT-prefixed naming for %s',
     async (agenceEauNom) => {
       masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue(agenceEauNom);
 
@@ -253,7 +254,7 @@ describe('DiffusionRapportProcessorService', () => {
     },
   );
 
-  it('should warn and continue when a DEPOT naming agency has no numeroDepotVerseau1', async () => {
+  it('should warn and continue when a supported agency has no numeroDepotVerseau1', async () => {
     masaGateway.findById.mockResolvedValue({ ...masa, numeroDepotVerseau1: null });
     masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('RHIN-MEUSE');
 
@@ -283,6 +284,7 @@ describe('DiffusionRapportProcessorService', () => {
 
     await service.process({
       depotId: 'dep_1',
+      masaId: 'masa_1',
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
 
@@ -305,6 +307,7 @@ describe('DiffusionRapportProcessorService', () => {
 
     await service.process({
       depotId: 'dep_1',
+      masaId: 'masa_1',
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
 
@@ -339,6 +342,7 @@ describe('DiffusionRapportProcessorService', () => {
 
     await service.process({
       depotId: 'dep_1',
+      masaId: 'masa_1',
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
 

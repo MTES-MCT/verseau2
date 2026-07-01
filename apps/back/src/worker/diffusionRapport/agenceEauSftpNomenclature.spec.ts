@@ -2,16 +2,16 @@ import { buildAgenceEauSftpRemotePaths } from './agenceEauSftpNomenclature';
 
 describe('buildAgenceEauSftpRemotePaths', () => {
   it('matches agency names regardless of case', () => {
-    expect(buildAgenceEauSftpRemotePaths('seine-normandie', 'depot.xml')).toEqual({
-      zipPath: 'depot.xml.zip',
-      ackPath: 'depot.xml.zip.ack',
+    expect(buildAgenceEauSftpRemotePaths('seine-normandie', 'depot.xml', '1234')).toEqual({
+      zipPath: 'DEPOT1234_depot.xml.zip',
+      ackPath: 'DEPOT1234_depot.xml.zip.ack',
     });
   });
 
   it('matches agency names regardless of accents', () => {
-    expect(buildAgenceEauSftpRemotePaths('Rhône-Méditerranée', 'depot.xml')).toEqual({
-      zipPath: 'depot.xml.zip',
-      ackPath: 'depot.xml.zip.ack',
+    expect(buildAgenceEauSftpRemotePaths('Rhône-Méditerranée', 'depot.xml', '1234')).toEqual({
+      zipPath: 'DEPOT1234_depot.xml.zip',
+      ackPath: 'DEPOT1234_depot.xml.zip.ack',
     });
   });
 
@@ -22,7 +22,8 @@ describe('buildAgenceEauSftpRemotePaths', () => {
     });
   });
 
-  it('returns null when a DEPOT agency has no numeroDepotVerseau1', () => {
+  it('returns null when a supported agency has no numeroDepotVerseau1', () => {
+    expect(buildAgenceEauSftpRemotePaths('SEINE-NORMANDIE', 'depot.xml', null)).toBeNull();
     expect(buildAgenceEauSftpRemotePaths('RHIN-MEUSE', 'depot.xml', null)).toBeNull();
   });
 
