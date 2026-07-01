@@ -4,6 +4,8 @@ import { LoggerService } from './logger/logger.service';
 import { ZodValidationPipe } from './schema/zodValidation.pipe';
 import { CsvGeneratorService } from './csv/csvGenerator.service';
 import { PaginatedExportService } from './csv/paginatedExport.service';
+import { Zip } from './zip/zip';
+import { ZipService } from './zip/zip.service';
 
 @Global()
 @Module({
@@ -12,11 +14,24 @@ import { PaginatedExportService } from './csv/paginatedExport.service';
     ZodValidationPipe,
     CsvGeneratorService,
     PaginatedExportService,
+    ZipService,
     {
       provide: CsvGenerator,
       useExisting: CsvGeneratorService,
     },
+    {
+      provide: Zip,
+      useExisting: ZipService,
+    },
   ],
-  exports: [LoggerService, ZodValidationPipe, CsvGenerator, CsvGeneratorService, PaginatedExportService],
+  exports: [
+    LoggerService,
+    ZodValidationPipe,
+    CsvGenerator,
+    CsvGeneratorService,
+    PaginatedExportService,
+    Zip,
+    ZipService,
+  ],
 })
 export class SharedModule {}

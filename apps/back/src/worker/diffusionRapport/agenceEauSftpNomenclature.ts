@@ -1,0 +1,49 @@
+export interface AgenceEauSftpRemotePaths {
+  zipPath: string;
+  ackPath: string;
+}
+
+const ACK_SUFFIX_AGENCIES = new Set(['SEINE-NORMANDIE', 'RHONE-MEDITERRANEE', 'ADOUR-GARONNE']);
+const ACK_PREFIX_AGENCIES = new Set(['RHIN-MEUSE', 'LOIRE-BRETAGNE']);
+const SUPPORTED_AGENCIES = new Set([...ACK_SUFFIX_AGENCIES, ...ACK_PREFIX_AGENCIES]);
+
+function normalizeAgenceEauNom(agenceEauNom: string): string {
+  return agenceEauNom
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+export function buildAgenceEauSftpRemotePaths(
+  agenceEauNom: string,
+  nomOriginalFichier: string,
+  numeroDepotVerseau1?: string | null,
+): AgenceEauSftpRemotePaths | null {
+  const normalizedAgenceEauNom = normalizeAgenceEauNom(agenceEauNom);
+
+  if (!SUPPORTED_AGENCIES.has(normalizedAgenceEauNom)) {
+    return null;
+  }
+
+  const numeroDepot = numeroDepotVerseau1?.trim();
+  if (!numeroDepot) {
+    return null;
+  }
+
+  const prefixedNomOriginalFichier = `DEPOT${numeroDepot}_${nomOriginalFichier}`;
+
+  if (ACK_PREFIX_AGENCIES.has(normalizedAgenceEauNom)) {
+    return {
+      zipPath: `${prefixedNomOriginalFichier}.zip`,
+      ackPath: `ACK_${prefixedNomOriginalFichier}.zip`,
+    };
+  }
+
+  return {
+    zipPath: `${prefixedNomOriginalFichier}.zip`,
+    ackPath: `${prefixedNomOriginalFichier}.zip.ack`,
+  };
+}

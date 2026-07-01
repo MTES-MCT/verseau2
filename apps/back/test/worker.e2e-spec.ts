@@ -33,6 +33,8 @@ import { MasaEntity } from '@dossier/masa/masa.entity';
 import { SftpAgency } from '@infra/sftp/sftpAgency';
 import { MasaProvider } from '@masa/masa.provider';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { Zip } from '@shared/zip/zip';
+import { ZipService } from '@shared/zip/zip.service';
 
 // Import shared mocks
 import {
@@ -107,6 +109,8 @@ describe('Worker Service (e2e)', () => {
         { provide: S3, useValue: s3Mock },
         { provide: Sftp, useValue: sftpMock },
         { provide: SftpAgency, useValue: sftpAgencyMock },
+        ZipService,
+        { provide: Zip, useExisting: ZipService },
         { provide: MasaProvider, useValue: masaProviderMock },
         { provide: QueueGateway, useValue: queueMock },
         { provide: ControleV1Service, useClass: ControleV1TestMock },

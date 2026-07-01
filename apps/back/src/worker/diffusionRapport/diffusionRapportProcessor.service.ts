@@ -17,6 +17,8 @@ import { parseScenarioAssainissementXml } from '@lib/parser';
 import { MasaProvider } from '@masa/masa.provider';
 import { RapportDestinataire } from '@queue/queue';
 import type { DiffusionRapportJobData } from '@queue/queue';
+import { Zip } from '@shared/zip/zip';
+import { buildAgenceEauSftpRemotePaths } from './agenceEauSftpNomenclature';
 
 @Injectable()
 export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapportJobData> {
@@ -28,6 +30,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     @Inject(S3) private readonly s3: S3,
     @Inject(SftpAgency) private readonly sftpAgency: SftpAgency,
+    @Inject(Zip) private readonly zip: Zip,
     private readonly masaProvider: MasaProvider,
     private readonly pdfGenerator: RapportPdfGeneratorService,
     private readonly logger: LoggerService,
@@ -72,7 +75,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       // 3. Send to Agence de l'eau SFTP
       if (destinataires.includes(RapportDestinataire.AGENCE_EAU)) {
-        await this.sendToAgenceDeEauSftp(depot, pdfBuffer);
+        await this.sendToAgenceDeEauSftp(depot, pdfBuffer, masa ?? undefined);
       }
 
       // 4. Send email to déposant
@@ -133,7 +136,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     });
   }
 
-  private async sendToAgenceDeEauSftp(depot: DepotModel, pdfBuffer: Buffer): Promise<void> {
+  private async sendToAgenceDeEauSftp(depot: DepotModel, pdfBuffer: Buffer, masa?: MasaModel): Promise<void> {
     try {
       if (!depot.path) {
         throw new Error(`No XML file path for depot: ${depot.id}`);
@@ -162,6 +165,21 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
         return;
       }
 
+      const remotePaths = buildAgenceEauSftpRemotePaths(
+        agenceEauNom,
+        depot.nomOriginalFichier,
+        masa?.numeroDepotVerseau1,
+      );
+      if (!remotePaths) {
+        this.logger.warn("No SFTP filename rule for agence de l'eau, skipping upload", {
+          depotId: depot.id,
+          ouvrageDepollutionCode,
+          agenceEauNom,
+          numeroDepotVerseau1: masa?.numeroDepotVerseau1,
+        });
+        return;
+      }
+
       if (!this.sftpAgency.hasClient(agenceEauNom)) {
         this.logger.warn("No configured SFTP client for agence de l'eau, skipping upload", {
           depotId: depot.id,
@@ -176,16 +194,19 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
 
       // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
 
-      const filePath1 = `${depot.id}/${depot.nomOriginalFichier}`;
-      const filePath2 = `${depot.id}/rapport-masa-${depot.id}.pdf`;
-      await sftpClient.send(xmlBuffer, filePath1);
-      await sftpClient.send(pdfBuffer, filePath2);
+      const zipBuffer = this.zip.createArchive({
+        [depot.nomOriginalFichier]: xmlBuffer,
+        [`rapport-masa-${depot.id}.pdf`]: pdfBuffer,
+      });
+      await sftpClient.send(zipBuffer, remotePaths.zipPath);
+      await sftpClient.send(Buffer.alloc(0), remotePaths.ackPath);
 
       this.logger.log("Files sent to Agence de l'eau SFTP", {
         depotId: depot.id,
         ouvrageDepollutionCode,
-        agenceEauCode: agenceEauNom,
-        depot: depot.id,
+        agenceEauNom,
+        zipPath: remotePaths.zipPath,
+        ackPath: remotePaths.ackPath,
       });
     } catch (error) {
       this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {
