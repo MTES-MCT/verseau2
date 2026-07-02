@@ -47,6 +47,7 @@ export class SftpAgencyService implements SftpAgency {
       const agenciesConfig = JSON.parse(configJson) as SftpAgenciesConfig;
 
       for (const [agenceEauSiret, config] of Object.entries(agenciesConfig)) {
+        const agenceEnvKey = this.getAgencyEnvKey(agenceEauSiret);
         const credentials = this.getCredentials(agenceEauSiret);
         this.validateConfig(agenceEauSiret, config);
 
@@ -63,7 +64,7 @@ export class SftpAgencyService implements SftpAgency {
           this.logger,
         );
 
-        this.clients.set(agenceEauSiret, sftpService);
+        this.clients.set(agenceEnvKey, sftpService);
         this.logger.log(`Client SFTP configuré pour l'agence: ${agenceEauSiret}`);
       }
 
@@ -77,15 +78,17 @@ export class SftpAgencyService implements SftpAgency {
   }
 
   private getCredentials(agenceEauSiret: string): SftpCredentials {
-    const privateKey = this.configService.get<string>(`SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`);
+    const agenceEnvKey = this.getAgencyEnvKey(agenceEauSiret);
+    const privateKeyConfigKey = `SFTP_AGENCY_PRIVATE_KEY_${agenceEnvKey}`;
+    const privateKey = this.configService.get<string>(privateKeyConfigKey);
 
     if (privateKey) {
       return {
-        privateKey: decodeSftpPrivateKey(privateKey, `SFTP_AGENCY_PRIVATE_KEY_${agenceEauSiret}`),
+        privateKey: decodeSftpPrivateKey(privateKey, privateKeyConfigKey),
       };
     }
 
-    const password = this.configService.get<string>(`SFTP_AGENCY_PASSWORD_${agenceEauSiret}`);
+    const password = this.configService.get<string>(`SFTP_AGENCY_PASSWORD_${agenceEnvKey}`);
 
     if (password) {
       return { password };
@@ -114,7 +117,8 @@ export class SftpAgencyService implements SftpAgency {
   }
 
   getClient(nomAgence: string): Sftp {
-    const client = this.clients.get(nomAgence);
+    const agenceEnvKey = this.getAgencyEnvKey(nomAgence);
+    const client = this.clients.get(agenceEnvKey);
 
     if (!client) {
       throw new Error(
@@ -127,10 +131,14 @@ export class SftpAgencyService implements SftpAgency {
   }
 
   hasClient(nomAgence: string): boolean {
-    return this.clients.has(nomAgence);
+    return this.clients.has(this.getAgencyEnvKey(nomAgence));
   }
 
   getConfiguredAgencies(): string[] {
     return Array.from(this.clients.keys());
+  }
+
+  private getAgencyEnvKey(nomAgence: string): string {
+    return nomAgence.replaceAll('-', '_');
   }
 }
