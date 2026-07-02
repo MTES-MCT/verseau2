@@ -17,7 +17,7 @@ const agence22222222222222PrivateKey = createTestPrivateKey();
 const encodedArtoisPicardiePrivateKey = Buffer.from(artoisPicardiePrivateKey, 'utf8').toString('base64');
 const encodedAgence22222222222222PrivateKey = Buffer.from(agence22222222222222PrivateKey, 'utf8').toString('base64');
 const sftpAgencyConfig = JSON.stringify({
-  'ARTOIS-PICARDIE': {
+  ARTOIS_PICARDIE: {
     host: 'sftp1.example.com',
     port: 22,
     username: 'user1',
@@ -34,7 +34,7 @@ const sftpAgencyConfig = JSON.stringify({
   },
 });
 const sftpAgencyPrivateKeys: Record<string, string> = {
-  'SFTP_AGENCY_PRIVATE_KEY_ARTOIS-PICARDIE': encodedArtoisPicardiePrivateKey,
+  SFTP_AGENCY_PRIVATE_KEY_ARTOIS_PICARDIE: encodedArtoisPicardiePrivateKey,
   SFTP_AGENCY_PRIVATE_KEY_22222222222222: encodedAgence22222222222222PrivateKey,
 };
 const sftpAgencyPasswords: Record<string, string> = {
@@ -77,7 +77,7 @@ describe('SftpAgencyService', () => {
 
     it('devrait initialiser les clients correctement', () => {
       expect(service.getConfiguredAgencies()).toHaveLength(3);
-      expect(service.getConfiguredAgencies()).toContain('ARTOIS-PICARDIE');
+      expect(service.getConfiguredAgencies()).toContain('ARTOIS_PICARDIE');
       expect(service.getConfiguredAgencies()).toContain('22222222222222');
       expect(service.getConfiguredAgencies()).toContain('33333333333333');
     });
