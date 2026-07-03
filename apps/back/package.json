@@ -94,6 +94,10 @@
       "ts"
     ],
     "rootDir": "src",
+    "setupFiles": [
+      "<rootDir>/../test/jest.setup.ts"
+    ],
+    "silent": true,
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
@@ -104,6 +108,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "watchman": false,
     "moduleNameMapper": {
       "^@queue/(.*)$": "<rootDir>/infra/queue/$1",
       "^@database/(.*)$": "<rootDir>/infra/database/$1",

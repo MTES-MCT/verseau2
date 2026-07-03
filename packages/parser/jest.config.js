@@ -10,4 +10,5 @@ module.exports = {
   },
   testPathIgnorePatterns: ['/dist/'],
   coveragePathIgnorePatterns: ['/dist/'],
+  watchman: false,
 };
