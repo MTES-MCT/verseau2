@@ -14,7 +14,7 @@
     "dev:front": "pnpm --filter front dev",
     "prepare": "husky",
     "clean": "pnpm --filter back clean && pnpm --filter front clean && pnpm --filter parser clean && pnpm --filter dossier clean && pnpm --filter shared clean",
-    "test": "pnpm --filter back test && pnpm --filter parser test",
+    "test": "pnpm -r --if-present test",
     "knip": "knip"
   },
   "devDependencies": {
