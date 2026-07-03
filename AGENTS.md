@@ -7,13 +7,16 @@ Application de depots de fichiers et de tableaux de bord d'autosurveillance des 
 ## Commands
 
 ```bash
-pnpm test                            # Run backend unit + e2e tests and parser tests
-pnpm --filter back test:e2e          # E2E tests (testcontainers)
+pnpm test                            # Run backend unit + e2e tests, then parser tests
+pnpm --filter back test:unit         # Backend unit tests
+pnpm --filter back test:e2e          # Backend e2e tests (testcontainers)
 pnpm --filter back test:e2e:api-worker # E2E tests with API + worker
+pnpm --filter front check            # Frontend TypeScript check
+pnpm --filter front test             # Frontend unit tests
+pnpm --filter front test -- <file>   # Run a single frontend test file (e.g. SelectAutocomplete.spec.tsx)
 pnpm build                           # Production build (front + back)
 pnpm --filter back lint              # Lint backend
 pnpm --filter front lint             # Lint frontend
-pnpm --filter front test -- <file>   # Run a single frontend test file (e.g. SelectAutocomplete.spec.tsx)
 ```
 
 ## Memory System
@@ -47,23 +50,6 @@ _Grows over time but should stay concise and reusable._
 
 ## Critical Rules
 
-- Always use path aliases (`@dossier/*`, `@infra/*`, etc.), never relative imports across module boundaries
-- Never Commit on your own
-- Scopes: `back`, `front`, or omit for root-level changes
-- Most API controllers must use `@UseGuards` (architecture tests exempt `AuthenticationController`, `ReferentielController`, `VersionController`, and a few named endpoints)
-- Gateway pattern: interface + Symbol export with same name
-- Run tests before considering your task finished
 - Use pnpm, not npm or yarn
-- Mock providers exist for S3, SANDRE, Auth, Email, SFTP -- toggled via env vars
-- Shared packages (`packages/*`) must be built before backend/frontend can use them
+- Run the relevant tests/checks before considering your task finished; if they cannot be run, state why
 
-## Issue Tracking
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-```
