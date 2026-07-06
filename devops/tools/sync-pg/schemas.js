@@ -28,9 +28,7 @@ function parseExcludedTables() {
   const rawValue = process.env.SYNC_PG_EXCLUDED_TABLES;
 
   if (!rawValue || rawValue.trim() === '') {
-    throw new Error(
-      'SYNC_PG_EXCLUDED_TABLES is required. Expected comma-separated values in format "dump_schema.table_name".',
-    );
+    return [];
   }
 
   const tables = rawValue.split(',').map((value) => value.trim());
@@ -53,7 +51,7 @@ function parseExcludedTables() {
 
 /**
  * Tables excluded from pg_restore (too large / too slow).
- * Configured via SYNC_PG_EXCLUDED_TABLES.
+ * Optionally configured via SYNC_PG_EXCLUDED_TABLES.
  * Format: comma-separated values using "dump_schema.table_name".
  * Example: SYNC_PG_EXCLUDED_TABLES=custom_ingestion_roseau.alr,custom_ingestion_roseau.ple
  *
