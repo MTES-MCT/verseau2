@@ -1,0 +1,128 @@
+import { FctAssainissement } from '@lib/parser';
+import { Injectable } from '@nestjs/common';
+import { ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
+import { MasaProvider } from '@masa/masa.provider';
+import { CapaciteNominaleBySandreCda } from '@masa/masa.dto';
+
+export const PFAS_REGLEMENTAIRES_CODES = [
+  '5980',
+  '5979',
+  '5978',
+  '5977',
+  '5347',
+  '6508',
+  '6509',
+  '6510',
+  '6507',
+  '6549',
+  '6025',
+  '8738',
+  '6830',
+  '6542',
+  '6561',
+  '8739',
+  '6550',
+  '8740',
+  '8741',
+  '8742',
+  '7893',
+  '7991',
+];
+
+export const AOF_CODE = '8986';
+export const PFAS_FINALITE_ANALYSE = '11';
+export const PFAS_CAPACITE_MIN_EH = 10000;
+
+const PFAS_REGLEMENTAIRES_CODE_SET = new Set(PFAS_REGLEMENTAIRES_CODES);
+
+type AnalysePfasCandidate = {
+  cdParametre?: string;
+  finalite?: string;
+};
+
+@Injectable()
+export class ControleMetierV2Pfas {
+  constructor(private readonly masaProvider: MasaProvider) {}
+
+  async verifyAofPresenceForPfasCampaigns(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess> {
+    const errors: ControleError[] = [];
+    const year = this.extractReferenceYear(fctAssainissement);
+
+    if (year === undefined) {
+      return { name: ControleName.CTL201, errors };
+    }
+
+    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
+    if (steuCodes.length === 0) {
+      return { name: ControleName.CTL201, errors };
+    }
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
+      if (!eligibleSteuCodes.has(cdOuvrageDepollution)) {
+        continue;
+      }
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A4') {
+          continue;
+        }
+
+        for (const prelevement of pointMesure.prelevement) {
+          const analyses = prelevement.analyse ?? [];
+
+          if (this.isPfasCampaign(analyses) && !analyses.some((analyse) => analyse.cdParametre === AOF_CODE)) {
+            errors.push({
+              code: ErrorCode.E2_201,
+              params: [prelevement.datePrlvt ?? ''],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return { name: ControleName.CTL201, errors };
+  }
+
+  isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {
+    return analyses.some(
+      (analyse) =>
+        analyse.finalite === PFAS_FINALITE_ANALYSE &&
+        !!analyse.cdParametre &&
+        PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
+    );
+  }
+
+  private extractReferenceYear(fctAssainissement: FctAssainissement): number | undefined {
+    const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
+    if (!dateDebutReference) {
+      return undefined;
+    }
+
+    const year = parseInt(dateDebutReference.substring(0, 4), 10);
+    if (isNaN(year)) {
+      return undefined;
+    }
+
+    return year;
+  }
+
+  private extractUniqueSteuCodes(fctAssainissement: FctAssainissement): string[] {
+    return [...new Set(fctAssainissement.ouvrages.map((ouvrage) => ouvrage.cdOuvrageDepollution).filter(Boolean))];
+  }
+
+  private getSteuCodesWithMinimumCapacity(capacitesNominales: CapaciteNominaleBySandreCda[]): Set<string> {
+    return new Set(
+      capacitesNominales
+        .filter((capacite) => capacite.capaciteNominaleEH >= PFAS_CAPACITE_MIN_EH)
+        .map((capacite) => capacite.ouvrageDepollutionCode),
+    );
+  }
+}

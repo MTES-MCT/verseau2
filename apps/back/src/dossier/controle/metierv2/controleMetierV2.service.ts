@@ -23,6 +23,7 @@ import {
   MaxDebitBySandreCda,
   ProductionBoueZero,
 } from '@masa/masa.dto';
+import { ControleMetierV2Pfas } from './controleMetierV2Pfas';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -30,6 +31,7 @@ export class ControleMetierV2Service {
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(MasaProvider) private readonly masaProvider: MasaProvider,
+    private readonly controleMetierV2Pfas: ControleMetierV2Pfas,
     private readonly controleMapper: ControleMapper,
   ) {}
 

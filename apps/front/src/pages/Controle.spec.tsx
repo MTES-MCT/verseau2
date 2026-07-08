@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import {
   ControleName,
+  ErrorCode,
   EvenementType,
   MasaStatus,
   SandreAcceptationStatus,
@@ -85,7 +86,7 @@ function renderControlePage() {
   );
 }
 
-function clickFilterCard(label: 'Succès' | 'Avertissement' | 'Erreur') {
+function clickFilterCard(label: 'Succès' | 'Avertissement' | 'Erreur' | 'Information') {
   const clickableStatCard = screen.getByTestId(`clickable-stat-card-${label}`);
   const button = clickableStatCard.querySelector('button');
 
@@ -190,6 +191,37 @@ describe('ControlePage', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /intégration des données/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByText(/aucune donnée d'intégration/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows PFAS controls in a dedicated section with warning status', async () => {
+    mockFetchControles.mockResolvedValue([
+      makeControle({
+        id: 'roseau-warning',
+        name: ControleName.CTL004,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+      }),
+      makeControle({
+        id: 'pfas-information',
+        name: ControleName.CTL201,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_201,
+        errorParams: ['2024-06-01'],
+      }),
+    ]);
+    mockFetchControlesSandre.mockResolvedValue([]);
+    mockFetchMasa.mockResolvedValue(null);
+
+    renderControlePage();
+
+    await waitForLoadedPage();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /contrôles métiers/i, level: 2 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /contrôles PFAS/i, level: 2 })).toBeInTheDocument();
+      expect(screen.getByTestId('clickable-stat-card-Avertissement')).toBeInTheDocument();
+      expect(screen.getByText(/Paramètre AOF \(code 8986\) absent pour la date 2024-06-01/i)).toBeInTheDocument();
     });
   });
 });

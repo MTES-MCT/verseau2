@@ -9,6 +9,7 @@ import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
 import { ControleModel, CreateControleModel } from '../controle.model';
+import { ControleMetierV2Pfas } from './controleMetierV2Pfas';
 
 function createFctWithAnalyses(
   analyse: { cdParametre?: string; rsAnalyse?: string; cdUniteMesure?: string }[],
@@ -65,6 +66,7 @@ describe('ControleMetierV2Service', () => {
             findProductionBoueZeroBatch: jest.fn(),
           },
         },
+        ControleMetierV2Pfas,
         {
           provide: ControleMapper,
           useValue: {
@@ -182,6 +184,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL058, // verifyVolumesNegatifs
         ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
         ControleName.CTL061, // verifyDebitA3A4SameDate
+        ControleName.CTL201, // verifyAofPresenceForPfasCampaigns
       ]);
       expect(calledControles).not.toContain(null);
     });

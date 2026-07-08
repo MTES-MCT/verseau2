@@ -12,7 +12,7 @@ interface ClickableStatCardProps {
 
 export function ClickableStatCard({ count, label, icon, color, onClick, isActive }: ClickableStatCardProps) {
   return (
-    <div className="fr-col-12 fr-col-md-4" data-testid={`clickable-stat-card-${label}`}>
+    <div className="fr-col-12 fr-col-md-3" data-testid={`clickable-stat-card-${label}`}>
       <button
         onClick={onClick}
         aria-pressed={isActive}

@@ -50,6 +50,7 @@ export enum ErrorCode {
   E2_059 = 'E2.059',
   E2_060 = 'E2.060',
   E2_061 = 'E2.061',
+  E2_201 = 'E2.201',
   E2_999 = 'E2.999',
 }
 
@@ -171,6 +172,7 @@ export type ErrorParamsMap = {
   ];
   [ErrorCode.E2_060]: [cdOuvrage: string, chargeEH: string, capaciteNominale: string, seuilEH: string, date: string];
   [ErrorCode.E2_061]: [missingPoint: 'A3' | 'A4', datePrlvt: string];
+  [ErrorCode.E2_201]: [date: string];
   [ErrorCode.E2_999]: [message: string];
 };
 
@@ -182,4 +184,5 @@ export enum AvertissmentCode {
 export enum EvenementType {
   ERREUR = 'ERREUR',
   AVERTISSEMENT = 'AVERTISSEMENT',
+  INFORMATION = 'INFORMATION',
 }

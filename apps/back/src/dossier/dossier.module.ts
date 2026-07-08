@@ -36,6 +36,7 @@ import { MasaIpGuard } from './masa/masaIp.guard';
 import { IsAdminGuard } from '@authentication/isAdmin.guard';
 import { RapportPdfGeneratorService } from './rapport/rapportPdfGenerator.service';
 import { ControleMetierV2Service } from './controle/metierv2/controleMetierV2.service';
+import { ControleMetierV2Pfas } from './controle/metierv2/controleMetierV2Pfas';
 
 const sandreServiceFactory = {
   provide: SandreService,
@@ -75,6 +76,7 @@ const sandreServiceFactory = {
     ControleV1DataFetcherService,
     ControleV1Service,
     ControleMetierV2Service,
+    ControleMetierV2Pfas,
     { provide: ControleGateway, useClass: ControleRepository },
     ControleMapper,
     // Masa

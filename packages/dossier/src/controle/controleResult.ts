@@ -81,6 +81,7 @@ export enum ControleName {
   CTL059 = 'CTL059',
   CTL060 = 'CTL060',
   CTL061 = 'CTL061',
+  CTL201 = 'CTL201',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -141,5 +142,6 @@ export const ControleDescription: Record<ControleName, string> = {
     'Contrôle sur la charge de pollution à traiter vs capacité nominale de la station (≥ 2 000 EH)',
   [ControleName.CTL061]:
     'Vérification que les débits A3/A4 du paramètre 1552 sont renseignés à la même date',
+  [ControleName.CTL201]: 'Vérification de la présence du paramètre AOF pour les analyses PFAS en sortie de station',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };

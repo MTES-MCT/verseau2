@@ -128,6 +128,13 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_201 (AOF absent)', () => {
+    const result = buildMessage(ErrorCode.E2_201, ['2024-06-01']);
+    expect(result).toBe(
+      'Paramètre AOF (code 8986) absent pour la date 2024-06-01. Ce paramètre est obligatoire pour les analyses PFAS en sortie de station (A4).',
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

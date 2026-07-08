@@ -166,6 +166,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage60(params);
     case ErrorCode.E2_061:
       return buildErrorMessage61(params);
+    case ErrorCode.E2_201:
+      return buildErrorMessage201(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -339,4 +341,9 @@ const buildErrorMessage61 = (params: string[]) => {
     return `Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit d'entrée manque pour la date ${datePrlvt}, alors que le débit de sortie pour la date ${datePrlvt} existe.`;
   }
   return `Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit de sortie manque pour la date ${datePrlvt}, alors que le débit d'entrée pour la date ${datePrlvt} existe.`;
+};
+
+const buildErrorMessage201 = (params: string[]) => {
+  const [date] = params as ErrorParamsMap[ErrorCode.E2_201];
+  return `Paramètre AOF (code 8986) absent pour la date ${date}. Ce paramètre est obligatoire pour les analyses PFAS en sortie de station (A4).`;
 };

@@ -12,6 +12,8 @@ export function useControleStatistics(controles: ControleView[]) {
           acc.errorCount++;
         } else if (controle.evenementType === EvenementType.AVERTISSEMENT) {
           acc.warningCount++;
+        } else if (controle.evenementType === EvenementType.INFORMATION) {
+          acc.informationCount++;
         }
 
         return acc;
@@ -20,6 +22,7 @@ export function useControleStatistics(controles: ControleView[]) {
         successCount: 0,
         errorCount: 0,
         warningCount: 0,
+        informationCount: 0,
       },
     );
 

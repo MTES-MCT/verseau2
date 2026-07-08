@@ -11,6 +11,7 @@ import { ControleSandreGroup } from '../components/ControleGroupSandre';
 import { MasaIntegrationStatus } from '../components/MasaIntegrationStatus';
 import { ClickableStatCard } from '../components/ClickableStatCard';
 import type { ControleFilterSet, ControleFilterType } from '../types/controle.types';
+import { ControleName } from '@lib/dossier';
 import { useControleStatistics } from '../hooks/useControleStatistics';
 import {
   defaultActiveControleFilters,
@@ -24,6 +25,8 @@ import {
 export type ControleLocationState = {
   numeroDepotVerseau1?: string;
 };
+
+const PFAS_CONTROLE_NAMES = new Set<ControleName>([ControleName.CTL201]);
 
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>();
@@ -56,15 +59,25 @@ export function ControlePage() {
     retry: false,
   });
 
-  const controlesV1 = useMemo(() => mapControlesV1ToView(controles), [controles]);
+  const controlesMapped = useMemo(() => mapControlesV1ToView(controles), [controles]);
+  const controlesV1 = useMemo(
+    () => controlesMapped.filter((controle) => !PFAS_CONTROLE_NAMES.has(controle.name)),
+    [controlesMapped],
+  );
+  const controlesPfas = useMemo(
+    () => controlesMapped.filter((controle) => PFAS_CONTROLE_NAMES.has(controle.name)),
+    [controlesMapped],
+  );
   const sandreControlesMapped = useMemo(() => mapSandreControlesToView(sandreControles), [sandreControles]);
   const roseauStatistics = useControleStatistics(controlesV1);
+  const pfasStatistics = useControleStatistics(controlesPfas);
   const sandreStatistics = useMemo(() => getSandreStatistics(sandreControlesMapped), [sandreControlesMapped]);
   const masaStatistics = useMemo(() => getMasaStatistics(masa), [masa]);
   const hasVisibleRoseauRows = filterControlesByActiveFilters(controlesV1, activeFilters).length > 0;
+  const hasVisiblePfasRows = filterControlesByActiveFilters(controlesPfas, activeFilters).length > 0;
   const hasVisibleSandreRows = filterSandreControlesByActiveFilters(sandreControlesMapped, activeFilters).length > 0;
   const hasVisibleMasaRow = masa === null || matchesMasaFilters(masa, activeFilters);
-  const hasAnyResult = controlesV1.length > 0 || sandreControlesMapped.length > 0 || masa !== null;
+  const hasAnyResult = controlesMapped.length > 0 || sandreControlesMapped.length > 0 || masa !== null;
 
   const visibleSections: ReactElement[] = [];
 
@@ -75,6 +88,12 @@ export function ControlePage() {
         controles={controlesV1}
         activeFilters={activeFilters}
       />,
+    );
+  }
+
+  if (hasVisiblePfasRows) {
+    visibleSections.push(
+      <ControleGroup title="Contrôles PFAS" controles={controlesPfas} activeFilters={activeFilters} />,
     );
   }
 
@@ -90,9 +109,19 @@ export function ControlePage() {
     );
   }
 
-  const totalSuccessCount = roseauStatistics.successCount + sandreStatistics.successCount + masaStatistics.successCount;
-  const totalWarningCount = roseauStatistics.warningCount + sandreStatistics.warningCount + masaStatistics.warningCount;
-  const totalErrorCount = roseauStatistics.errorCount + sandreStatistics.errorCount + masaStatistics.errorCount;
+  const totalSuccessCount =
+    roseauStatistics.successCount +
+    pfasStatistics.successCount +
+    sandreStatistics.successCount +
+    masaStatistics.successCount;
+  const totalWarningCount =
+    roseauStatistics.warningCount +
+    pfasStatistics.warningCount +
+    sandreStatistics.warningCount +
+    masaStatistics.warningCount;
+  const totalErrorCount =
+    roseauStatistics.errorCount + pfasStatistics.errorCount + sandreStatistics.errorCount + masaStatistics.errorCount;
+  const totalInformationCount = roseauStatistics.informationCount + pfasStatistics.informationCount;
 
   const toggleFilter = (filter: ControleFilterType) => {
     setActiveFilters((previousFilters) => {
@@ -169,6 +198,14 @@ export function ControlePage() {
             color="var(--text-default-error)"
             onClick={() => toggleFilter('error')}
             isActive={activeFilters.has('error')}
+          />
+          <ClickableStatCard
+            count={totalInformationCount}
+            label="Information"
+            icon="fr-icon-information-fill"
+            color="var(--text-default-info)"
+            onClick={() => toggleFilter('information')}
+            isActive={activeFilters.has('information')}
           />
         </div>
       )}
