@@ -191,7 +191,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       }
 
       const sftpClient = this.sftpAgency.getClient(agenceEauNom);
-
+      this.logger.log("Sending files to Agence de l'eau SFTP: {agenceEauNom}", { agenceEauNom });
       // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
 
       const zipBuffer = this.zip.createArchive({
