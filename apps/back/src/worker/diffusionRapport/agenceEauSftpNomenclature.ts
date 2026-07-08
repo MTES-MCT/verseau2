@@ -33,17 +33,17 @@ export function buildAgenceEauSftpRemotePaths(
     return null;
   }
 
-  const prefixedNomOriginalFichier = `DEPOT${numeroDepot}_${nomOriginalFichier}`;
+  const prefixedNomOriginalFichier = `TEST_DEPOT${numeroDepot}_${nomOriginalFichier}`;
 
   if (ACK_PREFIX_AGENCIES.has(normalizedAgenceEauNom)) {
     return {
-      zipPath: `${prefixedNomOriginalFichier}.zip`,
-      ackPath: `ACK_${prefixedNomOriginalFichier}.zip`,
+      zipPath: `${prefixedNomOriginalFichier}.TEST`,
+      ackPath: `TEST_ACK_DEPOT${numeroDepot}_${nomOriginalFichier}.TEST`,
     };
   }
 
   return {
-    zipPath: `${prefixedNomOriginalFichier}.zip`,
-    ackPath: `${prefixedNomOriginalFichier}.zip.ack`,
+    zipPath: `${prefixedNomOriginalFichier}.TEST`,
+    ackPath: `${prefixedNomOriginalFichier}.ack.TEST`,
   };
 }

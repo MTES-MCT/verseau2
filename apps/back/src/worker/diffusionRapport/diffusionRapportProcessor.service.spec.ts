@@ -210,8 +210,8 @@ describe('DiffusionRapportProcessorService', () => {
     expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
     expect(sftpAgency.hasClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
     expect(sftpAgency.getClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'TEST_DEPOT1234_depot.xml.TEST');
+    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'TEST_DEPOT1234_depot.xml.ack.TEST');
     expectFirstSftpCallToContainZipEntries();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
@@ -231,8 +231,8 @@ describe('DiffusionRapportProcessorService', () => {
 
       expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
       expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'TEST_DEPOT1234_depot.xml.TEST');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'TEST_DEPOT1234_depot.xml.ack.TEST');
     },
   );
 
@@ -249,8 +249,8 @@ describe('DiffusionRapportProcessorService', () => {
 
       expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
       expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'ACK_DEPOT1234_depot.xml.zip');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'TEST_DEPOT1234_depot.xml.TEST');
+      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'TEST_ACK_DEPOT1234_depot.xml.TEST');
     },
   );
 
