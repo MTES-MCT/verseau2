@@ -165,52 +165,49 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
         return;
       }
 
-      const configuredAgencies = this.sftpAgency.getConfiguredAgencies();
-      if (configuredAgencies.length === 0) {
+      const remotePaths = buildAgenceEauSftpRemotePaths(
+        agenceEauNom,
+        depot.nomOriginalFichier,
+        masa?.numeroDepotVerseau1,
+      );
+      if (!remotePaths) {
+        this.logger.warn("No SFTP filename rule for agence de l'eau, skipping upload", {
+          depotId: depot.id,
+          ouvrageDepollutionCode,
+          agenceEauNom,
+          numeroDepotVerseau1: masa?.numeroDepotVerseau1,
+        });
+        return;
+      }
+
+      if (!this.sftpAgency.hasClient(agenceEauNom)) {
         this.logger.warn("No configured SFTP client for agence de l'eau, skipping upload", {
           depotId: depot.id,
           ouvrageDepollutionCode,
           agenceEauNom,
-          configuredAgencies,
+          configuredAgencies: this.sftpAgency.getConfiguredAgencies(),
         });
         return;
       }
+
+      const sftpClient = this.sftpAgency.getClient(agenceEauNom);
+      this.logger.log("Sending files to Agence de l'eau SFTP: {agenceEauNom}", { agenceEauNom });
+      // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
 
       const zipBuffer = this.zip.createArchive({
         [depot.nomOriginalFichier]: xmlBuffer,
         [`rapport-masa-${depot.id}.pdf`]: pdfBuffer,
       });
+      await sftpClient.send(zipBuffer, remotePaths.zipPath);
+      await sftpClient.send(Buffer.alloc(0), remotePaths.ackPath);
 
-      for (const agenceEauNom of configuredAgencies) {
-        const remotePaths = buildAgenceEauSftpRemotePaths(
-          agenceEauNom,
-          depot.nomOriginalFichier,
-          masa?.numeroDepotVerseau1,
-        );
-        if (!remotePaths) {
-          this.logger.warn("No SFTP filename rule for agence de l'eau, skipping upload", {
-            depotId: depot.id,
-            ouvrageDepollutionCode,
-            agenceEauNom,
-            numeroDepotVerseau1: masa?.numeroDepotVerseau1,
-          });
-          continue;
-        }
-
-        const sftpClient = this.sftpAgency.getClient(agenceEauNom);
-        this.logger.log("Sending files to Agence de l'eau SFTP: {agenceEauNom}", { agenceEauNom });
-        // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
-        await sftpClient.send(zipBuffer, remotePaths.zipPath);
-        await sftpClient.send(Buffer.alloc(0), remotePaths.ackPath);
-
-        this.logger.log("Files sent to Agence de l'eau SFTP", {
-          depotId: depot.id,
-          ouvrageDepollutionCode,
-          agenceEauNom,
-          zipPath: remotePaths.zipPath,
-          ackPath: remotePaths.ackPath,
-        });
-      }
+      this.logger.log("Files sent to Agence de l'eau SFTP", {
+        depotId: depot.id,
+        ouvrageDepollutionCode,
+        agenceEauNom,
+        zipPath: remotePaths.zipPath,
+        ackPath: remotePaths.ackPath,
+      });
     } catch (error) {
       this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {
         depotId: depot.id,
