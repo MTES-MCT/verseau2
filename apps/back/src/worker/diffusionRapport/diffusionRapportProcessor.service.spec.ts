@@ -279,7 +279,7 @@ describe('DiffusionRapportProcessorService', () => {
   });
 
   it('should warn and continue when the agency has no SFTP filename rule', async () => {
-    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('ARTOIS-PICARDIE');
+    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('UNKNOWN-AGENCY');
 
     await service.process({
       depotId: 'dep_1',
@@ -291,7 +291,7 @@ describe('DiffusionRapportProcessorService', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       "No SFTP filename rule for agence de l'eau, skipping upload",
       expect.objectContaining({
-        agenceEauNom: 'ARTOIS-PICARDIE',
+        agenceEauNom: 'UNKNOWN-AGENCY',
         depotId: 'dep_1',
         ouvrageDepollutionCode: 'STEU001',
       }),
