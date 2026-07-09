@@ -11,6 +11,7 @@ function normalizeAgenceEauNom(agenceEauNom: string): string {
   return agenceEauNom
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replaceAll('_', '-')
     .replace(/\s*-\s*/g, '-')
     .replace(/\s+/g, ' ')
     .trim()
