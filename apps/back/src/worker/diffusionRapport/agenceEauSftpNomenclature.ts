@@ -12,6 +12,7 @@ function normalizeAgenceEauNom(agenceEauNom: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s*-\s*/g, '-')
+    .replace('_', '-')
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();
@@ -33,17 +34,17 @@ export function buildAgenceEauSftpRemotePaths(
     return null;
   }
 
-  const prefixedNomOriginalFichier = `DEPOT${numeroDepot}_${nomOriginalFichier}`;
+  const prefixedNomOriginalFichier = `TEST_DEPOT${numeroDepot}_${nomOriginalFichier}`;
 
   if (ACK_PREFIX_AGENCIES.has(normalizedAgenceEauNom)) {
     return {
-      zipPath: `${prefixedNomOriginalFichier}.zip`,
-      ackPath: `ACK_${prefixedNomOriginalFichier}.zip`,
+      zipPath: `${prefixedNomOriginalFichier}.TEST`,
+      ackPath: `ACK_${prefixedNomOriginalFichier}.TEST`,
     };
   }
 
   return {
-    zipPath: `${prefixedNomOriginalFichier}.zip`,
-    ackPath: `${prefixedNomOriginalFichier}.zip.ack`,
+    zipPath: `${prefixedNomOriginalFichier}.TEST`,
+    ackPath: `${prefixedNomOriginalFichier}.ack.TEST`,
   };
 }
