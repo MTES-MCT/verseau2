@@ -5,7 +5,7 @@ import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { NotificationGateway } from '@notification/notification.gateway';
 import { EmailTemplate, EmailRapportParams } from '@notification/notification';
 import { S3 } from '@infra/s3/s3';
-import { SftpAgency } from '@infra/sftp/sftpAgency';
+import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { MasaModel } from '@dossier/masa/masa.model';
@@ -29,7 +29,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     @Inject(S3) private readonly s3: S3,
-    @Inject(SftpAgency) private readonly sftpAgency: SftpAgency,
+    @Inject(AgenceEauClient) private readonly agenceEauClient: AgenceEauClient,
     @Inject(Zip) private readonly zip: Zip,
     private readonly masaProvider: MasaProvider,
     private readonly pdfGenerator: RapportPdfGeneratorService,
@@ -180,19 +180,19 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
         return;
       }
 
-      if (!this.sftpAgency.hasClient(agenceEauNom)) {
+      if (!this.agenceEauClient.hasClient(agenceEauNom)) {
         this.logger.warn("No configured SFTP client for agence de l'eau, skipping upload", {
           depotId: depot.id,
           ouvrageDepollutionCode,
           agenceEauNom,
-          configuredAgencies: this.sftpAgency.getConfiguredAgencies(),
+          configuredAgencies: this.agenceEauClient.getConfiguredAgencies(),
         });
         return;
       }
 
-      const sftpClient = this.sftpAgency.getClient(agenceEauNom);
+      const sftpClient = this.agenceEauClient.getClient(agenceEauNom);
       this.logger.log("Sending files to Agence de l'eau SFTP: {agenceEauNom}", { agenceEauNom });
-      // SftpAgency/SftpService prefixes the relative remote path using the agency configuration.
+      // AgenceEauClient prefixes the relative remote path using the agency configuration.
 
       const zipBuffer = this.zip.createArchive({
         [depot.nomOriginalFichier]: xmlBuffer,

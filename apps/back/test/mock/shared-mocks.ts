@@ -5,7 +5,7 @@
  */
 
 import type { S3 } from '@infra/s3/s3';
-import type { Sftp } from '@infra/sftp/sftp';
+import type { TransferClient } from '@infra/transferClient/transferClient';
 import type { Queue, QueueJob, QueueOptions } from '@infra/queue/queue';
 import type { UserEntity } from '@user/user.entity';
 // ============= Infrastructure Mocks =============
@@ -67,10 +67,10 @@ export class S3TestMock implements S3 {
 }
 
 /**
- * SFTP mock that tracks calls and supports failure simulation.
- * Implements the Sftp interface for full compatibility.
+ * Transfer mock that tracks calls and supports failure simulation.
+ * Implements the TransferClient interface for full compatibility.
  */
-export class SftpTestMock implements Sftp {
+export class TransferClientTestMock implements TransferClient {
   calls: Array<{ file: Buffer; fileName: string }> = [];
   shouldFail = false;
   failureMessage = 'SFTP send failed';
@@ -81,10 +81,6 @@ export class SftpTestMock implements Sftp {
     }
     this.calls.push({ file, fileName });
     await Promise.resolve();
-  }
-
-  async sendToAgentVerseau(file: Buffer, fileName: string): Promise<void> {
-    await this.send(file, fileName);
   }
 
   /**
@@ -432,15 +428,14 @@ export class ControleGatewayTestMock {
 }
 
 /**
- * Mock for SftpAgency.
+ * Mock for AgenceEauClient.
  */
-export class SftpAgencyTestMock {
+export class AgenceEauClientTestMock {
   private mockClient: jest.Mocked<any>;
 
   constructor() {
     this.mockClient = {
       send: jest.fn().mockResolvedValue(undefined),
-      sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
     };
   }
 
@@ -458,7 +453,6 @@ export class SftpAgencyTestMock {
 
   reset(): void {
     this.mockClient.send.mockClear();
-    this.mockClient.sendToAgentVerseau.mockClear();
   }
 }
 

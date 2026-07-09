@@ -7,7 +7,7 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { Authentication } from '@authentication/authentication';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
 import { UserService } from '@user/user.service';
@@ -24,7 +24,7 @@ import { S3_CLIENT } from '@infra/s3/s3.service';
 // Import shared mocks
 import {
   S3TestMock,
-  SftpTestMock,
+  TransferClientTestMock,
   QueueTestMock,
   ConfigServiceTestMock,
   UserServiceTestMock,
@@ -66,8 +66,8 @@ describe('Depot upload (e2e)', () => {
       .useValue({})
       .overrideProvider(S3)
       .useValue(s3Mock)
-      .overrideProvider(Sftp)
-      .useClass(SftpTestMock)
+      .overrideProvider(AgentVerseauClient)
+      .useClass(TransferClientTestMock)
       .overrideProvider(UserService)
       .useClass(UserServiceTestMock)
       .overrideProvider(DroitsUserService)

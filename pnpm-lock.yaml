@@ -101,6 +101,9 @@ importers:
       axios:
         specifier: ^1.16.1
         version: 1.16.1
+      basic-ftp:
+        specifier: ^6.0.1
+        version: 6.0.1
       cache-manager:
         specifier: ^7.2.8
         version: 7.2.8
@@ -2799,6 +2802,10 @@ packages:
   baseline-browser-mapping@2.8.32:
     resolution: {integrity: sha512-OPz5aBThlyLFgxyhdwf/s2+8ab3OvT7AdTNvKHBwpXomIYeXqpUUuT8LrdtxZSsWJ4R4CU1un4XGh5Ez3nlTpw==}
     hasBin: true
+
+  basic-ftp@6.0.1:
+    resolution: {integrity: sha512-3ilxa3n4276wGQp/ImRAuz4ALdsj/2Wd3FqoZBZlajDYnByCZ0JMb4+26Rde0wGXIbM0G2HWSfr/Fi8b21KX8g==}
+    engines: {node: '>=10.0.0'}
 
   bcrypt-pbkdf@1.0.2:
     resolution: {integrity: sha512-qeFIXtP4MSoi6NLqO12WfqARWWuCKi2Rn/9hJLEmtB5yTNr9DqFWkJRCf2qShWzPeAMRnOgCrq0sg/KLv5ES9w==}
@@ -8747,6 +8754,8 @@ snapshots:
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.8.32: {}
+
+  basic-ftp@6.0.1: {}
 
   bcrypt-pbkdf@1.0.2:
     dependencies:

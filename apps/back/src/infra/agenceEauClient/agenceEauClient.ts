@@ -1,17 +1,13 @@
-import { Sftp } from './sftp';
+import { TransferClient } from '../transferClient/transferClient';
 
-/**
- * Registry pour gérer plusieurs clients SFTP pour les différentes agences de l'eau.
- * Les clés de configuration attendues sont les codes CDB des agences.
- */
-export interface SftpAgency {
+export interface AgenceEauClient {
   /**
-   * Récupère un client SFTP pour une agence donnée.
+   * Récupère un client de transfert pour une agence donnée.
    * @param cdbRfa Code CDB de l'agence de l'eau
-   * @returns Client SFTP configuré pour cette agence
+   * @returns Client de transfert configuré pour cette agence
    * @throws Error si l'agence n'est pas configurée
    */
-  getClient(cdbRfa: string): Sftp;
+  getClient(cdbRfa: string): TransferClient;
 
   /**
    * Vérifie si une agence est configurée.
@@ -27,4 +23,4 @@ export interface SftpAgency {
   getConfiguredAgencies(): string[];
 }
 
-export const SftpAgency = Symbol('SftpAgency');
+export const AgenceEauClient = Symbol('AgenceEauClient');

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import path from 'node:path';
 import Client from 'ssh2-sftp-client';
-import { Sftp } from './sftp';
+import { TransferClient } from '../transferClient/transferClient';
 import { LoggerService } from '@shared/logger/logger.service';
 
 export const SFTP_CLIENT = Symbol('SFTP_CLIENT');
@@ -26,7 +26,7 @@ export type SftpCredentials =
 export type SftpConfig = SftpConnectionConfig & SftpCredentials;
 
 @Injectable()
-export class SftpService implements Sftp {
+export class SftpService implements TransferClient {
   constructor(
     @Inject(SFTP_CLIENT) private readonly sftpClient: Client,
     private readonly config: SftpConfig,
@@ -58,13 +58,5 @@ export class SftpService implements Sftp {
     } finally {
       await this.sftpClient.end();
     }
-  }
-
-  async sendToAgentVerseau(file: Buffer, remotePath: string | undefined): Promise<void> {
-    if (!remotePath) {
-      throw new Error('Remote path is undefined');
-    }
-
-    await this.send(file, `uploads/${remotePath}`);
   }
 }

@@ -22,7 +22,7 @@ import cookieParser from 'cookie-parser';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStatus } from '@lib/dossier';
 import { S3 } from '@infra/s3/s3';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { QueueGateway, PGBOSS, QueueName } from '@infra/queue/queue';
 import { ApiModule } from '../../src/api/api.module';
 import { InfraModule } from '@infra/infra.module';
@@ -39,7 +39,7 @@ import { createReferentielDataset } from '../createReferentielDataset';
 import { seedUserWithDroits, seedUserWithoutDroits, clearUserWithDroits } from '../userWithDroitsDataset.helper';
 
 // Import shared mocks
-import { S3TestMock, SftpTestMock, QueueTestMock } from '../mock/shared-mocks';
+import { S3TestMock, TransferClientTestMock, QueueTestMock } from '../mock/shared-mocks';
 
 // ============= Test Suite =============
 
@@ -48,7 +48,7 @@ describe('Dossier E2E - Depot Upload', () => {
   let dataSource: DataSource;
   let authService: Authentication;
   let s3Mock: S3TestMock;
-  let sftpMock: SftpTestMock;
+  let agentVerseauClientMock: TransferClientTestMock;
   let queueMock: QueueTestMock;
 
   // Test user data matching AuthenticationMockService.getMockUser()
@@ -65,7 +65,7 @@ describe('Dossier E2E - Depot Upload', () => {
     const connectionUri = getPostgresConnectionUri();
 
     s3Mock = new S3TestMock();
-    sftpMock = new SftpTestMock();
+    agentVerseauClientMock = new TransferClientTestMock();
     queueMock = new QueueTestMock();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -79,8 +79,8 @@ describe('Dossier E2E - Depot Upload', () => {
       .useValue(queueMock)
       .overrideProvider(S3)
       .useValue(s3Mock)
-      .overrideProvider(Sftp)
-      .useValue(sftpMock)
+      .overrideProvider(AgentVerseauClient)
+      .useValue(agentVerseauClientMock)
       .overrideProvider(LoggerService)
       .useValue(loggerValueMock)
       .compile();
@@ -103,7 +103,7 @@ describe('Dossier E2E - Depot Upload', () => {
   beforeEach(async () => {
     // Reset mocks
     s3Mock.reset();
-    sftpMock.reset();
+    agentVerseauClientMock.reset();
     queueMock.reset();
 
     // Clear and reseed user data
