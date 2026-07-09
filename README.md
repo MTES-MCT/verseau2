@@ -119,12 +119,13 @@ OIDC_FAKE_TOKEN=change-me
  SFTP_USERNAME=user
  SFTP_PRIVATE_KEY=key
 
- # SFTP Agency Configuration
+ # SFTP/FTP Agency Configuration
  SFTP_AGENCY_PROVIDER=mock # ou real
- # Configuration JSON des SFTP pour chaque agence de l'eau
- # Format: {"agence_id": {"host": "hostname", "port": 22, "username": "user", "remotePath": "base/path"}}
- SFTP_AGENCY_CONFIG={ "11111111111111": { "host": "sftp1.example.com", "port": 22, "username": "user1", "remotePath": "test-agency-1" } }
- # Pour chaque agence, fournir soit une clé privée, soit un mot de passe
+ # Configuration JSON des clients de transfert pour chaque agence de l'eau
+ # Format SFTP par défaut: {"agence_id": {"host": "hostname", "port": 22, "username": "user", "remotePath": "base/path"}}
+ # Format FTP/FTPS: {"agence_id": {"type": "ftp", "host": "hostname", "port": 21, "username": "user", "remotePath": "base/path", "secure": true}}
+ SFTP_AGENCY_CONFIG={ "11111111111111": { "host": "sftp1.example.com", "port": 22, "username": "user1", "remotePath": "test-agency-1" }, "22222222222222": { "type": "ftp", "host": "ftp2.example.com", "port": 21, "username": "user2", "remotePath": "test-agency-2", "secure": true } }
+ # Pour chaque agence SFTP, fournir soit une clé privée, soit un mot de passe. Pour FTP, fournir un mot de passe.
  # Clés privées encodées en base64 pour chaque agence, le fournisseur Cloud ne gère pas les VE multi-ligne
  SFTP_AGENCY_PRIVATE_KEY_11111111111111=base64
  SFTP_AGENCY_PASSWORD_22222222222222=mot-de-passe
@@ -214,6 +215,7 @@ pnpm knip         # Analyse du code inutilisé
 - **Testcontainers** : Tests d'intégration avec PostgreSQL
 - **OpenID Client** : Authentification OIDC
 - **ssh2-sftp-client** : Client SFTP
+- **basic-ftp** : Client FTP/FTPS pour les agences de l'eau
 
 ### Frontend
 

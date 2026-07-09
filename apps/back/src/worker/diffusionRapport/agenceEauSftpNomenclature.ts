@@ -4,7 +4,7 @@ export interface AgenceEauSftpRemotePaths {
 }
 
 const ACK_SUFFIX_AGENCIES = new Set(['SEINE-NORMANDIE', 'RHONE-MEDITERRANEE', 'ADOUR-GARONNE']);
-const ACK_PREFIX_AGENCIES = new Set(['RHIN-MEUSE', 'LOIRE-BRETAGNE']);
+const ACK_PREFIX_AGENCIES = new Set(['RHIN-MEUSE', 'LOIRE-BRETAGNE', 'ARTOIS-PICARDIE']);
 const SUPPORTED_AGENCIES = new Set([...ACK_SUFFIX_AGENCIES, ...ACK_PREFIX_AGENCIES]);
 
 function normalizeAgenceEauNom(agenceEauNom: string): string {

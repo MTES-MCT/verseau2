@@ -5,7 +5,7 @@
  *
  * Important: This module does NOT include S3MockModule or QueueMockModule
  * because they import DatabaseMockModule. Use .overrideProvider() in tests
- * to provide S3, Sftp, and QueueGateway mocks.
+ * to provide S3, AgentVerseauClient, and QueueGateway mocks.
  */
 import { Global, Module } from '@nestjs/common';
 import { ClsModule } from 'nestjs-cls';
@@ -13,8 +13,8 @@ import { AuthenticationModule } from '@authentication/authentication.module';
 import { ConfigurationModule } from '@infra/config/configuration.module';
 import { PGBOSS, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
-import { Sftp } from '@infra/sftp/sftp';
-import { SftpAgency } from '@infra/sftp/sftpAgency';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
+import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 
 // Minimal placeholder providers - tests should override these
 const minimalQueueProvider = {
@@ -27,13 +27,13 @@ const minimalS3Provider = {
   useValue: { upload: jest.fn(), download: jest.fn() },
 };
 
-const minimalSftpProvider = {
-  provide: Sftp,
-  useValue: { send: jest.fn(), sendToAgentVerseau: jest.fn() },
+const minimalAgentVerseauClientProvider = {
+  provide: AgentVerseauClient,
+  useValue: { send: jest.fn() },
 };
 
-const minimalSftpAgencyProvider = {
-  provide: SftpAgency,
+const minimalAgenceEauClientProvider = {
+  provide: AgenceEauClient,
   useValue: {
     getClient: jest.fn(),
     hasClient: jest.fn(),
@@ -59,10 +59,19 @@ const pgBossNullProvider = {
   providers: [
     minimalQueueProvider,
     minimalS3Provider,
-    minimalSftpProvider,
-    minimalSftpAgencyProvider,
+    minimalAgentVerseauClientProvider,
+    minimalAgenceEauClientProvider,
     pgBossNullProvider,
   ],
-  exports: [ClsModule, AuthenticationModule, ConfigurationModule, QueueGateway, S3, Sftp, SftpAgency, PGBOSS],
+  exports: [
+    ClsModule,
+    AuthenticationModule,
+    ConfigurationModule,
+    QueueGateway,
+    S3,
+    AgentVerseauClient,
+    AgenceEauClient,
+    PGBOSS,
+  ],
 })
 export class InfraWithRealDbMockModule {}

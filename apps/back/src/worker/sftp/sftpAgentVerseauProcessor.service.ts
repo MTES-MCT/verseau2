@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { S3 } from '@s3/s3';
 import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
@@ -9,7 +9,7 @@ import { addNameTagToXml } from '@lib/parser';
 @Injectable()
 export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
   constructor(
-    @Inject(Sftp) private readonly sftpService: Sftp,
+    @Inject(AgentVerseauClient) private readonly agentVerseauClient: AgentVerseauClient,
     @Inject(S3) private readonly s3: S3,
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
@@ -31,6 +31,9 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
         throw new Error(`Depot with id ${depotId} not found`);
       }
       const file = await this.s3.download(filePath);
+      if (!depot.path) {
+        throw new Error('Remote path is undefined');
+      }
 
       let fileToSend = file;
       if (depot.user) {
@@ -43,8 +46,8 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
         }
       }
 
-      await this.sftpService.sendToAgentVerseau(fileToSend, depot.path);
-      await this.sftpService.sendToAgentVerseau(Buffer.alloc(0), `${depot.path}.ack`);
+      await this.agentVerseauClient.send(fileToSend, depot.path);
+      await this.agentVerseauClient.send(Buffer.alloc(0), `${depot.path}.ack`);
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
       });

@@ -1,18 +1,19 @@
 import { DynamicModule, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { Sftp } from './sftp';
-import { SftpAgency } from './sftpAgency';
-import { createSftpAgentVerseauProviders } from './sftp.factory';
-import { createSftpAgencyProviders } from './sftpAgency.factory';
+import Client from 'ssh2-sftp-client';
+import { SFTP_CLIENT } from './sftp.service';
 
 @Module({})
 export class SftpModule {
   static forRootAsync(): DynamicModule {
     return {
       module: SftpModule,
-      imports: [ConfigModule],
-      providers: [...createSftpAgentVerseauProviders(), ...createSftpAgencyProviders()],
-      exports: [Sftp, SftpAgency],
+      providers: [
+        {
+          provide: SFTP_CLIENT,
+          useFactory: () => new Client(),
+        },
+      ],
+      exports: [SFTP_CLIENT],
     };
   }
 }

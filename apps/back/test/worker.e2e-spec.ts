@@ -15,7 +15,7 @@ import { MasaGateway } from '@dossier/masa/masa.gateway';
 import { NotificationGateway } from '@notification/notification.gateway';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { S3 } from '@infra/s3/s3';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { QueueName, QueueGateway, RapportDestinataire } from '@infra/queue/queue';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -30,7 +30,7 @@ import { UserService } from '@user/user.service';
 import { startPostgresContainer, getPostgresConnectionUri } from './testcontainer.config';
 import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
-import { SftpAgency } from '@infra/sftp/sftpAgency';
+import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { MasaProvider } from '@masa/masa.provider';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 import { Zip } from '@shared/zip/zip';
@@ -39,7 +39,7 @@ import { ZipService } from '@shared/zip/zip.service';
 // Import shared mocks
 import {
   S3TestMock,
-  SftpTestMock,
+  TransferClientTestMock,
   QueueTestMock,
   RoseauGatewayTestMock,
   ControleV1TestMock,
@@ -48,7 +48,7 @@ import {
   NotificationGatewayTestMock,
   MasaGatewayTestMock,
   ControleGatewayTestMock,
-  SftpAgencyTestMock,
+  AgenceEauClientTestMock,
   MasaProviderTestMock,
 } from './mock/shared-mocks';
 
@@ -56,8 +56,8 @@ describe('Worker Service (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let s3Mock: S3TestMock;
-  let sftpMock: SftpTestMock;
-  let sftpAgencyMock: SftpAgencyTestMock;
+  let agentVerseauClientMock: TransferClientTestMock;
+  let agenceEauClientMock: AgenceEauClientTestMock;
   let masaProviderMock: MasaProviderTestMock;
   let queueMock: QueueTestMock;
   let notificationMock: NotificationGatewayTestMock;
@@ -71,8 +71,8 @@ describe('Worker Service (e2e)', () => {
     await startPostgresContainer();
 
     s3Mock = new S3TestMock();
-    sftpMock = new SftpTestMock();
-    sftpAgencyMock = new SftpAgencyTestMock();
+    agentVerseauClientMock = new TransferClientTestMock();
+    agenceEauClientMock = new AgenceEauClientTestMock();
     masaProviderMock = new MasaProviderTestMock();
     queueMock = new QueueTestMock();
     notificationMock = new NotificationGatewayTestMock();
@@ -107,8 +107,8 @@ describe('Worker Service (e2e)', () => {
         { provide: MasaGateway, useValue: masaGatewayMock },
         { provide: ControleGateway, useValue: controleGatewayMock },
         { provide: S3, useValue: s3Mock },
-        { provide: Sftp, useValue: sftpMock },
-        { provide: SftpAgency, useValue: sftpAgencyMock },
+        { provide: AgentVerseauClient, useValue: agentVerseauClientMock },
+        { provide: AgenceEauClient, useValue: agenceEauClientMock },
         ZipService,
         { provide: Zip, useExisting: ZipService },
         { provide: MasaProvider, useValue: masaProviderMock },
@@ -248,7 +248,7 @@ describe('Worker Service (e2e)', () => {
       s3Mock.seed('sftp_test.xml', '<data>test</data>');
 
       // Reset mocks
-      sftpMock.reset();
+      agentVerseauClientMock.reset();
 
       // Process SFTP
       await sftpProcessorService.process({
@@ -263,9 +263,9 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.SFTP_COMPLETED);
       // Verify SFTP was called
-      expect(sftpMock.calls).toHaveLength(2);
-      expect(sftpMock.calls[0].fileName).toBe('sftp_test.xml');
-      expect(sftpMock.calls[1].fileName).toBe('sftp_test.xml.ack');
+      expect(agentVerseauClientMock.calls).toHaveLength(2);
+      expect(agentVerseauClientMock.calls[0].fileName).toBe('sftp_test.xml');
+      expect(agentVerseauClientMock.calls[1].fileName).toBe('sftp_test.xml.ack');
     });
 
     it('should handle SFTP failures', async () => {
@@ -284,8 +284,8 @@ describe('Worker Service (e2e)', () => {
       s3Mock.seed('sftp_fail.xml', '<data>test</data>');
 
       // Reset mocks and configure failure
-      sftpMock.reset();
-      sftpMock.setFailure(true);
+      agentVerseauClientMock.reset();
+      agentVerseauClientMock.setFailure(true);
 
       // Process SFTP (should throw)
       await expect(
@@ -330,8 +330,8 @@ describe('Worker Service (e2e)', () => {
       // Mock dependencies
       s3Mock.reset();
       notificationMock.reset();
-      sftpMock.reset();
-      sftpAgencyMock.reset();
+      agentVerseauClientMock.reset();
+      agenceEauClientMock.reset();
       masaProviderMock.reset();
       // Seed original file for SFTP transfer simulation
       s3Mock.seed('rejected_file.xml', '<data>test</data>');
@@ -410,8 +410,8 @@ describe('Worker Service (e2e)', () => {
       // Mock dependencies
       s3Mock.reset();
       notificationMock.reset();
-      sftpMock.reset();
-      sftpAgencyMock.reset();
+      agentVerseauClientMock.reset();
+      agenceEauClientMock.reset();
       masaProviderMock.reset();
       s3Mock.seed('valid_file.xml', '<data>test</data>');
       controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([]);

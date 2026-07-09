@@ -30,7 +30,7 @@ import { MasaWebhookStatus } from '@dossier/masa/masa.model';
 import { MasaService } from '@dossier/masa/masa.service';
 import { QueueGateway, PGBOSS, QueueName, Queue, RapportDestinataire } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { NotificationGateway } from '@notification/notification.gateway';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { ApiModule } from '../../src/api/api.module';
@@ -51,8 +51,13 @@ import { seedUserWithDroits, clearUserWithDroits, seedVSteuSclItv } from '../use
 import { waitForJobCompletion, waitFor, getJobsForDepot } from '../mock/queueTestHelper';
 
 // Import shared mocks for infrastructure dependencies
-import { S3TestMock, SftpTestMock, NotificationGatewayTestMock, SftpAgencyTestMock } from '../mock/shared-mocks';
-import { SftpAgency } from '@infra/sftp/sftpAgency';
+import {
+  S3TestMock,
+  TransferClientTestMock,
+  NotificationGatewayTestMock,
+  AgenceEauClientTestMock,
+} from '../mock/shared-mocks';
+import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { DepotError } from '@dossier/depot/depotError';
 import { seedDepotFull } from '../depot.helper';
 import { clearControles } from '../controle.helper';
@@ -103,8 +108,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
   let pgboss: PgBoss;
   let authService: Authentication;
   let s3Mock: S3TestMock;
-  let sftpMock: SftpTestMock;
-  let sftpAgencyMock: SftpAgencyTestMock;
+  let agentVerseauClientMock: TransferClientTestMock;
+  let agenceEauClientMock: AgenceEauClientTestMock;
   let notificationMock: NotificationGatewayTestMock;
   let sandreService: SandreService;
   let testUserId: string;
@@ -211,8 +216,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
     process.env.DATABASE_URL = connectionUri;
 
     s3Mock = new S3TestMock();
-    sftpMock = new SftpTestMock();
-    sftpAgencyMock = new SftpAgencyTestMock();
+    agentVerseauClientMock = new TransferClientTestMock();
+    agenceEauClientMock = new AgenceEauClientTestMock();
     notificationMock = new NotificationGatewayTestMock();
 
     // Create real PgBoss instance
@@ -253,10 +258,10 @@ describe('Dossier E2E - Real Queue Processing', () => {
       .useValue(realQueueService)
       .overrideProvider(S3)
       .useValue(s3Mock)
-      .overrideProvider(Sftp)
-      .useValue(sftpMock)
-      .overrideProvider(SftpAgency)
-      .useValue(sftpAgencyMock)
+      .overrideProvider(AgentVerseauClient)
+      .useValue(agentVerseauClientMock)
+      .overrideProvider(AgenceEauClient)
+      .useValue(agenceEauClientMock)
       .overrideProvider(NotificationGateway)
       .useValue(notificationMock)
       .overrideProvider(LoggerService)
@@ -307,8 +312,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
   beforeEach(async () => {
     // Reset mocks
     s3Mock.reset();
-    sftpMock.reset();
-    sftpAgencyMock.reset();
+    agentVerseauClientMock.reset();
+    agenceEauClientMock.reset();
     notificationMock.reset();
     (sandreService as ConfigurableSandreMock).defaultBehavior = 'conformant';
     (sandreService as ConfigurableSandreMock).clearValidationResults?.();
@@ -652,7 +657,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
         depotId,
         destinataires: [RapportDestinataire.DEPOSANT],
       });
-      expect(sftpAgencyMock.getClient('11111111111111').send).not.toHaveBeenCalled();
+      expect(agenceEauClientMock.getClient('11111111111111').send).not.toHaveBeenCalled();
 
       const finalDepot = await findDepotOrFail(depotId);
       expect(finalDepot.status).toBe(DepotStatus.REJETE);

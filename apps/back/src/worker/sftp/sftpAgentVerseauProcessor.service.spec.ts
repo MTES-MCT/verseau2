@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { SftpAgentVerseauProcessorService } from './sftpAgentVerseauProcessor.service';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { S3 } from '@s3/s3';
 import { DepotService } from '@dossier/depot/depot.service';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -14,16 +14,15 @@ jest.mock('@lib/parser', () => ({
 
 describe('SftpAgentVerseauProcessorService', () => {
   let service: SftpAgentVerseauProcessorService;
-  let mockSftp: Sftp;
+  let mockAgentVerseauClient: AgentVerseauClient;
   let mockS3: S3;
   let mockDepotService: DepotService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockSftp = {
+    mockAgentVerseauClient = {
       send: jest.fn().mockResolvedValue(undefined),
-      sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
-    } as unknown as Sftp;
+    } as unknown as AgentVerseauClient;
 
     mockS3 = {
       download: jest.fn().mockResolvedValue(Buffer.from('<xml></xml>')),
@@ -41,7 +40,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SftpAgentVerseauProcessorService,
-        { provide: Sftp, useValue: mockSftp },
+        { provide: AgentVerseauClient, useValue: mockAgentVerseauClient },
         { provide: S3, useValue: mockS3 },
         { provide: DepotService, useValue: mockDepotService },
         {
@@ -80,8 +79,8 @@ describe('SftpAgentVerseauProcessorService', () => {
     expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
 
     const expectedXml = `${originalXml}<!-- added DOE John -->`;
-    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'remote/path.xml');
-    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'remote/path.xml');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
 
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       step: DepotStep.SFTP_COMPLETED,
@@ -102,15 +101,15 @@ describe('SftpAgentVerseauProcessorService', () => {
     await service.process({ depotId, filePath });
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
-    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(1, Buffer.from(originalXml), 'remote/path.xml');
-    expect(mockSftp.sendToAgentVerseau).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(originalXml), 'remote/path.xml');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
   });
 
   it('should handle errors and update depot status to REJETE', async () => {
     const depotId = 'depot-1';
     const filePath = 's3/path.xml';
     const error = new Error('SFTP Error');
-    (mockSftp.sendToAgentVerseau as jest.Mock).mockRejectedValue(error);
+    (mockAgentVerseauClient.send as jest.Mock).mockRejectedValue(error);
 
     await expect(service.process({ depotId, filePath })).rejects.toThrow('SFTP Error');
 

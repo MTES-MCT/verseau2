@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { generateKeyPairSync } from 'node:crypto';
-import { SftpAgencyService } from './sftpAgency.service';
-import { SftpAgencyMock } from './sftpAgency.mock';
-import { createSftpAgency } from './sftpAgency.factory';
+import { AgenceEauClientService } from './agenceEauClient.service';
+import { AgenceEauClientMock } from './agenceEauClient.mock';
+import { createAgenceEauClient } from './agenceEauClient.factory';
+import { FtpService } from '../ftp/ftp.service';
+import { SftpService } from '../sftp/sftp.service';
 import { SharedModule } from '@shared/shared.module';
 import { loggerProviderMock, LoggerServiceMock } from '@shared/logger/logger.mock';
 
@@ -16,7 +18,7 @@ const artoisPicardiePrivateKey = createTestPrivateKey();
 const agence22222222222222PrivateKey = createTestPrivateKey();
 const encodedArtoisPicardiePrivateKey = Buffer.from(artoisPicardiePrivateKey, 'utf8').toString('base64');
 const encodedAgence22222222222222PrivateKey = Buffer.from(agence22222222222222PrivateKey, 'utf8').toString('base64');
-const sftpAgencyConfig = JSON.stringify({
+const agenceEauClientConfig = JSON.stringify({
   ARTOIS_PICARDIE: {
     host: 'sftp1.example.com',
     port: 22,
@@ -32,27 +34,35 @@ const sftpAgencyConfig = JSON.stringify({
     port: 22,
     username: 'user3',
   },
+  '44444444444444': {
+    type: 'ftp',
+    host: 'ftp4.example.com',
+    port: 21,
+    username: 'user4',
+    secure: true,
+  },
 });
-const sftpAgencyPrivateKeys: Record<string, string> = {
+const agenceEauPrivateKeys: Record<string, string> = {
   SFTP_AGENCY_PRIVATE_KEY_ARTOIS_PICARDIE: encodedArtoisPicardiePrivateKey,
   SFTP_AGENCY_PRIVATE_KEY_22222222222222: encodedAgence22222222222222PrivateKey,
 };
-const sftpAgencyPasswords: Record<string, string> = {
+const agenceEauPasswords: Record<string, string> = {
   SFTP_AGENCY_PASSWORD_33333333333333: 'agency-password-333',
+  SFTP_AGENCY_PASSWORD_44444444444444: 'agency-password-444',
 };
 
-describe('SftpAgencyService', () => {
+describe('AgenceEauClientService', () => {
   describe('avec configuration valide', () => {
-    let service: SftpAgencyService;
+    let service: AgenceEauClientService;
     const getConfigValue = (key: string): string | undefined => {
       if (key === 'SFTP_AGENCY_CONFIG') {
-        return sftpAgencyConfig;
+        return agenceEauClientConfig;
       }
       if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
-        return sftpAgencyPrivateKeys[key];
+        return agenceEauPrivateKeys[key];
       }
       if (key.startsWith('SFTP_AGENCY_PASSWORD_')) {
-        return sftpAgencyPasswords[key];
+        return agenceEauPasswords[key];
       }
       return undefined;
     };
@@ -61,7 +71,7 @@ describe('SftpAgencyService', () => {
       const module: TestingModule = await Test.createTestingModule({
         imports: [SharedModule],
         providers: [
-          SftpAgencyService,
+          AgenceEauClientService,
           {
             provide: ConfigService,
             useValue: {
@@ -72,28 +82,27 @@ describe('SftpAgencyService', () => {
         ],
       }).compile();
 
-      service = module.get<SftpAgencyService>(SftpAgencyService);
+      service = module.get<AgenceEauClientService>(AgenceEauClientService);
     });
 
     it('devrait initialiser les clients correctement', () => {
-      expect(service.getConfiguredAgencies()).toHaveLength(3);
+      expect(service.getConfiguredAgencies()).toHaveLength(4);
       expect(service.getConfiguredAgencies()).toContain('ARTOIS_PICARDIE');
       expect(service.getConfiguredAgencies()).toContain('22222222222222');
       expect(service.getConfiguredAgencies()).toContain('33333333333333');
+      expect(service.getConfiguredAgencies()).toContain('44444444444444');
     });
 
     it('devrait retourner un client pour la troisième agence configurée', () => {
       const client = service.getClient('33333333333333');
       expect(client).toBeDefined();
       expect(typeof client.send).toBe('function');
-      expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
     it('devrait retourner un client pour une agence configurée', () => {
       const client = service.getClient('ARTOIS-PICARDIE');
       expect(client).toBeDefined();
       expect(typeof client.send).toBe('function');
-      expect(typeof client.sendToAgentVerseau).toBe('function');
     });
 
     it("devrait avoir le bon privateKey pour l'agence ARTOIS-PICARDIE", () => {
@@ -114,6 +123,19 @@ describe('SftpAgencyService', () => {
       expect((client as any).config.privateKey).toBeUndefined();
     });
 
+    it('devrait créer un client FTP pour une agence avec type ftp', () => {
+      const client = service.getClient('44444444444444');
+
+      expect(client).toBeInstanceOf(FtpService);
+      expect((client as any).config.password).toBe('agency-password-444');
+      expect((client as any).config.secure).toBe(true);
+      expect((client as any).config.privateKey).toBeUndefined();
+    });
+
+    it("devrait créer un client SFTP par défaut quand le type n'est pas défini", () => {
+      expect(service.getClient('ARTOIS-PICARDIE')).toBeInstanceOf(SftpService);
+    });
+
     it('devrait vérifier si un client existe', () => {
       expect(service.hasClient('ARTOIS-PICARDIE')).toBe(true);
       expect(service.hasClient('agence_inexistante')).toBe(false);
@@ -132,13 +154,13 @@ describe('SftpAgencyService', () => {
   });
 
   describe('avec configuration vide', () => {
-    let service: SftpAgencyService;
+    let service: AgenceEauClientService;
 
     beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
         imports: [SharedModule],
         providers: [
-          SftpAgencyService,
+          AgenceEauClientService,
           {
             provide: ConfigService,
             useValue: {
@@ -148,7 +170,7 @@ describe('SftpAgencyService', () => {
         ],
       }).compile();
 
-      service = module.get<SftpAgencyService>(SftpAgencyService);
+      service = module.get<AgenceEauClientService>(AgenceEauClientService);
     });
 
     it('devrait initialiser sans erreur', () => {
@@ -160,7 +182,7 @@ describe('SftpAgencyService', () => {
     const logger = new LoggerServiceMock();
     it('devrait lever une erreur si le JSON est invalide', () => {
       expect(() => {
-        new SftpAgencyService(
+        new AgenceEauClientService(
           {
             get: jest.fn(() => '{invalid json'),
           } as unknown as ConfigService,
@@ -180,7 +202,7 @@ describe('SftpAgencyService', () => {
       });
 
       expect(() => {
-        new SftpAgencyService(
+        new AgenceEauClientService(
           {
             get: jest.fn((key: string) => {
               if (key === 'SFTP_AGENCY_CONFIG') {
@@ -208,7 +230,7 @@ describe('SftpAgencyService', () => {
       });
 
       expect(() => {
-        new SftpAgencyService(
+        new AgenceEauClientService(
           {
             get: jest.fn((key: string) => {
               if (key === 'SFTP_AGENCY_CONFIG') {
@@ -236,7 +258,7 @@ describe('SftpAgencyService', () => {
       const invalidPrivateKey = Buffer.from('not a private key', 'utf8').toString('base64');
 
       expect(() => {
-        new SftpAgencyService(
+        new AgenceEauClientService(
           {
             get: jest.fn((key: string) => {
               if (key === 'SFTP_AGENCY_CONFIG') {
@@ -263,7 +285,7 @@ describe('SftpAgencyService', () => {
       });
 
       expect(() => {
-        new SftpAgencyService(
+        new AgenceEauClientService(
           {
             get: jest.fn((key: string) => {
               if (key === 'SFTP_AGENCY_CONFIG') {
@@ -277,6 +299,82 @@ describe('SftpAgencyService', () => {
       }).toThrow(/Configuration incomplète pour l'agence 11111111111111: privateKey ou password manquant/);
     });
 
+    it("devrait lever une erreur si une agence FTP n'a pas de mot de passe", () => {
+      const configJson = JSON.stringify({
+        '11111111111111': {
+          type: 'ftp',
+          host: 'ftp1.example.com',
+          port: 21,
+          username: 'user1',
+        },
+      });
+
+      expect(() => {
+        new AgenceEauClientService(
+          {
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              return undefined;
+            }),
+          } as unknown as ConfigService,
+          logger,
+        );
+      }).toThrow(/Configuration incomplète pour l'agence 11111111111111: password manquant pour FTP/);
+    });
+
+    it('devrait lever une erreur si le type est invalide', () => {
+      const configJson = JSON.stringify({
+        '11111111111111': {
+          type: 'http',
+          host: 'ftp1.example.com',
+          port: 21,
+          username: 'user1',
+        },
+      });
+
+      expect(() => {
+        new AgenceEauClientService(
+          {
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              return undefined;
+            }),
+          } as unknown as ConfigService,
+          logger,
+        );
+      }).toThrow(/Type invalide pour l'agence 11111111111111: doit être "sftp" ou "ftp"/);
+    });
+
+    it('devrait lever une erreur si secure est invalide', () => {
+      const configJson = JSON.stringify({
+        '11111111111111': {
+          type: 'ftp',
+          host: 'ftp1.example.com',
+          port: 21,
+          username: 'user1',
+          secure: 'yes',
+        },
+      });
+
+      expect(() => {
+        new AgenceEauClientService(
+          {
+            get: jest.fn((key: string) => {
+              if (key === 'SFTP_AGENCY_CONFIG') {
+                return configJson;
+              }
+              return undefined;
+            }),
+          } as unknown as ConfigService,
+          logger,
+        );
+      }).toThrow(/Secure invalide pour l'agence 11111111111111: doit être un booléen ou "implicit"/);
+    });
+
     it('devrait prioriser la clé privée quand clé privée et mot de passe sont définis', () => {
       const configJson = JSON.stringify({
         '11111111111111': {
@@ -286,7 +384,7 @@ describe('SftpAgencyService', () => {
         },
       });
 
-      const service = new SftpAgencyService(
+      const service = new AgenceEauClientService(
         {
           get: jest.fn((key: string) => {
             if (key === 'SFTP_AGENCY_CONFIG') {
@@ -310,11 +408,11 @@ describe('SftpAgencyService', () => {
   });
 });
 
-describe('SftpAgencyMock', () => {
-  let mock: SftpAgencyMock;
+describe('AgenceEauClientMock', () => {
+  let mock: AgenceEauClientMock;
 
   beforeEach(() => {
-    mock = new SftpAgencyMock(new LoggerServiceMock());
+    mock = new AgenceEauClientMock(new LoggerServiceMock());
   });
 
   it("devrait retourner un client mock pour n'importe quelle agence", () => {
@@ -337,8 +435,8 @@ describe('SftpAgencyMock', () => {
   });
 });
 
-describe('createSftpAgency factory', () => {
-  it('devrait retourner SftpAgencyMock quand SFTP_AGENCY_PROVIDER=mock', () => {
+describe('createAgenceEauClient factory', () => {
+  it('devrait retourner AgenceEauClientMock quand SFTP_AGENCY_PROVIDER=mock', () => {
     const configService = {
       get: jest.fn((key: string) => {
         if (key === 'SFTP_AGENCY_PROVIDER') {
@@ -348,39 +446,39 @@ describe('createSftpAgency factory', () => {
       }),
     } as unknown as ConfigService;
 
-    const registry = createSftpAgency(configService, new LoggerServiceMock());
-    expect(registry).toBeInstanceOf(SftpAgencyMock);
+    const registry = createAgenceEauClient(configService, new LoggerServiceMock());
+    expect(registry).toBeInstanceOf(AgenceEauClientMock);
   });
 
-  it('devrait retourner SftpAgencyService quand SFTP_AGENCY_PROVIDER=real', () => {
+  it('devrait retourner AgenceEauClientService quand SFTP_AGENCY_PROVIDER=real', () => {
     const configService = {
       get: jest.fn((key: string) => {
         if (key === 'SFTP_AGENCY_PROVIDER') {
           return 'real';
         }
         if (key === 'SFTP_AGENCY_CONFIG') {
-          return sftpAgencyConfig;
+          return agenceEauClientConfig;
         }
         if (key.startsWith('SFTP_AGENCY_PRIVATE_KEY_')) {
-          return sftpAgencyPrivateKeys[key];
+          return agenceEauPrivateKeys[key];
         }
         if (key.startsWith('SFTP_AGENCY_PASSWORD_')) {
-          return sftpAgencyPasswords[key];
+          return agenceEauPasswords[key];
         }
         return undefined;
       }),
     } as unknown as ConfigService;
 
-    const registry = createSftpAgency(configService, new LoggerServiceMock());
-    expect(registry).toBeInstanceOf(SftpAgencyService);
+    const registry = createAgenceEauClient(configService, new LoggerServiceMock());
+    expect(registry).toBeInstanceOf(AgenceEauClientService);
   });
 
-  it('devrait retourner SftpAgencyService par défaut', () => {
+  it('devrait retourner AgenceEauClientService par défaut', () => {
     const configService = {
       get: jest.fn(() => undefined),
     } as unknown as ConfigService;
 
-    const registry = createSftpAgency(configService, new LoggerServiceMock());
-    expect(registry).toBeInstanceOf(SftpAgencyService);
+    const registry = createAgenceEauClient(configService, new LoggerServiceMock());
+    expect(registry).toBeInstanceOf(AgenceEauClientService);
   });
 });

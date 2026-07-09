@@ -7,8 +7,8 @@ import { NotificationGateway } from '@notification/notification.gateway';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
 import { S3 } from '@infra/s3/s3';
-import { SftpAgency } from '@infra/sftp/sftpAgency';
-import { Sftp } from '@infra/sftp/sftp';
+import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
+import { TransferClient } from '@infra/transferClient/transferClient';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { Zip } from '@shared/zip/zip';
@@ -34,8 +34,8 @@ describe('DiffusionRapportProcessorService', () => {
   let controleGateway: jest.Mocked<ControleGateway>;
   let reponseSandreGateway: jest.Mocked<ReponseSandreGateway>;
   let s3: jest.Mocked<S3>;
-  let sftpAgency: jest.Mocked<SftpAgency>;
-  let agencySftpClient: jest.Mocked<Sftp>;
+  let agenceEauClient: jest.Mocked<AgenceEauClient>;
+  let agencyTransferClient: jest.Mocked<TransferClient>;
   let pdfGenerator: jest.Mocked<RapportPdfGeneratorService>;
   let masaProvider: jest.Mocked<MasaProvider>;
   let logger: {
@@ -126,16 +126,15 @@ describe('DiffusionRapportProcessorService', () => {
       download: jest.fn().mockResolvedValue(xmlBuffer),
     } as unknown as jest.Mocked<S3>;
 
-    agencySftpClient = {
+    agencyTransferClient = {
       send: jest.fn().mockResolvedValue(undefined),
-      sendToAgentVerseau: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<Sftp>;
+    } as unknown as jest.Mocked<TransferClient>;
 
-    sftpAgency = {
-      getClient: jest.fn().mockReturnValue(agencySftpClient),
+    agenceEauClient = {
+      getClient: jest.fn().mockReturnValue(agencyTransferClient),
       hasClient: jest.fn().mockReturnValue(true),
       getConfiguredAgencies: jest.fn().mockReturnValue(['SEINE-NORMANDIE']),
-    } as unknown as jest.Mocked<SftpAgency>;
+    } as unknown as jest.Mocked<AgenceEauClient>;
 
     pdfGenerator = {
       generateReport: jest.fn().mockResolvedValue(pdfBuffer),
@@ -163,7 +162,7 @@ describe('DiffusionRapportProcessorService', () => {
         { provide: ControleGateway, useValue: controleGateway },
         { provide: ReponseSandreGateway, useValue: reponseSandreGateway },
         { provide: S3, useValue: s3 },
-        { provide: SftpAgency, useValue: sftpAgency },
+        { provide: AgenceEauClient, useValue: agenceEauClient },
         ZipService,
         { provide: Zip, useExisting: ZipService },
         { provide: RapportPdfGeneratorService, useValue: pdfGenerator },
@@ -179,7 +178,7 @@ describe('DiffusionRapportProcessorService', () => {
   });
 
   function expectFirstSftpCallToContainZipEntries(): void {
-    const zipBufferSent = agencySftpClient.send.mock.calls[0]?.[0];
+    const zipBufferSent = agencyTransferClient.send.mock.calls[0]?.[0];
     const zipEntries = unzipSync(zipBufferSent);
 
     expect(Buffer.from(zipEntries['depot.xml']).toString('utf8')).toBe(xmlBuffer.toString('utf8'));
@@ -192,9 +191,9 @@ describe('DiffusionRapportProcessorService', () => {
     expect(s3.download).not.toHaveBeenCalled();
     expect(parseScenarioAssainissementXml).not.toHaveBeenCalled();
     expect(masaProvider.findAgenceEauNomBySteuCode).not.toHaveBeenCalled();
-    expect(sftpAgency.hasClient).not.toHaveBeenCalled();
-    expect(sftpAgency.getClient).not.toHaveBeenCalled();
-    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agenceEauClient.hasClient).not.toHaveBeenCalled();
+    expect(agenceEauClient.getClient).not.toHaveBeenCalled();
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
@@ -208,10 +207,10 @@ describe('DiffusionRapportProcessorService', () => {
     });
 
     expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
-    expect(sftpAgency.hasClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
-    expect(sftpAgency.getClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
-    expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
+    expect(agenceEauClient.hasClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
+    expect(agenceEauClient.getClient).toHaveBeenCalledWith('SEINE-NORMANDIE');
+    expect(agencyTransferClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
+    expect(agencyTransferClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
     expectFirstSftpCallToContainZipEntries();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
@@ -229,10 +228,10 @@ describe('DiffusionRapportProcessorService', () => {
         destinataires: [RapportDestinataire.AGENCE_EAU],
       });
 
-      expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
+      expect(agenceEauClient.hasClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(agenceEauClient.getClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(agencyTransferClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
+      expect(agencyTransferClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
     },
   );
 
@@ -247,10 +246,10 @@ describe('DiffusionRapportProcessorService', () => {
         destinataires: [RapportDestinataire.AGENCE_EAU],
       });
 
-      expect(sftpAgency.hasClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(sftpAgency.getClient).toHaveBeenCalledWith(agenceEauNom);
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
-      expect(agencySftpClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'ACK_DEPOT1234_depot.xml.zip');
+      expect(agenceEauClient.hasClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(agenceEauClient.getClient).toHaveBeenCalledWith(agenceEauNom);
+      expect(agencyTransferClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'DEPOT1234_depot.xml.zip');
+      expect(agencyTransferClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'ACK_DEPOT1234_depot.xml.zip');
     },
   );
 
@@ -273,14 +272,14 @@ describe('DiffusionRapportProcessorService', () => {
         ouvrageDepollutionCode: 'STEU001',
       }),
     );
-    expect(sftpAgency.hasClient).not.toHaveBeenCalled();
-    expect(sftpAgency.getClient).not.toHaveBeenCalled();
-    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agenceEauClient.hasClient).not.toHaveBeenCalled();
+    expect(agenceEauClient.getClient).not.toHaveBeenCalled();
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
   it('should warn and continue when the agency has no SFTP filename rule', async () => {
-    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('ARTOIS-PICARDIE');
+    masaProvider.findAgenceEauNomBySteuCode.mockResolvedValue('UNKNOWN-AGENCY');
 
     await service.process({
       depotId: 'dep_1',
@@ -288,17 +287,17 @@ describe('DiffusionRapportProcessorService', () => {
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
 
-    expect(sftpAgency.hasClient).not.toHaveBeenCalled();
+    expect(agenceEauClient.hasClient).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(
       "No SFTP filename rule for agence de l'eau, skipping upload",
       expect.objectContaining({
-        agenceEauNom: 'ARTOIS-PICARDIE',
+        agenceEauNom: 'UNKNOWN-AGENCY',
         depotId: 'dep_1',
         ouvrageDepollutionCode: 'STEU001',
       }),
     );
-    expect(sftpAgency.getClient).not.toHaveBeenCalled();
-    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agenceEauClient.getClient).not.toHaveBeenCalled();
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
@@ -316,7 +315,7 @@ describe('DiffusionRapportProcessorService', () => {
       expect.objectContaining({ depotId: 'dep_1' }),
     );
     expect(masaProvider.findAgenceEauNomBySteuCode).not.toHaveBeenCalled();
-    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
@@ -332,13 +331,13 @@ describe('DiffusionRapportProcessorService', () => {
       "No agence de l'eau code found for ouvrage, skipping Agence de l'eau SFTP upload",
       expect.objectContaining({ depotId: 'dep_1', ouvrageDepollutionCode: 'STEU001' }),
     );
-    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 
   it('should warn and continue when no SFTP client is configured for the agency', async () => {
-    sftpAgency.hasClient.mockReturnValue(false);
-    sftpAgency.getConfiguredAgencies.mockReturnValue(['99999999999999']);
+    agenceEauClient.hasClient.mockReturnValue(false);
+    agenceEauClient.getConfiguredAgencies.mockReturnValue(['99999999999999']);
 
     await service.process({
       depotId: 'dep_1',
@@ -355,8 +354,8 @@ describe('DiffusionRapportProcessorService', () => {
         ouvrageDepollutionCode: 'STEU001',
       }),
     );
-    expect(sftpAgency.getClient).not.toHaveBeenCalled();
-    expect(agencySftpClient.send).not.toHaveBeenCalled();
+    expect(agenceEauClient.getClient).not.toHaveBeenCalled();
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
   });
 });
