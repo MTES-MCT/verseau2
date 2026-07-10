@@ -2,12 +2,12 @@
 
 ## Quick Context
 
-Application de depots de fichiers et de tableaux de bord d'autosurveillance des eaux usees. Monorepo TypeScript: NestJS 11 backend (dual-process: HTTP server + async worker) + React 19 frontend (Vite, DSFR). PostgreSQL, pg-boss queues, S3 storage, SFTP export.
+Application de depots de fichiers et de tableaux de bord d'autosurveillance des eaux usees. Monorepo TypeScript: NestJS 11 backend (dual-process: HTTP server + async worker) + React 19 frontend (Vite, DSFR). PostgreSQL, pg-boss queues, S3 storage, SFTP/FTP export.
 
 ## Commands
 
 ```bash
-pnpm test                            # Run backend unit + e2e tests, then parser tests
+pnpm test                            # Run every workspace test script
 pnpm --filter back test:unit         # Backend unit tests
 pnpm --filter back test:e2e          # Backend e2e tests (testcontainers)
 pnpm --filter back test:e2e:api-worker # E2E tests with API + worker
@@ -52,4 +52,3 @@ _Grows over time but should stay concise and reusable._
 
 - Use pnpm, not npm or yarn
 - Run the relevant tests/checks before considering your task finished; if they cannot be run, state why
-
