@@ -15,6 +15,22 @@ services:
       - verseau2-postgres-data:/var/lib/postgresql
     networks:
       - verseau2-network
+  pg-boss-dashboard:
+    image: node:24
+    container_name: verseau2-pg-boss-dashboard
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install -g @pg-boss/dashboard@1.6.1 && pg-boss-dashboard"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/verseau2
+      PGBOSS_SCHEMA: pgboss
+      PORT: 3000
+    ports:
+      - '3001:3000'
+    depends_on:
+      - postgres
+    networks:
+      - verseau2-network
   s3mock:
     image: adobe/s3mock:latest
     container_name: verseau2-s3mock
