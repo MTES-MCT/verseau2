@@ -10,6 +10,28 @@ import { MasaProvider } from '@masa/masa.provider';
 import { CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
 import { ControleModel, CreateControleModel } from '../controle.model';
 
+function createFctWithAnalyses(
+  analyse: { cdParametre?: string; rsAnalyse?: string; cdUniteMesure?: string }[],
+  locGlobalePointMesure = 'A3',
+): FctAssainissement {
+  return {
+    scenario: { dateDebutReference: '2024-01-01' },
+    ouvrages: [
+      {
+        cdOuvrageDepollution: 'STEU1',
+        pointMesure: [
+          {
+            numeroPointMesure: 'PM1',
+            locGlobalePointMesure,
+            prelevement: [{ datePrlvt: '2024-01-15', cdSupport: '3', analyse }],
+          },
+        ],
+      },
+    ],
+    systemesCollecte: [],
+  } as unknown as FctAssainissement;
+}
+
 describe('ControleMetierV2Service', () => {
   let service: ControleMetierV2Service;
   let roseauGateway: jest.Mocked<RoseauGateway>;
@@ -2653,6 +2675,204 @@ describe('ControleMetierV2Service', () => {
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('non-applicable controls with missing values', () => {
+    it.each([
+      [ControleName.CTL041, (fct: FctAssainissement) => service.verifyDcoRange(fct)],
+      [ControleName.CTL042, (fct: FctAssainissement) => service.verifyDbo5Range(fct)],
+      [ControleName.CTL043, (fct: FctAssainissement) => service.verifyMesRange(fct)],
+      [ControleName.CTL044, (fct: FctAssainissement) => service.verifyNtkRange(fct)],
+      [ControleName.CTL045, (fct: FctAssainissement) => service.verifyPtotRange(fct)],
+      [ControleName.CTL046, (fct: FctAssainissement) => service.verifyPhRange(fct)],
+    ])('should not apply %s when its parameter is missing', (_controleName, verify) => {
+      expect(verify(createFctWithAnalyses([]))).toBeNull();
+    });
+
+    it.each([
+      [ControleName.CTL039, (fct: FctAssainissement) => service.verifyRatioDcoDbo5(fct), CodeParametre.DCO],
+      [ControleName.CTL040, (fct: FctAssainissement) => service.verifyRatioMesDbo5(fct), CodeParametre.MES],
+    ])('should not apply %s when DBO5 is missing', (_controleName, verify, numeratorCode) => {
+      const fct = createFctWithAnalyses([{ cdParametre: numeratorCode.toString(), rsAnalyse: '300' }]);
+
+      expect(verify(fct)).toBeNull();
+    });
+
+    it('should not apply CTL039 when DCO is missing or DBO5 is not strictly positive', () => {
+      const withoutDco = createFctWithAnalyses([{ cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '100' }]);
+      const withZeroDbo5 = createFctWithAnalyses([
+        { cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '300' },
+        { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '0' },
+      ]);
+
+      expect(service.verifyRatioDcoDbo5(withoutDco)).toBeNull();
+      expect(service.verifyRatioDcoDbo5(withZeroDbo5)).toBeNull();
+    });
+
+    it.each([
+      [ControleName.CTL047, (fct: FctAssainissement) => service.verifyDcoGreaterThanDbo5(fct), CodeParametre.DCO],
+      [ControleName.CTL048, (fct: FctAssainissement) => service.verifyNtkGreaterThanNnh4(fct), CodeParametre.NTK],
+      [ControleName.CTL049, (fct: FctAssainissement) => service.verifyNglGreaterThanNtk(fct), CodeParametre.NGL],
+      [ControleName.CTL050, (fct: FctAssainissement) => service.verifyPGreaterThanPO4(fct), CodeParametre.Ptot],
+    ])('should not apply %s when the second value is missing', (_controleName, verify, firstParamCode) => {
+      const fct = createFctWithAnalyses([{ cdParametre: firstParamCode.toString(), rsAnalyse: '100' }]);
+
+      expect(verify(fct)).toBeNull();
+    });
+
+    it('should not apply CTL051 when only one volume is available or dates do not match', async () => {
+      roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(3000);
+      const withOnlyA3 = createFctWithAnalyses([{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '1000' }]);
+      const withDifferentDates = {
+        scenario: { dateDebutReference: '2024-01-01' },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    analyse: [{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '1000' }],
+                  },
+                ],
+              },
+              {
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-16',
+                    analyse: [{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '900' }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      await expect(service.verifyVolumeA3A4VsCapaciteEH(withOnlyA3)).resolves.toBeNull();
+      await expect(service.verifyVolumeA3A4VsCapaciteEH(withDifferentDates)).resolves.toBeNull();
+    });
+
+    it('should not apply CTL052 without a value matching the available CMA', () => {
+      const dbo5Only = createFctWithAnalyses([{ cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '200' }]);
+      const dcoOnly = createFctWithAnalyses([{ cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '500' }]);
+      const dbo5Cma: CmaBySandreCdaAndParam[] = [
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DBO5.toString(),
+          resultatAnnuelConcentrationMoyenne: 150,
+        },
+      ];
+      const dcoCma: CmaBySandreCdaAndParam[] = [
+        {
+          ouvrageDepollutionCode: 'STEU1',
+          parametreAnalyseCode: CodeParametre.DCO.toString(),
+          resultatAnnuelConcentrationMoyenne: 400,
+        },
+      ];
+
+      expect(service.verifyCmaComparisonForDcoDbo5(dbo5Only, dcoCma)).toBeNull();
+      expect(service.verifyCmaComparisonForDcoDbo5(dcoOnly, dbo5Cma)).toBeNull();
+    });
+
+    it('should not apply CTL053 when the debit or its reference is missing', async () => {
+      const withoutDebit = createFctWithAnalyses([]);
+      masaProvider.findMaxDebitsReferenceBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionDebitMaximalReference: 500 },
+      ]);
+
+      await expect(service.verifyDebitEntrantVsChargeMax(withoutDebit)).resolves.toBeNull();
+
+      const withDebit = createFctWithAnalyses([{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '1000' }]);
+      masaProvider.findMaxDebitsReferenceBatch.mockResolvedValue([]);
+
+      await expect(service.verifyDebitEntrantVsChargeMax(withDebit)).resolves.toBeNull();
+    });
+
+    it('should not apply CTL054 when no N/N-1 comparison is available', async () => {
+      masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([]);
+
+      await expect(service.verifyChargeEntranteVsTranche(createFctWithAnalyses([]))).resolves.toBeNull();
+    });
+
+    it('should not apply CTL056 to CTL059 when no targeted value is available', () => {
+      const withoutAnalyses = createFctWithAnalyses([], 'A4');
+      const withoutPluviometrie = {
+        ouvrages: [],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A1',
+                prelevement: [{ datePrlvt: '2024-01-15', cdSupport: '3', analyse: [] }],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      expect(service.verifyTemperatureA4Range(withoutAnalyses)).toBeNull();
+      expect(service.verifyPluviometrieRange(withoutPluviometrie)).toBeNull();
+      expect(service.verifyVolumesNegatifs(withoutAnalyses)).toBeNull();
+      expect(service.verifyConcentrationsNegativesOuNulles(withoutAnalyses)).toBeNull();
+    });
+
+    it.each([
+      ['volume', [{ cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '500' }]],
+      ['DBO5', [{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '500' }]],
+      [
+        'strictly positive volume',
+        [
+          { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '0' },
+          { cdParametre: CodeParametre.DBO5.toString(), rsAnalyse: '500' },
+        ],
+      ],
+    ])('should not apply CTL060 without a %s', async (_missingValue, analyse) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 5000 },
+      ]);
+
+      await expect(service.verifyChargePollutionVsCapaciteNominale(createFctWithAnalyses(analyse))).resolves.toBeNull();
+    });
+
+    it('should not apply CTL061 without a dated A3 or A4 volume', () => {
+      const withoutVolume = createFctWithAnalyses([{ cdParametre: CodeParametre.DCO.toString(), rsAnalyse: '500' }]);
+      const withoutDate = {
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU1',
+            pointMesure: [
+              {
+                locGlobalePointMesure: 'A3',
+                prelevement: [{ analyse: [{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '1000' }] }],
+              },
+            ],
+          },
+        ],
+      } as unknown as FctAssainissement;
+
+      expect(service.verifyDebitA3A4SameDate(withoutVolume)).toBeNull();
+      expect(service.verifyDebitA3A4SameDate(withoutDate)).toBeNull();
+    });
+
+    it('should keep CTL061 applicable when only one side has a dated volume', () => {
+      const withOnlyA3 = createFctWithAnalyses([{ cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '1000' }]);
+
+      expect(service.verifyDebitA3A4SameDate(withOnlyA3)).toEqual({
+        name: ControleName.CTL061,
+        errors: [
+          {
+            code: ErrorCode.E2_061,
+            params: ['A4', '2024-01-15'],
+            evenementType: 'AVERTISSEMENT',
+          },
+        ],
+      });
     });
   });
 });

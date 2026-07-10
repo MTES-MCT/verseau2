@@ -3064,4 +3064,69 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });
+
+  describe('non-applicable controls with missing values', () => {
+    it('should persist only CTL055 when no other control has evaluable data', async () => {
+      const fctAssainissement = createTestFctAssainissement({
+        scenario: {
+          emetteur: {},
+          codeScenario: SandreScenarioCode.FCT_ASSAIN,
+          versionScenario: SandreScenarioVersion.V4,
+          dateDebutReference: '2024-01-01',
+        },
+        ouvrages: [
+          {
+            cdOuvrageDepollution: 'STEU_WITHOUT_REFERENCE',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A3',
+                locGlobalePointMesure: 'A3',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse('9999', '100')],
+                  },
+                ],
+              },
+              {
+                numeroPointMesure: 'PM_A4',
+                locGlobalePointMesure: 'A4',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse('9999', '100')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        systemesCollecte: [
+          {
+            cdSystemeCollecte: 'SCL_WITHOUT_VALUES',
+            pointMesure: [
+              {
+                numeroPointMesure: 'PM_A1',
+                locGlobalePointMesure: 'A1',
+                prelevement: [
+                  {
+                    datePrlvt: '2024-01-15',
+                    cdSupport: '3',
+                    analyse: [createTestAnalyse('9999', '100')],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({ name: ControleName.CTL055, success: true });
+    });
+  });
 });
