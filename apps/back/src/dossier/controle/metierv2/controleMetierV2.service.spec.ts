@@ -129,7 +129,7 @@ describe('ControleMetierV2Service', () => {
       roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(null);
     });
 
-    it('should run all controls and return the complete list of tousControles names passed to the mapper', async () => {
+    it('should pass only applicable controls to the mapper', async () => {
       const fakeCreateControles: CreateControleModel[] = [
         { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
       ] as CreateControleModel[];
@@ -154,17 +154,14 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL042, // verifyDbo5Range
         ControleName.CTL047, // verifyDcoGreaterThanDbo5
         ControleName.CTL046, // verifyPhRange
-        ControleName.CTL051, // verifyVolumeA3A4VsCapaciteEH
-        ControleName.CTL052, // verifyCmaComparisonForDcoDbo5
-        ControleName.CTL054, // verifyChargeEntranteVsTranche
         ControleName.CTL055, // verifyProductionBoue
         ControleName.CTL056, // verifyTemperatureA4Range
         ControleName.CTL057, // verifyPluviometrieRange
         ControleName.CTL058, // verifyVolumesNegatifs
         ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
-        ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
         ControleName.CTL061, // verifyDebitA3A4SameDate
       ]);
+      expect(calledControles).not.toContain(null);
     });
 
     it('should pass tousControles results to the mapper and return createdControles from the gateway', async () => {
@@ -209,7 +206,7 @@ describe('ControleMetierV2Service', () => {
       expect(masaProvider.findProductionBoueZeroBatch).toHaveBeenCalledWith(['STEU1'], 2024);
     });
 
-    it('should produce 14 controls even when all data is valid (no errors)', async () => {
+    it('should omit controls without evaluable data', async () => {
       controleMapper.mapControlesIndividuelsToCreateControleModel.mockReturnValue([]);
       controleGateway.createControles.mockResolvedValue([]);
 
@@ -218,8 +215,7 @@ describe('ControleMetierV2Service', () => {
       const [, , calledControles] = controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
       const typedControles = calledControles;
 
-      expect(typedControles).toHaveLength(14);
-      // Each control should have an errors array (possibly empty)
+      expect(typedControles).toHaveLength(10);
       for (const controle of typedControles) {
         expect(controle).toHaveProperty('name');
         expect(controle).toHaveProperty('errors');
@@ -255,10 +251,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoGreaterThanDbo5(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL047);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_047);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '100', '150']);
+      expect(result!.name).toBe(ControleName.CTL047);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_047);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '100', '150']);
     });
 
     it('should return no error when DCO > DBO5', () => {
@@ -287,7 +283,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoGreaterThanDbo5(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should return no error when DCO or DBO5 is missing', () => {
@@ -313,7 +309,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoGreaterThanDbo5(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
   });
 
@@ -344,10 +340,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNtkGreaterThanNnh4(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL048);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_048);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '10', '15']);
+      expect(result!.name).toBe(ControleName.CTL048);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_048);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '10', '15']);
     });
 
     it('should return no error when NTK > N-NH4', () => {
@@ -376,7 +372,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNtkGreaterThanNnh4(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
   });
 
@@ -407,10 +403,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyRatioDcoDbo5(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL039);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '120', '100', '1.20']);
+      expect(result!.name).toBe(ControleName.CTL039);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_039);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '120', '100', '1.20']);
     });
 
     it('should return an error when ratio DCO/DBO5 is above range (ratio >= 3.5)', () => {
@@ -439,9 +435,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyRatioDcoDbo5(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_039);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '400', '100', '4.00']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_039);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '400', '100', '4.00']);
     });
 
     it('should return no error when ratio DCO/DBO5 is within range (1.5 < ratio < 3.5)', () => {
@@ -470,7 +466,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyRatioDcoDbo5(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
   });
 
@@ -501,10 +497,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyRatioMesDbo5(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL040);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '50', '100', '0.50']);
+      expect(result!.name).toBe(ControleName.CTL040);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_040);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '50', '100', '0.50']);
     });
 
     it('should return an error when ratio MES/DBO5 is above range (ratio >= 1.5)', () => {
@@ -533,9 +529,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyRatioMesDbo5(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_040);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '200', '100', '2.00']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_040);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '200', '100', '2.00']);
     });
 
     it('should return no error when ratio MES/DBO5 is within range (0.7 < ratio < 1.5)', () => {
@@ -564,7 +560,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyRatioMesDbo5(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
   });
 
@@ -593,10 +589,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoRange(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL041);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '200']);
+      expect(result!.name).toBe(ControleName.CTL041);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_041);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '200']);
     });
 
     it('should return an error when DCO is above range (DCO >= 1700)', () => {
@@ -623,9 +619,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoRange(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_041);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '1800']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_041);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '1800']);
     });
 
     it('should return no error when DCO is within range (300 < DCO < 1700)', () => {
@@ -652,10 +648,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
-    it('should return no error when DCO is missing', () => {
+    it('should not apply when DCO is missing', () => {
       const xmlObj: FctAssainissement = {
         ouvrages: [
           {
@@ -679,7 +675,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDcoRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
   });
 
@@ -708,10 +704,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyDbo5Range(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL042);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_042);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '100']);
+      expect(result!.name).toBe(ControleName.CTL042);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_042);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-01', '3', '100']);
     });
   });
 
@@ -745,10 +741,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNtkRange(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL044);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_044);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '15']);
+      expect(result!.name).toBe(ControleName.CTL044);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_044);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '15']);
     });
 
     it('should return an error when NTK is above range (NTK >= 160)', () => {
@@ -780,12 +776,12 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNtkRange(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_044);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '170']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_044);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '170']);
     });
 
-    it('should return no error when NTK is within range (20 < NTK < 160)', () => {
+    it('should not apply when NTK has no expected unit', () => {
       const xmlObj: FctAssainissement = {
         ouvrages: [
           {
@@ -808,7 +804,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNtkRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should not test analyses where cdUniteMesure is not MG_N_L for NTK', () => {
@@ -845,8 +841,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNtkRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
-      expect(result.name).toBe(ControleName.CTL044);
+      expect(result!.errors).toHaveLength(0);
+      expect(result!.name).toBe(ControleName.CTL044);
     });
   });
 
@@ -880,10 +876,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPtotRange(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL045);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_045);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '3']);
+      expect(result!.name).toBe(ControleName.CTL045);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_045);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '3']);
     });
 
     it('should return an error when Ptot is above range (Ptot >= 25)', () => {
@@ -915,9 +911,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPtotRange(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_045);
-      expect(result.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '30']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_045);
+      expect(result!.errors[0].params).toEqual(['STEU1', '', '2024-01-01', '3', '30']);
     });
 
     it('should return no error when Ptot is within range (4 < Ptot < 25)', () => {
@@ -949,7 +945,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPtotRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should not test this analyse when cdUniteMesure is not MG_L for Ptot', () => {
@@ -979,14 +975,14 @@ describe('ControleMetierV2Service', () => {
         ],
       } as unknown as FctAssainissement;
 
-      const result = service.verifyNtkRange(xmlObj);
+      const result = service.verifyPtotRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
   });
 
   describe('verifyVolumeA3A4VsCapaciteEH', () => {
-    it('should return no error when volumes are within acceptable range', async () => {
+    it('should not apply when capacity is below the threshold', async () => {
       roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(1000);
 
       const xmlObj: FctAssainissement = {
@@ -1022,8 +1018,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL051);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
       expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).toHaveBeenCalledWith('STEU1', 2024);
     });
 
@@ -1063,10 +1058,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL051);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '2500', '≥', '180', '<']);
+      expect(result!.name).toBe(ControleName.CTL051);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result!.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '2500', '≥', '180', '<']);
     });
 
     it('should return an error when volume A4 exceeds threshold', async () => {
@@ -1105,10 +1100,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL051);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '200', '<', '3000', '≥']);
+      expect(result!.name).toBe(ControleName.CTL051);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result!.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '200', '<', '3000', '≥']);
     });
 
     it('should return an error when both volumes exceed threshold', async () => {
@@ -1147,13 +1142,13 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL051);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '2500', '≥', '3000', '≥']);
+      expect(result!.name).toBe(ControleName.CTL051);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result!.errors[0].params).toEqual(['STEU1', '2024-01-15', '2401.20', '2500', '≥', '3000', '≥']);
     });
 
-    it('should return no error when capacity is not found', async () => {
+    it('should not apply when capacity is not found', async () => {
       roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(null);
 
       const xmlObj: FctAssainissement = {
@@ -1180,10 +1175,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
-    it('should return no error when volumes are missing', async () => {
+    it('should not apply when volumes are missing', async () => {
       roseauGateway.findCapaciteNominaleBySteuSandreAndYear.mockResolvedValue(1000);
 
       const xmlObj: FctAssainissement = {
@@ -1210,7 +1205,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should return error when dateDebutReference is missing', async () => {
@@ -1228,9 +1223,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
-      expect(result.errors[0].params).toEqual([undefined]);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result!.errors[0].params).toEqual([undefined]);
       expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).not.toHaveBeenCalled();
     });
 
@@ -1270,8 +1265,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL051);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
       expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).toHaveBeenCalledWith('STEU1', 2024);
     });
 
@@ -1311,9 +1305,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyVolumeA3A4VsCapaciteEH(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL051);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_051);
+      expect(result!.name).toBe(ControleName.CTL051);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_051);
       expect(roseauGateway.findCapaciteNominaleBySteuSandreAndYear).toHaveBeenCalledWith('STEU1', 2024);
     });
   });
@@ -1365,9 +1359,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
-      expect(result.name).toBe(ControleName.CTL052);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+      expect(result!.name).toBe(ControleName.CTL052);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_052);
     });
 
     it('should return no error when values are lower than CMA N-1', () => {
@@ -1413,7 +1407,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should not trigger error when DBO5 exceeds CMA N-1 by less than 10%', () => {
@@ -1453,7 +1447,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, cmas);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should skip comparison when no CMA found', () => {
@@ -1484,7 +1478,7 @@ describe('ControleMetierV2Service', () => {
       // Empty array — no CMA found for any STEU
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should return error when dateDebutReference is missing', () => {
@@ -1497,9 +1491,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyCmaComparisonForDcoDbo5(xmlObj, []);
 
-      expect(result.name).toBe(ControleName.CTL052);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_052);
+      expect(result!.name).toBe(ControleName.CTL052);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_052);
     });
   });
   describe('verifyNglGreaterThanNtk', () => {
@@ -1549,15 +1543,15 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyNglGreaterThanNtk(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL049);
-      expect(result.errors).toHaveLength(2);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_049);
-      expect(result.errors[0].params).toEqual(['STEU_CODE', 'A3', '2024-06-15', '3', '5', '10']);
-      expect(result.errors[1].params).toEqual(['STEU_CODE', 'A3', '2024-06-17', '3', '1', '5']);
+      expect(result!.name).toBe(ControleName.CTL049);
+      expect(result!.errors).toHaveLength(2);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_049);
+      expect(result!.errors[0].params).toEqual(['STEU_CODE', 'A3', '2024-06-15', '3', '5', '10']);
+      expect(result!.errors[1].params).toEqual(['STEU_CODE', 'A3', '2024-06-17', '3', '1', '5']);
     });
   });
 
-  describe.skip('verifyChargeEntranteVsTranche', () => {
+  describe('verifyChargeEntranteVsTranche', () => {
     it('should detect variation > 20% between year N and N-1', async () => {
       // N = 10000, N-1 = 5000 => variation = 100% => error
       masaProvider.findChargeEntranteMaxComparison.mockResolvedValue([
@@ -1578,9 +1572,9 @@ describe('ControleMetierV2Service', () => {
       const result = await service.verifyChargeEntranteVsTranche(xmlObj);
 
       expect(masaProvider.findChargeEntranteMaxComparison).toHaveBeenCalledWith(['STEU1'], 2024);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU1', '10000', '5000', 'Tranche 2', '100.0']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result!.errors[0].params).toEqual(['STEU1', '10000', '5000', 'Tranche 2', '100.0']);
     });
 
     it('should not report error when variation <= 20%', async () => {
@@ -1602,7 +1596,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargeEntranteVsTranche(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should detect negative variation > 20%', async () => {
@@ -1619,14 +1613,14 @@ describe('ControleMetierV2Service', () => {
 
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: '2024-01-01' },
-        ouvrages: [{ ouvrageDepollutionCode: 'STEU1' }],
+        ouvrages: [{ cdOuvrageDepollution: 'STEU1' }],
       } as unknown as FctAssainissement;
 
       const result = await service.verifyChargeEntranteVsTranche(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU1', '3000', '5000', 'Tranche 2', '40.0']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result!.errors[0].params).toEqual(['STEU1', '3000', '5000', 'Tranche 2', '40.0']);
     });
   });
 
@@ -1725,10 +1719,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyTemperatureA4Range(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL056);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_056);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', '0']);
+      expect(result!.name).toBe(ControleName.CTL056);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_056);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', '0']);
     });
 
     it('should return an error when temperature > 35 on point A4', () => {
@@ -1754,9 +1748,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyTemperatureA4Range(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_056);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-07-15', '3', '36']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_056);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A4', '2024-07-15', '3', '36']);
     });
 
     it('should return no error when temperature is within range (0 < T <= 35)', () => {
@@ -1782,7 +1776,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyTemperatureA4Range(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should not check temperature on non-A4 points', () => {
@@ -1808,10 +1802,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyTemperatureA4Range(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
-    it('should return no error when temperature is missing', () => {
+    it('should not apply when temperature is missing', () => {
       const xmlObj: FctAssainissement = {
         ouvrages: [
           {
@@ -1834,7 +1828,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyTemperatureA4Range(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should return error for negative temperature on A4', () => {
@@ -1860,8 +1854,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyTemperatureA4Range(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_056);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_056);
     });
   });
 
@@ -1890,11 +1884,11 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPluviometrieRange(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL057);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_057);
-      expect(result.errors[0].evenementType).toBe('AVERTISSEMENT');
-      expect(result.errors[0].params).toEqual(['SCL1', 'A1', '2024-01-15', '3', '-5']);
+      expect(result!.name).toBe(ControleName.CTL057);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_057);
+      expect(result!.errors[0].evenementType).toBe('AVERTISSEMENT');
+      expect(result!.errors[0].params).toEqual(['SCL1', 'A1', '2024-01-15', '3', '-5']);
     });
 
     it('should return AVERTISSEMENT when pluviometrie > 200 but <= 1000 on R1', () => {
@@ -1921,8 +1915,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPluviometrieRange(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].evenementType).toBe('AVERTISSEMENT');
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].evenementType).toBe('AVERTISSEMENT');
     });
 
     it('should return ERREUR (bloquant) when pluviometrie > 1000', () => {
@@ -1949,9 +1943,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPluviometrieRange(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_057);
-      expect(result.errors[0].evenementType).toBe('ERREUR');
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_057);
+      expect(result!.errors[0].evenementType).toBe('ERREUR');
     });
 
     it('should return no error when pluviometrie is within range (0 <= P <= 200)', () => {
@@ -1978,7 +1972,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPluviometrieRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should not check pluviometrie on non-A1/R1 points', () => {
@@ -2005,7 +1999,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyPluviometrieRange(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
   });
 
@@ -2034,11 +2028,11 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyVolumesNegatifs(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL058);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_058);
-      expect(result.errors[0].evenementType).toBe('ERREUR');
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'Vol.Moy.J', '-100']);
+      expect(result!.name).toBe(ControleName.CTL058);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_058);
+      expect(result!.errors[0].evenementType).toBe('ERREUR');
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'Vol.Moy.J', '-100']);
     });
 
     it('should return ERREUR when Volume (1098) is negative on SCL', () => {
@@ -2065,9 +2059,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyVolumesNegatifs(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_058);
-      expect(result.errors[0].params).toEqual(['SCL1', 'A1', '2024-01-15', '3', 'Volume', '-50']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_058);
+      expect(result!.errors[0].params).toEqual(['SCL1', 'A1', '2024-01-15', '3', 'Volume', '-50']);
     });
 
     it('should return ERREUR when Masse (1099) is negative', () => {
@@ -2094,8 +2088,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyVolumesNegatifs(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', 'Masse', '-10']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', 'Masse', '-10']);
     });
 
     it('should return no error when all volumes are positive', () => {
@@ -2126,7 +2120,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyVolumesNegatifs(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should return no error when volume is zero', () => {
@@ -2153,7 +2147,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyVolumesNegatifs(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
   });
 
@@ -2182,11 +2176,11 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL059);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_059);
-      expect(result.errors[0].evenementType).toBe('ERREUR');
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'DBO5', '-10']);
+      expect(result!.name).toBe(ControleName.CTL059);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_059);
+      expect(result!.errors[0].evenementType).toBe('ERREUR');
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '3', 'DBO5', '-10']);
     });
 
     it('should return ERREUR when concentration is zero', () => {
@@ -2213,8 +2207,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', 'DCO', '0']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A4', '2024-01-15', '3', 'DCO', '0']);
     });
 
     it('should return errors for multiple negative/zero concentrations in same prelevement', () => {
@@ -2245,9 +2239,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(2);
-      expect(result.errors[0].params[4]).toBe('DBO5');
-      expect(result.errors[1].params[4]).toBe('MES');
+      expect(result!.errors).toHaveLength(2);
+      expect(result!.errors[0].params[4]).toBe('DBO5');
+      expect(result!.errors[1].params[4]).toBe('MES');
     });
 
     it('should return no error when all concentrations are positive', () => {
@@ -2278,7 +2272,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should ignore concentrations on SCL (systemesCollecte no longer checked)', () => {
@@ -2305,7 +2299,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should return ERREUR when cdSupport is 4 (newly included)', () => {
@@ -2332,8 +2326,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '4', 'DBO5', '-5']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '4', 'DBO5', '-5']);
     });
 
     it('should return ERREUR when cdSupport is 5 (newly included)', () => {
@@ -2360,8 +2354,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '5', 'DCO', '-5']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'A3', '2024-01-15', '5', 'DCO', '-5']);
     });
 
     it('should return no error when cdSupport is 1 (ignored by filter upstream)', () => {
@@ -2396,7 +2390,7 @@ describe('ControleMetierV2Service', () => {
         { ouvrages: [], systemesCollecte: [] } as unknown as FctAssainissement,
       );
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should return no error when locGlobalePointMesure is M1 (ignored by filter upstream)', () => {
@@ -2406,7 +2400,7 @@ describe('ControleMetierV2Service', () => {
         systemesCollecte: [],
       } as unknown as FctAssainissement);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should return ERREUR when locGlobalePointMesure is S3 (newly included by prefix filter)', () => {
@@ -2433,8 +2427,8 @@ describe('ControleMetierV2Service', () => {
 
       const result = service.verifyConcentrationsNegativesOuNulles(xmlObj);
 
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].params).toEqual(['STEU1', 'S3', '2024-01-15', '3', 'MES', '-1']);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].params).toEqual(['STEU1', 'S3', '2024-01-15', '3', 'MES', '-1']);
     });
   });
 
@@ -2471,11 +2465,11 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL060);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_060);
-      expect(result.errors[0].evenementType).toBe('AVERTISSEMENT');
-      expect(result.errors[0].params).toEqual(['STEU1', '10000.00', '5000', '7500.00', '2024-01-15']);
+      expect(result!.name).toBe(ControleName.CTL060);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_060);
+      expect(result!.errors[0].evenementType).toBe('AVERTISSEMENT');
+      expect(result!.errors[0].params).toEqual(['STEU1', '10000.00', '5000', '7500.00', '2024-01-15']);
     });
 
     it('should return no error when charge <= 1.5 * capacite nominale', async () => {
@@ -2510,7 +2504,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should skip when capacite nominale < 2000 EH', async () => {
@@ -2544,7 +2538,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should apply when capacite nominale = 2000 EH', async () => {
@@ -2579,9 +2573,9 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL060);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_060);
+      expect(result!.name).toBe(ControleName.CTL060);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_060);
     });
 
     it('should skip when capacite nominale is not found', async () => {
@@ -2613,7 +2607,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should only check A3 points', async () => {
@@ -2647,10 +2641,10 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
-    it('should return empty errors when dateDebutReference is missing', async () => {
+    it('should not apply when dateDebutReference is missing', async () => {
       const xmlObj: FctAssainissement = {
         scenario: { dateDebutReference: undefined },
         ouvrages: [{ cdOuvrageDepollution: 'STEU1', pointMesure: [] }],
@@ -2658,8 +2652,7 @@ describe('ControleMetierV2Service', () => {
 
       const result = await service.verifyChargePollutionVsCapaciteNominale(xmlObj);
 
-      expect(result.name).toBe(ControleName.CTL060);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
   });
 });

@@ -675,7 +675,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
-    it('should not report error when DCO is out of range on A4', async () => {
+    it('should not persist CTL041 when no DCO is applicable', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
           {
@@ -698,9 +698,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL041);
-
-      expect(ctlErrors).toHaveLength(0);
+      expect(results.filter((result) => result.name === ControleName.CTL041)).toHaveLength(0);
     });
   });
 
@@ -947,7 +945,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       expect(ctlErrors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
-    it('should not report error when no CMA data exists for year N-1', async () => {
+    it('should not persist CTL052 when no CMA data exists for year N-1', async () => {
       await seedSteu(dataSource, 4, 'STEU004');
       // No RESA data - no CMA available
 
@@ -982,9 +980,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL052);
-
-      expect(ctlErrors).toHaveLength(0); // Should skip gracefully when no CMA data
+      expect(results.filter((result) => result.name === ControleName.CTL052)).toHaveLength(0);
     });
 
     it('should not report error when dateDebutReference is missing', async () => {
@@ -2142,9 +2138,10 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL051);
+      const controles = results.filter((result) => result.name === ControleName.CTL051);
 
-      expect(ctlErrors).toHaveLength(0);
+      expect(controles).toHaveLength(1);
+      expect(controles[0].success).toBe(true);
     });
 
     it('should report error when volumes exceed threshold', async () => {
@@ -2250,9 +2247,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL051);
-
-      expect(ctlErrors).toHaveLength(0);
+      expect(results.filter((result) => result.name === ControleName.CTL051)).toHaveLength(0);
     });
 
     it('should skip when capaciteEH is null (STEU not found)', async () => {
@@ -2295,9 +2290,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL051);
-
-      expect(ctlErrors).toHaveLength(0);
+      expect(results.filter((result) => result.name === ControleName.CTL051)).toHaveLength(0);
     });
 
     it('should report error when dateDebutReference is missing', async () => {
@@ -2365,9 +2358,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL051);
-
-      expect(ctlErrors).toHaveLength(0); // No error because A4 volume is missing
+      expect(results.filter((result) => result.name === ControleName.CTL051)).toHaveLength(0);
     });
   });
 
@@ -2403,8 +2394,8 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL053);
-      expect(result.errors).toHaveLength(0);
+      expect(result!.name).toBe(ControleName.CTL053);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should report error when total debit exceeds threshold', async () => {
@@ -2436,11 +2427,11 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL053);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_053);
-      expect(result.errors[0].params).toEqual(['STEU002', '2024-01-15', '1100.00', '500.00', '1000.00']);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+      expect(result!.name).toBe(ControleName.CTL053);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_053);
+      expect(result!.errors[0].params).toEqual(['STEU002', '2024-01-15', '1100.00', '500.00', '1000.00']);
+      expect(result!.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
     it('should sum debits across A3, A2, A7 for the same date', async () => {
@@ -2494,11 +2485,11 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL053);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_053);
+      expect(result!.name).toBe(ControleName.CTL053);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_053);
       // Total = 400 + 400 + 300 = 1100 > 1000
-      expect(result.errors[0].params).toEqual(['STEU003', '2024-01-15', '1100.00', '500.00', '1000.00']);
+      expect(result!.errors[0].params).toEqual(['STEU003', '2024-01-15', '1100.00', '500.00', '1000.00']);
     });
 
     it('should skip locations other than A3, A2, A7', async () => {
@@ -2541,8 +2532,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL053);
-      expect(result.errors).toHaveLength(0); // A4 and S7 are not included
+      expect(result).toBeNull();
     });
 
     it('should skip when no maxDebitRef data exists', async () => {
@@ -2572,8 +2562,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL053);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should skip prelevements with cdSupport != 3', async () => {
@@ -2605,8 +2594,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyDebitEntrantVsChargeMax(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL053);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
   });
 
@@ -2637,8 +2625,8 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(0);
+      expect(result!.name).toBe(ControleName.CTL054);
+      expect(result!.errors).toHaveLength(0);
     });
 
     it('should report error when variation exceeds +20%', async () => {
@@ -2667,11 +2655,11 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU002', '12000', '8000', 'De 2 000 à 10 000 EH', '50.0']);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+      expect(result!.name).toBe(ControleName.CTL054);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result!.errors[0].params).toEqual(['STEU002', '12000', '8000', 'De 2 000 à 10 000 EH', '50.0']);
+      expect(result!.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
 
     it('should report error when variation exceeds -20% (decrease)', async () => {
@@ -2700,10 +2688,10 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU003', '3000', '8000', 'Moins de 2 000 EH', '62.5']);
+      expect(result!.name).toBe(ControleName.CTL054);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result!.errors[0].params).toEqual(['STEU003', '3000', '8000', 'Moins de 2 000 EH', '62.5']);
     });
 
     it('should skip when no N-1 data exists for the ouvrage', async () => {
@@ -2731,8 +2719,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should skip when dateDebutReference is missing', async () => {
@@ -2747,8 +2734,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should skip when no referentiel data exists for the ouvrage', async () => {
@@ -2769,8 +2755,7 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(0);
+      expect(result).toBeNull();
     });
 
     it('should report error for variation exactly at boundary (>20%)', async () => {
@@ -2799,11 +2784,11 @@ describe('ControleMetierV2Service (e2e)', () => {
 
       const result = await controleMetierV2Service.verifyChargeEntranteVsTranche(fctAssainissement);
 
-      expect(result.name).toBe(ControleName.CTL054);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe(ErrorCode.E2_054);
-      expect(result.errors[0].params).toEqual(['STEU005', '6100', '5000', 'De 10 000 à 100 000 EH', '22.0']);
-      expect(result.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
+      expect(result!.name).toBe(ControleName.CTL054);
+      expect(result!.errors).toHaveLength(1);
+      expect(result!.errors[0].code).toBe(ErrorCode.E2_054);
+      expect(result!.errors[0].params).toEqual(['STEU005', '6100', '5000', 'De 10 000 à 100 000 EH', '22.0']);
+      expect(result!.errors[0].evenementType).toBe(EvenementType.AVERTISSEMENT);
     });
   });
 
@@ -2842,9 +2827,10 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL061);
+      const controles = results.filter((result) => result.name === ControleName.CTL061);
 
-      expect(ctlErrors).toHaveLength(0);
+      expect(controles).toHaveLength(1);
+      expect(controles[0].success).toBe(true);
     });
 
     it('should warn when A4 exists at a date but A3 does not (A3 missing)', async () => {
@@ -3013,12 +2999,10 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL061);
-
-      expect(ctlErrors).toHaveLength(0);
+      expect(results.filter((result) => result.name === ControleName.CTL061)).toHaveLength(0);
     });
 
-    it('should pass when A3 and A4 both lack 1552 entirely', async () => {
+    it('should not persist CTL061 when A3 and A4 both lack 1552 entirely', async () => {
       const fctAssainissement = createTestFctAssainissement({
         ouvrages: [
           {
@@ -3052,9 +3036,7 @@ describe('ControleMetierV2Service (e2e)', () => {
       });
 
       const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
-      const ctlErrors = findControleErrors(results, ControleName.CTL061);
-
-      expect(ctlErrors).toHaveLength(0);
+      expect(results.filter((result) => result.name === ControleName.CTL061)).toHaveLength(0);
     });
 
     it('should parse real XML and pass when A3 and A4 have 1552 at the same date', async () => {
