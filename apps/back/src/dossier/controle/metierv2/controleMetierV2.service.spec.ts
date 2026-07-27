@@ -118,6 +118,7 @@ describe('ControleMetierV2Service', () => {
                     { cdParametre: CodeParametre.pH.toString(), rsAnalyse: '7' },
                     { cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '20' },
                     { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '90' },
+                    { cdParametre: '5980', rsAnalyse: '1', finalite: '11' },
                   ],
                 },
               ],
@@ -154,6 +155,9 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should pass only applicable controls to the mapper', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+      ]);
       const fakeCreateControles: CreateControleModel[] = [
         { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
       ] as CreateControleModel[];
@@ -183,6 +187,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL057, // verifyPluviometrieRange
         ControleName.CTL058, // verifyVolumesNegatifs
         ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
+        ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
         ControleName.CTL061, // verifyDebitA3A4SameDate
         ControleName.CTL201, // verifyAofPresenceForPfasCampaigns
       ]);
@@ -240,7 +245,7 @@ describe('ControleMetierV2Service', () => {
       const [, , calledControles] = controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
       const typedControles = calledControles;
 
-      expect(typedControles).toHaveLength(11);
+      expect(typedControles).toHaveLength(10);
       for (const controle of typedControles) {
         expect(controle).toHaveProperty('name');
         expect(controle).toHaveProperty('errors');

@@ -47,21 +47,22 @@ export class ControleMetierV2Pfas {
 
   async verifyAofPresenceForPfasCampaigns(
     fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess> {
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
     const errors: ControleError[] = [];
     const year = this.extractReferenceYear(fctAssainissement);
 
     if (year === undefined) {
-      return { name: ControleName.CTL201, errors };
+      return null;
     }
 
     const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
     if (steuCodes.length === 0) {
-      return { name: ControleName.CTL201, errors };
+      return null;
     }
 
     const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
     const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+    let isApplicable = false;
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
@@ -77,7 +78,12 @@ export class ControleMetierV2Pfas {
         for (const prelevement of pointMesure.prelevement) {
           const analyses = prelevement.analyse ?? [];
 
-          if (this.isPfasCampaign(analyses) && !analyses.some((analyse) => analyse.cdParametre === AOF_CODE)) {
+          if (!this.isPfasCampaign(analyses)) {
+            continue;
+          }
+
+          isApplicable = true;
+          if (!analyses.some((analyse) => analyse.cdParametre === AOF_CODE)) {
             errors.push({
               code: ErrorCode.E2_201,
               params: [prelevement.datePrlvt ?? ''],
@@ -88,7 +94,7 @@ export class ControleMetierV2Pfas {
       }
     }
 
-    return { name: ControleName.CTL201, errors };
+    return isApplicable ? { name: ControleName.CTL201, errors } : null;
   }
 
   isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {

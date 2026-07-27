@@ -58,7 +58,7 @@ describe('ControleMetierV2Pfas', () => {
       }),
     );
 
-    expect(result.errors).toHaveLength(0);
+    expect(result).toEqual({ name: ControleName.CTL201, errors: [] });
   });
 
   it('should ignore PFAS campaigns for STEU under 10000 EH', async () => {
@@ -75,7 +75,7 @@ describe('ControleMetierV2Pfas', () => {
       }),
     );
 
-    expect(result.errors).toHaveLength(0);
+    expect(result).toBeNull();
   });
 
   it('should ignore analyses outside A4 or outside PFAS finality', async () => {
@@ -101,8 +101,8 @@ describe('ControleMetierV2Pfas', () => {
       }),
     );
 
-    expect(outsideA4Result.errors).toHaveLength(0);
-    expect(outsideFinalityResult.errors).toHaveLength(0);
+    expect(outsideA4Result).toBeNull();
+    expect(outsideFinalityResult).toBeNull();
   });
 
   it('should not call MasaProvider when the reference year is missing', async () => {
@@ -117,7 +117,7 @@ describe('ControleMetierV2Pfas', () => {
     const result = await service.verifyAofPresenceForPfasCampaigns(fctAssainissement);
 
     expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
-    expect(result.errors).toHaveLength(0);
+    expect(result).toBeNull();
   });
 
   it('should detect PFAS campaigns only for finality 11 and regulatory PFAS codes', () => {
