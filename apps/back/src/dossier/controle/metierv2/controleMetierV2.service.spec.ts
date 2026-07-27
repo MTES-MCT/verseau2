@@ -240,7 +240,7 @@ describe('ControleMetierV2Service', () => {
       const [, , calledControles] = controleMapper.mapControlesIndividuelsToCreateControleModel.mock.calls[0];
       const typedControles = calledControles;
 
-      expect(typedControles).toHaveLength(10);
+      expect(typedControles).toHaveLength(11);
       for (const controle of typedControles) {
         expect(controle).toHaveProperty('name');
         expect(controle).toHaveProperty('errors');
