@@ -67,35 +67,34 @@ export class ControleMetierV2Service {
 
     const { cmas, maxDebits: _maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
-    const tousControles = await Promise.all([
-      // Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      // Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      Promise.resolve(this.verifyDcoRange(dataWithLocGlobalePointMesureA3AndCdSupport3)),
-      Promise.resolve(this.verifyDbo5Range(dataWithLocGlobalePointMesureA3AndCdSupport3)),
-      Promise.resolve(this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3AndCdSupport3)),
-      // Promise.resolve(this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      // Promise.resolve(this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      // Promise.resolve(this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA4AndCdSupport3)),
-      // Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      // Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      // Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
-      Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
-      // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
-      this.verifyChargeEntranteVsTranche(xmlObj),
-      // TODO: réactiver le contrôle verifyProductionBoue quand les tables file et filiere seront disponible
-      Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
-      Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-      Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
-      Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
-      Promise.resolve(this.verifyConcentrationsNegativesOuNulles(dataWithLocGlobalePointMesureSAAndCdSupprt345)),
-      this.verifyChargePollutionVsCapaciteNominale(xmlObj),
-      Promise.resolve(this.verifyDebitA3A4SameDate(xmlObj)),
-    ]);
-    // Filtrer les contrôles nuls (certains contrôles ne sont pas applicables et renvoient null), afin qu'ils ne soient pas enregistrés ni affichés en SUCCESS
-    // TODO: Les contrôles qui ne sont pas effectués car pas de point de mesure ou de valeur doivent renvoyer null
-    //.filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null);
+    const tousControles = (
+      await Promise.all([
+        // Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        // Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        Promise.resolve(this.verifyDcoRange(dataWithLocGlobalePointMesureA3AndCdSupport3)),
+        Promise.resolve(this.verifyDbo5Range(dataWithLocGlobalePointMesureA3AndCdSupport3)),
+        Promise.resolve(this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3AndCdSupport3)),
+        // Promise.resolve(this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        // Promise.resolve(this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        // Promise.resolve(this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA4AndCdSupport3)),
+        // Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        // Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        // Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
+        Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
+        // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
+        this.verifyChargeEntranteVsTranche(xmlObj),
+        // TODO: réactiver le contrôle verifyProductionBoue quand les tables file et filiere seront disponible
+        Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
+        Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
+        Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
+        Promise.resolve(this.verifyVolumesNegatifs(xmlObj)),
+        Promise.resolve(this.verifyConcentrationsNegativesOuNulles(dataWithLocGlobalePointMesureSAAndCdSupprt345)),
+        this.verifyChargePollutionVsCapaciteNominale(xmlObj),
+        Promise.resolve(this.verifyDebitA3A4SameDate(xmlObj)),
+      ])
+    ).filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null);
 
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,
@@ -141,7 +140,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL039: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5
-  verifyRatioDcoDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyRatioDcoDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRatio(fctAssainissement, {
       name: ControleName.CTL039,
       errorCode: ErrorCode.E2_039,
@@ -153,7 +152,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL040: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio MES/DBO5
-  verifyRatioMesDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyRatioMesDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRatio(fctAssainissement, {
       name: ControleName.CTL040,
       errorCode: ErrorCode.E2_040,
@@ -165,7 +164,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL041: Analyse des concentrations en DCO hors fourchette (300 < DCO < 1700)
-  verifyDcoRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyDcoRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRange(fctAssainissement, {
       name: ControleName.CTL041,
       errorCode: ErrorCode.E2_041,
@@ -176,7 +175,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL042: Analyse des concentrations en DBO5 hors fourchette (150 < DBO5 < 800)
-  verifyDbo5Range(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyDbo5Range(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRange(fctAssainissement, {
       name: ControleName.CTL042,
       errorCode: ErrorCode.E2_042,
@@ -187,7 +186,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL043: Analyse des concentrations en MES hors fourchette (100 < MES < 1200)
-  verifyMesRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyMesRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRange(fctAssainissement, {
       name: ControleName.CTL043,
       errorCode: ErrorCode.E2_043,
@@ -198,7 +197,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL044: Analyse des concentrations en NTK hors fourchette (20 < NTK < 160)
-  verifyNtkRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyNtkRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRange(fctAssainissement, {
       name: ControleName.CTL044,
       errorCode: ErrorCode.E2_044,
@@ -210,7 +209,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL045: Analyse des concentrations en Ptot hors fourchette (4 < Ptot < 25)
-  verifyPtotRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyPtotRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterRange(fctAssainissement, {
       name: ControleName.CTL045,
       errorCode: ErrorCode.E2_045,
@@ -224,8 +223,9 @@ export class ControleMetierV2Service {
   // CTL046: Analyse des concentrations en pH hors fourchette
   // ERREUR: pH <= 2 ou pH >= 12
   // AVERTISSEMENT: 2 < pH <= 4 ou 10 <= pH < 12
-  verifyPhRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyPhRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const paramCodeStr = CodeParametre.pH.toString();
 
     this.forEachPrelevement(fctAssainissement, (context, analyses) => {
@@ -233,6 +233,7 @@ export class ControleMetierV2Service {
       const hasParamAnalyse = analyses.some((a) => a.cdParametre === paramCodeStr);
 
       if (hasParamAnalyse && paramValue !== undefined) {
+        hasValue = true;
         if (paramValue <= 2 || paramValue >= 12) {
           errors.push({
             code: ErrorCode.E2_046,
@@ -261,11 +262,11 @@ export class ControleMetierV2Service {
       }
     });
 
-    return { name: ControleName.CTL046, errors };
+    return hasValue ? { name: ControleName.CTL046, errors } : null;
   }
 
   // CTL047: Vérification que la concentration DCO > DBO5
-  verifyDcoGreaterThanDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyDcoGreaterThanDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterComparison(fctAssainissement, {
       name: ControleName.CTL047,
       errorCode: ErrorCode.E2_047,
@@ -276,7 +277,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL048: Vérification que la concentration NTK > N-NH4
-  verifyNtkGreaterThanNnh4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyNtkGreaterThanNnh4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterComparison(fctAssainissement, {
       name: ControleName.CTL048,
       errorCode: ErrorCode.E2_048,
@@ -287,7 +288,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL049: Vérification que la concentration NGL > NTK
-  verifyNglGreaterThanNtk(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyNglGreaterThanNtk(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterComparison(fctAssainissement, {
       name: ControleName.CTL049,
       errorCode: ErrorCode.E2_049,
@@ -298,7 +299,7 @@ export class ControleMetierV2Service {
   }
 
   // CTL050: Vérification que la concentration Ptot > PO4
-  verifyPGreaterThanPO4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyPGreaterThanPO4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     return this.verifyParameterComparison(fctAssainissement, {
       name: ControleName.CTL050,
       errorCode: ErrorCode.E2_050,
@@ -319,8 +320,9 @@ export class ControleMetierV2Service {
       max: number;
       uniteMesureCode?: CodeUniteMesure;
     },
-  ): ControleIndividuelWithoutSuccess {
+  ): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const paramCodeStr = config.paramCode.toString();
 
     this.forEachPrelevement(fctAssainissement, (context, analyses) => {
@@ -328,6 +330,7 @@ export class ControleMetierV2Service {
       const hasParamAnalyse = analyses.some((a) => a.cdParametre === paramCodeStr);
 
       if (hasParamAnalyse && paramValue !== undefined) {
+        hasValue = true;
         if (paramValue <= config.min || paramValue >= config.max) {
           errors.push({
             code: config.errorCode,
@@ -344,7 +347,7 @@ export class ControleMetierV2Service {
       }
     });
 
-    return { name: config.name, errors };
+    return hasValue ? { name: config.name, errors } : null;
   }
 
   // Helper for parameter ratio verification
@@ -358,12 +361,14 @@ export class ControleMetierV2Service {
       min: number;
       max: number;
     },
-  ): ControleIndividuelWithoutSuccess {
+  ): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let isApplicable = false;
     const groups = this.groupAnalysesByTwoParams(fctAssainissement, config.paramCode1, config.paramCode2);
 
     for (const group of groups.values()) {
       if (group.val1 !== undefined && group.val2 !== undefined && group.val2 > 0) {
+        isApplicable = true;
         const ratio = group.val1 / group.val2;
 
         if (ratio <= config.min || ratio >= config.max) {
@@ -384,7 +389,7 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: config.name, errors };
+    return isApplicable ? { name: config.name, errors } : null;
   }
 
   // Helper for parameter comparison (e.g., DCO > DBO5)
@@ -397,12 +402,14 @@ export class ControleMetierV2Service {
       paramCode2: CodeParametre;
       compare: (val1: number, val2: number) => boolean;
     },
-  ): ControleIndividuelWithoutSuccess {
+  ): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let isApplicable = false;
     const groups = this.groupAnalysesByTwoParams(fctAssainissement, config.paramCode1, config.paramCode2);
 
     for (const group of groups.values()) {
       if (group.val1 !== undefined && group.val2 !== undefined) {
+        isApplicable = true;
         if (!config.compare(group.val1, group.val2)) {
           errors.push({
             code: config.errorCode,
@@ -420,7 +427,7 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: config.name, errors };
+    return isApplicable ? { name: config.name, errors } : null;
   }
 
   // Itère sur tous les prélèvements et fournit le contexte et les analyses
@@ -503,8 +510,11 @@ export class ControleMetierV2Service {
   }
 
   // CTL051: Vérification que les volumes A3/A4 sont cohérents avec la capacité nominale en EH
-  async verifyVolumeA3A4VsCapaciteEH(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  async verifyVolumeA3A4VsCapaciteEH(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
     const errors: ControleError[] = [];
+    let isApplicable = false;
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
     if (!dateDebutReference) {
@@ -578,6 +588,7 @@ export class ControleMetierV2Service {
         const { volumeA3, volumeA4 } = volumes;
 
         if (volumeA3 !== undefined && volumeA4 !== undefined) {
+          isApplicable = true;
           const seuil = capaciteEH * 0.2 * 6;
           const testA3 = volumeA3 < seuil;
           const testA4 = volumeA4 < seuil;
@@ -601,15 +612,16 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL051, errors };
+    return isApplicable ? { name: ControleName.CTL051, errors } : null;
   }
 
   // CTL052: Comparaison des concentrations en DBO5/DCO (A3) avec les moyennes annuelles N-1
   verifyCmaComparisonForDcoDbo5(
     fctAssainissement: FctAssainissement,
     cmas: CmaBySandreCdaAndParam[],
-  ): ControleIndividuelWithoutSuccess {
+  ): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let isApplicable = false;
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
     if (!dateDebutReference) {
@@ -663,6 +675,7 @@ export class ControleMetierV2Service {
 
           // Comparer DBO5 avec CMA N-1
           if (dbo5Value !== undefined && dbo5ValueNmoins1 !== undefined) {
+            isApplicable = true;
             if (dbo5Value > dbo5ValueNmoins1 * 1.1) {
               errors.push({
                 code: ErrorCode.E2_052,
@@ -673,6 +686,7 @@ export class ControleMetierV2Service {
           }
 
           if (dcoValue !== undefined && dcoValueNmoins1 !== undefined) {
+            isApplicable = true;
             if (dcoValue > dcoValueNmoins1) {
               errors.push({
                 code: ErrorCode.E2_052,
@@ -685,15 +699,16 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL052, errors };
+    return isApplicable ? { name: ControleName.CTL052, errors } : null;
   }
 
   // CTL053: Vérification du débit entrant (paramètre 1552) vs max(PC95, Dref)
   async verifyDebitEntrantVsChargeMax(
     fctAssainissement: FctAssainissement,
     maxDebits?: MaxDebitBySandreCda[],
-  ): Promise<ControleIndividuelWithoutSuccess> {
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
     const errors: ControleError[] = [];
+    let isApplicable = false;
     const volumeCode = String(CodeParametre.Volume); // Paramètre 1552
 
     // Si les données ne sont pas préchargées (appel direct, hors execute()), on les récupère ici
@@ -754,6 +769,7 @@ export class ControleMetierV2Service {
       // Vérifier que chaque somme n'excède pas 2 fois max(PC95, Dref)
       const threshold = 2 * maxDebitRef;
       for (const [datePrlvt, totalDebit] of debitsByDate.entries()) {
+        isApplicable = true;
         if (totalDebit > threshold) {
           const error: ControleError = {
             code: ErrorCode.E2_053,
@@ -771,23 +787,26 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL053, errors };
+    return isApplicable ? { name: ControleName.CTL053, errors } : null;
   }
 
   private static readonly SEUIL_VARIATION_CHARGE_ENTRANTE = 0.2;
 
   // CTL054: Vérification d'un dépassement de plus de 20% de la charge entrante entre l'année N et N-1
-  async verifyChargeEntranteVsTranche(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess> {
+  async verifyChargeEntranteVsTranche(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
     const errors: ControleError[] = [];
+    let isApplicable = false;
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
     if (!dateDebutReference) {
-      return { name: ControleName.CTL054, errors };
+      return null;
     }
 
     const year = parseInt(dateDebutReference.substring(0, 4), 10);
     if (isNaN(year)) {
-      return { name: ControleName.CTL054, errors };
+      return null;
     }
 
     const steuCodes = fctAssainissement.ouvrages
@@ -806,6 +825,7 @@ export class ControleMetierV2Service {
       if (!comparison) {
         continue;
       }
+      isApplicable = true;
 
       const {
         chargeEntranteMaximaleEHN: chargeMaxN,
@@ -831,7 +851,7 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL054, errors };
+    return isApplicable ? { name: ControleName.CTL054, errors } : null;
   }
 
   // CTL055: Vérification que la production de boue est non nulle et renseignée
@@ -864,8 +884,9 @@ export class ControleMetierV2Service {
 
   // CTL056: Contrôle métier sur la température en sortie de station (point A4)
   // Avertissement si ≤ 0 °C ou > 35 °C (paramètre SANDRE 1301)
-  verifyTemperatureA4Range(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyTemperatureA4Range(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const temperatureCode = String(CodeParametre.Temperature);
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -880,6 +901,7 @@ export class ControleMetierV2Service {
           const datePrlvt = prelevement.datePrlvt ?? '';
           const cdSupport = prelevement.cdSupport ?? '';
           const tempValue = this.extractAnalyseValue(prelevement.analyse, temperatureCode);
+          hasValue ||= tempValue !== undefined;
 
           if (tempValue !== undefined && (tempValue <= 0 || tempValue > 35)) {
             errors.push({
@@ -892,13 +914,14 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL056, errors };
+    return hasValue ? { name: ControleName.CTL056, errors } : null;
   }
 
   // CTL057: Contrôle sur la pluviométrie journalière au niveau du système de collecte (points A1 et R1)
   // Avertissement si < 0 mm ou > 200 mm, Bloquant si > 1000 mm (paramètre SANDRE 1553)
-  verifyPluviometrieRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyPluviometrieRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const pluvioCode = String(CodeParametre.Pluviometrie);
 
     for (const systemeCollecte of fctAssainissement.systemesCollecte ?? []) {
@@ -918,6 +941,7 @@ export class ControleMetierV2Service {
           if (pluvioValue === undefined) {
             continue;
           }
+          hasValue = true;
 
           if (pluvioValue > 1000) {
             errors.push({
@@ -936,13 +960,14 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL057, errors };
+    return hasValue ? { name: ControleName.CTL057, errors } : null;
   }
 
   // CTL058: Contrôle sur les volumes négatifs (Vol.Moy.J 1552, Volume 1098, Masse 1099) sur tous les points de mesure
   // Bloquant si volume négatif
-  verifyVolumesNegatifs(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyVolumesNegatifs(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const volumeParams: { code: CodeParametre; label: string }[] = [
       { code: CodeParametre.Volume, label: 'Vol.Moy.J' },
       { code: CodeParametre.VolumeRef, label: 'Volume' },
@@ -969,6 +994,7 @@ export class ControleMetierV2Service {
 
           for (const { code, label } of volumeParams) {
             const value = this.extractAnalyseValue(prelevement.analyse, String(code));
+            hasValue ||= value !== undefined;
             if (value !== undefined && value < 0) {
               errors.push({
                 code: ErrorCode.E2_058,
@@ -989,13 +1015,14 @@ export class ControleMetierV2Service {
       checkPrelevements(systemeCollecte.cdSystemeCollecte || '', systemeCollecte.pointMesure);
     }
 
-    return { name: ControleName.CTL058, errors };
+    return hasValue ? { name: ControleName.CTL058, errors } : null;
   }
 
   // CTL059: Contrôle sur les concentrations négatives ou nulles sur tous les points de mesure
   // Bloquant si valeur ≤ 0 pour DBO5, DCO, MES, NH4, NTK, NO2, NO3, Ptot, MS105, NGL
-  verifyConcentrationsNegativesOuNulles(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyConcentrationsNegativesOuNulles(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const concentrationParams: { code: CodeParametre; label: string }[] = [
       { code: CodeParametre.DBO5, label: 'DBO5' },
       { code: CodeParametre.DCO, label: 'DCO' },
@@ -1028,6 +1055,7 @@ export class ControleMetierV2Service {
 
           for (const { code, label } of concentrationParams) {
             const value = this.extractAnalyseValue(prelevement.analyse, String(code));
+            hasValue ||= value !== undefined;
             if (value !== undefined && value <= 0) {
               errors.push({
                 code: ErrorCode.E2_059,
@@ -1044,7 +1072,7 @@ export class ControleMetierV2Service {
       checkPrelevements(ouvrage.cdOuvrageDepollution || '', ouvrage.pointMesure);
     }
 
-    return { name: ControleName.CTL059, errors };
+    return hasValue ? { name: ControleName.CTL059, errors } : null;
   }
 
   // CTL060: Contrôle sur la charge de pollution à traiter vs capacité nominale (only >= 2000 EH)
@@ -1052,17 +1080,18 @@ export class ControleMetierV2Service {
   // Charge EH = (Volume_A3 × DBO5_A3) / 60
   async verifyChargePollutionVsCapaciteNominale(
     fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess> {
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
     const errors: ControleError[] = [];
+    let isApplicable = false;
 
     const dateDebutReference = fctAssainissement.scenario?.dateDebutReference;
     if (!dateDebutReference) {
-      return { name: ControleName.CTL060, errors };
+      return null;
     }
 
     const year = parseInt(dateDebutReference.substring(0, 4), 10);
     if (isNaN(year)) {
-      return { name: ControleName.CTL060, errors };
+      return null;
     }
 
     const allSteuCdas = fctAssainissement.ouvrages
@@ -1100,6 +1129,7 @@ export class ControleMetierV2Service {
           const dbo5Value = this.extractAnalyseValue(prelevement.analyse, dbo5Code);
 
           if (volumeValue !== undefined && dbo5Value !== undefined && volumeValue > 0) {
+            isApplicable = true;
             // Charge en EH = (Volume en m³/j × DBO5 en mg/L) / 60
             const chargeEH = (volumeValue * dbo5Value) / 60;
 
@@ -1121,11 +1151,12 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL060, errors };
+    return isApplicable ? { name: ControleName.CTL060, errors } : null;
   }
   // CTL061: Vérification que les débits A3/A4 du paramètre 1552 sont renseignés à la même date
-  verifyDebitA3A4SameDate(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess {
+  verifyDebitA3A4SameDate(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
+    let hasValue = false;
     const volumeCode = String(CodeParametre.Volume);
 
     for (const ouvrage of fctAssainissement.ouvrages) {
@@ -1148,6 +1179,7 @@ export class ControleMetierV2Service {
           if (volumeValue === undefined) {
             continue;
           }
+          hasValue = true;
 
           if (locGlobale === 'A3') {
             datesA3.add(datePrlvt);
@@ -1178,7 +1210,7 @@ export class ControleMetierV2Service {
       }
     }
 
-    return { name: ControleName.CTL061, errors };
+    return hasValue ? { name: ControleName.CTL061, errors } : null;
   }
 }
 
