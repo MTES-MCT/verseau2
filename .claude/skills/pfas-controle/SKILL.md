@@ -7,16 +7,16 @@ description: Adds a new PFAS business control (CTL20x) in controleMetierV2Pfas, 
 
 Use this when adding a new PFAS-specific business control in the V2 control pipeline.
 
-Reference implementation: `CTL201` in `apps/back/src/dossier/controle/metierv2/controleMetierV2Pfas.ts`.
+Reference implementations: `CTL201` and `CTL202` in `apps/back/src/dossier/controle/metierv2/controleMetierV2Pfas.ts`.
 
 ## Rules
 
 - Keep PFAS logic in `apps/back/src/dossier/controle/metierv2/controleMetierV2Pfas.ts` unless the file becomes too large.
-- Do not create a Roseau/Lanceleau gateway or repository for PFAS controls. Use `MasaProvider` for live reference data.
+- Do not create a Roseau/Lanceleau gateway or repository for PFAS controls. Use `MasaProvider` for reference data.
 - When a requirement mentions retrieving nominal capacity from the "J-7 database", use the existing `MasaProvider.findCapaciteNominaleBatch(steuCodes, referenceYear)` method. Do not ask for a J-7 interpretation or add a snapshot/date-based gateway method.
 - Reuse `isPfasCampaign(...)` when a control applies only to PFAS campaigns.
 - Keep `MasaProvider` as pass-through only. Put business rules in `ControleMetierV2Pfas`.
-- `CTL201` uses `EvenementType.AVERTISSEMENT`. `EvenementType.INFORMATION` exists for future controls only when explicitly requested.
+- `CTL201` and `CTL202` use `EvenementType.AVERTISSEMENT`. Use the event type requested by the business rule; do not default future controls to `INFORMATION`.
 - Add future PFAS controls as `CTL20x` and errors as `E2.20x`.
 
 ## Current PFAS Constants
@@ -24,22 +24,23 @@ Reference implementation: `CTL201` in `apps/back/src/dossier/controle/metierv2/c
 These already exist in `controleMetierV2Pfas.ts` and should be reused:
 
 ```typescript
-PFAS_REGLEMENTAIRES_CODES
-AOF_CODE
-PFAS_FINALITE_ANALYSE
-PFAS_CAPACITE_MIN_EH
+PFAS_REGLEMENTAIRES_CODES;
+AOF_CODE;
+FLUORURE_CODE;
+PFAS_FINALITE_ANALYSE;
+PFAS_CAPACITE_MIN_EH;
 ```
 
 ## Backend Flow
 
-1. Add a method to `ControleMetierV2Pfas`, for example `verify<RuleName>(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess>`.
-2. Return `{ name: ControleName.CTL20x, errors }` and never persist directly from the PFAS service.
+1. Add a method to `ControleMetierV2Pfas`, for example `verify<RuleName>(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess | null>`.
+2. Return `null` when the control cannot be evaluated or has no matching business scope. Return `{ name: ControleName.CTL20x, errors: [] }` when it was evaluated successfully without errors. Never persist directly from the PFAS service.
 3. Use `fctAssainissement.scenario.dateDebutReference` to derive the reference year when capacity/reference data is needed.
 4. Extract unique STEU codes from `fctAssainissement.ouvrages`; for nominal capacity, call `MasaProvider.findCapaciteNominaleBatch(steuCodes, referenceYear)`.
 5. Traverse only the relevant `ouvrage.pointMesure` locations and `prelevement.analyse` nodes.
-6. Push `ControleError` entries with the correct `ErrorCode.E2_20x`, typed `params`, and requested `EvenementType`.
-7. Wire the new method in `ControleMetierV2Service.execute()` inside the `Promise.all([...])` list.
-8. If `ControleMetierV2Pfas` is not already provided, register it in `DossierModule`.
+6. For rules scoped to a PFAS sampling event, detect the campaign and required parameter in the same `prelevement.analyse` array. Emit one error per failing `prelevement`; do not deduplicate by date unless explicitly requested.
+7. Push `ControleError` entries with the correct `ErrorCode.E2_20x`, typed `params`, and requested `EvenementType`.
+8. Wire the new method in `ControleMetierV2Service.execute()` inside the `Promise.all([...])` list.
 
 ## Shared Contracts
 
@@ -59,12 +60,6 @@ Update `packages/dossier/src/controle/messages.ts`:
 - Add a small `buildErrorMessage20x(...)` helper near the existing helpers.
 
 Update `packages/dossier/src/controle/messages.spec.ts` with the exact expected message.
-
-If the new enum values are persisted in PostgreSQL, add a TypeORM migration under `apps/back/src/infra/migrations/` to extend:
-
-- `controle_name_enum`
-- `controle_error_enum`
-- `controle_evenement_type_enum` only if adding a new event type
 
 ## Frontend And PDF
 
@@ -89,12 +84,13 @@ Update `apps/back/src/dossier/rapport/generateDummyPdf.ts` with a representative
 Backend unit tests:
 
 - Add cases to `apps/back/src/dossier/controle/metierv2/controleMetierV2Pfas.spec.ts`.
-- Cover trigger, non-trigger, boundary conditions, missing reference data, and expected `EvenementType`.
+- Cover trigger, successful evaluation, out-of-scope data, exact threshold boundaries, missing reference data, and expected `EvenementType`.
+- For per-sampling rules, verify that the required parameter is searched in the same prélèvement and that repeated dates still produce one error per failing prélèvement unless the requirement says otherwise.
 - Update `controleMetierV2.service.spec.ts` expected control order and count after wiring the control into `execute()`.
 
 Frontend tests:
 
-- Update `apps/front/src/pages/Controle.spec.tsx` when the UI grouping or displayed severity changes.
+- Add a representative row for the new control to `apps/front/src/pages/Controle.spec.tsx` and verify its PFAS grouping and message.
 - Add component/helper tests only when a new event type or new display behavior is introduced.
 
 ## Verification Commands
@@ -104,6 +100,7 @@ Run the most targeted checks first:
 ```bash
 pnpm --filter back test:unit -- controleMetierV2Pfas.spec.ts controleMetierV2.service.spec.ts
 pnpm --filter @lib/dossier test -- messages.spec.ts
+pnpm --filter @lib/dossier build
 pnpm --filter front test -- Controle.spec.tsx
 pnpm --filter front check
 pnpm --filter back build
@@ -121,11 +118,10 @@ pnpm --filter front exec eslint <modified-frontend-files>
 1. PFAS logic added to `ControleMetierV2Pfas`.
 2. New control wired in `ControleMetierV2Service.execute()`.
 3. `ControleName`, description, `ErrorCode`, `ErrorParamsMap`, and message added.
-4. Migration added for persisted enum values.
-5. `PFAS_CONTROLE_NAMES` updated for the PFAS UI group.
-6. `generateDummyPdf.ts` contains a representative row.
-7. Unit and frontend tests updated.
-8. Targeted tests/checks pass.
+4. `PFAS_CONTROLE_NAMES` updated for the PFAS UI group.
+5. `generateDummyPdf.ts` contains a representative row.
+6. Unit and frontend tests updated.
+7. Targeted tests/checks pass.
 
 ## Anti-Patterns
 
