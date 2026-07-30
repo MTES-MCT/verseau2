@@ -13,6 +13,7 @@ Reference implementation: `CTL201` in `apps/back/src/dossier/controle/metierv2/c
 
 - Keep PFAS logic in `apps/back/src/dossier/controle/metierv2/controleMetierV2Pfas.ts` unless the file becomes too large.
 - Do not create a Roseau/Lanceleau gateway or repository for PFAS controls. Use `MasaProvider` for live reference data.
+- When a requirement mentions retrieving nominal capacity from the "J-7 database", use the existing `MasaProvider.findCapaciteNominaleBatch(steuCodes, referenceYear)` method. Do not ask for a J-7 interpretation or add a snapshot/date-based gateway method.
 - Reuse `isPfasCampaign(...)` when a control applies only to PFAS campaigns.
 - Keep `MasaProvider` as pass-through only. Put business rules in `ControleMetierV2Pfas`.
 - `CTL201` uses `EvenementType.AVERTISSEMENT`. `EvenementType.INFORMATION` exists for future controls only when explicitly requested.
@@ -34,7 +35,7 @@ PFAS_CAPACITE_MIN_EH
 1. Add a method to `ControleMetierV2Pfas`, for example `verify<RuleName>(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess>`.
 2. Return `{ name: ControleName.CTL20x, errors }` and never persist directly from the PFAS service.
 3. Use `fctAssainissement.scenario.dateDebutReference` to derive the reference year when capacity/reference data is needed.
-4. Extract unique STEU codes from `fctAssainissement.ouvrages` and call existing `MasaProvider` batch methods where possible.
+4. Extract unique STEU codes from `fctAssainissement.ouvrages`; for nominal capacity, call `MasaProvider.findCapaciteNominaleBatch(steuCodes, referenceYear)`.
 5. Traverse only the relevant `ouvrage.pointMesure` locations and `prelevement.analyse` nodes.
 6. Push `ControleError` entries with the correct `ErrorCode.E2_20x`, typed `params`, and requested `EvenementType`.
 7. Wire the new method in `ControleMetierV2Service.execute()` inside the `Promise.all([...])` list.
