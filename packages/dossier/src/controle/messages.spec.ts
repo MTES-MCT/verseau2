@@ -147,6 +147,16 @@ describe('buildMessage', () => {
     expect(result).toBe('Carbone organique (code 1841) absent pour la date 2024-06-01.');
   });
 
+  it('devrait retourner le message pour E2_204 (Fluorure absent)', () => {
+    const result = buildMessage(ErrorCode.E2_204, ['FLUORURE', '2024-06-01']);
+    expect(result).toBe('AOF présent mais fluorure absent pour la date 2024-06-01, interprétation impossible');
+  });
+
+  it('devrait retourner le message pour E2_204 (AOF absent)', () => {
+    const result = buildMessage(ErrorCode.E2_204, ['AOF', '2024-06-02']);
+    expect(result).toBe('Fluorure présent mais AOF absent pour la date 2024-06-02, interprétation impossible');
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

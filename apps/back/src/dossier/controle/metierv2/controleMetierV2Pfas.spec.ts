@@ -349,6 +349,149 @@ describe('ControleMetierV2Pfas', () => {
       expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
     });
   });
+
+  describe('verifyAofFluorureCoherenceForPfasCampaigns', () => {
+    it.each([
+      {
+        point: 'A3',
+        presentParameter: '8986',
+        missingParameter: 'FLUORURE',
+      },
+      {
+        point: 'A4',
+        presentParameter: '7073',
+        missingParameter: 'AOF',
+      },
+    ])(
+      'should report AVERTISSEMENT at $point when $missingParameter is absent',
+      async ({ point, presentParameter, missingParameter }) => {
+        masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+          { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+        ]);
+
+        const result = await service.verifyAofFluorureCoherenceForPfasCampaigns(
+          makeFctAssainissement({
+            cdOuvrageDepollution: 'STEU1',
+            locGlobalePointMesure: point,
+            datePrlvt: '2024-06-01',
+            analyses: [
+              { cdParametre: '5980', finalite: '11' },
+              { cdParametre: presentParameter, finalite: '11' },
+            ],
+          }),
+        );
+
+        expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+        expect(result).toEqual({
+          name: ControleName.CTL204,
+          errors: [
+            {
+              code: ErrorCode.E2_204,
+              params: [missingParameter, '2024-06-01'],
+              evenementType: EvenementType.AVERTISSEMENT,
+            },
+          ],
+        });
+      },
+    );
+
+    it('should pass when AOF and fluorure are both present in the same prelevement', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyAofFluorureCoherenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A3',
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite: '11' },
+            { cdParametre: '8986', finalite: '11' },
+            { cdParametre: '7073', finalite: '11' },
+          ],
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL204, errors: [] });
+    });
+
+    it('should pass when AOF and fluorure are both absent from a PFAS campaign', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyAofFluorureCoherenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11' }],
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL204, errors: [] });
+    });
+
+    it('should not apply below the capacity threshold or without capacity data', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [
+          { cdParametre: '5980', finalite: '11' },
+          { cdParametre: '8986', finalite: '11' },
+        ],
+      });
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 9999 },
+      ]);
+
+      await expect(service.verifyAofFluorureCoherenceForPfasCampaigns(data)).resolves.toBeNull();
+
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      await expect(service.verifyAofFluorureCoherenceForPfasCampaigns(data)).resolves.toBeNull();
+    });
+
+    it.each([
+      ['A2', '11'],
+      ['A3', '1'],
+    ])('should ignore point %s with PFAS finality %s', async (point, finalite) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyAofFluorureCoherenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite },
+            { cdParametre: '8986', finalite: '11' },
+          ],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should not call MasaProvider when the reference year is missing', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [
+          { cdParametre: '5980', finalite: '11' },
+          { cdParametre: '8986', finalite: '11' },
+        ],
+      });
+      data.scenario.dateDebutReference = '';
+
+      await expect(service.verifyAofFluorureCoherenceForPfasCampaigns(data)).resolves.toBeNull();
+      expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
+    });
+  });
 });
 
 function makeFctAssainissement({

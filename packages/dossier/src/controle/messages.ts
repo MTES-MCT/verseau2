@@ -172,6 +172,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage202(params);
     case ErrorCode.E2_203:
       return buildErrorMessage203(params);
+    case ErrorCode.E2_204:
+      return buildErrorMessage204(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -360,4 +362,12 @@ const buildErrorMessage202 = (params: string[]) => {
 const buildErrorMessage203 = (params: string[]) => {
   const [date] = params as ErrorParamsMap[ErrorCode.E2_203];
   return `Carbone organique (code 1841) absent pour la date ${date}.`;
+};
+
+const buildErrorMessage204 = (params: string[]) => {
+  const [missingParameter, date] = params as ErrorParamsMap[ErrorCode.E2_204];
+  if (missingParameter === 'FLUORURE') {
+    return `AOF présent mais fluorure absent pour la date ${date}, interprétation impossible`;
+  }
+  return `Fluorure présent mais AOF absent pour la date ${date}, interprétation impossible`;
 };

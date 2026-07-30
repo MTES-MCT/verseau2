@@ -26,7 +26,12 @@ export type ControleLocationState = {
   numeroDepotVerseau1?: string;
 };
 
-const PFAS_CONTROLE_NAMES = new Set<ControleName>([ControleName.CTL201, ControleName.CTL202, ControleName.CTL203]);
+const PFAS_CONTROLE_NAMES = new Set<ControleName>([
+  ControleName.CTL201,
+  ControleName.CTL202,
+  ControleName.CTL203,
+  ControleName.CTL204,
+]);
 
 export function ControlePage() {
   const { depotId } = useParams<{ depotId: string }>();
