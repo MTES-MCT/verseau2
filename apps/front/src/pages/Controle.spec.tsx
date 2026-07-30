@@ -210,6 +210,14 @@ describe('ControlePage', () => {
         error: ErrorCode.E2_201,
         errorParams: ['2024-06-01'],
       }),
+      makeControle({
+        id: 'pfas-fluorure-warning',
+        name: ControleName.CTL202,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_202,
+        errorParams: ['2024-06-02'],
+      }),
     ]);
     mockFetchControlesSandre.mockResolvedValue([]);
     mockFetchMasa.mockResolvedValue(null);
@@ -222,6 +230,7 @@ describe('ControlePage', () => {
       expect(screen.getByRole('heading', { name: /contrôles PFAS/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByTestId('clickable-stat-card-Avertissement')).toBeInTheDocument();
       expect(screen.getByText(/Paramètre AOF \(code 8986\) absent pour la date 2024-06-01/i)).toBeInTheDocument();
+      expect(screen.getByText(/Paramètre Fluorure \(code 7073\) absent pour la date 2024-06-02/i)).toBeInTheDocument();
     });
   });
 });

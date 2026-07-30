@@ -135,6 +135,13 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_202 (Fluorure absent)', () => {
+    const result = buildMessage(ErrorCode.E2_202, ['2024-06-01']);
+    expect(result).toBe(
+      "Paramètre Fluorure (code 7073) absent pour la date 2024-06-01. Ce paramètre est obligatoire pour permettre l'interprétation de l'AOF.",
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

@@ -125,6 +125,131 @@ describe('ControleMetierV2Pfas', () => {
     expect(service.isPfasCampaign([{ cdParametre: '8986', finalite: '11' }])).toBe(false);
     expect(service.isPfasCampaign([{ cdParametre: '5980', finalite: '1' }])).toBe(false);
   });
+
+  describe('verifyFluorurePresenceForPfasCampaigns', () => {
+    it.each(['A3', 'A4'])('should report AVERTISSEMENT at %s when fluorure is absent', async (point) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+      ]);
+
+      const result = await service.verifyFluorurePresenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11' }],
+        }),
+      );
+
+      expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+      expect(result).toEqual({
+        name: ControleName.CTL202,
+        errors: [
+          {
+            code: ErrorCode.E2_202,
+            params: ['2024-06-01'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+    });
+
+    it('should pass when fluorure is present in the same prelevement', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyFluorurePresenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A3',
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite: '11' },
+            { cdParametre: '7073', finalite: '11' },
+          ],
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL202, errors: [] });
+    });
+
+    it('should not apply below the capacity threshold or without capacity data', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 9999 },
+      ]);
+
+      await expect(service.verifyFluorurePresenceForPfasCampaigns(data)).resolves.toBeNull();
+
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      await expect(service.verifyFluorurePresenceForPfasCampaigns(data)).resolves.toBeNull();
+    });
+
+    it.each([
+      ['A2', '11'],
+      ['A3', '1'],
+    ])('should ignore point %s with finality %s', async (point, finalite) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyFluorurePresenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite }],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should not call MasaProvider when the reference year is missing', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      data.scenario.dateDebutReference = '';
+
+      await expect(service.verifyFluorurePresenceForPfasCampaigns(data)).resolves.toBeNull();
+      expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
+    });
+
+    it('should report one error per prelevement sharing the same date', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      const secondData = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5979', finalite: '11' }],
+      });
+      data.ouvrages[0].pointMesure[0].prelevement.push(secondData.ouvrages[0].pointMesure[0].prelevement[0]);
+
+      const result = await service.verifyFluorurePresenceForPfasCampaigns(data);
+
+      expect(result?.errors).toEqual([
+        { code: ErrorCode.E2_202, params: ['2024-06-01'], evenementType: EvenementType.AVERTISSEMENT },
+        { code: ErrorCode.E2_202, params: ['2024-06-01'], evenementType: EvenementType.AVERTISSEMENT },
+      ]);
+    });
+  });
 });
 
 function makeFctAssainissement({

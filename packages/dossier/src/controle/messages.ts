@@ -168,6 +168,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage61(params);
     case ErrorCode.E2_201:
       return buildErrorMessage201(params);
+    case ErrorCode.E2_202:
+      return buildErrorMessage202(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -346,4 +348,9 @@ const buildErrorMessage61 = (params: string[]) => {
 const buildErrorMessage201 = (params: string[]) => {
   const [date] = params as ErrorParamsMap[ErrorCode.E2_201];
   return `Paramètre AOF (code 8986) absent pour la date ${date}. Ce paramètre est obligatoire pour les analyses PFAS en sortie de station (A4).`;
+};
+
+const buildErrorMessage202 = (params: string[]) => {
+  const [date] = params as ErrorParamsMap[ErrorCode.E2_202];
+  return `Paramètre Fluorure (code 7073) absent pour la date ${date}. Ce paramètre est obligatoire pour permettre l'interprétation de l'AOF.`;
 };

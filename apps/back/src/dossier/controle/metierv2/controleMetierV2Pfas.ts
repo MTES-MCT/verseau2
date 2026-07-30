@@ -31,6 +31,7 @@ export const PFAS_REGLEMENTAIRES_CODES = [
 ];
 
 export const AOF_CODE = '8986';
+export const FLUORURE_CODE = '7073';
 export const PFAS_FINALITE_ANALYSE = '11';
 export const PFAS_CAPACITE_MIN_EH = 10000;
 
@@ -95,6 +96,57 @@ export class ControleMetierV2Pfas {
     }
 
     return isApplicable ? { name: ControleName.CTL201, errors } : null;
+  }
+
+  async verifyFluorurePresenceForPfasCampaigns(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
+    const errors: ControleError[] = [];
+    const year = this.extractReferenceYear(fctAssainissement);
+
+    if (year === undefined) {
+      return null;
+    }
+
+    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
+    if (steuCodes.length === 0) {
+      return null;
+    }
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+    let isApplicable = false;
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
+        continue;
+      }
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
+          continue;
+        }
+
+        for (const prelevement of pointMesure.prelevement) {
+          const analyses = prelevement.analyse ?? [];
+
+          if (!this.isPfasCampaign(analyses)) {
+            continue;
+          }
+
+          isApplicable = true;
+          if (!analyses.some((analyse) => analyse.cdParametre === FLUORURE_CODE)) {
+            errors.push({
+              code: ErrorCode.E2_202,
+              params: [prelevement.datePrlvt ?? ''],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return isApplicable ? { name: ControleName.CTL202, errors } : null;
   }
 
   isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {

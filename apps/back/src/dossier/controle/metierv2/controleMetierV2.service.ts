@@ -96,6 +96,7 @@ export class ControleMetierV2Service {
         this.verifyChargePollutionVsCapaciteNominale(xmlObj),
         Promise.resolve(this.verifyDebitA3A4SameDate(xmlObj)),
         this.controleMetierV2Pfas.verifyAofPresenceForPfasCampaigns(xmlObj),
+        this.controleMetierV2Pfas.verifyFluorurePresenceForPfasCampaigns(xmlObj),
       ])
     ).filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null);
 
