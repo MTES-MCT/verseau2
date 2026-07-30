@@ -191,6 +191,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL061, // verifyDebitA3A4SameDate
         ControleName.CTL201, // verifyAofPresenceForPfasCampaigns
         ControleName.CTL202, // verifyFluorurePresenceForPfasCampaigns
+        ControleName.CTL203, // verifyCarboneOrganiquePresenceForPfasCampaigns
       ]);
       expect(calledControles).not.toContain(null);
     });

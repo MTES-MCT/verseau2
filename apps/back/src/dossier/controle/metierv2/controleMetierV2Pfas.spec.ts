@@ -250,6 +250,105 @@ describe('ControleMetierV2Pfas', () => {
       ]);
     });
   });
+
+  describe('verifyCarboneOrganiquePresenceForPfasCampaigns', () => {
+    it.each(['A3', 'A4'])('should report AVERTISSEMENT at %s when organic carbon is absent', async (point) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+      ]);
+
+      const result = await service.verifyCarboneOrganiquePresenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11' }],
+        }),
+      );
+
+      expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+      expect(result).toEqual({
+        name: ControleName.CTL203,
+        errors: [
+          {
+            code: ErrorCode.E2_203,
+            params: ['2024-06-01'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+    });
+
+    it('should pass when organic carbon is present in the same prelevement', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyCarboneOrganiquePresenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A3',
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite: '11' },
+            { cdParametre: '1841', finalite: '11' },
+          ],
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL203, errors: [] });
+    });
+
+    it('should not apply below the capacity threshold or without capacity data', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 9999 },
+      ]);
+
+      await expect(service.verifyCarboneOrganiquePresenceForPfasCampaigns(data)).resolves.toBeNull();
+
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      await expect(service.verifyCarboneOrganiquePresenceForPfasCampaigns(data)).resolves.toBeNull();
+    });
+
+    it.each([
+      ['A2', '11'],
+      ['A3', '1'],
+    ])('should ignore point %s with finality %s', async (point, finalite) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyCarboneOrganiquePresenceForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite }],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should not call MasaProvider when the reference year is missing', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      data.scenario.dateDebutReference = '';
+
+      await expect(service.verifyCarboneOrganiquePresenceForPfasCampaigns(data)).resolves.toBeNull();
+      expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
+    });
+  });
 });
 
 function makeFctAssainissement({

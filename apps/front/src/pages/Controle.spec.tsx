@@ -218,6 +218,14 @@ describe('ControlePage', () => {
         error: ErrorCode.E2_202,
         errorParams: ['2024-06-02'],
       }),
+      makeControle({
+        id: 'pfas-organic-carbon-warning',
+        name: ControleName.CTL203,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_203,
+        errorParams: ['2024-06-03'],
+      }),
     ]);
     mockFetchControlesSandre.mockResolvedValue([]);
     mockFetchMasa.mockResolvedValue(null);
@@ -231,6 +239,7 @@ describe('ControlePage', () => {
       expect(screen.getByTestId('clickable-stat-card-Avertissement')).toBeInTheDocument();
       expect(screen.getByText(/Paramètre AOF \(code 8986\) absent pour la date 2024-06-01/i)).toBeInTheDocument();
       expect(screen.getByText(/Paramètre Fluorure \(code 7073\) absent pour la date 2024-06-02/i)).toBeInTheDocument();
+      expect(screen.getByText(/Carbone organique \(code 1841\) absent pour la date 2024-06-03/i)).toBeInTheDocument();
     });
   });
 });

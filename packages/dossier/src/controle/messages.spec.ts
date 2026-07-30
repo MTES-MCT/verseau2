@@ -142,6 +142,11 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_203 (Carbone organique absent)', () => {
+    const result = buildMessage(ErrorCode.E2_203, ['2024-06-01']);
+    expect(result).toBe('Carbone organique (code 1841) absent pour la date 2024-06-01.');
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

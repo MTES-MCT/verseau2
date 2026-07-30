@@ -52,6 +52,7 @@ export enum ErrorCode {
   E2_061 = 'E2.061',
   E2_201 = 'E2.201',
   E2_202 = 'E2.202',
+  E2_203 = 'E2.203',
   E2_999 = 'E2.999',
 }
 
@@ -175,6 +176,7 @@ export type ErrorParamsMap = {
   [ErrorCode.E2_061]: [missingPoint: 'A3' | 'A4', datePrlvt: string];
   [ErrorCode.E2_201]: [date: string];
   [ErrorCode.E2_202]: [date: string];
+  [ErrorCode.E2_203]: [date: string];
   [ErrorCode.E2_999]: [message: string];
 };
 

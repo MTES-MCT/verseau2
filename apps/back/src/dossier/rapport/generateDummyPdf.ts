@@ -292,6 +292,17 @@ async function generateDummyPdf() {
       createdAt: new Date(),
       updatedAt: new Date(),
     },
+    {
+      id: 'ctrl_203',
+      name: ControleName.CTL203,
+      type: ControleType.CONTROLE_V2,
+      success: false,
+      error: ErrorCode.E2_203,
+      errorParams: ['2024-06-03'],
+      evenementType: EvenementType.AVERTISSEMENT,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
   ];
 
   const reponsesSandreSuccess: ReponseSandreModel[] = [
