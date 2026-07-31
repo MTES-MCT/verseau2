@@ -86,6 +86,7 @@ export enum ControleName {
   CTL203 = 'CTL203',
   CTL204 = 'CTL204',
   CTL205 = 'CTL205',
+  CTL207 = 'CTL207',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -153,5 +154,6 @@ export const ControleDescription: Record<ControleName, string> = {
     "Vérification de la cohérence entre les paramètres AOF et Fluorure nécessaires à l'interprétation de l'AOF",
   [ControleName.CTL205]:
     'Vérification de la limite de quantification des analyses PFAS aux points A3/A4 selon les seuils réglementaires',
+  [ControleName.CTL207]: 'Identification des paramètres PFAS détectés et quantifiés aux points A3/A4',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };

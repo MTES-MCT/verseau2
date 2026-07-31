@@ -100,6 +100,7 @@ export class ControleMetierV2Service {
         this.controleMetierV2Pfas.verifyCarboneOrganiquePresenceForPfasCampaigns(xmlObj),
         this.controleMetierV2Pfas.verifyAofFluorureCoherenceForPfasCampaigns(xmlObj),
         this.controleMetierV2Pfas.verifyQuantificationLimitsForPfasCampaigns(xmlObj),
+        this.controleMetierV2Pfas.identifyQuantifiedPfas(xmlObj),
       ])
     ).filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null);
 

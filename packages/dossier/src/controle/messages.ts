@@ -176,6 +176,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage204(params);
     case ErrorCode.E2_205:
       return buildErrorMessage205(params);
+    case ErrorCode.E2_207:
+      return buildErrorMessage207(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -377,4 +379,9 @@ const buildErrorMessage204 = (params: string[]) => {
 const buildErrorMessage205 = (params: string[]) => {
   const [parameterCodes, date] = params as ErrorParamsMap[ErrorCode.E2_205];
   return `La Limite de Quantification (LQ) attendue est supérieure à celle de la circulaire pour le(s) paramètre(s) [${parameterCodes}], pour la date ${date}`;
+};
+
+const buildErrorMessage207 = (params: string[]) => {
+  const [parameterCodes] = params as ErrorParamsMap[ErrorCode.E2_207];
+  return `Les codes suivants sont quantifiés : ${parameterCodes}.`;
 };

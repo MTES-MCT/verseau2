@@ -242,6 +242,14 @@ describe('ControlePage', () => {
         error: ErrorCode.E2_205,
         errorParams: ['5980, 5979', '2024-06-05'],
       }),
+      makeControle({
+        id: 'pfas-quantified-information',
+        name: ControleName.CTL207,
+        success: false,
+        evenementType: EvenementType.INFORMATION,
+        error: ErrorCode.E2_207,
+        errorParams: ['8986, 6025'],
+      }),
     ]);
     mockFetchControlesSandre.mockResolvedValue([]);
     mockFetchMasa.mockResolvedValue(null);
@@ -253,6 +261,7 @@ describe('ControlePage', () => {
       expect(screen.getByRole('heading', { name: /contrôles métiers/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: /contrôles PFAS/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByTestId('clickable-stat-card-Avertissement')).toBeInTheDocument();
+      expect(screen.getByTestId('clickable-stat-card-Information')).toBeInTheDocument();
       expect(screen.getByText(/Paramètre AOF \(code 8986\) absent pour la date 2024-06-01/i)).toBeInTheDocument();
       expect(screen.getByText(/Paramètre Fluorure \(code 7073\) absent pour la date 2024-06-02/i)).toBeInTheDocument();
       expect(screen.getByText(/Carbone organique \(code 1841\) absent pour la date 2024-06-03/i)).toBeInTheDocument();
@@ -264,6 +273,7 @@ describe('ControlePage', () => {
           /La Limite de Quantification \(LQ\) attendue est supérieure à celle de la circulaire pour le\(s\) paramètre\(s\) \[5980, 5979\], pour la date 2024-06-05/i,
         ),
       ).toBeInTheDocument();
+      expect(screen.getByText(/Les codes suivants sont quantifiés : 8986, 6025\./i)).toBeInTheDocument();
     });
   });
 });

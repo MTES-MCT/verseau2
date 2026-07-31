@@ -164,6 +164,11 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_207 (PFAS quantifiés)', () => {
+    const result = buildMessage(ErrorCode.E2_207, ['8986, 6025']);
+    expect(result).toBe('Les codes suivants sont quantifiés : 8986, 6025.');
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

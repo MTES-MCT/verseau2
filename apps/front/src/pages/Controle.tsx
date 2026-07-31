@@ -32,6 +32,7 @@ const PFAS_CONTROLE_NAMES = new Set<ControleName>([
   ControleName.CTL203,
   ControleName.CTL204,
   ControleName.CTL205,
+  ControleName.CTL207,
 ]);
 
 export function ControlePage() {

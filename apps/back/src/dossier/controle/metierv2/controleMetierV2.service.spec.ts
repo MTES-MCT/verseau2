@@ -194,6 +194,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL203, // verifyCarboneOrganiquePresenceForPfasCampaigns
         ControleName.CTL204, // verifyAofFluorureCoherenceForPfasCampaigns
         ControleName.CTL205, // verifyQuantificationLimitsForPfasCampaigns
+        ControleName.CTL207, // identifyQuantifiedPfas
       ]);
       expect(calledControles).not.toContain(null);
     });
