@@ -169,6 +169,13 @@ describe('buildMessage', () => {
     expect(result).toBe('Les codes suivants sont quantifiés : 8986, 6025.');
   });
 
+  it('devrait retourner le message pour E2_208 (mesure PFAS incomplète)', () => {
+    const result = buildMessage(ErrorCode.E2_208, ['21', '2024-06-04', '8858, 7991']);
+    expect(result).toBe(
+      'Le nombre de paramètres mesurés est égal à 21 pour la campagne de mesure en date de 2024-06-04 (< à 23), les codes suivants sont manquant: 8858, 7991.',
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

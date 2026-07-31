@@ -33,10 +33,13 @@ export const PFAS_REGLEMENTAIRES_CODES = [
 export const AOF_CODE = '8986';
 export const FLUORURE_CODE = '7073';
 export const CARBONE_ORGANIQUE_CODE = '1841';
+export const TFA_CODE = '8858';
 export const PFAS_FINALITE_ANALYSE = '11';
 export const PFAS_CAPACITE_MIN_EH = 10000;
+export const PFAS_SURVEILLANCE_CODES = [...PFAS_REGLEMENTAIRES_CODES, TFA_CODE];
 
 const PFAS_REGLEMENTAIRES_CODE_SET = new Set(PFAS_REGLEMENTAIRES_CODES);
+const PFAS_SURVEILLANCE_CODE_SET = new Set(PFAS_SURVEILLANCE_CODES);
 const PFAS_QUANTIFIABLE_CODE_SET = new Set([AOF_CODE, ...PFAS_REGLEMENTAIRES_CODES]);
 
 type AnalysePfasCandidate = {
@@ -398,12 +401,74 @@ export class ControleMetierV2Pfas {
     return isApplicable ? { name: ControleName.CTL207, errors } : null;
   }
 
+  async verifyRegulatoryPfasCompleteness(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
+    const errors: ControleError[] = [];
+    const year = this.extractReferenceYear(fctAssainissement);
+
+    if (year === undefined) {
+      return null;
+    }
+
+    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
+    if (steuCodes.length === 0) {
+      return null;
+    }
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+    let isApplicable = false;
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
+        continue;
+      }
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
+          continue;
+        }
+
+        for (const prelevement of pointMesure.prelevement) {
+          const analyses = prelevement.analyse ?? [];
+          if (!this.isPfasCampaign(analyses)) {
+            continue;
+          }
+
+          isApplicable = true;
+          const measuredCodes = new Set(
+            analyses
+              .filter(
+                (analyse) =>
+                  analyse.finalite === PFAS_FINALITE_ANALYSE &&
+                  !!analyse.cdParametre &&
+                  PFAS_SURVEILLANCE_CODE_SET.has(analyse.cdParametre),
+              )
+              .map((analyse) => analyse.cdParametre),
+          );
+          const missingCodes = PFAS_SURVEILLANCE_CODES.filter((code) => !measuredCodes.has(code));
+
+          if (missingCodes.length > 0) {
+            errors.push({
+              code: ErrorCode.E2_208,
+              params: [measuredCodes.size.toString(), prelevement.datePrlvt ?? '', missingCodes.join(', ')],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return isApplicable ? { name: ControleName.CTL208, errors } : null;
+  }
+
   isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {
     return analyses.some(
       (analyse) =>
         analyse.finalite === PFAS_FINALITE_ANALYSE &&
         !!analyse.cdParametre &&
-        PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
+        PFAS_SURVEILLANCE_CODE_SET.has(analyse.cdParametre),
     );
   }
 

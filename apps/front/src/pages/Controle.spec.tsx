@@ -250,6 +250,14 @@ describe('ControlePage', () => {
         error: ErrorCode.E2_207,
         errorParams: ['8986, 6025'],
       }),
+      makeControle({
+        id: 'pfas-incomplete-warning',
+        name: ControleName.CTL208,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_208,
+        errorParams: ['22', '2024-06-06', '8858'],
+      }),
     ]);
     mockFetchControlesSandre.mockResolvedValue([]);
     mockFetchMasa.mockResolvedValue(null);
@@ -274,6 +282,11 @@ describe('ControlePage', () => {
         ),
       ).toBeInTheDocument();
       expect(screen.getByText(/Les codes suivants sont quantifiés : 8986, 6025\./i)).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Le nombre de paramètres mesurés est égal à 22 pour la campagne de mesure en date de 2024-06-06 \(< à 23\), les codes suivants sont manquant: 8858\./i,
+        ),
+      ).toBeInTheDocument();
     });
   });
 });

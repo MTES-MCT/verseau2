@@ -178,6 +178,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage205(params);
     case ErrorCode.E2_207:
       return buildErrorMessage207(params);
+    case ErrorCode.E2_208:
+      return buildErrorMessage208(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -384,4 +386,9 @@ const buildErrorMessage205 = (params: string[]) => {
 const buildErrorMessage207 = (params: string[]) => {
   const [parameterCodes] = params as ErrorParamsMap[ErrorCode.E2_207];
   return `Les codes suivants sont quantifiés : ${parameterCodes}.`;
+};
+
+const buildErrorMessage208 = (params: string[]) => {
+  const [parameterCount, date, missingParameterCodes] = params as ErrorParamsMap[ErrorCode.E2_208];
+  return `Le nombre de paramètres mesurés est égal à ${parameterCount} pour la campagne de mesure en date de ${date} (< à 23), les codes suivants sont manquant: ${missingParameterCodes}.`;
 };
