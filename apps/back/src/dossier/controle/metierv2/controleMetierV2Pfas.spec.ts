@@ -492,6 +492,201 @@ describe('ControleMetierV2Pfas', () => {
       expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
     });
   });
+
+  describe('verifyQuantificationLimitsForPfasCampaigns', () => {
+    it.each([
+      ['A3', '50.1'],
+      ['A4', '20.1'],
+    ])('should report AVERTISSEMENT when the quantification limit exceeds the %s threshold', async (point, lqAna) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+      ]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11', lqAna }],
+        }),
+      );
+
+      expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+      expect(result).toEqual({
+        name: ControleName.CTL205,
+        errors: [
+          {
+            code: ErrorCode.E2_205,
+            params: ['5980', '2024-06-01'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+    });
+
+    it.each([
+      ['A3', '50'],
+      ['A4', '20'],
+    ])('should pass at the exact %s threshold', async (point, lqAna) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11', lqAna }],
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL205, errors: [] });
+    });
+
+    it('should group all failing PFAS codes from the same prelevement', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite: '11', lqAna: '21' },
+            { cdParametre: '5979', finalite: '11', lqAna: '25' },
+            { cdParametre: '5978', finalite: '11', lqAna: '20' },
+          ],
+        }),
+      );
+
+      expect(result?.errors).toEqual([
+        {
+          code: ErrorCode.E2_205,
+          params: ['5980, 5979', '2024-06-01'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+      ]);
+    });
+
+    it('should ignore non-regulatory parameters from the same PFAS prelevement', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite: '11', lqAna: '20' },
+            { cdParametre: '8986', finalite: '11', lqAna: '100' },
+            { cdParametre: '7073', finalite: '11', lqAna: '100' },
+            { cdParametre: '1841', finalite: '11', lqAna: '100' },
+          ],
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL205, errors: [] });
+    });
+
+    it('should not apply below the capacity threshold or without capacity data', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11', lqAna: '51' }],
+      });
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 9999 },
+      ]);
+
+      await expect(service.verifyQuantificationLimitsForPfasCampaigns(data)).resolves.toBeNull();
+
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      await expect(service.verifyQuantificationLimitsForPfasCampaigns(data)).resolves.toBeNull();
+    });
+
+    it.each([
+      ['A2', '11', '5980'],
+      ['A3', '1', '5980'],
+      ['A3', '11', '8986'],
+    ])('should ignore point %s, finality %s and parameter %s', async (point, finalite, cdParametre) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre, finalite, lqAna: '100' }],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it.each([undefined, '', 'not-a-number'])('should not evaluate a missing or invalid LQAna value', async (lqAna) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11', lqAna }],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should not call MasaProvider when the reference year is missing', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11', lqAna: '21' }],
+      });
+      data.scenario.dateDebutReference = '';
+
+      await expect(service.verifyQuantificationLimitsForPfasCampaigns(data)).resolves.toBeNull();
+      expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
+    });
+
+    it('should report one error per prelevement sharing the same date', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11', lqAna: '21' }],
+      });
+      const secondData = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5979', finalite: '11', lqAna: '22' }],
+      });
+      data.ouvrages[0].pointMesure[0].prelevement.push(secondData.ouvrages[0].pointMesure[0].prelevement[0]);
+
+      const result = await service.verifyQuantificationLimitsForPfasCampaigns(data);
+
+      expect(result?.errors).toEqual([
+        { code: ErrorCode.E2_205, params: ['5980', '2024-06-01'], evenementType: EvenementType.AVERTISSEMENT },
+        { code: ErrorCode.E2_205, params: ['5979', '2024-06-01'], evenementType: EvenementType.AVERTISSEMENT },
+      ]);
+    });
+  });
 });
 
 function makeFctAssainissement({
@@ -503,7 +698,7 @@ function makeFctAssainissement({
   cdOuvrageDepollution: string;
   locGlobalePointMesure: string;
   datePrlvt: string;
-  analyses: Array<{ cdParametre: string; finalite: string }>;
+  analyses: Array<{ cdParametre: string; finalite: string; lqAna?: string }>;
 }): FctAssainissement {
   return {
     scenario: { dateDebutReference: '2024-01-01' },

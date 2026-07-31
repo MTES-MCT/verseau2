@@ -157,6 +157,13 @@ describe('buildMessage', () => {
     expect(result).toBe('Fluorure présent mais AOF absent pour la date 2024-06-02, interprétation impossible');
   });
 
+  it('devrait retourner le message pour E2_205 (LQ supérieure au seuil)', () => {
+    const result = buildMessage(ErrorCode.E2_205, ['5980, 5979', '2024-06-03']);
+    expect(result).toBe(
+      'La Limite de Quantification (LQ) attendue est supérieure à celle de la circulaire pour le(s) paramètre(s) [5980, 5979], pour la date 2024-06-03',
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

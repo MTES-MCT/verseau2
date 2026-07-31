@@ -54,6 +54,7 @@ export enum ErrorCode {
   E2_202 = 'E2.202',
   E2_203 = 'E2.203',
   E2_204 = 'E2.204',
+  E2_205 = 'E2.205',
   E2_999 = 'E2.999',
 }
 
@@ -179,6 +180,7 @@ export type ErrorParamsMap = {
   [ErrorCode.E2_202]: [date: string];
   [ErrorCode.E2_203]: [date: string];
   [ErrorCode.E2_204]: [missingParameter: 'AOF' | 'FLUORURE', date: string];
+  [ErrorCode.E2_205]: [parameterCodes: string, date: string];
   [ErrorCode.E2_999]: [message: string];
 };
 

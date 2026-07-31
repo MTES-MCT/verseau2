@@ -41,6 +41,7 @@ const PFAS_REGLEMENTAIRES_CODE_SET = new Set(PFAS_REGLEMENTAIRES_CODES);
 type AnalysePfasCandidate = {
   cdParametre?: string;
   finalite?: string;
+  lqAna?: string;
 };
 
 @Injectable()
@@ -253,6 +254,79 @@ export class ControleMetierV2Pfas {
     }
 
     return isApplicable ? { name: ControleName.CTL204, errors } : null;
+  }
+
+  async verifyQuantificationLimitsForPfasCampaigns(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
+    const errors: ControleError[] = [];
+    const year = this.extractReferenceYear(fctAssainissement);
+
+    if (year === undefined) {
+      return null;
+    }
+
+    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
+    if (steuCodes.length === 0) {
+      return null;
+    }
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+    let isApplicable = false;
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
+        continue;
+      }
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const location = pointMesure.locGlobalePointMesure;
+        if (location !== 'A3' && location !== 'A4') {
+          continue;
+        }
+        const threshold = location === 'A3' ? 50 : 20;
+
+        for (const prelevement of pointMesure.prelevement) {
+          const analyses = prelevement.analyse ?? [];
+          if (!this.isPfasCampaign(analyses)) {
+            continue;
+          }
+
+          const failingParameterCodes = new Set<string>();
+          for (const analyse of analyses) {
+            if (
+              analyse.finalite !== PFAS_FINALITE_ANALYSE ||
+              !analyse.cdParametre ||
+              !PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre) ||
+              !analyse.lqAna?.trim()
+            ) {
+              continue;
+            }
+
+            const quantificationLimit = Number(analyse.lqAna);
+            if (!Number.isFinite(quantificationLimit)) {
+              continue;
+            }
+
+            isApplicable = true;
+            if (quantificationLimit > threshold) {
+              failingParameterCodes.add(analyse.cdParametre);
+            }
+          }
+
+          if (failingParameterCodes.size > 0) {
+            errors.push({
+              code: ErrorCode.E2_205,
+              params: [[...failingParameterCodes].join(', '), prelevement.datePrlvt ?? ''],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return isApplicable ? { name: ControleName.CTL205, errors } : null;
   }
 
   isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {

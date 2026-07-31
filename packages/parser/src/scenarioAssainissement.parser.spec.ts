@@ -25,6 +25,7 @@ describe('Sandre Parser', () => {
 
     const locGlobalePointMesure = ouvrage2.pointMesure[0].locGlobalePointMesure;
     expect(locGlobalePointMesure).toBe('S7');
+    expect(ouvrage2.pointMesure[0].prelevement[0].analyse[0].lqAna).toBe('12.5');
   });
 
   it('should throw an error when the XML is not compliant', async () => {

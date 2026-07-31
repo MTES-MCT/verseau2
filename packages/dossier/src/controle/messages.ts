@@ -174,6 +174,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage203(params);
     case ErrorCode.E2_204:
       return buildErrorMessage204(params);
+    case ErrorCode.E2_205:
+      return buildErrorMessage205(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -370,4 +372,9 @@ const buildErrorMessage204 = (params: string[]) => {
     return `AOF présent mais fluorure absent pour la date ${date}, interprétation impossible`;
   }
   return `Fluorure présent mais AOF absent pour la date ${date}, interprétation impossible`;
+};
+
+const buildErrorMessage205 = (params: string[]) => {
+  const [parameterCodes, date] = params as ErrorParamsMap[ErrorCode.E2_205];
+  return `La Limite de Quantification (LQ) attendue est supérieure à celle de la circulaire pour le(s) paramètre(s) [${parameterCodes}], pour la date ${date}`;
 };

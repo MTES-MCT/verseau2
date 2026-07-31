@@ -118,7 +118,7 @@ describe('ControleMetierV2Service', () => {
                     { cdParametre: CodeParametre.pH.toString(), rsAnalyse: '7' },
                     { cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '20' },
                     { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '90' },
-                    { cdParametre: '5980', rsAnalyse: '1', finalite: '11' },
+                    { cdParametre: '5980', rsAnalyse: '1', finalite: '11', lqAna: '20' },
                   ],
                 },
               ],
@@ -193,6 +193,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL202, // verifyFluorurePresenceForPfasCampaigns
         ControleName.CTL203, // verifyCarboneOrganiquePresenceForPfasCampaigns
         ControleName.CTL204, // verifyAofFluorureCoherenceForPfasCampaigns
+        ControleName.CTL205, // verifyQuantificationLimitsForPfasCampaigns
       ]);
       expect(calledControles).not.toContain(null);
     });

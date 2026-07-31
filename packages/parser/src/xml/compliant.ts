@@ -43,6 +43,7 @@ export const compliantXml = `<?xml version="1.0" encoding="UTF-8"?>
                 </Support>
                 <Analyse>
                     <RsAnalyse>0</RsAnalyse>
+                    <LQAna>12.5</LQAna>
                     <CdRemAnalyse>1</CdRemAnalyse>
                     <InSituAnalyse>1</InSituAnalyse>
                     <StatutRsAnalyse>A</StatutRsAnalyse>

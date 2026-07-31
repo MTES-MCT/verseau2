@@ -234,6 +234,14 @@ describe('ControlePage', () => {
         error: ErrorCode.E2_204,
         errorParams: ['FLUORURE', '2024-06-04'],
       }),
+      makeControle({
+        id: 'pfas-lq-warning',
+        name: ControleName.CTL205,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_205,
+        errorParams: ['5980, 5979', '2024-06-05'],
+      }),
     ]);
     mockFetchControlesSandre.mockResolvedValue([]);
     mockFetchMasa.mockResolvedValue(null);
@@ -250,6 +258,11 @@ describe('ControlePage', () => {
       expect(screen.getByText(/Carbone organique \(code 1841\) absent pour la date 2024-06-03/i)).toBeInTheDocument();
       expect(
         screen.getByText(/AOF présent mais fluorure absent pour la date 2024-06-04, interprétation impossible/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /La Limite de Quantification \(LQ\) attendue est supérieure à celle de la circulaire pour le\(s\) paramètre\(s\) \[5980, 5979\], pour la date 2024-06-05/i,
+        ),
       ).toBeInTheDocument();
     });
   });

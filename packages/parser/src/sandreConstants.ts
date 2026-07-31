@@ -34,6 +34,7 @@ export enum SandreTags {
   CdSupport = 'CdSupport',
   Analyse = 'Analyse',
   RsAnalyse = 'RsAnalyse',
+  LQAna = 'LQAna',
   AccreAna = 'AccreAna',
   CdRemAnalyse = 'CdRemAnalyse',
   InSituAnalyse = 'InSituAnalyse',
