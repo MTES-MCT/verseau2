@@ -3067,6 +3067,132 @@ describe('ControleMetierV2Service (e2e)', () => {
     });
   });
 
+  describe('PFAS controls CTL201-CTL210', () => {
+    const pfasControlNames = [
+      ControleName.CTL201,
+      ControleName.CTL202,
+      ControleName.CTL203,
+      ControleName.CTL204,
+      ControleName.CTL205,
+      ControleName.CTL207,
+      ControleName.CTL208,
+      ControleName.CTL209,
+      ControleName.CTL210,
+    ];
+
+    async function executePfasFixture(capacity: number) {
+      await seedSteu(dataSource, 201, 'CD_OUVRAGE_1');
+      await seedCpy(dataSource, 201, 201, 2026, capacity);
+
+      const xmlPath = path.join(__dirname, '..', '..', '..', 'fixtures', 'xml', 'pfas_anonymized.xml');
+      const fctAssainissement = await parseScenarioAssainissementXml(fs.readFileSync(xmlPath, 'utf-8'));
+      const results = await controleMetierV2Service.execute(TEST_DEPOT_ID, fctAssainissement);
+
+      return results
+        .filter((result) => pfasControlNames.includes(result.name))
+        .map(({ name, success, error, errorParams, evenementType }) => ({
+          name,
+          success,
+          error: error ?? null,
+          errorParams: errorParams ?? null,
+          evenementType: evenementType ?? null,
+        }));
+    }
+
+    it('should persist the characterized PFAS results at exactly 10000 EH', async () => {
+      const results = await executePfasFixture(10000);
+
+      expect(results).toEqual([
+        {
+          name: ControleName.CTL201,
+          success: true,
+          error: null,
+          errorParams: null,
+          evenementType: null,
+        },
+        {
+          name: ControleName.CTL202,
+          success: false,
+          error: ErrorCode.E2_202,
+          errorParams: ['2026-03-09'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+        {
+          name: ControleName.CTL203,
+          success: false,
+          error: ErrorCode.E2_203,
+          errorParams: ['2026-03-09'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+        {
+          name: ControleName.CTL204,
+          success: true,
+          error: null,
+          errorParams: null,
+          evenementType: null,
+        },
+        {
+          name: ControleName.CTL205,
+          success: true,
+          error: null,
+          errorParams: null,
+          evenementType: null,
+        },
+        {
+          name: ControleName.CTL207,
+          success: false,
+          error: ErrorCode.E2_207,
+          errorParams: ['8986, 7991'],
+          evenementType: EvenementType.INFORMATION,
+        },
+        {
+          name: ControleName.CTL208,
+          success: false,
+          error: ErrorCode.E2_208,
+          errorParams: ['22', '2026-03-09', '8858'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+        {
+          name: ControleName.CTL208,
+          success: false,
+          error: ErrorCode.E2_208,
+          errorParams: ['22', '2026-03-09', '8858'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+        {
+          name: ControleName.CTL209,
+          success: true,
+          error: null,
+          errorParams: null,
+          evenementType: null,
+        },
+        {
+          name: ControleName.CTL210,
+          success: false,
+          error: ErrorCode.E2_210,
+          errorParams: ['2026-03-09', 'Fluorure, Carbone organique'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+      ]);
+      expect(results.map((result) => result.name)).toEqual([
+        ControleName.CTL201,
+        ControleName.CTL202,
+        ControleName.CTL203,
+        ControleName.CTL204,
+        ControleName.CTL205,
+        ControleName.CTL207,
+        ControleName.CTL208,
+        ControleName.CTL208,
+        ControleName.CTL209,
+        ControleName.CTL210,
+      ]);
+    });
+
+    it('should not persist PFAS controls below 10000 EH', async () => {
+      await expect(executePfasFixture(9999)).resolves.toEqual([]);
+    });
+  });
+
   describe('non-applicable controls with missing values', () => {
     it('should persist only CTL055 when no other control has evaluable data', async () => {
       const fctAssainissement = createTestFctAssainissement({

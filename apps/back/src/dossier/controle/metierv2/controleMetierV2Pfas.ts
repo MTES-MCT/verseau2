@@ -1,9 +1,9 @@
-import { FctAssainissement } from '@lib/parser';
-import { Injectable } from '@nestjs/common';
 import { CodeParametre, ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
-import { ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
-import { MasaProvider } from '@masa/masa.provider';
+import { FctAssainissement } from '@lib/parser';
 import { CapaciteNominaleBySandreCda } from '@masa/masa.dto';
+import { MasaProvider } from '@masa/masa.provider';
+import { Injectable } from '@nestjs/common';
+import { ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
 
 export const PFAS_REGLEMENTAIRES_CODES = [
   '5980',
@@ -74,68 +74,46 @@ type AnalysePfasCandidate = {
   rsAnalyse?: string;
 };
 
+type PfasLocation = 'A3' | 'A4';
+
+type PfasSampling = {
+  location: PfasLocation;
+  datePrlvt: string;
+  analyses: AnalysePfasCandidate[];
+};
+
+type PfasControlContext = {
+  samplings: PfasSampling[];
+  campaigns: PfasSampling[];
+};
+
 @Injectable()
 export class ControleMetierV2Pfas {
   constructor(private readonly masaProvider: MasaProvider) {}
 
-  async verifyAofPresenceForPfasCampaigns(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
+  async verifyPfasControls(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess[]> {
+    const context = await this.buildPfasControlContext(fctAssainissement);
+    if (context === null) {
+      return [];
     }
 
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
+    const controls = [
+      this.verifyAofPresence(context),
+      this.verifyFluorurePresence(context),
+      this.verifyCarboneOrganiquePresence(context),
+      this.verifyAofFluorureCoherence(context),
+      this.verifyQuantificationLimits(context),
+      this.identifyQuantifiedPfas(context),
+      this.verifyRegulatoryPfasCompleteness(context),
+      this.verifyRegulatoryPfasExcludingTfaCompleteness(context),
+      this.verifyPfasCampaignParametersSameSampling(context),
+    ];
 
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!eligibleSteuCodes.has(cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A4') {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          isApplicable = true;
-          if (!analyses.some((analyse) => analyse.cdParametre === AOF_CODE)) {
-            errors.push({
-              code: ErrorCode.E2_201,
-              params: [prelevement.datePrlvt ?? ''],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL201, errors } : null;
+    return controls.filter((control): control is ControleIndividuelWithoutSuccess => control !== null);
   }
 
-  async verifyFluorurePresenceForPfasCampaigns(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
+  private async buildPfasControlContext(fctAssainissement: FctAssainissement): Promise<PfasControlContext | null> {
     const year = this.extractReferenceYear(fctAssainissement);
-
     if (year === undefined) {
       return null;
     }
@@ -145,165 +123,9 @@ export class ControleMetierV2Pfas {
       return null;
     }
 
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          isApplicable = true;
-          if (!analyses.some((analyse) => analyse.cdParametre === FLUORURE_CODE)) {
-            errors.push({
-              code: ErrorCode.E2_202,
-              params: [prelevement.datePrlvt ?? ''],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL202, errors } : null;
-  }
-
-  async verifyCarboneOrganiquePresenceForPfasCampaigns(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
-    }
-
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
-
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          isApplicable = true;
-          if (!analyses.some((analyse) => analyse.cdParametre === CARBONE_ORGANIQUE_CODE)) {
-            errors.push({
-              code: ErrorCode.E2_203,
-              params: [prelevement.datePrlvt ?? ''],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL203, errors } : null;
-  }
-
-  async verifyAofFluorureCoherenceForPfasCampaigns(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
-    }
-
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
-
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          isApplicable = true;
-          const hasAof = analyses.some((analyse) => analyse.cdParametre === AOF_CODE);
-          const hasFluorure = analyses.some((analyse) => analyse.cdParametre === FLUORURE_CODE);
-
-          if (hasAof !== hasFluorure) {
-            errors.push({
-              code: ErrorCode.E2_204,
-              params: [hasAof ? 'FLUORURE' : 'AOF', prelevement.datePrlvt ?? ''],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL204, errors } : null;
-  }
-
-  async verifyQuantificationLimitsForPfasCampaigns(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
-    }
-
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
-
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
+    const capacities = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacities);
+    const samplings: PfasSampling[] = [];
 
     for (const ouvrage of fctAssainissement.ouvrages) {
       if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
@@ -315,106 +137,171 @@ export class ControleMetierV2Pfas {
         if (location !== 'A3' && location !== 'A4') {
           continue;
         }
-        const threshold = location === 'A3' ? 50 : 20;
 
         for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          const failingParameterCodes = new Set<string>();
-          for (const analyse of analyses) {
-            if (
-              analyse.finalite !== PFAS_FINALITE_ANALYSE ||
-              !analyse.cdParametre ||
-              !PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre) ||
-              !analyse.lqAna?.trim()
-            ) {
-              continue;
-            }
-
-            const quantificationLimit = Number(analyse.lqAna);
-            if (!Number.isFinite(quantificationLimit)) {
-              continue;
-            }
-
-            isApplicable = true;
-            if (quantificationLimit > threshold) {
-              failingParameterCodes.add(analyse.cdParametre);
-            }
-          }
-
-          if (failingParameterCodes.size > 0) {
-            errors.push({
-              code: ErrorCode.E2_205,
-              params: [[...failingParameterCodes].join(', '), prelevement.datePrlvt ?? ''],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
+          samplings.push({
+            location,
+            datePrlvt: prelevement.datePrlvt ?? '',
+            analyses: prelevement.analyse ?? [],
+          });
         }
+      }
+    }
+
+    return {
+      samplings,
+      campaigns: samplings.filter((sampling) => this.isPfasCampaign(sampling.analyses)),
+    };
+  }
+
+  private verifyAofPresence(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
+    return this.verifyParameterPresence(context, {
+      name: ControleName.CTL201,
+      errorCode: ErrorCode.E2_201,
+      parameterCode: AOF_CODE,
+      locations: ['A4'],
+    });
+  }
+
+  private verifyFluorurePresence(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
+    return this.verifyParameterPresence(context, {
+      name: ControleName.CTL202,
+      errorCode: ErrorCode.E2_202,
+      parameterCode: FLUORURE_CODE,
+      locations: ['A3', 'A4'],
+    });
+  }
+
+  private verifyCarboneOrganiquePresence(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
+    return this.verifyParameterPresence(context, {
+      name: ControleName.CTL203,
+      errorCode: ErrorCode.E2_203,
+      parameterCode: CARBONE_ORGANIQUE_CODE,
+      locations: ['A3', 'A4'],
+    });
+  }
+
+  private verifyParameterPresence(
+    context: PfasControlContext,
+    config: {
+      name: ControleName;
+      errorCode: ErrorCode;
+      parameterCode: string;
+      locations: readonly PfasLocation[];
+    },
+  ): ControleIndividuelWithoutSuccess | null {
+    const campaigns = context.campaigns.filter((campaign) => config.locations.includes(campaign.location));
+    if (campaigns.length === 0) {
+      return null;
+    }
+
+    const errors: ControleError[] = [];
+    for (const campaign of campaigns) {
+      if (!campaign.analyses.some((analyse) => analyse.cdParametre === config.parameterCode)) {
+        errors.push({
+          code: config.errorCode,
+          params: [campaign.datePrlvt],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
+      }
+    }
+
+    return { name: config.name, errors };
+  }
+
+  private verifyAofFluorureCoherence(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
+    if (context.campaigns.length === 0) {
+      return null;
+    }
+
+    const errors: ControleError[] = [];
+    for (const campaign of context.campaigns) {
+      const hasAof = campaign.analyses.some((analyse) => analyse.cdParametre === AOF_CODE);
+      const hasFluorure = campaign.analyses.some((analyse) => analyse.cdParametre === FLUORURE_CODE);
+
+      if (hasAof !== hasFluorure) {
+        errors.push({
+          code: ErrorCode.E2_204,
+          params: [hasAof ? 'FLUORURE' : 'AOF', campaign.datePrlvt],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
+      }
+    }
+
+    return { name: ControleName.CTL204, errors };
+  }
+
+  private verifyQuantificationLimits(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
+    const errors: ControleError[] = [];
+    let isApplicable = false;
+
+    for (const campaign of context.campaigns) {
+      const threshold = campaign.location === 'A3' ? 50 : 20;
+      const failingParameterCodes = new Set<string>();
+
+      for (const analyse of campaign.analyses) {
+        if (
+          analyse.finalite !== PFAS_FINALITE_ANALYSE ||
+          !analyse.cdParametre ||
+          !PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre) ||
+          !analyse.lqAna?.trim()
+        ) {
+          continue;
+        }
+
+        const quantificationLimit = Number(analyse.lqAna);
+        if (!Number.isFinite(quantificationLimit)) {
+          continue;
+        }
+
+        isApplicable = true;
+        if (quantificationLimit > threshold) {
+          failingParameterCodes.add(analyse.cdParametre);
+        }
+      }
+
+      if (failingParameterCodes.size > 0) {
+        errors.push({
+          code: ErrorCode.E2_205,
+          params: [[...failingParameterCodes].join(', '), campaign.datePrlvt],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
       }
     }
 
     return isApplicable ? { name: ControleName.CTL205, errors } : null;
   }
 
-  async identifyQuantifiedPfas(fctAssainissement: FctAssainissement): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
-    }
-
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
-
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+  private identifyQuantifiedPfas(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
     const quantifiedParameterCodes = new Set<string>();
     let isApplicable = false;
 
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        const location = pointMesure.locGlobalePointMesure;
-        if (location !== 'A3' && location !== 'A4') {
+    for (const sampling of context.samplings) {
+      for (const analyse of sampling.analyses) {
+        if (
+          analyse.finalite !== PFAS_FINALITE_ANALYSE ||
+          !analyse.cdParametre ||
+          !PFAS_QUANTIFIABLE_CODE_SET.has(analyse.cdParametre) ||
+          !analyse.rsAnalyse?.trim() ||
+          !analyse.lqAna?.trim()
+        ) {
           continue;
         }
 
-        for (const prelevement of pointMesure.prelevement) {
-          for (const analyse of prelevement.analyse ?? []) {
-            if (
-              analyse.finalite !== PFAS_FINALITE_ANALYSE ||
-              !analyse.cdParametre ||
-              !PFAS_QUANTIFIABLE_CODE_SET.has(analyse.cdParametre) ||
-              !analyse.rsAnalyse?.trim() ||
-              !analyse.lqAna?.trim()
-            ) {
-              continue;
-            }
+        const result = Number(analyse.rsAnalyse);
+        const quantificationLimit = Number(analyse.lqAna);
+        if (!Number.isFinite(result) || !Number.isFinite(quantificationLimit)) {
+          continue;
+        }
 
-            const result = Number(analyse.rsAnalyse);
-            const quantificationLimit = Number(analyse.lqAna);
-            if (!Number.isFinite(result) || !Number.isFinite(quantificationLimit)) {
-              continue;
-            }
-
-            isApplicable = true;
-            if (result > quantificationLimit) {
-              quantifiedParameterCodes.add(analyse.cdParametre);
-            }
-          }
+        isApplicable = true;
+        if (result > quantificationLimit) {
+          quantifiedParameterCodes.add(analyse.cdParametre);
         }
       }
     }
 
+    const errors: ControleError[] = [];
     if (quantifiedParameterCodes.size > 0) {
       errors.push({
         code: ErrorCode.E2_207,
@@ -426,197 +313,101 @@ export class ControleMetierV2Pfas {
     return isApplicable ? { name: ControleName.CTL207, errors } : null;
   }
 
-  async verifyRegulatoryPfasCompleteness(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
-    }
-
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
-
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          isApplicable = true;
-          const measuredCodes = new Set(
-            analyses
-              .filter(
-                (analyse) =>
-                  analyse.finalite === PFAS_FINALITE_ANALYSE &&
-                  !!analyse.cdParametre &&
-                  PFAS_SURVEILLANCE_CODE_SET.has(analyse.cdParametre),
-              )
-              .map((analyse) => analyse.cdParametre),
-          );
-          const missingCodes = PFAS_SURVEILLANCE_CODES.filter((code) => !measuredCodes.has(code));
-
-          if (missingCodes.length > 0) {
-            errors.push({
-              code: ErrorCode.E2_208,
-              params: [measuredCodes.size.toString(), prelevement.datePrlvt ?? '', missingCodes.join(', ')],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL208, errors } : null;
+  private verifyRegulatoryPfasCompleteness(context: PfasControlContext): ControleIndividuelWithoutSuccess | null {
+    return this.verifyPfasCompleteness(context, {
+      name: ControleName.CTL208,
+      errorCode: ErrorCode.E2_208,
+      requiredCodes: PFAS_SURVEILLANCE_CODES,
+    });
   }
 
-  async verifyRegulatoryPfasExcludingTfaCompleteness(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
-
-    if (year === undefined) {
-      return null;
-    }
-
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
-
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
-    let isApplicable = false;
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
-        continue;
-      }
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-          if (!this.isPfasCampaign(analyses)) {
-            continue;
-          }
-
-          isApplicable = true;
-          const measuredCodes = new Set(
-            analyses
-              .filter(
-                (analyse) =>
-                  analyse.finalite === PFAS_FINALITE_ANALYSE &&
-                  !!analyse.cdParametre &&
-                  PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
-              )
-              .map((analyse) => analyse.cdParametre),
-          );
-          const missingCodes = PFAS_REGLEMENTAIRES_CODES.filter((code) => !measuredCodes.has(code));
-
-          if (missingCodes.length > 0) {
-            errors.push({
-              code: ErrorCode.E2_209,
-              params: [measuredCodes.size.toString(), prelevement.datePrlvt ?? '', missingCodes.join(', ')],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL209, errors } : null;
+  private verifyRegulatoryPfasExcludingTfaCompleteness(
+    context: PfasControlContext,
+  ): ControleIndividuelWithoutSuccess | null {
+    return this.verifyPfasCompleteness(context, {
+      name: ControleName.CTL209,
+      errorCode: ErrorCode.E2_209,
+      requiredCodes: PFAS_REGLEMENTAIRES_CODES,
+    });
   }
 
-  async verifyPfasCampaignParametersSameSampling(
-    fctAssainissement: FctAssainissement,
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
+  private verifyPfasCompleteness(
+    context: PfasControlContext,
+    config: {
+      name: ControleName;
+      errorCode: ErrorCode;
+      requiredCodes: readonly string[];
+    },
+  ): ControleIndividuelWithoutSuccess | null {
+    if (context.campaigns.length === 0) {
+      return null;
+    }
+
+    const requiredCodeSet = new Set(config.requiredCodes);
     const errors: ControleError[] = [];
-    const year = this.extractReferenceYear(fctAssainissement);
 
-    if (year === undefined) {
-      return null;
+    for (const campaign of context.campaigns) {
+      const measuredCodes = new Set(
+        campaign.analyses
+          .filter(
+            (analyse) =>
+              analyse.finalite === PFAS_FINALITE_ANALYSE &&
+              !!analyse.cdParametre &&
+              requiredCodeSet.has(analyse.cdParametre),
+          )
+          .map((analyse) => analyse.cdParametre),
+      );
+      const missingCodes = config.requiredCodes.filter((code) => !measuredCodes.has(code));
+
+      if (missingCodes.length > 0) {
+        errors.push({
+          code: config.errorCode,
+          params: [measuredCodes.size.toString(), campaign.datePrlvt, missingCodes.join(', ')],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
+      }
     }
 
-    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
-    if (steuCodes.length === 0) {
-      return null;
-    }
+    return { name: config.name, errors };
+  }
 
-    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
-    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+  private verifyPfasCampaignParametersSameSampling(
+    context: PfasControlContext,
+  ): ControleIndividuelWithoutSuccess | null {
+    const errors: ControleError[] = [];
     let isApplicable = false;
 
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
+    for (const campaign of context.campaigns) {
+      const hasRegulatoryPfas = campaign.analyses.some(
+        (analyse) =>
+          analyse.finalite === PFAS_FINALITE_ANALYSE &&
+          !!analyse.cdParametre &&
+          PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
+      );
+      if (!hasRegulatoryPfas) {
         continue;
       }
 
-      for (const pointMesure of ouvrage.pointMesure) {
-        const location = pointMesure.locGlobalePointMesure;
-        if (location !== 'A3' && location !== 'A4') {
-          continue;
-        }
+      isApplicable = true;
+      const requiredParameters = campaign.location === 'A4' ? PFAS_A4_PARAMETERS : PFAS_A3_PARAMETERS;
+      const measuredCodes = new Set(campaign.analyses.map((analyse) => analyse.cdParametre).filter(Boolean));
+      const missingParameterNames = requiredParameters
+        .filter((parameter) => !measuredCodes.has(parameter.code))
+        .map((parameter) => parameter.name);
 
-        const requiredParameters = location === 'A4' ? PFAS_A4_PARAMETERS : PFAS_A3_PARAMETERS;
-
-        for (const prelevement of pointMesure.prelevement) {
-          const analyses = prelevement.analyse ?? [];
-          if (
-            !this.isPfasCampaign(analyses) ||
-            !analyses.some(
-              (analyse) =>
-                analyse.finalite === PFAS_FINALITE_ANALYSE &&
-                !!analyse.cdParametre &&
-                PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
-            )
-          ) {
-            continue;
-          }
-
-          isApplicable = true;
-          const measuredCodes = new Set(analyses.map((analyse) => analyse.cdParametre).filter(Boolean));
-          const missingParameterNames = requiredParameters
-            .filter((parameter) => !measuredCodes.has(parameter.code))
-            .map((parameter) => parameter.name);
-
-          if (missingParameterNames.length > 0) {
-            errors.push({
-              code: ErrorCode.E2_210,
-              params: [prelevement.datePrlvt ?? '', missingParameterNames.join(', ')],
-              evenementType: EvenementType.AVERTISSEMENT,
-            });
-          }
-        }
+      if (missingParameterNames.length > 0) {
+        errors.push({
+          code: ErrorCode.E2_210,
+          params: [campaign.datePrlvt, missingParameterNames.join(', ')],
+          evenementType: EvenementType.AVERTISSEMENT,
+        });
       }
     }
 
     return isApplicable ? { name: ControleName.CTL210, errors } : null;
   }
 
-  isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {
+  private isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {
     return analyses.some(
       (analyse) =>
         analyse.finalite === PFAS_FINALITE_ANALYSE &&
@@ -631,23 +422,23 @@ export class ControleMetierV2Pfas {
       return undefined;
     }
 
-    const year = parseInt(dateDebutReference.substring(0, 4), 10);
-    if (isNaN(year)) {
+    const yearText = dateDebutReference.substring(0, 4);
+    if (!/^\d{4}$/.test(yearText)) {
       return undefined;
     }
 
-    return year;
+    return Number(yearText);
   }
 
   private extractUniqueSteuCodes(fctAssainissement: FctAssainissement): string[] {
     return [...new Set(fctAssainissement.ouvrages.map((ouvrage) => ouvrage.cdOuvrageDepollution).filter(Boolean))];
   }
 
-  private getSteuCodesWithMinimumCapacity(capacitesNominales: CapaciteNominaleBySandreCda[]): Set<string> {
+  private getSteuCodesWithMinimumCapacity(capacities: CapaciteNominaleBySandreCda[]): Set<string> {
     return new Set(
-      capacitesNominales
-        .filter((capacite) => capacite.capaciteNominaleEH >= PFAS_CAPACITE_MIN_EH)
-        .map((capacite) => capacite.ouvrageDepollutionCode),
+      capacities
+        .filter((capacity) => capacity.capaciteNominaleEH >= PFAS_CAPACITE_MIN_EH)
+        .map((capacity) => capacity.ouvrageDepollutionCode),
     );
   }
 }
