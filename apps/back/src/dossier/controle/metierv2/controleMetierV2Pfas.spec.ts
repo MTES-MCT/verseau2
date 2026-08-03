@@ -545,7 +545,7 @@ function selectControl(
 
 type TestAnalysis = {
   cdParametre: string;
-  cdUniteMesure?: string;
+  cdUniteMesure?: string | CodeUniteMesure;
   finalite: string;
   lqAna?: string;
   rsAnalyse?: string;
