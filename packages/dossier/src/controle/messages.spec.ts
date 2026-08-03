@@ -176,6 +176,13 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_209 (mesure PFAS hors TFA incomplète)', () => {
+    const result = buildMessage(ErrorCode.E2_209, ['21', '2024-06-05', '7991']);
+    expect(result).toBe(
+      'Le nombre de paramètres PFAS réglementaires hors TFA mesurés est égal à 21 pour la campagne de mesure en date de 2024-06-05 (< à 22), les codes suivants sont manquants : 7991.',
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

@@ -463,6 +463,68 @@ export class ControleMetierV2Pfas {
     return isApplicable ? { name: ControleName.CTL208, errors } : null;
   }
 
+  async verifyRegulatoryPfasExcludingTfaCompleteness(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
+    const errors: ControleError[] = [];
+    const year = this.extractReferenceYear(fctAssainissement);
+
+    if (year === undefined) {
+      return null;
+    }
+
+    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
+    if (steuCodes.length === 0) {
+      return null;
+    }
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+    let isApplicable = false;
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
+        continue;
+      }
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        if (pointMesure.locGlobalePointMesure !== 'A3' && pointMesure.locGlobalePointMesure !== 'A4') {
+          continue;
+        }
+
+        for (const prelevement of pointMesure.prelevement) {
+          const analyses = prelevement.analyse ?? [];
+          if (!this.isPfasCampaign(analyses)) {
+            continue;
+          }
+
+          isApplicable = true;
+          const measuredCodes = new Set(
+            analyses
+              .filter(
+                (analyse) =>
+                  analyse.finalite === PFAS_FINALITE_ANALYSE &&
+                  !!analyse.cdParametre &&
+                  PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
+              )
+              .map((analyse) => analyse.cdParametre),
+          );
+          const missingCodes = PFAS_REGLEMENTAIRES_CODES.filter((code) => !measuredCodes.has(code));
+
+          if (missingCodes.length > 0) {
+            errors.push({
+              code: ErrorCode.E2_209,
+              params: [measuredCodes.size.toString(), prelevement.datePrlvt ?? '', missingCodes.join(', ')],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return isApplicable ? { name: ControleName.CTL209, errors } : null;
+  }
+
   isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {
     return analyses.some(
       (analyse) =>

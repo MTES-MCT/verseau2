@@ -57,6 +57,7 @@ export enum ErrorCode {
   E2_205 = 'E2.205',
   E2_207 = 'E2.207',
   E2_208 = 'E2.208',
+  E2_209 = 'E2.209',
   E2_999 = 'E2.999',
 }
 
@@ -185,6 +186,7 @@ export type ErrorParamsMap = {
   [ErrorCode.E2_205]: [parameterCodes: string, date: string];
   [ErrorCode.E2_207]: [parameterCodes: string];
   [ErrorCode.E2_208]: [parameterCount: string, date: string, missingParameterCodes: string];
+  [ErrorCode.E2_209]: [parameterCount: string, date: string, missingParameterCodes: string];
   [ErrorCode.E2_999]: [message: string];
 };
 

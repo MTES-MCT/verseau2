@@ -258,6 +258,14 @@ describe('ControlePage', () => {
         error: ErrorCode.E2_208,
         errorParams: ['22', '2024-06-06', '8858'],
       }),
+      makeControle({
+        id: 'pfas-excluding-tfa-incomplete-warning',
+        name: ControleName.CTL209,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_209,
+        errorParams: ['21', '2024-06-07', '7991'],
+      }),
     ]);
     mockFetchControlesSandre.mockResolvedValue([]);
     mockFetchMasa.mockResolvedValue(null);
@@ -285,6 +293,11 @@ describe('ControlePage', () => {
       expect(
         screen.getByText(
           /Le nombre de paramètres mesurés est égal à 22 pour la campagne de mesure en date de 2024-06-06 \(< à 23\), les codes suivants sont manquant: 8858\./i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Le nombre de paramètres PFAS réglementaires hors TFA mesurés est égal à 21 pour la campagne de mesure en date de 2024-06-07 \(< à 22\), les codes suivants sont manquants : 7991\./i,
         ),
       ).toBeInTheDocument();
     });

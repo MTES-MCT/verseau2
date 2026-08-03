@@ -1,7 +1,12 @@
 import { FctAssainissement } from '@lib/parser';
 import { ErrorCode, EvenementType, ControleName } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
-import { ControleMetierV2Pfas, PFAS_SURVEILLANCE_CODES, TFA_CODE } from './controleMetierV2Pfas';
+import {
+  ControleMetierV2Pfas,
+  PFAS_REGLEMENTAIRES_CODES,
+  PFAS_SURVEILLANCE_CODES,
+  TFA_CODE,
+} from './controleMetierV2Pfas';
 
 describe('ControleMetierV2Pfas', () => {
   let service: ControleMetierV2Pfas;
@@ -981,6 +986,161 @@ describe('ControleMetierV2Pfas', () => {
       data.ouvrages[0].pointMesure[0].prelevement.push(secondData.ouvrages[0].pointMesure[0].prelevement[0]);
 
       const result = await service.verifyRegulatoryPfasCompleteness(data);
+
+      expect(result?.errors).toHaveLength(2);
+      expect(result?.errors.every((error) => error.evenementType === EvenementType.AVERTISSEMENT)).toBe(true);
+    });
+  });
+
+  describe('verifyRegulatoryPfasExcludingTfaCompleteness', () => {
+    it.each(['A3', 'A4'])('should report missing regulatory PFAS excluding TFA at %s', async (point) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+      ]);
+
+      const result = await service.verifyRegulatoryPfasExcludingTfaCompleteness(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [
+            { cdParametre: '5980', finalite: '11' },
+            { cdParametre: TFA_CODE, finalite: '11' },
+          ],
+        }),
+      );
+
+      expect(PFAS_REGLEMENTAIRES_CODES).toHaveLength(22);
+      expect(PFAS_REGLEMENTAIRES_CODES).not.toContain(TFA_CODE);
+      expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+      expect(result).toEqual({
+        name: ControleName.CTL209,
+        errors: [
+          {
+            code: ErrorCode.E2_209,
+            params: ['1', '2024-06-01', PFAS_REGLEMENTAIRES_CODES.filter((code) => code !== '5980').join(', ')],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+    });
+
+    it('should pass when all 22 regulatory PFAS are present without TFA', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyRegulatoryPfasExcludingTfaCompleteness(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: PFAS_REGLEMENTAIRES_CODES.map((cdParametre) => ({ cdParametre, finalite: '11' })),
+        }),
+      );
+
+      expect(result).toEqual({ name: ControleName.CTL209, errors: [] });
+    });
+
+    it('should not count TFA, duplicates, or analyses outside finality 11', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const analyses = PFAS_REGLEMENTAIRES_CODES.filter((code) => code !== '7991').map((cdParametre) => ({
+        cdParametre,
+        finalite: '11',
+      }));
+      analyses.push({ cdParametre: '5980', finalite: '11' });
+      analyses.push({ cdParametre: '7991', finalite: '1' });
+      analyses.push({ cdParametre: TFA_CODE, finalite: '11' });
+
+      const result = await service.verifyRegulatoryPfasExcludingTfaCompleteness(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A3',
+          datePrlvt: '2024-06-01',
+          analyses,
+        }),
+      );
+
+      expect(result?.errors).toEqual([
+        {
+          code: ErrorCode.E2_209,
+          params: ['21', '2024-06-01', '7991'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+      ]);
+    });
+
+    it('should not apply below the capacity threshold or without capacity data', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 9999 },
+      ]);
+
+      await expect(service.verifyRegulatoryPfasExcludingTfaCompleteness(data)).resolves.toBeNull();
+
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      await expect(service.verifyRegulatoryPfasExcludingTfaCompleteness(data)).resolves.toBeNull();
+    });
+
+    it.each([
+      ['A2', '11'],
+      ['A3', '1'],
+    ])('should ignore point %s with finality %s', async (point, finalite) => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyRegulatoryPfasExcludingTfaCompleteness(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: point,
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite }],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should not call MasaProvider when the reference year is missing', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      data.scenario.dateDebutReference = '';
+
+      await expect(service.verifyRegulatoryPfasExcludingTfaCompleteness(data)).resolves.toBeNull();
+      expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
+    });
+
+    it('should report one error per incomplete prelevement sharing the same date', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      const secondData = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5979', finalite: '11' }],
+      });
+      data.ouvrages[0].pointMesure[0].prelevement.push(secondData.ouvrages[0].pointMesure[0].prelevement[0]);
+
+      const result = await service.verifyRegulatoryPfasExcludingTfaCompleteness(data);
 
       expect(result?.errors).toHaveLength(2);
       expect(result?.errors.every((error) => error.evenementType === EvenementType.AVERTISSEMENT)).toBe(true);
