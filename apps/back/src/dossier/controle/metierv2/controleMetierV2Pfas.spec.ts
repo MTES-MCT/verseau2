@@ -1,4 +1,6 @@
-import { FctAssainissement } from '@lib/parser';
+import * as fs from 'fs';
+import * as path from 'path';
+import { FctAssainissement, parseScenarioAssainissementXml } from '@lib/parser';
 import { ErrorCode, EvenementType, ControleName } from '@lib/dossier';
 import { MasaProvider } from '@masa/masa.provider';
 import {
@@ -17,6 +19,92 @@ describe('ControleMetierV2Pfas', () => {
       findCapaciteNominaleBatch: jest.fn(),
     };
     service = new ControleMetierV2Pfas(masaProvider as unknown as MasaProvider);
+  });
+
+  describe('with pfas_anonymized.xml', () => {
+    let parsedPfasXml: FctAssainissement;
+
+    beforeAll(async () => {
+      const xmlPath = path.join(__dirname, '..', '..', '..', '..', 'test', 'fixtures', 'xml', 'pfas_anonymized.xml');
+      parsedPfasXml = await parseScenarioAssainissementXml(fs.readFileSync(xmlPath, 'utf-8'));
+    });
+
+    beforeEach(() => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'CD_OUVRAGE_1', capaciteNominaleEH: 10000 },
+      ]);
+    });
+
+    it('should evaluate presence and coherence controls from the real A3 and A4 campaigns', async () => {
+      const [aofResult, fluorureResult, carboneOrganiqueResult, coherenceResult] = await Promise.all([
+        service.verifyAofPresenceForPfasCampaigns(parsedPfasXml),
+        service.verifyFluorurePresenceForPfasCampaigns(parsedPfasXml),
+        service.verifyCarboneOrganiquePresenceForPfasCampaigns(parsedPfasXml),
+        service.verifyAofFluorureCoherenceForPfasCampaigns(parsedPfasXml),
+      ]);
+
+      expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledTimes(4);
+      expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['CD_OUVRAGE_1'], 2026);
+      expect(aofResult).toEqual({ name: ControleName.CTL201, errors: [] });
+      expect(fluorureResult).toEqual({
+        name: ControleName.CTL202,
+        errors: [
+          {
+            code: ErrorCode.E2_202,
+            params: ['2026-03-09'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+      expect(carboneOrganiqueResult).toEqual({
+        name: ControleName.CTL203,
+        errors: [
+          {
+            code: ErrorCode.E2_203,
+            params: ['2026-03-09'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+      expect(coherenceResult).toEqual({ name: ControleName.CTL204, errors: [] });
+    });
+
+    it('should accept the real quantification limits and identify quantified PFAS', async () => {
+      const [quantificationLimitsResult, quantifiedPfasResult] = await Promise.all([
+        service.verifyQuantificationLimitsForPfasCampaigns(parsedPfasXml),
+        service.identifyQuantifiedPfas(parsedPfasXml),
+      ]);
+
+      expect(quantificationLimitsResult).toEqual({ name: ControleName.CTL205, errors: [] });
+      expect(quantifiedPfasResult).toEqual({
+        name: ControleName.CTL207,
+        errors: [
+          {
+            code: ErrorCode.E2_207,
+            params: ['8986, 7991'],
+            evenementType: EvenementType.INFORMATION,
+          },
+        ],
+      });
+    });
+
+    it('should report the missing TFA while validating all 22 other regulatory PFAS', async () => {
+      const [withTfaResult, excludingTfaResult] = await Promise.all([
+        service.verifyRegulatoryPfasCompleteness(parsedPfasXml),
+        service.verifyRegulatoryPfasExcludingTfaCompleteness(parsedPfasXml),
+      ]);
+      const missingTfaError = {
+        code: ErrorCode.E2_208,
+        params: ['22', '2026-03-09', TFA_CODE],
+        evenementType: EvenementType.AVERTISSEMENT,
+      };
+
+      expect(withTfaResult).toEqual({
+        name: ControleName.CTL208,
+        errors: [missingTfaError, missingTfaError],
+      });
+      expect(excludingTfaResult).toEqual({ name: ControleName.CTL209, errors: [] });
+    });
   });
 
   it('should report AVERTISSEMENT when a PFAS campaign at A4 has no AOF analysis for an eligible STEU', async () => {
