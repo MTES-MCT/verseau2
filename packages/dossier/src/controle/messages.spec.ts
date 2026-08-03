@@ -183,6 +183,13 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_210 (paramètres de campagne manquants)', () => {
+    const result = buildMessage(ErrorCode.E2_210, ['2024-06-06', 'DBO5, MES']);
+    expect(result).toBe(
+      'Les paramètres (complémentaires et de suivi habituel) pour la campagne PFAS du 2024-06-06 sont manquants: DBO5, MES.',
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

@@ -1,6 +1,6 @@
 import { FctAssainissement } from '@lib/parser';
 import { Injectable } from '@nestjs/common';
-import { ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { CodeParametre, ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
 import { ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
 import { MasaProvider } from '@masa/masa.provider';
 import { CapaciteNominaleBySandreCda } from '@masa/masa.dto';
@@ -41,6 +41,31 @@ export const PFAS_SURVEILLANCE_CODES = [...PFAS_REGLEMENTAIRES_CODES, TFA_CODE];
 const PFAS_REGLEMENTAIRES_CODE_SET = new Set(PFAS_REGLEMENTAIRES_CODES);
 const PFAS_SURVEILLANCE_CODE_SET = new Set(PFAS_SURVEILLANCE_CODES);
 const PFAS_QUANTIFIABLE_CODE_SET = new Set([AOF_CODE, ...PFAS_REGLEMENTAIRES_CODES]);
+
+type PfasCampaignParameter = {
+  code: string;
+  name: string;
+};
+
+const PFAS_SUIVI_HABITUEL_PARAMETERS: PfasCampaignParameter[] = [
+  { code: String(CodeParametre.DBO5), name: 'DBO5' },
+  { code: String(CodeParametre.MES), name: 'MES' },
+  { code: String(CodeParametre.DCO), name: 'DCO' },
+  { code: String(CodeParametre.Volume), name: 'Débit moyen journalier' },
+];
+const PFAS_COMPLEMENTARY_PARAMETERS: PfasCampaignParameter[] = [
+  { code: FLUORURE_CODE, name: 'Fluorure' },
+  { code: CARBONE_ORGANIQUE_CODE, name: 'Carbone organique' },
+];
+const PFAS_A4_PARAMETERS: PfasCampaignParameter[] = [
+  ...PFAS_SUIVI_HABITUEL_PARAMETERS,
+  ...PFAS_COMPLEMENTARY_PARAMETERS,
+  { code: AOF_CODE, name: 'AOF' },
+];
+const PFAS_A3_PARAMETERS: PfasCampaignParameter[] = [
+  ...PFAS_SUIVI_HABITUEL_PARAMETERS,
+  ...PFAS_COMPLEMENTARY_PARAMETERS,
+];
 
 type AnalysePfasCandidate = {
   cdParametre?: string;
@@ -523,6 +548,72 @@ export class ControleMetierV2Pfas {
     }
 
     return isApplicable ? { name: ControleName.CTL209, errors } : null;
+  }
+
+  async verifyPfasCampaignParametersSameSampling(
+    fctAssainissement: FctAssainissement,
+  ): Promise<ControleIndividuelWithoutSuccess | null> {
+    const errors: ControleError[] = [];
+    const year = this.extractReferenceYear(fctAssainissement);
+
+    if (year === undefined) {
+      return null;
+    }
+
+    const steuCodes = this.extractUniqueSteuCodes(fctAssainissement);
+    if (steuCodes.length === 0) {
+      return null;
+    }
+
+    const capacitesNominales = await this.masaProvider.findCapaciteNominaleBatch(steuCodes, year);
+    const eligibleSteuCodes = this.getSteuCodesWithMinimumCapacity(capacitesNominales);
+    let isApplicable = false;
+
+    for (const ouvrage of fctAssainissement.ouvrages) {
+      if (!eligibleSteuCodes.has(ouvrage.cdOuvrageDepollution)) {
+        continue;
+      }
+
+      for (const pointMesure of ouvrage.pointMesure) {
+        const location = pointMesure.locGlobalePointMesure;
+        if (location !== 'A3' && location !== 'A4') {
+          continue;
+        }
+
+        const requiredParameters = location === 'A4' ? PFAS_A4_PARAMETERS : PFAS_A3_PARAMETERS;
+
+        for (const prelevement of pointMesure.prelevement) {
+          const analyses = prelevement.analyse ?? [];
+          if (
+            !this.isPfasCampaign(analyses) ||
+            !analyses.some(
+              (analyse) =>
+                analyse.finalite === PFAS_FINALITE_ANALYSE &&
+                !!analyse.cdParametre &&
+                PFAS_REGLEMENTAIRES_CODE_SET.has(analyse.cdParametre),
+            )
+          ) {
+            continue;
+          }
+
+          isApplicable = true;
+          const measuredCodes = new Set(analyses.map((analyse) => analyse.cdParametre).filter(Boolean));
+          const missingParameterNames = requiredParameters
+            .filter((parameter) => !measuredCodes.has(parameter.code))
+            .map((parameter) => parameter.name);
+
+          if (missingParameterNames.length > 0) {
+            errors.push({
+              code: ErrorCode.E2_210,
+              params: [prelevement.datePrlvt ?? '', missingParameterNames.join(', ')],
+              evenementType: EvenementType.AVERTISSEMENT,
+            });
+          }
+        }
+      }
+    }
+
+    return isApplicable ? { name: ControleName.CTL210, errors } : null;
   }
 
   isPfasCampaign(analyses: AnalysePfasCandidate[]): boolean {

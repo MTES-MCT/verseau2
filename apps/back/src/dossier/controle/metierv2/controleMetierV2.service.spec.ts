@@ -197,6 +197,7 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL207, // identifyQuantifiedPfas
         ControleName.CTL208, // verifyRegulatoryPfasCompleteness
         ControleName.CTL209, // verifyRegulatoryPfasExcludingTfaCompleteness
+        ControleName.CTL210, // verifyPfasCampaignParametersSameSampling
       ]);
       expect(calledControles).not.toContain(null);
     });

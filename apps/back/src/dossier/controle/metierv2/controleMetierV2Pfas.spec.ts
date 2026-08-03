@@ -105,6 +105,21 @@ describe('ControleMetierV2Pfas', () => {
       });
       expect(excludingTfaResult).toEqual({ name: ControleName.CTL209, errors: [] });
     });
+
+    it('should report complementary parameters missing from the real A3 campaign', async () => {
+      const result = await service.verifyPfasCampaignParametersSameSampling(parsedPfasXml);
+
+      expect(result).toEqual({
+        name: ControleName.CTL210,
+        errors: [
+          {
+            code: ErrorCode.E2_210,
+            params: ['2026-03-09', 'Fluorure, Carbone organique'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+    });
   });
 
   it('should report AVERTISSEMENT when a PFAS campaign at A4 has no AOF analysis for an eligible STEU', async () => {
@@ -1232,6 +1247,182 @@ describe('ControleMetierV2Pfas', () => {
 
       expect(result?.errors).toHaveLength(2);
       expect(result?.errors.every((error) => error.evenementType === EvenementType.AVERTISSEMENT)).toBe(true);
+    });
+  });
+
+  describe('verifyPfasCampaignParametersSameSampling', () => {
+    const habitualParameters = [
+      { cdParametre: '1313', finalite: '11' },
+      { cdParametre: '1305', finalite: '11' },
+      { cdParametre: '1314', finalite: '11' },
+      { cdParametre: '1552', finalite: '11' },
+    ];
+    const complementaryParameters = [
+      { cdParametre: '7073', finalite: '11' },
+      { cdParametre: '1841', finalite: '11' },
+    ];
+
+    it.each([
+      ['A3', [...habitualParameters, ...complementaryParameters]],
+      ['A4', [...habitualParameters, ...complementaryParameters, { cdParametre: '8986', finalite: '11' }]],
+    ])(
+      'should pass at the exact capacity threshold when all %s parameters are in the same sampling',
+      async (point, parameters) => {
+        masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+          { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+        ]);
+
+        const result = await service.verifyPfasCampaignParametersSameSampling(
+          makeFctAssainissement({
+            cdOuvrageDepollution: 'STEU1',
+            locGlobalePointMesure: point,
+            datePrlvt: '2024-06-01',
+            analyses: [{ cdParametre: '5980', finalite: '11' }, ...parameters],
+          }),
+        );
+
+        expect(masaProvider.findCapaciteNominaleBatch).toHaveBeenCalledWith(['STEU1'], 2024);
+        expect(result).toEqual({ name: ControleName.CTL210, errors: [] });
+      },
+    );
+
+    it('should report all missing habitual and complementary A4 parameters as AVERTISSEMENT', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyPfasCampaignParametersSameSampling(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: '5980', finalite: '11' }],
+        }),
+      );
+
+      expect(result).toEqual({
+        name: ControleName.CTL210,
+        errors: [
+          {
+            code: ErrorCode.E2_210,
+            params: ['2024-06-01', 'DBO5, MES, DCO, Débit moyen journalier, Fluorure, Carbone organique, AOF'],
+            evenementType: EvenementType.AVERTISSEMENT,
+          },
+        ],
+      });
+    });
+
+    it('should search required parameters in the same sampling rather than another sampling on the same date', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      const completeSampling = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5979', finalite: '11' }, ...habitualParameters, ...complementaryParameters],
+      });
+      data.ouvrages[0].pointMesure[0].prelevement.push(completeSampling.ouvrages[0].pointMesure[0].prelevement[0]);
+
+      const result = await service.verifyPfasCampaignParametersSameSampling(data);
+
+      expect(result?.errors).toEqual([
+        {
+          code: ErrorCode.E2_210,
+          params: ['2024-06-01', 'DBO5, MES, DCO, Débit moyen journalier, Fluorure, Carbone organique'],
+          evenementType: EvenementType.AVERTISSEMENT,
+        },
+      ]);
+    });
+
+    it('should report one error per incomplete sampling sharing the same date', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      const secondData = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A3',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5979', finalite: '11' }],
+      });
+      data.ouvrages[0].pointMesure[0].prelevement.push(secondData.ouvrages[0].pointMesure[0].prelevement[0]);
+
+      const result = await service.verifyPfasCampaignParametersSameSampling(data);
+
+      expect(result?.errors).toHaveLength(2);
+      expect(result?.errors.every((error) => error.evenementType === EvenementType.AVERTISSEMENT)).toBe(true);
+    });
+
+    it('should ignore a TFA-only measurement because it can use a different frequency', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+
+      const result = await service.verifyPfasCampaignParametersSameSampling(
+        makeFctAssainissement({
+          cdOuvrageDepollution: 'STEU1',
+          locGlobalePointMesure: 'A4',
+          datePrlvt: '2024-06-01',
+          analyses: [{ cdParametre: TFA_CODE, finalite: '11' }],
+        }),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should not apply below the capacity threshold or without capacity data', async () => {
+      const data = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 9999 },
+      ]);
+
+      await expect(service.verifyPfasCampaignParametersSameSampling(data)).resolves.toBeNull();
+
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([]);
+      await expect(service.verifyPfasCampaignParametersSameSampling(data)).resolves.toBeNull();
+    });
+
+    it('should ignore points outside A3/A4 and not query capacity without a reference year', async () => {
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 12000 },
+      ]);
+      const outsidePoint = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A2',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+
+      await expect(service.verifyPfasCampaignParametersSameSampling(outsidePoint)).resolves.toBeNull();
+
+      const withoutYear = makeFctAssainissement({
+        cdOuvrageDepollution: 'STEU1',
+        locGlobalePointMesure: 'A4',
+        datePrlvt: '2024-06-01',
+        analyses: [{ cdParametre: '5980', finalite: '11' }],
+      });
+      withoutYear.scenario.dateDebutReference = '';
+      masaProvider.findCapaciteNominaleBatch.mockClear();
+
+      await expect(service.verifyPfasCampaignParametersSameSampling(withoutYear)).resolves.toBeNull();
+      expect(masaProvider.findCapaciteNominaleBatch).not.toHaveBeenCalled();
     });
   });
 });

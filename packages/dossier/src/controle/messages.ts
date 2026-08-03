@@ -182,6 +182,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage208(params);
     case ErrorCode.E2_209:
       return buildErrorMessage209(params);
+    case ErrorCode.E2_210:
+      return buildErrorMessage210(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -398,4 +400,9 @@ const buildErrorMessage208 = (params: string[]) => {
 const buildErrorMessage209 = (params: string[]) => {
   const [parameterCount, date, missingParameterCodes] = params as ErrorParamsMap[ErrorCode.E2_209];
   return `Le nombre de paramètres PFAS réglementaires hors TFA mesurés est égal à ${parameterCount} pour la campagne de mesure en date de ${date} (< à 22), les codes suivants sont manquants : ${missingParameterCodes}.`;
+};
+
+const buildErrorMessage210 = (params: string[]) => {
+  const [date, missingParameterNames] = params as ErrorParamsMap[ErrorCode.E2_210];
+  return `Les paramètres (complémentaires et de suivi habituel) pour la campagne PFAS du ${date} sont manquants: ${missingParameterNames}.`;
 };

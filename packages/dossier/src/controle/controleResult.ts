@@ -89,6 +89,7 @@ export enum ControleName {
   CTL207 = 'CTL207',
   CTL208 = 'CTL208',
   CTL209 = 'CTL209',
+  CTL210 = 'CTL210',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -161,5 +162,7 @@ export const ControleDescription: Record<ControleName, string> = {
     'Vérification de la présence des 23 substances PFAS réglementaires dans chaque mesure aux points A3/A4',
   [ControleName.CTL209]:
     'Vérification de la présence des 22 substances PFAS réglementaires hors TFA dans chaque mesure aux points A3/A4',
+  [ControleName.CTL210]:
+    'Vérification que les paramètres complémentaires et de suivi habituel sont analysés lors du même prélèvement que la campagne PFAS',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };
