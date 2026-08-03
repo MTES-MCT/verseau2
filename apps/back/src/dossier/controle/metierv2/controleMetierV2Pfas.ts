@@ -1,5 +1,5 @@
-import { CodeParametre, ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
-import { FctAssainissement } from '@lib/parser';
+import { CodeParametre, CodeUniteMesure, ControleError, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { FctAssainissement, LocGlobalePointMesure } from '@lib/parser';
 import { CapaciteNominaleBySandreCda } from '@masa/masa.dto';
 import { MasaProvider } from '@masa/masa.provider';
 import { Injectable } from '@nestjs/common';
@@ -69,15 +69,14 @@ const PFAS_A3_PARAMETERS: PfasCampaignParameter[] = [
 
 type AnalysePfasCandidate = {
   cdParametre?: string;
+  cdUniteMesure?: string;
   finalite?: string;
   lqAna?: string;
   rsAnalyse?: string;
 };
 
-type PfasLocation = 'A3' | 'A4';
-
 type PfasSampling = {
-  location: PfasLocation;
+  location: LocGlobalePointMesure;
   datePrlvt: string;
   analyses: AnalysePfasCandidate[];
 };
@@ -134,7 +133,7 @@ export class ControleMetierV2Pfas {
 
       for (const pointMesure of ouvrage.pointMesure) {
         const location = pointMesure.locGlobalePointMesure;
-        if (location !== 'A3' && location !== 'A4') {
+        if (location !== LocGlobalePointMesure.A3 && location !== LocGlobalePointMesure.A4) {
           continue;
         }
 
@@ -159,7 +158,7 @@ export class ControleMetierV2Pfas {
       name: ControleName.CTL201,
       errorCode: ErrorCode.E2_201,
       parameterCode: AOF_CODE,
-      locations: ['A4'],
+      locations: [LocGlobalePointMesure.A4],
     });
   }
 
@@ -168,7 +167,7 @@ export class ControleMetierV2Pfas {
       name: ControleName.CTL202,
       errorCode: ErrorCode.E2_202,
       parameterCode: FLUORURE_CODE,
-      locations: ['A3', 'A4'],
+      locations: [LocGlobalePointMesure.A3, LocGlobalePointMesure.A4],
     });
   }
 
@@ -177,7 +176,7 @@ export class ControleMetierV2Pfas {
       name: ControleName.CTL203,
       errorCode: ErrorCode.E2_203,
       parameterCode: CARBONE_ORGANIQUE_CODE,
-      locations: ['A3', 'A4'],
+      locations: [LocGlobalePointMesure.A3, LocGlobalePointMesure.A4],
     });
   }
 
@@ -187,7 +186,7 @@ export class ControleMetierV2Pfas {
       name: ControleName;
       errorCode: ErrorCode;
       parameterCode: string;
-      locations: readonly PfasLocation[];
+      locations: readonly LocGlobalePointMesure[];
     },
   ): ControleIndividuelWithoutSuccess | null {
     const campaigns = context.campaigns.filter((campaign) => config.locations.includes(campaign.location));
@@ -236,7 +235,7 @@ export class ControleMetierV2Pfas {
     let isApplicable = false;
 
     for (const campaign of context.campaigns) {
-      const threshold = campaign.location === 'A3' ? 50 : 20;
+      const threshold = campaign.location === LocGlobalePointMesure.A3 ? 50 : 20;
       const failingParameterCodes = new Set<string>();
 
       for (const analyse of campaign.analyses) {
@@ -255,7 +254,12 @@ export class ControleMetierV2Pfas {
         }
 
         isApplicable = true;
-        if (quantificationLimit > threshold) {
+        let quantificationLimitNgPerLiter = quantificationLimit;
+        if (analyse.cdUniteMesure === CodeUniteMesure.MICROGRAMME_PAR_LITRE) {
+          quantificationLimitNgPerLiter *= 1000;
+        }
+
+        if (quantificationLimitNgPerLiter > threshold) {
           failingParameterCodes.add(analyse.cdParametre);
         }
       }
@@ -389,7 +393,8 @@ export class ControleMetierV2Pfas {
       }
 
       isApplicable = true;
-      const requiredParameters = campaign.location === 'A4' ? PFAS_A4_PARAMETERS : PFAS_A3_PARAMETERS;
+      const requiredParameters =
+        campaign.location === LocGlobalePointMesure.A4 ? PFAS_A4_PARAMETERS : PFAS_A3_PARAMETERS;
       const measuredCodes = new Set(campaign.analyses.map((analyse) => analyse.cdParametre).filter(Boolean));
       const missingParameterNames = requiredParameters
         .filter((parameter) => !measuredCodes.has(parameter.code))

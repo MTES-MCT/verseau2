@@ -73,3 +73,8 @@ export enum SandreScenarioVersion {
   V3 = '3',
   V4 = '4',
 }
+
+export enum LocGlobalePointMesure {
+  A3 = 'A3',
+  A4 = 'A4',
+}

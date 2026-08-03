@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ControleName, ErrorCode, EvenementType } from '@lib/dossier';
-import { FctAssainissement, parseScenarioAssainissementXml } from '@lib/parser';
+import { CodeUniteMesure, ControleName, ErrorCode, EvenementType } from '@lib/dossier';
+import { FctAssainissement, LocGlobalePointMesure, parseScenarioAssainissementXml } from '@lib/parser';
 import { MasaProvider } from '@masa/masa.provider';
 import { ControleIndividuelWithoutSuccess } from '../isov1/controle.mapper';
 import {
@@ -103,7 +103,7 @@ describe('ControleMetierV2Pfas', () => {
     it('should deduplicate STEU codes and call MASA only once', async () => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A4',
+        locGlobalePointMesure: LocGlobalePointMesure.A4,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -118,7 +118,7 @@ describe('ControleMetierV2Pfas', () => {
     it.each(['', 'invalid-date'])('should return no controls and avoid MASA for reference date %p', async (date) => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A4',
+        locGlobalePointMesure: LocGlobalePointMesure.A4,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -131,7 +131,7 @@ describe('ControleMetierV2Pfas', () => {
     it('should return no controls and avoid MASA when no STEU code exists', async () => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A4',
+        locGlobalePointMesure: LocGlobalePointMesure.A4,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -147,7 +147,7 @@ describe('ControleMetierV2Pfas', () => {
       );
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A4',
+        locGlobalePointMesure: LocGlobalePointMesure.A4,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -157,7 +157,7 @@ describe('ControleMetierV2Pfas', () => {
 
     it.each([
       ['A2', '11'],
-      ['A4', '1'],
+      [LocGlobalePointMesure.A4, '1'],
     ])('should ignore location %s with finality %s', async (location, finalite) => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
@@ -174,11 +174,11 @@ describe('ControleMetierV2Pfas', () => {
 
   describe('presence controls', () => {
     it.each([
-      [ControleName.CTL201, ErrorCode.E2_201, 'A4'],
-      [ControleName.CTL202, ErrorCode.E2_202, 'A3'],
-      [ControleName.CTL202, ErrorCode.E2_202, 'A4'],
-      [ControleName.CTL203, ErrorCode.E2_203, 'A3'],
-      [ControleName.CTL203, ErrorCode.E2_203, 'A4'],
+      [ControleName.CTL201, ErrorCode.E2_201, LocGlobalePointMesure.A4],
+      [ControleName.CTL202, ErrorCode.E2_202, LocGlobalePointMesure.A3],
+      [ControleName.CTL202, ErrorCode.E2_202, LocGlobalePointMesure.A4],
+      [ControleName.CTL203, ErrorCode.E2_203, LocGlobalePointMesure.A3],
+      [ControleName.CTL203, ErrorCode.E2_203, LocGlobalePointMesure.A4],
     ])('should report %s once for a failing %s sampling', async (name, errorCode, location) => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
@@ -200,7 +200,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [
             { cdParametre: '5980', finalite: '11' },
@@ -219,7 +219,7 @@ describe('ControleMetierV2Pfas', () => {
     it('should emit one error per prélèvement when dates are identical', async () => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A3',
+        locGlobalePointMesure: LocGlobalePointMesure.A3,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -242,7 +242,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [
             { cdParametre: '5980', finalite: '11' },
@@ -264,7 +264,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [{ cdParametre: '5980', finalite: '11' }],
         }),
@@ -276,17 +276,24 @@ describe('ControleMetierV2Pfas', () => {
 
   describe('CTL205', () => {
     it.each([
-      ['A3', '50', false],
-      ['A3', '50.1', true],
-      ['A4', '20', false],
-      ['A4', '20.1', true],
+      [LocGlobalePointMesure.A3, '0.05', false],
+      [LocGlobalePointMesure.A3, '0.0501', true],
+      [LocGlobalePointMesure.A4, '0.02', false],
+      [LocGlobalePointMesure.A4, '0.0201', true],
     ])('should apply the %s threshold to LQAna %s', async (location, lqAna, shouldFail) => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
           locGlobalePointMesure: location,
           datePrlvt: '2024-06-01',
-          analyses: [{ cdParametre: '5980', finalite: '11', lqAna }],
+          analyses: [
+            {
+              cdParametre: '5980',
+              cdUniteMesure: CodeUniteMesure.MICROGRAMME_PAR_LITRE,
+              finalite: '11',
+              lqAna,
+            },
+          ],
         }),
       );
       const control = selectControl(results, ControleName.CTL205);
@@ -299,13 +306,33 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [
-            { cdParametre: '5980', finalite: '11', lqAna: '21' },
-            { cdParametre: '5980', finalite: '11', lqAna: '22' },
-            { cdParametre: '5979', finalite: '11', lqAna: '25' },
-            { cdParametre: '8986', finalite: '11', lqAna: '100' },
+            {
+              cdParametre: '5980',
+              cdUniteMesure: CodeUniteMesure.MICROGRAMME_PAR_LITRE,
+              finalite: '11',
+              lqAna: '0.021',
+            },
+            {
+              cdParametre: '5980',
+              cdUniteMesure: CodeUniteMesure.MICROGRAMME_PAR_LITRE,
+              finalite: '11',
+              lqAna: '0.022',
+            },
+            {
+              cdParametre: '5979',
+              cdUniteMesure: CodeUniteMesure.MICROGRAMME_PAR_LITRE,
+              finalite: '11',
+              lqAna: '0.025',
+            },
+            {
+              cdParametre: '8986',
+              cdUniteMesure: CodeUniteMesure.MICROGRAMME_PAR_LITRE,
+              finalite: '11',
+              lqAna: '0.1',
+            },
           ],
         }),
       );
@@ -323,7 +350,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [{ cdParametre: '5980', finalite: '11', lqAna }],
         }),
@@ -337,7 +364,7 @@ describe('ControleMetierV2Pfas', () => {
     it('should read all eligible samplings and consolidate unique quantified codes', async () => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A4',
+        locGlobalePointMesure: LocGlobalePointMesure.A4,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '8986', finalite: '11', rsAnalyse: '2', lqAna: '1' }],
       });
@@ -366,7 +393,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [{ cdParametre: '8986', finalite: '11', rsAnalyse, lqAna }],
         }),
@@ -388,7 +415,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A3',
+          locGlobalePointMesure: LocGlobalePointMesure.A3,
           datePrlvt: '2024-06-01',
           analyses,
         }),
@@ -408,7 +435,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [{ cdParametre: '5980', finalite: '11' }],
         }),
@@ -424,7 +451,7 @@ describe('ControleMetierV2Pfas', () => {
     it('should emit one completeness warning per campaign with duplicate dates', async () => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A4',
+        locGlobalePointMesure: LocGlobalePointMesure.A4,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -450,8 +477,11 @@ describe('ControleMetierV2Pfas', () => {
     ];
 
     it.each([
-      ['A3', [...habitualParameters, ...complementaryParameters]],
-      ['A4', [...habitualParameters, ...complementaryParameters, { cdParametre: '8986', finalite: '1' }]],
+      [LocGlobalePointMesure.A3, [...habitualParameters, ...complementaryParameters]],
+      [
+        LocGlobalePointMesure.A4,
+        [...habitualParameters, ...complementaryParameters, { cdParametre: '8986', finalite: '1' }],
+      ],
     ])('should pass at %s when required parameters share the sampling', async (location, parameters) => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
@@ -468,7 +498,7 @@ describe('ControleMetierV2Pfas', () => {
     it('should check required parameters within each sampling, even on duplicate dates', async () => {
       const data = makeFctAssainissement({
         cdOuvrageDepollution: 'STEU1',
-        locGlobalePointMesure: 'A3',
+        locGlobalePointMesure: LocGlobalePointMesure.A3,
         datePrlvt: '2024-06-01',
         analyses: [{ cdParametre: '5980', finalite: '11' }],
       });
@@ -493,7 +523,7 @@ describe('ControleMetierV2Pfas', () => {
       const results = await service.verifyPfasControls(
         makeFctAssainissement({
           cdOuvrageDepollution: 'STEU1',
-          locGlobalePointMesure: 'A4',
+          locGlobalePointMesure: LocGlobalePointMesure.A4,
           datePrlvt: '2024-06-01',
           analyses: [{ cdParametre: TFA_CODE, finalite: '11' }],
         }),
@@ -515,6 +545,7 @@ function selectControl(
 
 type TestAnalysis = {
   cdParametre: string;
+  cdUniteMesure?: string;
   finalite: string;
   lqAna?: string;
   rsAnalyse?: string;
