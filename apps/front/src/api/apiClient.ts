@@ -2,21 +2,11 @@ import { authService } from '../services/auth.service';
 import { APP_HOME_PATH, API_BASE_URL } from '../appConfig';
 import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
 import { buildRoutePath } from '@lib/dossier';
+import { ApiError } from './apiError';
 
 // Re-export buildRoutePath for convenience
 export { buildRoutePath };
-
-export class ApiError extends Error {
-  status: number;
-  statusText: string;
-
-  constructor(message: string, status: number, statusText: string) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.statusText = statusText;
-  }
-}
+export { ApiError } from './apiError';
 
 export interface DownloadedFile {
   blob: Blob;
@@ -75,7 +65,7 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
   if (response.status === 204) {
     return {} as T;
   }
-
+  console.log('!!!!!apiPostFormData response:', response);
   return response.json();
 }
 
@@ -133,7 +123,6 @@ export async function apiCall<R extends RouteDefinition>(
     const message = await response.text().catch(() => response.statusText);
     throw new ApiError(`${route.method} ${path} failed: ${message}`, response.status, response.statusText);
   }
-
   // Parse response (no validation on frontend, schemas are for typing only)
   const json = await response.json();
   return json as RouteResponse<R>;
