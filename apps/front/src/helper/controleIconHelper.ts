@@ -7,5 +7,8 @@ export const getIconInfo = (success: boolean, evenementType: EvenementType | und
   if (evenementType === EvenementType.AVERTISSEMENT) {
     return { icon: 'fr-icon-warning-fill', color: 'var(--text-default-warning)' };
   }
+  if (evenementType === EvenementType.INFORMATION) {
+    return { icon: 'fr-icon-information-fill', color: 'var(--text-default-info)' };
+  }
   return { icon: 'fr-icon-error-fill', color: 'var(--text-default-error)' };
 };

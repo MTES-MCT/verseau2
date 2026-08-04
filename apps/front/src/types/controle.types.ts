@@ -4,6 +4,6 @@ export type ControleView = Pick<ControleDto, 'name' | 'success' | 'evenementType
 
 export type ControleSandreView = Pick<ControleDto, 'name' | 'success'> & { message: string };
 
-export type ControleFilterType = 'success' | 'warning' | 'error';
+export type ControleFilterType = 'success' | 'warning' | 'error' | 'information';
 
 export type ControleFilterSet = Set<ControleFilterType>;

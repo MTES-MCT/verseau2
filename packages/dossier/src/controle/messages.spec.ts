@@ -128,6 +128,68 @@ describe('buildMessage', () => {
     );
   });
 
+  it('devrait retourner le message pour E2_201 (AOF absent)', () => {
+    const result = buildMessage(ErrorCode.E2_201, ['2024-06-01']);
+    expect(result).toBe(
+      'Paramètre AOF (code 8986) absent pour la date 2024-06-01. Ce paramètre est obligatoire pour les analyses PFAS en sortie de station (A4).',
+    );
+  });
+
+  it('devrait retourner le message pour E2_202 (Fluorure absent)', () => {
+    const result = buildMessage(ErrorCode.E2_202, ['2024-06-01']);
+    expect(result).toBe(
+      "Paramètre Fluorure (code 7073) absent pour la date 2024-06-01. Ce paramètre est obligatoire pour permettre l'interprétation de l'AOF.",
+    );
+  });
+
+  it('devrait retourner le message pour E2_203 (Carbone organique absent)', () => {
+    const result = buildMessage(ErrorCode.E2_203, ['2024-06-01']);
+    expect(result).toBe('Carbone organique (code 1841) absent pour la date 2024-06-01.');
+  });
+
+  it('devrait retourner le message pour E2_204 (Fluorure absent)', () => {
+    const result = buildMessage(ErrorCode.E2_204, ['FLUORURE', '2024-06-01']);
+    expect(result).toBe('AOF présent mais fluorure absent pour la date 2024-06-01, interprétation impossible');
+  });
+
+  it('devrait retourner le message pour E2_204 (AOF absent)', () => {
+    const result = buildMessage(ErrorCode.E2_204, ['AOF', '2024-06-02']);
+    expect(result).toBe('Fluorure présent mais AOF absent pour la date 2024-06-02, interprétation impossible');
+  });
+
+  it('devrait retourner le message pour E2_205 (LQ supérieure au seuil)', () => {
+    const result = buildMessage(ErrorCode.E2_205, ['5980, 5979', '2024-06-03']);
+    expect(result).toBe(
+      'La Limite de Quantification (LQ) attendue est supérieure à celle de la circulaire pour le(s) paramètre(s) [5980, 5979], pour la date 2024-06-03',
+    );
+  });
+
+  it('devrait retourner le message pour E2_207 (PFAS quantifiés)', () => {
+    const result = buildMessage(ErrorCode.E2_207, ['8986, 6025']);
+    expect(result).toBe('Les codes suivants sont quantifiés : 8986, 6025.');
+  });
+
+  it('devrait retourner le message pour E2_208 (mesure PFAS incomplète)', () => {
+    const result = buildMessage(ErrorCode.E2_208, ['21', '2024-06-04', '8858, 7991']);
+    expect(result).toBe(
+      'Le nombre de paramètres mesurés est égal à 21 pour la campagne de mesure en date de 2024-06-04 (< à 23), les codes suivants sont manquant: 8858, 7991.',
+    );
+  });
+
+  it('devrait retourner le message pour E2_209 (mesure PFAS hors TFA incomplète)', () => {
+    const result = buildMessage(ErrorCode.E2_209, ['21', '2024-06-05', '7991']);
+    expect(result).toBe(
+      'Le nombre de paramètres PFAS réglementaires hors TFA mesurés est égal à 21 pour la campagne de mesure en date de 2024-06-05 (< à 22), les codes suivants sont manquants : 7991.',
+    );
+  });
+
+  it('devrait retourner le message pour E2_210 (paramètres de campagne manquants)', () => {
+    const result = buildMessage(ErrorCode.E2_210, ['2024-06-06', 'DBO5, MES']);
+    expect(result).toBe(
+      'Les paramètres (complémentaires et de suivi habituel) pour la campagne PFAS du 2024-06-06 sont manquants: DBO5, MES.',
+    );
+  });
+
   it('devrait retourner "Erreur inconnue" pour un code d\'erreur undefined', () => {
     const result = buildMessage(undefined, []);
     expect(result).toBe('Erreur inconnue');

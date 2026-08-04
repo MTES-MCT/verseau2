@@ -81,6 +81,15 @@ export enum ControleName {
   CTL059 = 'CTL059',
   CTL060 = 'CTL060',
   CTL061 = 'CTL061',
+  CTL201 = 'CTL201',
+  CTL202 = 'CTL202',
+  CTL203 = 'CTL203',
+  CTL204 = 'CTL204',
+  CTL205 = 'CTL205',
+  CTL207 = 'CTL207',
+  CTL208 = 'CTL208',
+  CTL209 = 'CTL209',
+  CTL210 = 'CTL210',
   CTL_TECHNICAL_ERROR = 'CTL_TECHNICAL_ERROR',
 }
 
@@ -139,7 +148,21 @@ export const ControleDescription: Record<ControleName, string> = {
   [ControleName.CTL059]: 'Contrôle sur les concentrations négatives ou nulles sur tous les points de mesure',
   [ControleName.CTL060]:
     'Contrôle sur la charge de pollution à traiter vs capacité nominale de la station (≥ 2 000 EH)',
-  [ControleName.CTL061]:
-    'Vérification que les débits A3/A4 du paramètre 1552 sont renseignés à la même date',
+  [ControleName.CTL061]: 'Vérification que les débits A3/A4 du paramètre 1552 sont renseignés à la même date',
+  [ControleName.CTL201]: 'Vérification de la présence du paramètre AOF pour les analyses PFAS en sortie de station',
+  [ControleName.CTL202]: 'Vérification de la présence du paramètre Fluorure pour les analyses PFAS aux points A3/A4',
+  [ControleName.CTL203]:
+    'Vérification de la présence du paramètre Carbone organique pour les analyses PFAS aux points A3/A4',
+  [ControleName.CTL204]:
+    "Vérification de la cohérence entre les paramètres AOF et Fluorure nécessaires à l'interprétation de l'AOF",
+  [ControleName.CTL205]:
+    'Vérification de la limite de quantification des analyses PFAS aux points A3/A4 selon les seuils réglementaires',
+  [ControleName.CTL207]: 'Identification des paramètres PFAS détectés et quantifiés aux points A3/A4',
+  [ControleName.CTL208]:
+    'Vérification de la présence des 23 substances PFAS réglementaires dans chaque mesure aux points A3/A4',
+  [ControleName.CTL209]:
+    'Vérification de la présence des 22 substances PFAS réglementaires hors TFA dans chaque mesure aux points A3/A4',
+  [ControleName.CTL210]:
+    'Vérification que les paramètres complémentaires et de suivi habituel sont analysés lors du même prélèvement que la campagne PFAS',
   [ControleName.CTL_TECHNICAL_ERROR]: "Erreur technique lors de l'exécution des contrôles métiers",
 };

@@ -166,6 +166,24 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return buildErrorMessage60(params);
     case ErrorCode.E2_061:
       return buildErrorMessage61(params);
+    case ErrorCode.E2_201:
+      return buildErrorMessage201(params);
+    case ErrorCode.E2_202:
+      return buildErrorMessage202(params);
+    case ErrorCode.E2_203:
+      return buildErrorMessage203(params);
+    case ErrorCode.E2_204:
+      return buildErrorMessage204(params);
+    case ErrorCode.E2_205:
+      return buildErrorMessage205(params);
+    case ErrorCode.E2_207:
+      return buildErrorMessage207(params);
+    case ErrorCode.E2_208:
+      return buildErrorMessage208(params);
+    case ErrorCode.E2_209:
+      return buildErrorMessage209(params);
+    case ErrorCode.E2_210:
+      return buildErrorMessage210(params);
     case ErrorCode.E2_999: {
       const [message] = params as ErrorParamsMap[ErrorCode.E2_999];
       return `Une erreur technique inattendue s'est produite lors de l'exécution des contrôles du dépôt: ${message}`;
@@ -339,4 +357,52 @@ const buildErrorMessage61 = (params: string[]) => {
     return `Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit d'entrée manque pour la date ${datePrlvt}, alors que le débit de sortie pour la date ${datePrlvt} existe.`;
   }
   return `Les valeurs de débit des points A3 et A4 (paramètre 1552) doivent être renseignées à la même date pour permettre le calcul du rendement. Le débit de sortie manque pour la date ${datePrlvt}, alors que le débit d'entrée pour la date ${datePrlvt} existe.`;
+};
+
+const buildErrorMessage201 = (params: string[]) => {
+  const [date] = params as ErrorParamsMap[ErrorCode.E2_201];
+  return `Paramètre AOF (code 8986) absent pour la date ${date}. Ce paramètre est obligatoire pour les analyses PFAS en sortie de station (A4).`;
+};
+
+const buildErrorMessage202 = (params: string[]) => {
+  const [date] = params as ErrorParamsMap[ErrorCode.E2_202];
+  return `Paramètre Fluorure (code 7073) absent pour la date ${date}. Ce paramètre est obligatoire pour permettre l'interprétation de l'AOF.`;
+};
+
+const buildErrorMessage203 = (params: string[]) => {
+  const [date] = params as ErrorParamsMap[ErrorCode.E2_203];
+  return `Carbone organique (code 1841) absent pour la date ${date}.`;
+};
+
+const buildErrorMessage204 = (params: string[]) => {
+  const [missingParameter, date] = params as ErrorParamsMap[ErrorCode.E2_204];
+  if (missingParameter === 'FLUORURE') {
+    return `AOF présent mais fluorure absent pour la date ${date}, interprétation impossible`;
+  }
+  return `Fluorure présent mais AOF absent pour la date ${date}, interprétation impossible`;
+};
+
+const buildErrorMessage205 = (params: string[]) => {
+  const [parameterCodes, date] = params as ErrorParamsMap[ErrorCode.E2_205];
+  return `La Limite de Quantification (LQ) attendue est supérieure à celle de la circulaire pour le(s) paramètre(s) [${parameterCodes}], pour la date ${date}`;
+};
+
+const buildErrorMessage207 = (params: string[]) => {
+  const [parameterCodes] = params as ErrorParamsMap[ErrorCode.E2_207];
+  return `Les codes suivants sont quantifiés : ${parameterCodes}.`;
+};
+
+const buildErrorMessage208 = (params: string[]) => {
+  const [parameterCount, date, missingParameterCodes] = params as ErrorParamsMap[ErrorCode.E2_208];
+  return `Le nombre de paramètres mesurés est égal à ${parameterCount} pour la campagne de mesure en date de ${date} (< à 23), les codes suivants sont manquant: ${missingParameterCodes}.`;
+};
+
+const buildErrorMessage209 = (params: string[]) => {
+  const [parameterCount, date, missingParameterCodes] = params as ErrorParamsMap[ErrorCode.E2_209];
+  return `Le nombre de paramètres PFAS réglementaires hors TFA mesurés est égal à ${parameterCount} pour la campagne de mesure en date de ${date} (< à 22), les codes suivants sont manquants : ${missingParameterCodes}.`;
+};
+
+const buildErrorMessage210 = (params: string[]) => {
+  const [date, missingParameterNames] = params as ErrorParamsMap[ErrorCode.E2_210];
+  return `Les paramètres (complémentaires et de suivi habituel) pour la campagne PFAS du ${date} sont manquants: ${missingParameterNames}.`;
 };

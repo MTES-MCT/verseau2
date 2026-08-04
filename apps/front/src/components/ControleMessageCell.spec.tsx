@@ -33,6 +33,7 @@ describe('ControleMessageCell', () => {
         ],
         errorCount: 1,
         warningCount: 0,
+        informationCount: 0,
         successCount: 1,
       },
     };
@@ -63,6 +64,7 @@ describe('ControleMessageCell', () => {
         controls,
         errorCount: 0,
         warningCount: 0,
+        informationCount: 0,
         successCount: 7,
       },
     };
@@ -103,6 +105,7 @@ describe('ControleMessageCell', () => {
         ],
         errorCount: 1,
         warningCount: 0,
+        informationCount: 0,
         successCount: 1,
       },
     };

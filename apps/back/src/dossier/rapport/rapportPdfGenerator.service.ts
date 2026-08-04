@@ -11,6 +11,7 @@ const COLORS = {
   SECONDARY: '#64748b', // Slate Gray
   SUCCESS: '#16a34a', // Green
   WARNING: '#f97316', // Orange
+  INFO: '#2563eb', // Blue
   TEXT: '#1e293b', // Dark Slate
   LIGHT_BG: '#f8fafc', // Light Gray/White
   BORDER: '#e2e8f0', // Light Border
@@ -105,7 +106,7 @@ export class RapportPdfGeneratorService {
     this.drawStatItem(doc, 'Succès', success.toString(), 50 + quarter, centerY, COLORS.SUCCESS);
     this.drawStatItem(
       doc,
-      'Échecs / Avertissements',
+      'Retours',
       failed.toString(),
       50 + quarter * 2,
       centerY,
@@ -173,13 +174,17 @@ export class RapportPdfGeneratorService {
     // Statistics
     const totalControls = controls.length;
     const successControls = controls.filter(
-      (c) => c.evenementType !== EvenementType.AVERTISSEMENT && c.evenementType !== EvenementType.ERREUR,
+      (c) =>
+        c.evenementType !== EvenementType.AVERTISSEMENT &&
+        c.evenementType !== EvenementType.ERREUR &&
+        c.evenementType !== EvenementType.INFORMATION,
     );
     const warningControls = controls.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT);
     const errorControls = controls.filter((c) => c.evenementType === EvenementType.ERREUR);
+    const informationControls = controls.filter((c) => c.evenementType === EvenementType.INFORMATION);
     const successRate = totalControls > 0 ? Math.round((successControls.length / totalControls) * 100) : 0;
-    const failedControls = [...errorControls, ...warningControls];
-    this.drawStatistics(doc, totalControls, successControls.length, failedControls.length, successRate);
+    const nonSuccessControls = [...errorControls, ...warningControls, ...informationControls];
+    this.drawStatistics(doc, totalControls, successControls.length, nonSuccessControls.length, successRate);
 
     // Success Summary
     if (successControls.length > 0) {
@@ -201,10 +206,10 @@ export class RapportPdfGeneratorService {
       doc.moveDown(2);
     }
 
-    // Warnings & Errors Detail
-    if (failedControls.length > 0) {
+    // Warnings, errors and information detail
+    if (nonSuccessControls.length > 0) {
       const groupedFailures: Record<string, ControleModelWithoutDepot[]> = {};
-      failedControls.forEach((c) => {
+      nonSuccessControls.forEach((c) => {
         if (!groupedFailures[c.name]) {
           groupedFailures[c.name] = [];
         }
@@ -218,8 +223,7 @@ export class RapportPdfGeneratorService {
 
         const group = groupedFailures[controlName];
 
-        const hasErrors = group.some((c) => c.evenementType === EvenementType.ERREUR);
-        const titleColor = hasErrors ? '#dc2626' : COLORS.WARNING; // Red for errors, Orange for warnings
+        const titleColor = getPdfControlGroupColor(group);
 
         doc.font('Helvetica-Bold').fillColor(titleColor).fontSize(11).text(`${controlName} (${group.length} retours)`);
         doc.font('Helvetica');
@@ -230,9 +234,7 @@ export class RapportPdfGeneratorService {
             doc.addPage();
           }
           const msg = buildMessage(c.error, c.errorParams || []);
-          const isError = c.evenementType === EvenementType.ERREUR;
-          const prefix = isError ? '[ERREUR]' : '[AVERTISSEMENT]';
-          const itemColor = isError ? '#dc2626' : COLORS.TEXT;
+          const { prefix, itemColor } = getPdfControlDisplay(c.evenementType);
 
           doc.fillColor(itemColor).fontSize(8).text(`• ${prefix} ${msg}`, { indent: 20 });
         });
@@ -299,4 +301,28 @@ export class RapportPdfGeneratorService {
         .text(`Page ${i + 1} / ${range.count} - Verseau 2`, 50, doc.page.height - 60, { align: 'center' });
     }
   }
+}
+
+function getPdfControlDisplay(evenementType: EvenementType | undefined): { prefix: string; itemColor: string } {
+  if (evenementType === EvenementType.ERREUR) {
+    return { prefix: '[ERREUR]', itemColor: '#dc2626' };
+  }
+
+  if (evenementType === EvenementType.INFORMATION) {
+    return { prefix: '[INFORMATION]', itemColor: COLORS.INFO };
+  }
+
+  return { prefix: '[AVERTISSEMENT]', itemColor: COLORS.TEXT };
+}
+
+function getPdfControlGroupColor(group: ControleModelWithoutDepot[]): string {
+  if (group.some((c) => c.evenementType === EvenementType.ERREUR)) {
+    return '#dc2626';
+  }
+
+  if (group.some((c) => c.evenementType === EvenementType.AVERTISSEMENT)) {
+    return COLORS.WARNING;
+  }
+
+  return COLORS.INFO;
 }

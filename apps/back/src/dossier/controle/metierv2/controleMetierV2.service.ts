@@ -23,6 +23,7 @@ import {
   MaxDebitBySandreCda,
   ProductionBoueZero,
 } from '@masa/masa.dto';
+import { ControleMetierV2Pfas } from './controleMetierV2Pfas';
 
 @Injectable()
 export class ControleMetierV2Service {
@@ -30,6 +31,7 @@ export class ControleMetierV2Service {
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     @Inject(RoseauGateway) private readonly roseauGateway: RoseauGateway,
     @Inject(MasaProvider) private readonly masaProvider: MasaProvider,
+    private readonly controleMetierV2Pfas: ControleMetierV2Pfas,
     private readonly controleMapper: ControleMapper,
   ) {}
 
@@ -67,8 +69,8 @@ export class ControleMetierV2Service {
 
     const { cmas, maxDebits: _maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
-    const tousControles = (
-      await Promise.all([
+    const [standardControls, pfasControls] = await Promise.all([
+      Promise.all([
         // Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
         // Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
         Promise.resolve(this.verifyDcoRange(dataWithLocGlobalePointMesureA3AndCdSupport3)),
@@ -93,8 +95,14 @@ export class ControleMetierV2Service {
         Promise.resolve(this.verifyConcentrationsNegativesOuNulles(dataWithLocGlobalePointMesureSAAndCdSupprt345)),
         this.verifyChargePollutionVsCapaciteNominale(xmlObj),
         Promise.resolve(this.verifyDebitA3A4SameDate(xmlObj)),
-      ])
-    ).filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null);
+      ]),
+      this.controleMetierV2Pfas.verifyPfasControls(xmlObj),
+    ]);
+
+    const tousControles = [
+      ...standardControls.filter((controle): controle is ControleIndividuelWithoutSuccess => controle !== null),
+      ...pfasControls,
+    ];
 
     const createControles = this.controleMapper.mapControlesIndividuelsToCreateControleModel(
       depotId,

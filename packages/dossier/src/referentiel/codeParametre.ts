@@ -36,6 +36,10 @@ export enum CodeParametre {
 }
 
 export enum CodeUniteMesure {
+  // µg/L
+  MICROGRAMME_PAR_LITRE = '133',
+
+  // TODO : Rename the code below and convert it to string
   // mg(N)/L
   MG_N_L = 168,
 

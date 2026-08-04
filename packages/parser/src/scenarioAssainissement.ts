@@ -83,6 +83,7 @@ export interface Prelevement {
 
 export interface Analyse {
   rsAnalyse: string;
+  lqAna?: string;
   inSituAnalyse: string;
   statutRsAnalyse: string;
   qualRsAnalyse: string;

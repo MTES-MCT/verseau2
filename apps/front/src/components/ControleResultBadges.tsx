@@ -21,6 +21,11 @@ export function ControleResultBadges({ row }: ControleResultBadgesProps) {
             Avertissement
           </Badge>
         )}
+        {evenementType === EvenementType.INFORMATION && (
+          <Badge severity="info" small>
+            Information
+          </Badge>
+        )}
         {!evenementType && (
           <Badge severity="success" small>
             Succès
@@ -30,7 +35,7 @@ export function ControleResultBadges({ row }: ControleResultBadgesProps) {
     );
   }
 
-  const { errorCount, warningCount, successCount } = row.groupData;
+  const { errorCount, warningCount, informationCount, successCount } = row.groupData;
 
   return (
     <div className="fr-flex fr-grid-row--gutters">
@@ -42,6 +47,11 @@ export function ControleResultBadges({ row }: ControleResultBadgesProps) {
       {warningCount > 0 && (
         <Badge severity="warning" small>
           {warningCount}
+        </Badge>
+      )}
+      {informationCount > 0 && (
+        <Badge severity="info" small>
+          {informationCount}
         </Badge>
       )}
       {successCount > 0 && (

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import {
   ControleName,
+  ErrorCode,
   EvenementType,
   MasaStatus,
   SandreAcceptationStatus,
@@ -85,7 +86,7 @@ function renderControlePage() {
   );
 }
 
-function clickFilterCard(label: 'Succès' | 'Avertissement' | 'Erreur') {
+function clickFilterCard(label: 'Succès' | 'Avertissement' | 'Erreur' | 'Information') {
   const clickableStatCard = screen.getByTestId(`clickable-stat-card-${label}`);
   const button = clickableStatCard.querySelector('button');
 
@@ -190,6 +191,128 @@ describe('ControlePage', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /intégration des données/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByText(/aucune donnée d'intégration/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows PFAS controls in a dedicated section with warning status', async () => {
+    mockFetchControles.mockResolvedValue([
+      makeControle({
+        id: 'roseau-warning',
+        name: ControleName.CTL004,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+      }),
+      makeControle({
+        id: 'pfas-information',
+        name: ControleName.CTL201,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_201,
+        errorParams: ['2024-06-01'],
+      }),
+      makeControle({
+        id: 'pfas-fluorure-warning',
+        name: ControleName.CTL202,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_202,
+        errorParams: ['2024-06-02'],
+      }),
+      makeControle({
+        id: 'pfas-organic-carbon-warning',
+        name: ControleName.CTL203,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_203,
+        errorParams: ['2024-06-03'],
+      }),
+      makeControle({
+        id: 'pfas-aof-fluorure-warning',
+        name: ControleName.CTL204,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_204,
+        errorParams: ['FLUORURE', '2024-06-04'],
+      }),
+      makeControle({
+        id: 'pfas-lq-warning',
+        name: ControleName.CTL205,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_205,
+        errorParams: ['5980, 5979', '2024-06-05'],
+      }),
+      makeControle({
+        id: 'pfas-quantified-information',
+        name: ControleName.CTL207,
+        success: false,
+        evenementType: EvenementType.INFORMATION,
+        error: ErrorCode.E2_207,
+        errorParams: ['8986, 6025'],
+      }),
+      makeControle({
+        id: 'pfas-incomplete-warning',
+        name: ControleName.CTL208,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_208,
+        errorParams: ['22', '2024-06-06', '8858'],
+      }),
+      makeControle({
+        id: 'pfas-excluding-tfa-incomplete-warning',
+        name: ControleName.CTL209,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_209,
+        errorParams: ['21', '2024-06-07', '7991'],
+      }),
+      makeControle({
+        id: 'pfas-campaign-parameters-warning',
+        name: ControleName.CTL210,
+        success: false,
+        evenementType: EvenementType.AVERTISSEMENT,
+        error: ErrorCode.E2_210,
+        errorParams: ['2024-06-08', 'DBO5, MES'],
+      }),
+    ]);
+    mockFetchControlesSandre.mockResolvedValue([]);
+    mockFetchMasa.mockResolvedValue(null);
+
+    renderControlePage();
+
+    await waitForLoadedPage();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /contrôles métiers/i, level: 2 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /contrôles PFAS/i, level: 2 })).toBeInTheDocument();
+      expect(screen.getByTestId('clickable-stat-card-Avertissement')).toBeInTheDocument();
+      expect(screen.getByTestId('clickable-stat-card-Information')).toBeInTheDocument();
+      expect(screen.getByText(/Paramètre AOF \(code 8986\) absent pour la date 2024-06-01/i)).toBeInTheDocument();
+      expect(screen.getByText(/Paramètre Fluorure \(code 7073\) absent pour la date 2024-06-02/i)).toBeInTheDocument();
+      expect(screen.getByText(/Carbone organique \(code 1841\) absent pour la date 2024-06-03/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/AOF présent mais fluorure absent pour la date 2024-06-04, interprétation impossible/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /La Limite de Quantification \(LQ\) attendue est supérieure à celle de la circulaire pour le\(s\) paramètre\(s\) \[5980, 5979\], pour la date 2024-06-05/i,
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Les codes suivants sont quantifiés : 8986, 6025\./i)).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Le nombre de paramètres mesurés est égal à 22 pour la campagne de mesure en date de 2024-06-06 \(< à 23\), les codes suivants sont manquant: 8858\./i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Le nombre de paramètres PFAS réglementaires hors TFA mesurés est égal à 21 pour la campagne de mesure en date de 2024-06-07 \(< à 22\), les codes suivants sont manquants : 7991\./i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /Les paramètres \(complémentaires et de suivi habituel\) pour la campagne PFAS du 2024-06-08 sont manquants: DBO5, MES\./i,
+        ),
+      ).toBeInTheDocument();
     });
   });
 });

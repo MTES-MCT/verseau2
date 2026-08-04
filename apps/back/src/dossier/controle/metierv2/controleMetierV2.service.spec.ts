@@ -9,6 +9,7 @@ import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
 import { ControleModel, CreateControleModel } from '../controle.model';
+import { ControleMetierV2Pfas } from './controleMetierV2Pfas';
 
 function createFctWithAnalyses(
   analyse: { cdParametre?: string; rsAnalyse?: string; cdUniteMesure?: string }[],
@@ -38,6 +39,7 @@ describe('ControleMetierV2Service', () => {
   let masaProvider: jest.Mocked<MasaProvider>;
   let controleGateway: jest.Mocked<ControleGateway>;
   let controleMapper: jest.Mocked<ControleMapper>;
+  let controleMetierV2Pfas: ControleMetierV2Pfas;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -65,6 +67,7 @@ describe('ControleMetierV2Service', () => {
             findProductionBoueZeroBatch: jest.fn(),
           },
         },
+        ControleMetierV2Pfas,
         {
           provide: ControleMapper,
           useValue: {
@@ -79,6 +82,7 @@ describe('ControleMetierV2Service', () => {
     masaProvider = module.get(MasaProvider);
     controleGateway = module.get(ControleGateway);
     controleMapper = module.get(ControleMapper);
+    controleMetierV2Pfas = module.get(ControleMetierV2Pfas);
   });
 
   describe('execute', () => {
@@ -116,6 +120,7 @@ describe('ControleMetierV2Service', () => {
                     { cdParametre: CodeParametre.pH.toString(), rsAnalyse: '7' },
                     { cdParametre: CodeParametre.Temperature.toString(), rsAnalyse: '20' },
                     { cdParametre: CodeParametre.Volume.toString(), rsAnalyse: '90' },
+                    { cdParametre: '5980', rsAnalyse: '1', finalite: '11', lqAna: '20' },
                   ],
                 },
               ],
@@ -152,6 +157,10 @@ describe('ControleMetierV2Service', () => {
     });
 
     it('should pass only applicable controls to the mapper', async () => {
+      const verifyPfasControlsSpy = jest.spyOn(controleMetierV2Pfas, 'verifyPfasControls');
+      masaProvider.findCapaciteNominaleBatch.mockResolvedValue([
+        { ouvrageDepollutionCode: 'STEU1', capaciteNominaleEH: 10000 },
+      ]);
       const fakeCreateControles: CreateControleModel[] = [
         { depotId, name: ControleName.CTL041, type: ControleType.CONTROLE_V2, success: true },
       ] as CreateControleModel[];
@@ -181,9 +190,21 @@ describe('ControleMetierV2Service', () => {
         ControleName.CTL057, // verifyPluviometrieRange
         ControleName.CTL058, // verifyVolumesNegatifs
         ControleName.CTL059, // verifyConcentrationsNegativesOuNulles
+        ControleName.CTL060, // verifyChargePollutionVsCapaciteNominale
         ControleName.CTL061, // verifyDebitA3A4SameDate
+        ControleName.CTL201,
+        ControleName.CTL202,
+        ControleName.CTL203,
+        ControleName.CTL204,
+        ControleName.CTL205,
+        ControleName.CTL207,
+        ControleName.CTL208,
+        ControleName.CTL209,
+        ControleName.CTL210,
       ]);
       expect(calledControles).not.toContain(null);
+      expect(verifyPfasControlsSpy).toHaveBeenCalledTimes(1);
+      expect(verifyPfasControlsSpy).toHaveBeenCalledWith(xmlObj);
     });
 
     it('should pass tousControles results to the mapper and return createdControles from the gateway', async () => {

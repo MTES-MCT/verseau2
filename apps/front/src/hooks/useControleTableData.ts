@@ -19,6 +19,7 @@ type GroupedControleRow = {
     controls: ControleView[];
     errorCount: number;
     warningCount: number;
+    informationCount: number;
     successCount: number;
   };
 };
@@ -52,7 +53,7 @@ export function useControleTableData(
 
       return {
         name,
-        evenementType: getGroupStatus(stats.errorCount, stats.warningCount),
+        evenementType: getGroupStatus(stats.errorCount, stats.warningCount, stats.informationCount),
         message: getGroupMessage(displayedItems),
         isGroup: true as const,
         groupData: {
@@ -68,23 +69,27 @@ function getGroupStats(group: ControleView[]) {
   return {
     errorCount: group.filter((controle) => controle.evenementType === EvenementType.ERREUR).length,
     warningCount: group.filter((controle) => controle.evenementType === EvenementType.AVERTISSEMENT).length,
+    informationCount: group.filter((controle) => controle.evenementType === EvenementType.INFORMATION).length,
     successCount: group.filter((controle) => controle.success).length,
   };
 }
 
-function getGroupStatus(errorCount: number, warningCount: number): EvenementType | undefined {
+function getGroupStatus(errorCount: number, warningCount: number, informationCount: number): EvenementType | undefined {
   if (errorCount > 0) {
     return EvenementType.ERREUR;
   }
   if (warningCount > 0) {
     return EvenementType.AVERTISSEMENT;
   }
+  if (informationCount > 0) {
+    return EvenementType.INFORMATION;
+  }
   return undefined;
 }
 
 function getGroupMessage(items: ControleView[]): string {
   const stats = getGroupStats(items);
-  const activeTypesCount = [stats.errorCount, stats.warningCount, stats.successCount].filter(
+  const activeTypesCount = [stats.errorCount, stats.warningCount, stats.informationCount, stats.successCount].filter(
     (count) => count > 0,
   ).length;
 
@@ -98,6 +103,10 @@ function getGroupMessage(items: ControleView[]): string {
 
   if (stats.warningCount > 0) {
     return `Voir les ${stats.warningCount} avertissement${stats.warningCount > 1 ? 's' : ''}`;
+  }
+
+  if (stats.informationCount > 0) {
+    return `Voir les ${stats.informationCount} information${stats.informationCount > 1 ? 's' : ''}`;
   }
 
   return `Voir les ${stats.successCount} succès`;

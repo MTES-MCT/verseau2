@@ -5,9 +5,10 @@ type ControleStatistics = {
   successCount: number;
   warningCount: number;
   errorCount: number;
+  informationCount: number;
 };
 
-export const defaultActiveControleFilters: ControleFilterType[] = ['warning', 'error'];
+export const defaultActiveControleFilters: ControleFilterType[] = ['warning', 'error', 'information'];
 
 export function matchesControleFilters(
   controle: Pick<ControleView, 'success' | 'evenementType'>,
@@ -27,6 +28,10 @@ export function matchesControleFilters(
 
   if (controle.evenementType === EvenementType.ERREUR) {
     return activeFilters.has('error');
+  }
+
+  if (controle.evenementType === EvenementType.INFORMATION) {
+    return activeFilters.has('information');
   }
 
   return false;
@@ -76,6 +81,7 @@ export function getSandreStatistics(controles: ControleSandreView[]): ControleSt
       successCount: 0,
       warningCount: 0,
       errorCount: 0,
+      informationCount: 0,
     },
   );
 }
@@ -98,6 +104,7 @@ export function getMasaStatistics(masa: MasaDto | null): ControleStatistics {
       successCount: 0,
       warningCount: 0,
       errorCount: 0,
+      informationCount: 0,
     };
   }
 
@@ -108,6 +115,7 @@ export function getMasaStatistics(masa: MasaDto | null): ControleStatistics {
       successCount: 1,
       warningCount: 0,
       errorCount: 0,
+      informationCount: 0,
     };
   }
 
@@ -116,6 +124,7 @@ export function getMasaStatistics(masa: MasaDto | null): ControleStatistics {
       successCount: 0,
       warningCount: 1,
       errorCount: 0,
+      informationCount: 0,
     };
   }
 
@@ -123,6 +132,7 @@ export function getMasaStatistics(masa: MasaDto | null): ControleStatistics {
     successCount: 0,
     warningCount: 0,
     errorCount: 1,
+    informationCount: 0,
   };
 }
 
