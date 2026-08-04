@@ -65,7 +65,6 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
   if (response.status === 204) {
     return {} as T;
   }
-  console.log('!!!!!apiPostFormData response:', response);
   return response.json();
 }
 
