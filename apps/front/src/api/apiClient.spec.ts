@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getControles, getMasa } from '@lib/dossier';
 
 const mockRefreshToken = vi.fn();
 const mockClearSession = vi.fn();
@@ -96,5 +97,73 @@ describe('authenticatedFetch', () => {
     await expect(authenticatedFetch('/api/test')).rejects.toThrow('Session expired');
     expect(mockClearSession).toHaveBeenCalledTimes(1);
     expect(locationSpy.href).toBe('/');
+  });
+});
+
+describe('apiCall', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  async function loadApiClient() {
+    return import('./apiClient');
+  }
+
+  it('returns valid JSON', async () => {
+    const { apiCall } = await loadApiClient();
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json([]));
+
+    await expect(apiCall(getControles, { params: { depotId: 'depot-1' } })).resolves.toEqual([]);
+  });
+
+  it('returns a JSON null response', async () => {
+    const { apiCall } = await loadApiClient();
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('null', { status: 200 }));
+
+    await expect(apiCall(getMasa, { params: { depotId: 'depot-1' } })).resolves.toBeNull();
+  });
+
+  it('returns null for an empty response when the route response is nullable', async () => {
+    const { apiCall } = await loadApiClient();
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await expect(apiCall(getMasa, { params: { depotId: 'depot-1' } })).resolves.toBeNull();
+  });
+
+  it('throws an ApiError for an empty response when the route response is not nullable', async () => {
+    const { apiCall, ApiError } = await loadApiClient();
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 200, statusText: 'OK' }));
+
+    const result = apiCall(getControles, { params: { depotId: 'depot-1' } });
+
+    await expect(result).rejects.toEqual(
+      expect.objectContaining({
+        name: 'ApiError',
+        message: 'GET /depot/depot-1/controle returned an empty response body',
+        status: 200,
+        statusText: 'OK',
+      }),
+    );
+    await expect(result).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('throws a contextual ApiError for malformed JSON without including the response body', async () => {
+    const { apiCall, ApiError } = await loadApiClient();
+    const malformedBody = '{"secret":"redacted"';
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(malformedBody, { status: 200, statusText: 'OK' }));
+
+    const result = apiCall(getMasa, { params: { depotId: 'depot-1' } });
+
+    await expect(result).rejects.toEqual(
+      expect.objectContaining({
+        name: 'ApiError',
+        message: 'GET /depot/depot-1/masa returned malformed JSON',
+        status: 200,
+        statusText: 'OK',
+      }),
+    );
+    await expect(result).rejects.toBeInstanceOf(ApiError);
+    await expect(result).rejects.not.toThrow(malformedBody);
   });
 });

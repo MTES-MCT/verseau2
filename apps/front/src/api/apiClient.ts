@@ -134,9 +134,23 @@ export async function apiCall<R extends RouteDefinition>(
     throw new ApiError(`${route.method} ${path} failed: ${message}`, response.status, response.statusText);
   }
 
-  // Parse response (no validation on frontend, schemas are for typing only)
-  const json = await response.json();
-  return json as RouteResponse<R>;
+  const responseBody = await response.text();
+
+  if (responseBody.length === 0) {
+    const nullResponse = route.response?.safeParse(null);
+    if (nullResponse?.success && nullResponse.data === null) {
+      return null as RouteResponse<R>;
+    }
+
+    throw new ApiError(`${route.method} ${path} returned an empty response body`, response.status, response.statusText);
+  }
+
+  // Non-empty responses remain typing-only; schemas are checked here only for nullable empty responses.
+  try {
+    return JSON.parse(responseBody) as RouteResponse<R>;
+  } catch {
+    throw new ApiError(`${route.method} ${path} returned malformed JSON`, response.status, response.statusText);
+  }
 }
 
 function parseContentDispositionFilename(contentDisposition: string | null): string | undefined {
