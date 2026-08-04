@@ -2,21 +2,11 @@ import { authService } from '../services/auth.service';
 import { APP_HOME_PATH, API_BASE_URL } from '../appConfig';
 import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
 import { buildRoutePath } from '@lib/dossier';
+import { ApiError } from './apiError';
 
 // Re-export buildRoutePath for convenience
 export { buildRoutePath };
-
-export class ApiError extends Error {
-  status: number;
-  statusText: string;
-
-  constructor(message: string, status: number, statusText: string) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.statusText = statusText;
-  }
-}
+export { ApiError } from './apiError';
 
 export interface DownloadedFile {
   blob: Blob;
@@ -75,7 +65,7 @@ export async function apiPostFormData<T>(endpoint: string, formData: FormData): 
   if (response.status === 204) {
     return {} as T;
   }
-
+  console.log('!!!!!apiPostFormData response:', response);
   return response.json();
 }
 

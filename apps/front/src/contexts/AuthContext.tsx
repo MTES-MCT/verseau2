@@ -1,18 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { authService } from '../services/auth.service';
 import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
-import { reportError } from '../monitoring/sentry';
-
-interface AuthContextValue {
-  authenticatedUser: AuthenticatedUserWithIntervenant | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import { reportError, setSentryUser } from '../monitoring/sentry';
+import { AuthContext, type AuthContextValue } from './authContextDefinition';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -46,6 +36,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
+  useEffect(() => {
+    if (!authenticatedUser) {
+      setSentryUser(null);
+      return;
+    }
+
+    const { cerbereId, nom, prenom, mel, itvCdn } = authenticatedUser.user;
+    const username = `${prenom} ${nom}`.trim();
+    setSentryUser({
+      id: cerbereId,
+      username: username || undefined,
+      email: mel || undefined,
+      itvCdn: itvCdn ?? undefined,
+    });
+  }, [authenticatedUser]);
 
   const login = useCallback(async () => {
     setIsLoading(true);
@@ -81,13 +87,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function useAuthContext(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
-  }
-  return context;
 }
