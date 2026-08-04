@@ -1,8 +1,6 @@
-/* eslint-disable react-refresh/only-export-components */
-import type { ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
 import { APP_ENV, SENTRY_DSN, SENTRY_RELEASE } from '../appConfig';
-import { ApiError } from '../api/apiClient';
+import { ApiError } from '../api/apiError';
 
 let isSentryEnabled = false;
 
@@ -55,14 +53,10 @@ export function setSentryUser(user: { id?: string; username?: string; email?: st
   if (!isSentryEnabled) {
     return;
   }
-
+  console.log('!!!!!!setSentryUser user:', user);
   Sentry.setUser(user);
 }
 
-export function SentryErrorBoundary({ children }: { children: ReactNode }) {
-  if (!isSentryEnabled) {
-    return <>{children}</>;
-  }
-
-  return <Sentry.ErrorBoundary fallback={<p>Une erreur inattendue est survenue.</p>}>{children}</Sentry.ErrorBoundary>;
+export function getIsSentryEnabled() {
+  return isSentryEnabled;
 }

@@ -8,7 +8,8 @@ import '@codegouvfr/react-dsfr/dsfr/utility/icons/icons.min.css';
 import './index.css';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext';
-import { initSentry, reportError, SentryErrorBoundary } from './monitoring/sentry';
+import { initSentry, reportError } from './monitoring/sentry';
+import { SentryErrorBoundary } from './monitoring/SentryErrorBoundary';
 
 // Force DSFR to use React Router Link to prevent page reload
 export const Link = ({ href, ...props }: { href?: string }) => <RouterLink to={href ?? ''} {...props} />;

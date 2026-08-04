@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ReactNode } from 'react';
-import { ApiError } from '../api/apiClient';
+import { ApiError } from '../api/apiError';
 
 vi.mock('@sentry/react', () => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
-  ErrorBoundary: ({ children }: { children: ReactNode }) => children,
   init: vi.fn(),
   setUser: vi.fn(),
 }));
