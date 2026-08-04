@@ -41,19 +41,10 @@ export function reportError(error: unknown, context?: Record<string, unknown>) {
   Sentry.captureException(error, context ? { extra: context } : undefined);
 }
 
-export function reportMessage(message: string, context?: Record<string, unknown>) {
+export function setSentryUser(user: Sentry.User | null) {
   if (!isSentryEnabled) {
     return;
   }
-
-  Sentry.captureMessage(message, context ? { extra: context } : undefined);
-}
-
-export function setSentryUser(user: { id?: string; username?: string; email?: string } | null) {
-  if (!isSentryEnabled) {
-    return;
-  }
-  console.log('!!!!!!setSentryUser user:', user);
   Sentry.setUser(user);
 }
 

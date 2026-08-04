@@ -123,7 +123,6 @@ export async function apiCall<R extends RouteDefinition>(
     const message = await response.text().catch(() => response.statusText);
     throw new ApiError(`${route.method} ${path} failed: ${message}`, response.status, response.statusText);
   }
-
   // Parse response (no validation on frontend, schemas are for typing only)
   const json = await response.json();
   return json as RouteResponse<R>;

@@ -3,7 +3,6 @@ import { ApiError } from '../api/apiError';
 
 vi.mock('@sentry/react', () => ({
   captureException: vi.fn(),
-  captureMessage: vi.fn(),
   init: vi.fn(),
   setUser: vi.fn(),
 }));
