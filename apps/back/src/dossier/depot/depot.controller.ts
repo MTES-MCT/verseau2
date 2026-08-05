@@ -61,7 +61,7 @@ export class DepotController {
   }
 
   @Post('upload')
-  @Throttle({ default: { ttl: 60000, limit: 200 } })
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile() file: MulterFile | undefined,
