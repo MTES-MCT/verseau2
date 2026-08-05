@@ -8,8 +8,8 @@ const DATABASE_POOL_ENV_BY_PROCESS = {
 const DEFAULT_DATABASE_POOL_SIZE = 50;
 
 export const resolveDatabasePoolSize = (configService: ConfigService): number => {
-  const processType = configService.get<string>('PROCESS_TYPE');
-  if (processType === undefined) {
+  const processType = configService.get<string | null>('PROCESS_TYPE');
+  if (processType === undefined || processType === null) {
     return DEFAULT_DATABASE_POOL_SIZE;
   }
 
@@ -18,8 +18,8 @@ export const resolveDatabasePoolSize = (configService: ConfigService): number =>
   }
 
   const poolEnvironmentVariable = DATABASE_POOL_ENV_BY_PROCESS[processType];
-  const configuredPoolSize = configService.get<string>(poolEnvironmentVariable);
-  if (configuredPoolSize === undefined) {
+  const configuredPoolSize = configService.get<string | null>(poolEnvironmentVariable);
+  if (configuredPoolSize === undefined || configuredPoolSize === null) {
     return DEFAULT_DATABASE_POOL_SIZE;
   }
 

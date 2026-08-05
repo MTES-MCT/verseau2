@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { resolveDatabasePoolSize } from './databasePoolSize';
 
-const createConfigService = (config: Record<string, string>): ConfigService => {
+const createConfigService = (config: Record<string, string | null>): ConfigService => {
   return new ConfigService(config);
 };
 
@@ -45,8 +45,23 @@ describe('resolveDatabasePoolSize', () => {
     expect(resolveDatabasePoolSize(configService)).toBe(50);
   });
 
+  it('returns 50 when PROCESS_TYPE is null', () => {
+    const configService = createConfigService({ PROCESS_TYPE: null });
+
+    expect(resolveDatabasePoolSize(configService)).toBe(50);
+  });
+
   it.each(['api', 'worker'])('returns 50 when the pool variable for %s is absent', (processType) => {
     const configService = createConfigService({ PROCESS_TYPE: processType });
+
+    expect(resolveDatabasePoolSize(configService)).toBe(50);
+  });
+
+  it('returns 50 when the selected pool variable is null', () => {
+    const configService = createConfigService({
+      PROCESS_TYPE: 'worker',
+      DATABASE_POOL_WORKER: null,
+    });
 
     expect(resolveDatabasePoolSize(configService)).toBe(50);
   });
