@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MigrationService } from './migration.service';
+import { resolveDatabasePoolSize } from './databasePoolSize';
 import { TypeOrmLogger } from './typeorm-logger';
 import path from 'path';
 
@@ -17,13 +18,15 @@ const getDdlSync = (configService: ConfigService) => {
 const getLogging = (configService: ConfigService) => {
   return configService.get<string>('DATABASE_LOGGING') === 'true';
 };
-
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const migrationsPath = path.join(__dirname, '../migrations/**/*{.js, .ts}');
+        const poolSize = resolveDatabasePoolSize(configService);
+        const processType = configService.get<string>('PROCESS_TYPE') ?? 'local';
+        new LoggerService('DatabaseModule').log(`Database pool size for ${processType} is ${poolSize}`);
         const config: TypeOrmModuleOptions = {
           type: 'postgres',
           url: configService.getOrThrow('DATABASE_URL'),
@@ -31,7 +34,7 @@ const getLogging = (configService: ConfigService) => {
           synchronize: getDdlSync(configService),
           logging: getLogging(configService),
           logger: new TypeOrmLogger(),
-          poolSize: 5, // TODO: à gérer selon l'environnement, web: PROCESS_TYPE=api node apps/back/dist/mainServer.js
+          poolSize,
           migrations: [migrationsPath],
         };
         return config;

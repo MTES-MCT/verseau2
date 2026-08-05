@@ -131,6 +131,10 @@ OIDC_FAKE_TOKEN=change-me
  SFTP_AGENCY_PASSWORD_22222222222222=mot-de-passe
 ```
 
+#### Pools PostgreSQL
+
+Sur le PaaS, le `Procfile` définit `PROCESS_TYPE=api|worker`. TypeORM sélectionne ainsi `DATABASE_POOL_API` ou `DATABASE_POOL_WORKER`; les lancements locaux conservent le pool par défaut. Un rôle ou un pool invalide bloque le démarrage, et la configuration retenue est journalisée.
+
 ### Frontend
 
 Créer un fichier `.env` dans `apps/front/` basé sur `src/example.env` :
