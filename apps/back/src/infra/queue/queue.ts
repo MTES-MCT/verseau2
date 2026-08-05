@@ -32,6 +32,7 @@ export enum QueueName {
 export interface QueueOptions {
   batchSize: number;
   includeMetadata?: boolean;
+  localConcurrency?: number;
 }
 
 export const QueueGateway = Symbol('QUEUE');

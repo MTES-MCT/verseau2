@@ -1,6 +1,6 @@
 import type { ClsService } from 'nestjs-cls';
 import type { CustomClsStore } from '@shared/logger/cls-store.interface';
-import { QueueName } from '@queue/queue';
+import { QueueName, QueueOptions } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import type { LoggerService } from '@shared/logger/logger.service';
 import type { EmailProvider } from '@notification/email.provider';
@@ -14,7 +14,7 @@ import type { DiffusionRapportProcessorService } from './diffusionRapport/diffus
 import { WorkerService } from './worker.service';
 
 describe('WorkerService', () => {
-  it('registers every queue worker with batchSize 1', async () => {
+  it('registers every queue worker with single-job batches and bounded concurrency', async () => {
     const work = jest.fn().mockResolvedValue('worker-id');
     const queueService = {
       send: jest.fn(),
@@ -52,10 +52,22 @@ describe('WorkerService', () => {
 
     expect(work).toHaveBeenCalledTimes(Object.values(QueueName).length);
 
+    const expectedOptions: Record<QueueName, QueueOptions> = {
+      [QueueName.process_file]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.email]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.send_to_sftp]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.controle_metier]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.controle_sandre_upload]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.controle_sandre_poll]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.process_after_masa_webhook]: { batchSize: 1, localConcurrency: 10 },
+      [QueueName.diffusion_rapport]: { batchSize: 1, localConcurrency: 10 },
+    };
+
     for (const queueName of Object.values(QueueName)) {
-      const expectedOptions =
-        queueName === QueueName.controle_sandre_upload ? { batchSize: 1, includeMetadata: true } : { batchSize: 1 };
-      expect(work).toHaveBeenCalledWith(queueName, expectedOptions, expect.any(Function));
+      const options = expectedOptions[queueName];
+      const registeredOptions =
+        queueName === QueueName.controle_sandre_upload ? { ...options, includeMetadata: true } : options;
+      expect(work).toHaveBeenCalledWith(queueName, registeredOptions, expect.any(Function));
     }
   });
 });
