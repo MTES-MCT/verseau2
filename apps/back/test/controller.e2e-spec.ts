@@ -39,10 +39,22 @@ import {
 import { MasaService } from '@dossier/masa/masa.service';
 import { MasaWebhookStatus } from '@dossier/masa/masa.model';
 
-describe('Controller (e2e) - Unauthorized', () => {
+describe('Controller (e2e) - Access control', () => {
   let app: INestApplication<App>;
   let authService: Authentication;
   let masaService: MasaService;
+  let masaProvider: MasaProvider;
+
+  const mockAuthenticatedUser = (
+    overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
+  ): import('@authentication/authentication').AuthenticatedUser => ({
+    cerbereId: 'test-user-id',
+    mel: 'dev@example.com',
+    itvCdn: 100,
+    isExpertNational: false,
+    ...overrides,
+  });
+
   beforeAll(async () => {
     await startPostgresContainer();
     const connectionUri = getPostgresConnectionUri();
@@ -63,10 +75,15 @@ describe('Controller (e2e) - Unauthorized', () => {
     await app.init();
     authService = app.get<Authentication>(Authentication);
     masaService = app.get<MasaService>(MasaService);
+    masaProvider = app.get<MasaProvider>(MasaProvider);
   });
 
   afterAll(async () => {
     await app.close();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('Controller (e2e) - Version', () => {
@@ -150,6 +167,15 @@ describe('Controller (e2e) - Unauthorized', () => {
     it('/admin/depot (GET) - Should return 401 Unauthorized when no token is provided', async () => {
       return request(app.getHttpServer()).get('/admin/depot').expect(401);
     });
+
+    it.each(['/admin/depot', '/admin/depot/dep_forbidden/rapport', '/admin/depot/dep_forbidden/xml'])(
+      '%s (GET) - Should return 403 Forbidden for a non-admin user',
+      async (endpoint) => {
+        jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser());
+
+        return request(app.getHttpServer()).get(endpoint).set('Cookie', ['access_token=token-user-1']).expect(403);
+      },
+    );
   });
 
   describe('Controller (e2e) - Masa', () => {
@@ -223,6 +249,39 @@ describe('Controller (e2e) - Unauthorized', () => {
         .get('/referentiel/points-mesure')
         .query({ ouvrageType: 'steu', ouvrageCode: 'STEU001' })
         .expect(401);
+    });
+
+    it.each([
+      '/referentiel/points-mesure?ouvrageType=steu&ouvrageCode=STEU001',
+      '/referentiel/steu/STEU001/detail',
+      '/referentiel/scl/SCL001/detail',
+    ])('%s (GET) - Should return 403 Forbidden when user has no intervenant', async (endpoint) => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser({ itvCdn: null }));
+
+      return request(app.getHttpServer()).get(endpoint).set('Cookie', ['access_token=token-user-1']).expect(403);
+    });
+
+    it('/referentiel/points-mesure (GET) - Should return 403 Forbidden for an unauthorized ouvrage', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser());
+      jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
+        intervenantId: 100,
+        intervenantSiret: 'SIRET001',
+      });
+      jest.spyOn(masaProvider, 'findVSteuSclItvByItvRfa').mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU001',
+          systemeCollecteCode: null as unknown as string,
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+
+      return request(app.getHttpServer())
+        .get('/referentiel/points-mesure')
+        .query({ ouvrageType: 'steu', ouvrageCode: 'STEU002' })
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
     });
   });
 
@@ -367,7 +426,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   });
 });
 
-describe('ControleController (e2e) - UseOrGuards', () => {
+describe('Depot access guards (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let authService: Authentication;
@@ -520,6 +579,20 @@ describe('ControleController (e2e) - UseOrGuards', () => {
     it('/depot/:depotId/masa (GET) - Should return 403', async () => {
       return request(app.getHttpServer())
         .get(`/depot/${DEPOT_ID}/masa`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
+    });
+
+    it('/depot/:id/rapport (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/rapport`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
+    });
+
+    it('/depot/:id/xml (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/xml`)
         .set('Cookie', ['access_token=token-user-1'])
         .expect(403);
     });
