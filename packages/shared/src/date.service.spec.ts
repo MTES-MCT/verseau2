@@ -1,4 +1,11 @@
-import { formatDate, getDateAsISODate, getStartOfYearAsUTCDate, toISODateOrNull, getPreviousSunday } from './date.service';
+import {
+  formatDate,
+  formatDateTime,
+  getDateAsISODate,
+  getStartOfYearAsUTCDate,
+  toISODateOrNull,
+  getPreviousSunday,
+} from './date.service';
 
 describe('formatDate', () => {
   it('returns "-" for null', () => {
@@ -30,6 +37,33 @@ describe('formatDate', () => {
     // 2020-03-04 23:00 UTC = 2020-03-04 18:00 EST (UTC-5)
     const result = formatDate('2020-03-04T23:00:00+00:00', 'America/New_York');
     expect(result).toBe('04/03/2020');
+  });
+});
+
+describe('formatDateTime', () => {
+  it('returns "-" for null', () => {
+    expect(formatDateTime(null)).toBe('-');
+  });
+
+  it('formats the date and time in the runtime timezone', () => {
+    const localDate = new Date(2026, 7, 6, 10, 52);
+
+    expect(formatDateTime(localDate)).toBe('06/08/2026 10:52');
+  });
+
+  it('lets the runtime select its timezone', () => {
+    const toLocaleDateString = jest.spyOn(Date.prototype, 'toLocaleDateString');
+
+    formatDateTime(new Date());
+
+    expect(toLocaleDateString).toHaveBeenCalledWith('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    toLocaleDateString.mockRestore();
   });
 });
 

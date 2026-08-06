@@ -7,6 +7,7 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { DepotStatus, type DepotDto } from '@lib/dossier';
+import { formatDateTime } from '@lib/shared';
 import { ApiError } from '../api/apiClient';
 import { StatCard } from '../components/StatCard';
 import { fr } from '@codegouvfr/react-dsfr';
@@ -16,6 +17,7 @@ import { getEtapeMetierNumber, getMessageForDepotEtapeMetier } from '../services
 import { IndicateursTable } from '../components/IndicateursTable';
 import { useDepots } from '../hooks/useDepots';
 import { FixedHeightTable } from '../components/common/FixedHeightTable';
+import './Dashboard.css';
 
 const PAGE_SIZE = 5;
 
@@ -48,17 +50,6 @@ function getStatusBadge(depot: DepotDto) {
     default:
       return <Badge small>{depot.status}</Badge>;
   }
-}
-
-function formatDate(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export function Dashboard() {
@@ -97,7 +88,7 @@ export function Dashboard() {
     depot.nomOriginalFichier,
     getStatusBadge(depot),
     `${getMessageForDepotEtapeMetier(depot.etapeMetier) ? `${getMessageForDepotEtapeMetier(depot.etapeMetier)} - ${getEtapeMetierNumber(depot.etapeMetier)}/4` : ''}`,
-    depot.createdAt ? formatDate(depot.createdAt) : '-',
+    formatDateTime(depot.createdAt),
     <div key={depot.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
       <Link
         to={getControleRoute(depot.id)}
@@ -179,7 +170,7 @@ export function Dashboard() {
             pageSize={pageSize}
             rowHeight="two-lines"
             noScroll={false}
-            className={fr.cx('fr-mb-1w')}
+            className={`${fr.cx('fr-mb-1w')} dashboard-depots-table`}
           />
         ) : (
           'Aucun dépôt trouvé.'
