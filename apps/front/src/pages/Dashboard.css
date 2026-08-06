@@ -1,0 +1,34 @@
+.dashboard-depots-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.dashboard-depots-table th:nth-child(1),
+.dashboard-depots-table td:nth-child(1) {
+  width: 10%;
+}
+
+.dashboard-depots-table th:nth-child(2),
+.dashboard-depots-table td:nth-child(2) {
+  width: 25%;
+}
+
+.dashboard-depots-table th:nth-child(3),
+.dashboard-depots-table td:nth-child(3) {
+  width: 17%;
+}
+
+.dashboard-depots-table th:nth-child(4),
+.dashboard-depots-table td:nth-child(4) {
+  width: 16%;
+}
+
+.dashboard-depots-table th:nth-child(5),
+.dashboard-depots-table td:nth-child(5) {
+  width: 12%;
+}
+
+.dashboard-depots-table th:nth-child(6),
+.dashboard-depots-table td:nth-child(6) {
+  width: 20%;
+}
