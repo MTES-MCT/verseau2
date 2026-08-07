@@ -326,7 +326,7 @@ describe('ControleV1Service (e2e)', () => {
     });
   });
 
-  describe.skip('CTL005 - verifyPmoExists', () => {
+  describe('CTL005 - verifyPmoExists', () => {
     it('should pass when PMO exists', async () => {
       // Seed data: STEU, TLREF for the location point, and PMO linked to both
       await seedSteu(dataSource, 1, '0600000001');
@@ -1868,7 +1868,7 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl002?.success).toBe(true);
     });
 
-    it.skip('CTL005 should pass when PMO exists in CHAR(n) columns', async () => {
+    it('CTL005 should pass when PMO exists in CHAR(n) columns', async () => {
       await seedSteu(dataSource, 1, '0442165S0005');
       await seedTlref(dataSource, 1, 'LREF_16', 'S15');
       await seedPmo(dataSource, 1, 1, '14', 1);

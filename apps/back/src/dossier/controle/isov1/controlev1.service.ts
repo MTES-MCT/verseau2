@@ -38,7 +38,7 @@ export class ControleV1Service {
       Promise.resolve(this.verifySteuExists(fctAssainissement, steus)),
       this.verifyMoSteuExists(fctAssainissement),
       Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steus, itvs, validExpSteuLinks)),
-      // Promise.resolve(this.verifyPmoExists(fctAssainissement, existingPmos)),
+      Promise.resolve(this.verifyPmoExists(fctAssainissement, existingPmos)),
       this.verifySupExists(fctAssainissement),
       this.verifyLieuAnalyseExists(fctAssainissement),
       this.verifyStatutAnalyseExists(fctAssainissement),
