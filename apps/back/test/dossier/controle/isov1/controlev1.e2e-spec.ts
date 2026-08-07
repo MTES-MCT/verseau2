@@ -116,7 +116,7 @@ describe('ControleV1Service (e2e)', () => {
     await clearReferentielData(dataSource);
   });
 
-  describe.skip('CTL002 - verifySteuExists', () => {
+  describe('CTL002 - verifySteuExists', () => {
     it('should pass when STEU exists', async () => {
       // Seed STEU
       await seedSteu(dataSource, 1, '0600000001');
@@ -1853,7 +1853,7 @@ describe('ControleV1Service (e2e)', () => {
       await dataSource.query(`ALTER TABLE lanceleau.itv ALTER COLUMN itv_rfa TYPE VARCHAR`);
     });
 
-    it.skip('CTL002 should pass when STEU exists in CHAR(n) column', async () => {
+    it('CTL002 should pass when STEU exists in CHAR(n) column', async () => {
       await seedSteu(dataSource, 1, '0442165S0005');
       await seedDepot(dataSource, 'dep_char_ctl002');
 
