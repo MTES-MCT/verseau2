@@ -35,7 +35,7 @@ export class ControleV1Service {
       await this.controleV1DataFetcher.load(fctAssainissement);
 
     const tousControles = Promise.all([
-      Promise.resolve(this.verifySteuExists(fctAssainissement, steus)),
+      // Promise.resolve(this.verifySteuExists(fctAssainissement, steus)),
       this.verifyMoSteuExists(fctAssainissement),
       Promise.resolve(this.verifyExpSteuExists(fctAssainissement, steus, itvs, validExpSteuLinks)),
       Promise.resolve(this.verifyPmoExists(fctAssainissement, existingPmos)),
