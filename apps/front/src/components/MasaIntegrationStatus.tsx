@@ -2,6 +2,7 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Accordion } from '@codegouvfr/react-dsfr/Accordion';
 import { type MasaDto, MasaStatus } from '@lib/dossier';
+import { formatAgentVerseauReport } from '@lib/shared';
 import { Badge } from '@codegouvfr/react-dsfr/Badge';
 import { Table } from '@codegouvfr/react-dsfr/Table';
 import './ControleGroup.css';
@@ -40,7 +41,9 @@ export function MasaIntegrationStatus({ title, masa, activeFilters }: MasaIntegr
       label="Rapport d'intégration"
       defaultExpanded={masa.statut === MasaStatus.REFUSE || masa.statut === MasaStatus.INTEGRATION_PARTIELLE}
     >
-      <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.875rem' }}>{masa.rapport}</div>
+      <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '0.875rem' }}>
+        {formatAgentVerseauReport(masa.rapport)}
+      </div>
     </Accordion>
   ) : (
     <Alert
