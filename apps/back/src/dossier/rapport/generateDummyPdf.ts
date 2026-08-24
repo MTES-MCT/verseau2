@@ -36,7 +36,11 @@ async function generateDummyPdf() {
     statut: MasaStatus.INTEGRE,
     statutMasa: MasaWebhookStatus.INTEGRE,
     rapport:
-      'Intégration effectuée avec succès.\nAucune anomalie majeure détectée lors du traitement MASA.\nLe fichier a été transmis correctement.',
+      "<p>IMPORTANT : ne rÃ©pondez pas Ã  l'expÃ©diteur de ce message, il s'agit d'un automate.<br/></p>" +
+      '<p>Bonjour,<br/></p>' +
+      '<p>Le dÃ©pÃ´t automatique du fichier a bien Ã©tÃ© intÃ©grÃ© dans Verseau.<br/></p>' +
+      '<p>Le fichier a Ã©tÃ© transmis correctement et aucune anomalie majeure nâ€™a Ã©tÃ© dÃ©tectÃ©e.<br/></p>' +
+      '<p>En cas de problÃ¨me, contactezÂ lâ€™agence ou lâ€™office de lâ€™eau concernÃ©.</p>',
     createdAt: new Date(),
     updatedAt: new Date(),
   };
