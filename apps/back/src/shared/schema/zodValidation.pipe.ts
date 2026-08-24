@@ -1,6 +1,6 @@
 import { PipeTransform, BadRequestException } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
-import { ZodType } from 'zod';
+import { ZodError, ZodType } from 'zod';
 
 export class ZodValidationPipe implements PipeTransform {
   private readonly logger = new LoggerService(ZodValidationPipe.name);
@@ -10,8 +10,9 @@ export class ZodValidationPipe implements PipeTransform {
     try {
       const parsedValue = this.schema.parse(value);
       return parsedValue;
-    } catch (error) {
-      this.logger.error('Validation failed', error);
+    } catch (error: unknown) {
+      const validationError = error instanceof ZodError ? { issues: error.issues } : { error };
+      this.logger.error('Validation failed', { ...validationError, payload: value });
       throw new BadRequestException('Validation failed');
     }
   }
