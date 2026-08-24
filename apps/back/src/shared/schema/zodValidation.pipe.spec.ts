@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
-import { z, ZodError } from 'zod';
+import { z } from 'zod';
 import { ZodValidationPipe } from './zodValidation.pipe';
 
 describe('ZodValidationPipe', () => {
@@ -25,11 +25,19 @@ describe('ZodValidationPipe', () => {
 
     const loggedContext: unknown = loggerErrorSpy.mock.calls[0]?.[1];
     expect(loggedContext).toHaveProperty('payload', payload);
-    expect(loggedContext).toHaveProperty('error');
+    expect(loggedContext).toHaveProperty('issues');
 
-    if (typeof loggedContext !== 'object' || loggedContext === null || !('error' in loggedContext)) {
+    if (typeof loggedContext !== 'object' || loggedContext === null || !('issues' in loggedContext)) {
       throw new Error('Expected validation log context');
     }
-    expect(loggedContext.error).toBeInstanceOf(ZodError);
+    expect(loggedContext.issues).toEqual([
+      {
+        code: 'invalid_type',
+        expected: 'string',
+        message: 'Invalid input: expected string, received number',
+        path: ['name'],
+      },
+    ]);
+    expect(JSON.stringify(loggedContext)).not.toContain('\\n');
   });
 });
