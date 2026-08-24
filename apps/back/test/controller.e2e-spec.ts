@@ -230,6 +230,37 @@ describe('Controller (e2e) - Access control', () => {
         .expect(200);
       return response;
     });
+
+    it('/webhook/masa/agent-verseau (POST) - Should normalize a NULL numeroDepotVerseau1', async () => {
+      const processRetourAgentVerseau = jest.spyOn(masaService, 'processRetourAgentVerseau').mockResolvedValue({
+        id: 'masa-id-123',
+        depotId: 'dep_01m0fnz8t33qwq4pzqw6tney3a',
+        numeroDepotVerseau1: null,
+        statut: MasaStatus.REFUSE,
+        statutMasa: MasaWebhookStatus.ERREUR_BLOQUANTE,
+        rapport: "<p>Le dépôt automatique du fichier n'a pas pu être effectué.</p>",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const payload = {
+        verseau2DepotId: 'dep_01m0fnz8t33qwq4pzqw6tney3a',
+        numeroDepotVerseau1: 'NULL',
+        statut: 'Erreur Bloquante',
+        rapport: "<p>Le dépôt automatique du fichier n'a pas pu être effectué.</p>",
+      };
+
+      await request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send(payload)
+        .expect(200);
+
+      expect(processRetourAgentVerseau).toHaveBeenCalledWith({
+        ...payload,
+        numeroDepotVerseau1: null,
+        statut: MasaWebhookStatus.ERREUR_BLOQUANTE,
+      });
+    });
   });
 
   describe('Controller (e2e) - Referentiel', () => {
