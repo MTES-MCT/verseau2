@@ -5,6 +5,7 @@ import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '@dossier/controle/controle.model';
 import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
 import { buildMessage, ControleDescription, EvenementType, SandreAcceptationStatus } from '@lib/dossier';
+import { formatAgentVerseauReport } from '@lib/shared';
 
 const COLORS = {
   PRIMARY: '#2563eb', // Blue
@@ -157,7 +158,7 @@ export class RapportPdfGeneratorService {
     if (masa.rapport) {
       doc.fontSize(10).fillColor(COLORS.SECONDARY).text('Détail:', { underline: true });
       doc.moveDown(0.2);
-      doc.fontSize(9).fillColor(COLORS.TEXT).text(masa.rapport, { align: 'left' });
+      doc.fontSize(9).fillColor(COLORS.TEXT).text(formatAgentVerseauReport(masa.rapport), { align: 'left' });
     }
     doc.moveDown(2);
   }
