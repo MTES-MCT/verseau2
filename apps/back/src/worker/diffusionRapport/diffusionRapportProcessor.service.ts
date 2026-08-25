@@ -61,10 +61,10 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       }
 
       // 1. Generate PDF report
-      const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);
+      const controles = await this.controleGateway.findByDepotId(depotId);
       const reponsesSandre = await this.reponseSandreGateway.findByDepotId(depotId);
       this.logger.log(`Generating PDF report`, { depotId, masaId });
-      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controlesV2, masa ?? undefined, reponsesSandre);
+      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controles, masa ?? undefined, reponsesSandre);
 
       // 2. Upload PDF to S3
       const pdfPath = `rapports/${depotId}/rapport.pdf`;

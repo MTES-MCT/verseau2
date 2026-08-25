@@ -14,7 +14,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { Zip } from '@shared/zip/zip';
 import { ZipService } from '@shared/zip/zip.service';
 import { MasaProvider } from '@masa/masa.provider';
-import { DepotStep } from '@lib/dossier';
+import { ControleName, ControleType, DepotStep, ErrorCode, EvenementType } from '@lib/dossier';
 import { parseScenarioAssainissementXml } from '@lib/parser';
 import type { FctAssainissement } from '@lib/parser';
 import { RapportDestinataire } from '@queue/queue';
@@ -109,8 +109,7 @@ describe('DiffusionRapportProcessorService', () => {
     } as unknown as jest.Mocked<NotificationGateway>;
 
     controleGateway = {
-      findByDepotId: jest.fn(),
-      findControlesV2ByDepotId: jest.fn().mockResolvedValue([]),
+      findByDepotId: jest.fn().mockResolvedValue([]),
       createControle: jest.fn(),
       createControles: jest.fn(),
     } as unknown as jest.Mocked<ControleGateway>;
@@ -184,6 +183,36 @@ describe('DiffusionRapportProcessorService', () => {
     expect(Buffer.from(zipEntries['depot.xml']).toString('utf8')).toBe(xmlBuffer.toString('utf8'));
     expect(Buffer.from(zipEntries['rapport-masa-dep_1.pdf']).toString('utf8')).toBe(pdfBuffer.toString('utf8'));
   }
+
+  it('should provide V1 and V2 controls to the PDF generator', async () => {
+    const controles = [
+      {
+        id: 'ctrl_v1',
+        name: ControleName.CTL005,
+        type: ControleType.CONTROLE_V1,
+        success: false,
+        error: ErrorCode.E2_033,
+        errorParams: ['99', '1A', '0600000001'],
+        evenementType: EvenementType.ERREUR,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'ctrl_v2',
+        name: ControleName.CTL039,
+        type: ControleType.CONTROLE_V2,
+        success: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    controleGateway.findByDepotId.mockResolvedValue(controles);
+
+    await service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] });
+
+    expect(controleGateway.findByDepotId).toHaveBeenCalledWith('dep_1');
+    expect(pdfGenerator.generateReport).toHaveBeenCalledWith(depot, controles, undefined, []);
+  });
 
   it('should send the report to the deposant only', async () => {
     await service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] });

@@ -420,10 +420,10 @@ export class MasaGatewayTestMock {
  * Mock for ControleGateway.
  */
 export class ControleGatewayTestMock {
-  findControlesV2ByDepotId = jest.fn().mockResolvedValue([]);
+  findByDepotId = jest.fn().mockResolvedValue([]);
 
   reset(): void {
-    this.findControlesV2ByDepotId.mockClear().mockResolvedValue([]);
+    this.findByDepotId.mockClear().mockResolvedValue([]);
   }
 }
 

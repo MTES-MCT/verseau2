@@ -4,7 +4,7 @@ import { MasaModel } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '@dossier/controle/controle.model';
 import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
-import { buildMessage, ControleDescription, EvenementType, SandreAcceptationStatus } from '@lib/dossier';
+import { buildMessage, ControleDescription, ControleType, EvenementType, SandreAcceptationStatus } from '@lib/dossier';
 import { formatAgentVerseauReport } from '@lib/shared';
 
 const COLORS = {
@@ -22,7 +22,7 @@ const COLORS = {
 export class RapportPdfGeneratorService {
   async generateReport(
     depot: DepotModel,
-    controlesV2: ControleModelWithoutDepot[],
+    controles: ControleModelWithoutDepot[],
     masa?: MasaModel,
     reponsesSandre?: ReponseSandreModel[],
   ): Promise<Buffer> {
@@ -50,8 +50,12 @@ export class RapportPdfGeneratorService {
         this.drawMasaReport(doc, masa);
       }
 
-      if (controlesV2 && controlesV2.length > 0) {
-        this.drawControlsV2(doc, controlesV2);
+      const controlesRoseau = controles.filter(
+        (controle) => controle.type === ControleType.CONTROLE_V1 || controle.type === ControleType.CONTROLE_V2,
+      );
+
+      if (controlesRoseau.length > 0) {
+        this.drawControls(doc, controlesRoseau, 'Contrôles métiers, référentiels et de cohérence des données (ROSEAU)');
       }
 
       if (reponsesSandre && reponsesSandre.length > 0) {
@@ -163,12 +167,8 @@ export class RapportPdfGeneratorService {
     doc.moveDown(2);
   }
 
-  private drawControlsV2(doc: PDFKit.PDFDocument, controls: ControleModelWithoutDepot[]) {
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(14)
-      .fillColor(COLORS.PRIMARY)
-      .text('Résultats des contrôles V2', 50, doc.y, { underline: false });
+  private drawControls(doc: PDFKit.PDFDocument, controls: ControleModelWithoutDepot[], title: string) {
+    doc.font('Helvetica-Bold').fontSize(14).fillColor(COLORS.PRIMARY).text(title, 50, doc.y, { underline: false });
     doc.font('Helvetica');
     doc.moveDown(1);
 

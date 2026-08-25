@@ -87,7 +87,7 @@ export type ErrorParamsMap = {
   [ErrorCode.E2_024]: [cdTypeOuvrageDepollution: string];
   [ErrorCode.E2_025]: [cdNatureSteu: string];
   [ErrorCode.E2_026]: [cdEmetteur: string];
-  [ErrorCode.E2_033]: [numeroPointMesure: string, cdOuvrage: string];
+  [ErrorCode.E2_033]: [numeroPointMesure: string, locGlobalePointMesure: string, cdOuvrage: string];
   [ErrorCode.E2_034]: [cdTypeDeversoir: string];
   [ErrorCode.E2_035]: [cdConformite: string];
   [ErrorCode.E2_036]: [cdTypeAppareil: string];
