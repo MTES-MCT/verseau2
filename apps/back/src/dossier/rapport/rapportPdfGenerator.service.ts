@@ -4,7 +4,14 @@ import { MasaModel } from '../masa/masa.model';
 import { DepotModel } from '../depot/depot.model';
 import { ControleModelWithoutDepot } from '@dossier/controle/controle.model';
 import { ReponseSandreModel } from '@dossier/controle/technique/sandre/reponseSandre.model';
-import { buildMessage, ControleDescription, ControleType, EvenementType, SandreAcceptationStatus } from '@lib/dossier';
+import {
+  buildMessage,
+  ControleDescription,
+  ControleType,
+  DepotStatus,
+  EvenementType,
+  SandreAcceptationStatus,
+} from '@lib/dossier';
 import { formatAgentVerseauReport } from '@lib/shared';
 
 const COLORS = {
@@ -12,10 +19,18 @@ const COLORS = {
   SECONDARY: '#64748b', // Slate Gray
   SUCCESS: '#16a34a', // Green
   WARNING: '#f97316', // Orange
+  ERROR: '#dc2626', // Red
   INFO: '#2563eb', // Blue
   TEXT: '#1e293b', // Dark Slate
   LIGHT_BG: '#f8fafc', // Light Gray/White
   BORDER: '#e2e8f0', // Light Border
+};
+
+const DEPOT_STATUS_DISPLAY: Record<DepotStatus, { label: string; color: string }> = {
+  [DepotStatus.EN_COURS_DE_TRAITEMENT]: { label: 'En cours de traitement', color: COLORS.INFO },
+  [DepotStatus.INTEGRE]: { label: 'Intégré', color: COLORS.SUCCESS },
+  [DepotStatus.INTEGRE_PARTIELLEMENT]: { label: 'Intégré partiellement', color: COLORS.WARNING },
+  [DepotStatus.REJETE]: { label: 'Rejeté', color: COLORS.ERROR },
 };
 
 @Injectable()
@@ -88,36 +103,59 @@ export class RapportPdfGeneratorService {
       : new Date().toLocaleString('fr-FR');
     doc.fillColor(COLORS.TEXT).text(dateStr, 350, startY);
 
-    doc.moveDown(1.5);
+    doc.moveDown(0.5);
     const nextY = doc.y;
 
     doc.fillColor(COLORS.SECONDARY).text('Fichier:', 50, nextY);
     doc.fillColor(COLORS.TEXT).text(depot.nomOriginalFichier, 120, nextY, { width: 400 });
 
+    doc.moveDown(0.5);
+    const statusY = doc.y;
+    const statusDisplay = DEPOT_STATUS_DISPLAY[depot.status];
+    doc.fillColor(COLORS.SECONDARY).text('Statut du dépôt:', 50, statusY);
+    doc.font('Helvetica-Bold').fillColor(statusDisplay.color).text(statusDisplay.label, 140, statusY);
+    doc.font('Helvetica');
+
+    if (masa?.numeroDepotVerseau1) {
+      doc.moveDown(0.5);
+      const numeroDepotVerseau1Y = doc.y;
+      doc.fillColor(COLORS.SECONDARY).text('Numéro dépôt:', 50, numeroDepotVerseau1Y);
+      doc.fillColor(COLORS.TEXT).text(masa.numeroDepotVerseau1, 170, numeroDepotVerseau1Y);
+    }
+
     doc.moveDown(2);
   }
 
-  private drawStatistics(doc: PDFKit.PDFDocument, total: number, success: number, failed: number, rate: number) {
+  private drawStatistics(
+    doc: PDFKit.PDFDocument,
+    total: number,
+    success: number,
+    errors: number,
+    information: number,
+    warnings: number,
+  ) {
     const boxTop = doc.y;
     const boxHeight = 70;
 
     doc.rect(50, boxTop, 500, boxHeight).fillAndStroke(COLORS.LIGHT_BG, COLORS.BORDER);
     doc.fillColor(COLORS.TEXT);
 
-    const quarter = 500 / 4;
+    const itemWidth = 500 / 5;
     const centerY = boxTop + 25;
 
-    this.drawStatItem(doc, 'Total Contrôles', total.toString(), 50, centerY);
-    this.drawStatItem(doc, 'Succès', success.toString(), 50 + quarter, centerY, COLORS.SUCCESS);
+    this.drawStatItem(doc, 'Total Contrôles', total.toString(), 50, centerY, itemWidth);
+    this.drawStatItem(doc, 'Succès', success.toString(), 50 + itemWidth, centerY, itemWidth, COLORS.SUCCESS);
+    this.drawStatItem(doc, 'Erreurs', errors.toString(), 50 + itemWidth * 2, centerY, itemWidth, COLORS.ERROR);
+    this.drawStatItem(doc, 'Informations', information.toString(), 50 + itemWidth * 3, centerY, itemWidth, COLORS.INFO);
     this.drawStatItem(
       doc,
-      'Retours',
-      failed.toString(),
-      50 + quarter * 2,
+      'Avertissements',
+      warnings.toString(),
+      50 + itemWidth * 4,
       centerY,
-      failed > 0 ? COLORS.WARNING : COLORS.TEXT,
+      itemWidth,
+      COLORS.WARNING,
     );
-    this.drawStatItem(doc, 'Taux de succès', `${rate}%`, 50 + quarter * 3, centerY);
 
     doc.y = boxTop + boxHeight + 20;
     doc.x = 50; // Reset x position to left margin
@@ -129,18 +167,19 @@ export class RapportPdfGeneratorService {
     value: string,
     x: number,
     y: number,
+    width: number,
     color: string = COLORS.TEXT,
   ) {
     doc
       .font('Helvetica')
       .fontSize(10)
       .fillColor(COLORS.SECONDARY)
-      .text(label, x, y - 10, { width: 125, align: 'center' });
+      .text(label, x, y - 10, { width, align: 'center' });
     doc
       .font('Helvetica-Bold')
       .fontSize(16)
       .fillColor(color)
-      .text(value, x, y + 5, { width: 125, align: 'center' });
+      .text(value, x, y + 5, { width, align: 'center' });
     doc.font('Helvetica');
   }
 
@@ -149,14 +188,11 @@ export class RapportPdfGeneratorService {
       .font('Helvetica-Bold')
       .fontSize(14)
       .fillColor(COLORS.PRIMARY)
-      .text("Rapport d'intégration (Verseau 1)", 50, doc.y, { underline: false });
+      .text("Rapport d'intégration", 50, doc.y, { underline: false });
     doc.font('Helvetica');
     doc.moveDown(0.5);
 
     doc.fontSize(10).fillColor(COLORS.TEXT).text(`Statut MASA: ${masa.statut}`);
-    if (masa.numeroDepotVerseau1) {
-      doc.text(`Numéro dépôt Verseau 1: ${masa.numeroDepotVerseau1}`);
-    }
     doc.moveDown(0.5);
 
     if (masa.rapport) {
@@ -183,9 +219,15 @@ export class RapportPdfGeneratorService {
     const warningControls = controls.filter((c) => c.evenementType === EvenementType.AVERTISSEMENT);
     const errorControls = controls.filter((c) => c.evenementType === EvenementType.ERREUR);
     const informationControls = controls.filter((c) => c.evenementType === EvenementType.INFORMATION);
-    const successRate = totalControls > 0 ? Math.round((successControls.length / totalControls) * 100) : 0;
     const nonSuccessControls = [...errorControls, ...warningControls, ...informationControls];
-    this.drawStatistics(doc, totalControls, successControls.length, nonSuccessControls.length, successRate);
+    this.drawStatistics(
+      doc,
+      totalControls,
+      successControls.length,
+      errorControls.length,
+      informationControls.length,
+      warningControls.length,
+    );
 
     // Success Summary
     if (successControls.length > 0) {

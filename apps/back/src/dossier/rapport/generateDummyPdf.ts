@@ -439,7 +439,7 @@ async function generateDummyPdf() {
         type: ControleType.CONTROLE_V1,
         success: false,
         error: ErrorCode.E2_033,
-        errorParams: ['99', '0600000001'],
+        errorParams: ['99', '1A', '0600000001'],
         evenementType: EvenementType.ERREUR,
         createdAt: new Date(),
         updatedAt: new Date(),
