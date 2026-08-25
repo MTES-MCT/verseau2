@@ -6,7 +6,7 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
-import { DepotStep, DepotStatus } from '@lib/dossier';
+import { ControleName, ControleType, DepotStep, DepotStatus, ErrorCode, EvenementType } from '@lib/dossier';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
 import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
 import { DiffusionRapportProcessorService } from '@worker/diffusionRapport/diffusionRapportProcessor.service';
@@ -337,13 +337,17 @@ describe('Worker Service (e2e)', () => {
       s3Mock.seed('rejected_file.xml', '<data>test</data>');
 
       // Set mock for controles (e.g., an error occurred)
-      controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([
+      controleGatewayMock.findByDepotId.mockResolvedValue([
         {
           id: 'ctrl_001',
-          name: 'StructureXML',
-          evenementType: 'ERREUR',
-          error: 'Le fichier XML est mal formé',
+          name: ControleName.CTL005,
+          type: ControleType.CONTROLE_V1,
+          success: false,
+          evenementType: EvenementType.ERREUR,
+          error: ErrorCode.E2_033,
+          errorParams: ['99', '1A', '0600000001'],
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ]);
 
@@ -414,7 +418,7 @@ describe('Worker Service (e2e)', () => {
       agenceEauClientMock.reset();
       masaProviderMock.reset();
       s3Mock.seed('valid_file.xml', '<data>test</data>');
-      controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([]);
+      controleGatewayMock.findByDepotId.mockResolvedValue([]);
 
       // Process the diffusion rapport with MASA
       await diffusionRapportProcessorService.process({

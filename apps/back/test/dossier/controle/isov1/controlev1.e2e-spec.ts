@@ -377,6 +377,7 @@ describe('ControleV1Service (e2e)', () => {
       expect(ctl005).toBeDefined();
       expect(ctl005?.success).toBe(false);
       expect(ctl005?.error).toBe(ErrorCode.E2_033);
+      expect(ctl005?.errorParams).toEqual(['99', '1A', '0600000001']);
     });
   });
 

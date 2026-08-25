@@ -3,7 +3,6 @@ import { ControleModel, ControleModelWithoutDepot, CreateControleModel } from '.
 
 export interface ControleGateway {
   findByDepotId(depotId: string): Promise<ControleModelWithoutDepot[]>;
-  findControlesV2ByDepotId(depotId: string): Promise<ControleModelWithoutDepot[]>;
   createControle(data: CreateControleModel): Promise<ControleModel>;
   createControles(data: CreateControleModel[], manager?: EntityManager): Promise<ControleModel[]>;
 }

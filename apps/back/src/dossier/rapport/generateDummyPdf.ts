@@ -63,11 +63,11 @@ async function generateDummyPdf() {
     updatedAt: new Date(),
   };
 
-  const controlesV2: ControleModelWithoutDepot[] = [
+  const controles: ControleModelWithoutDepot[] = [
     {
-      id: 'ctrl_001',
+      id: 'ctrl_v1_success',
       name: ControleName.CTL002,
-      type: ControleType.CONTROLE_V2,
+      type: ControleType.CONTROLE_V1,
       success: true,
       error: undefined,
       errorParams: undefined,
@@ -418,7 +418,7 @@ async function generateDummyPdf() {
 
   try {
     console.log('Generating PDF for successful scenario (with MASA)...');
-    const bufferSuccess = await service.generateReport(depot, controlesV2, masa, reponsesSandreSuccess);
+    const bufferSuccess = await service.generateReport(depot, controles, masa, reponsesSandreSuccess);
     const outputPathSuccess = path.join(__dirname, 'dummy_report_success.pdf');
     fs.writeFileSync(outputPathSuccess, bufferSuccess);
     console.log(`✅ Success PDF generated at: ${outputPathSuccess}`);
@@ -431,8 +431,19 @@ async function generateDummyPdf() {
     };
 
     // Add a critical error to the controls to simulate a rejection
-    const controlesV2Rejected: ControleModelWithoutDepot[] = [
-      ...controlesV2.filter((ctrl) => ctrl.id !== 'ctrl_002'), // Keep successful controls for context
+    const controlesRejected: ControleModelWithoutDepot[] = [
+      ...controles.filter((ctrl) => ctrl.id !== 'ctrl_002'), // Keep successful controls for context
+      {
+        id: 'ctrl_v1_failure',
+        name: ControleName.CTL005,
+        type: ControleType.CONTROLE_V1,
+        success: false,
+        error: ErrorCode.E2_033,
+        errorParams: ['99', '1A', '0600000001'],
+        evenementType: EvenementType.ERREUR,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       {
         id: 'ctrl_040',
         name: ControleName.CTL002,
@@ -448,7 +459,7 @@ async function generateDummyPdf() {
 
     const bufferRejected = await service.generateReport(
       depotRejected,
-      controlesV2Rejected,
+      controlesRejected,
       undefined,
       reponsesSandreRejected,
     );

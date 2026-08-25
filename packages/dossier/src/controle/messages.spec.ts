@@ -39,9 +39,9 @@ describe('buildMessage', () => {
   });
 
   it('devrait retourner le message pour E2_033 (point de mesure inconnu)', () => {
-    const result = buildMessage(ErrorCode.E2_033, ['PM01', 'OUV999']);
+    const result = buildMessage(ErrorCode.E2_033, ['PM01','LOC01', 'OUV999']);
     expect(result).toBe(
-      "Le point de mesure N° PM01 est inconnu pour l'ouvrage OUV999 ! Veuillez contacter le service gestionnaire de l'ouvrage.",
+      "Le point de mesure N° PM01-LOC01 est inconnu pour l'ouvrage OUV999 ! Veuillez contacter le service gestionnaire de l'ouvrage.",
     );
   });
 
