@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DepotController } from './depot/depot.controller';
 import { DepotEntity } from './depot/depot.entity';
@@ -33,6 +33,7 @@ import { MasaGateway } from './masa/masa.gateway';
 import { MasaRepository } from './masa/masa.repository';
 import { MasaApiKeyGuard } from './masa/masaApiKey.guard';
 import { MasaIpGuard } from './masa/masaIp.guard';
+import { MasaResponseHeaderMiddleware } from './masa/masaResponseHeader.middleware';
 import { IsAdminGuard } from '@authentication/isAdmin.guard';
 import { RapportPdfGeneratorService } from './rapport/rapportPdfGenerator.service';
 import { ControleMetierV2Service } from './controle/metierv2/controleMetierV2.service';
@@ -84,6 +85,7 @@ const sandreServiceFactory = {
     MasaService,
     MasaApiKeyGuard,
     MasaIpGuard,
+    MasaResponseHeaderMiddleware,
     IsAdminGuard,
     RapportPdfGeneratorService,
   ],
@@ -101,4 +103,8 @@ const sandreServiceFactory = {
     ControleGateway,
   ],
 })
-export class DossierModule {}
+export class DossierModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MasaResponseHeaderMiddleware).forRoutes(MasaController);
+  }
+}
