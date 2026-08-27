@@ -315,7 +315,9 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
     CREATE TABLE lanceleau.t_orion_credentials (
       pr_cdn INTEGER PRIMARY KEY,
       mail VARCHAR,
-      login_lb VARCHAR
+      login_lb VARCHAR,
+      last_name VARCHAR,
+      first_name VARCHAR
     )
   `);
 
@@ -558,13 +560,15 @@ export async function seedOrionCredentials(
   prCdn: number,
   mail: string,
   loginLb: string,
+  lastName?: string,
+  firstName?: string,
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO lanceleau.t_orion_credentials (pr_cdn, mail, login_lb)
-    VALUES ($1, $2, $3)
+    INSERT INTO lanceleau.t_orion_credentials (pr_cdn, mail, login_lb, last_name, first_name)
+    VALUES ($1, $2, $3, $4, $5)
   `,
-    [prCdn, mail, loginLb],
+    [prCdn, mail, loginLb, lastName ?? null, firstName ?? null],
   );
 }
 

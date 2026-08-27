@@ -4,6 +4,7 @@ import { FanEntity } from './entities/fan.entity';
 import { ParEntity } from './entities/par.entity';
 import { UrfEntity } from './entities/urf.entity';
 import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
+import { OrionContact } from './lanceleau.model';
 
 export interface LanceleauGateway {
   findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null>;
@@ -19,6 +20,7 @@ export interface LanceleauGateway {
   findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]>;
   findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]>;
   findSiretByEmail(email: string): Promise<string | null>;
+  findOrionContactByEmail(mail: string): Promise<OrionContact | null>;
 }
 
 export const LanceleauGateway = Symbol('LanceleauGateway');

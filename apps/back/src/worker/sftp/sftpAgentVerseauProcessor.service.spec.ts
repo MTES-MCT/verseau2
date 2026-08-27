@@ -7,6 +7,7 @@ import { DepotService } from '@dossier/depot/depot.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotStatus, DepotStep, EtapeMetier } from '@lib/dossier';
 import { addNameTagToXml } from '@lib/parser';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
 jest.mock('@lib/parser', () => ({
   addNameTagToXml: jest.fn((xml, name) => `${xml}<!-- added ${name} -->`),
@@ -17,6 +18,7 @@ describe('SftpAgentVerseauProcessorService', () => {
   let mockAgentVerseauClient: AgentVerseauClient;
   let mockS3: S3;
   let mockDepotService: DepotService;
+  let mockLanceleauGateway: jest.Mocked<LanceleauGateway>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -33,9 +35,14 @@ describe('SftpAgentVerseauProcessorService', () => {
       findDepotByIdWithUser: jest.fn().mockResolvedValue({
         id: 'depot-1',
         path: 'remote/path.xml',
-        user: { nom: 'Doe', prenom: 'John' },
+        userId: 'user-1',
+        user: { email: 'user@example.com', nom: 'Cerbere', prenom: 'Contact' },
       }),
     } as unknown as DepotService;
+
+    mockLanceleauGateway = {
+      findOrionContactByEmail: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' }),
+    } as unknown as jest.Mocked<LanceleauGateway>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -43,6 +50,7 @@ describe('SftpAgentVerseauProcessorService', () => {
         { provide: AgentVerseauClient, useValue: mockAgentVerseauClient },
         { provide: S3, useValue: mockS3 },
         { provide: DepotService, useValue: mockDepotService },
+        { provide: LanceleauGateway, useValue: mockLanceleauGateway },
         {
           provide: LoggerService,
           useValue: {
@@ -76,6 +84,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
 
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
+    expect(mockLanceleauGateway.findOrionContactByEmail).toHaveBeenCalledWith('user@example.com');
     expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
 
     const expectedXml = `${originalXml}<!-- added DOE John -->`;
@@ -87,7 +96,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
   });
 
-  it('should send original file if no user is found', async () => {
+  it('should fail without sending files if no user is found', async () => {
     const depotId = 'depot-1';
     const filePath = 's3/path.xml';
     const originalXml = '<xml></xml>';
@@ -98,11 +107,35 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
     (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(originalXml));
 
-    await service.process({ depotId, filePath });
+    await expect(service.process({ depotId, filePath })).rejects.toThrow(
+      'Depot with id depot-1 has no associated user email',
+    );
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
-    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(originalXml), 'remote/path.xml');
-    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
+    expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
+    expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
+      status: DepotStatus.REJETE,
+      step: DepotStep.SFTP_FAILED,
+    });
+  });
+
+  it.each([
+    ['missing', null],
+    ['without last name', { nom: null, prenom: 'John' }],
+    ['without first name', { nom: 'Doe', prenom: null }],
+  ])('should fail without sending files when Orion contact is %s', async (_label, contact) => {
+    mockLanceleauGateway.findOrionContactByEmail.mockResolvedValue(contact);
+
+    await expect(service.process({ depotId: 'depot-1', filePath: 's3/path.xml' })).rejects.toThrow(
+      'Orion contact is missing or incomplete for depot depot-1',
+    );
+
+    expect(addNameTagToXml).not.toHaveBeenCalled();
+    expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
+    expect(mockDepotService.update).toHaveBeenCalledWith('depot-1', {
+      status: DepotStatus.REJETE,
+      step: DepotStep.SFTP_FAILED,
+    });
   });
 
   it('should handle errors and update depot status to REJETE', async () => {
