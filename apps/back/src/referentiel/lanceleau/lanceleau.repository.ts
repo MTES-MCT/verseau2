@@ -12,6 +12,7 @@ import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.en
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
 import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
+import { OrionContact } from './lanceleau.model';
 
 @Injectable()
 export class LanceleauRepository implements LanceleauGateway {
@@ -32,6 +33,8 @@ export class LanceleauRepository implements LanceleauGateway {
     private readonly agRepository: Repository<AgEntity>,
     @InjectRepository(VSteuSclItvEntity)
     private readonly vSteuSclItvRepository: Repository<VSteuSclItvEntity>,
+    @InjectRepository(OrionCredentialsEntity)
+    private readonly orionCredentialsRepository: Repository<OrionCredentialsEntity>,
   ) {}
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
@@ -152,5 +155,23 @@ export class LanceleauRepository implements LanceleauGateway {
       .where('TRIM(oc.mail) = :email', { email: email.trim() })
       .getRawOne<{ itvRfa: string | null }>();
     return row?.itvRfa ?? null;
+  }
+
+  async findOrionContactByEmail(mail: string): Promise<OrionContact | null> {
+    const row = await this.orionCredentialsRepository
+      .createQueryBuilder('oc')
+      .select('oc.lastName', 'nom')
+      .addSelect('oc.firstName', 'prenom')
+      .where('TRIM(oc.mail) = :mail', { mail: mail.trim() })
+      .getRawOne<OrionContact>();
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      nom: row.nom?.trim() || null,
+      prenom: row.prenom?.trim() || null,
+    };
   }
 }

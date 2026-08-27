@@ -32,6 +32,7 @@ import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { MasaProvider } from '@masa/masa.provider';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 import { Zip } from '@shared/zip/zip';
 import { ZipService } from '@shared/zip/zip.service';
@@ -50,6 +51,7 @@ import {
   ControleGatewayTestMock,
   AgenceEauClientTestMock,
   MasaProviderTestMock,
+  LanceleauGatewayTestMock,
 } from './mock/shared-mocks';
 
 describe('Worker Service (e2e)', () => {
@@ -115,6 +117,7 @@ describe('Worker Service (e2e)', () => {
         { provide: QueueGateway, useValue: queueMock },
         { provide: ControleV1Service, useClass: ControleV1TestMock },
         { provide: RoseauGateway, useClass: RoseauGatewayTestMock },
+        { provide: LanceleauGateway, useClass: LanceleauGatewayTestMock },
         loggerProviderMock,
       ],
     }).compile();
@@ -232,6 +235,18 @@ describe('Worker Service (e2e)', () => {
   });
 
   describe('SftpProcessorService', () => {
+    let sftpUser: UserEntity;
+
+    beforeEach(async () => {
+      sftpUser = await dataSource.getRepository(UserEntity).save({
+        id: 'user_sftp_processor',
+        sub: 'sftp-user-sub',
+        email: 'sftp-user@example.com',
+        nom: 'Cerbere',
+        prenom: 'Contact',
+      });
+    });
+
     it('should send file to SFTP successfully', async () => {
       // Create depot
       const depot = await dataSource.getRepository(DepotEntity).save({
@@ -242,6 +257,7 @@ describe('Worker Service (e2e)', () => {
         tailleFichier: 1024,
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
+        userId: sftpUser.id,
       });
 
       // Seed S3 with file
@@ -278,6 +294,7 @@ describe('Worker Service (e2e)', () => {
         tailleFichier: 1024,
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
+        userId: sftpUser.id,
       });
 
       // Seed S3 with file

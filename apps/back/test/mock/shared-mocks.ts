@@ -214,9 +214,11 @@ export class RoseauGatewayTestMock {
  */
 export class LanceleauGatewayTestMock {
   findIntervenantById = jest.fn().mockResolvedValue(null);
+  findOrionContactByEmail = jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
 
   reset(): void {
     this.findIntervenantById.mockClear().mockResolvedValue(null);
+    this.findOrionContactByEmail.mockClear().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
   }
 }
 

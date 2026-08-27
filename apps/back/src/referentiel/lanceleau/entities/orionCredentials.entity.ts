@@ -10,4 +10,10 @@ export class OrionCredentialsEntity {
 
   @Column({ name: 'login_lb' })
   loginLb: string;
+
+  @Column({ name: 'last_name', type: 'varchar', nullable: true })
+  lastName: string | null;
+
+  @Column({ name: 'first_name', type: 'varchar', nullable: true })
+  firstName: string | null;
 }
