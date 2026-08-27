@@ -6,7 +6,7 @@ dotenv.config({
   override: true,
 });
 
-import { INestApplication } from '@nestjs/common';
+import { ForbiddenException, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
@@ -38,11 +38,13 @@ import {
 } from './createReferentielDataset';
 import { MasaService } from '@dossier/masa/masa.service';
 import { MasaWebhookStatus } from '@dossier/masa/masa.model';
+import { MasaIpGuard } from '@dossier/masa/masaIp.guard';
 
 describe('Controller (e2e) - Access control', () => {
   let app: INestApplication<App>;
   let authService: Authentication;
   let masaService: MasaService;
+  let masaIpGuard: MasaIpGuard;
   let masaProvider: MasaProvider;
 
   const mockAuthenticatedUser = (
@@ -75,6 +77,7 @@ describe('Controller (e2e) - Access control', () => {
     await app.init();
     authService = app.get<Authentication>(Authentication);
     masaService = app.get<MasaService>(MasaService);
+    masaIpGuard = app.get<MasaIpGuard>(MasaIpGuard);
     masaProvider = app.get<MasaProvider>(MasaProvider);
   });
 
@@ -180,7 +183,31 @@ describe('Controller (e2e) - Access control', () => {
 
   describe('Controller (e2e) - Masa', () => {
     it('/webhook/masa/agent-verseau (POST) - Should return 401 Unauthorized', async () => {
-      return request(app.getHttpServer()).post('/webhook/masa/agent-verseau').expect(401);
+      return request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .expect('X-Source', 'Verseau2')
+        .expect(401);
+    });
+
+    it('/webhook/masa/agent-verseau (POST) - Should return 400 Bad Request', async () => {
+      return request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send({})
+        .expect('X-Source', 'Verseau2')
+        .expect(400);
+    });
+
+    it('/webhook/masa/agent-verseau (POST) - Should return 403 Forbidden', async () => {
+      jest.spyOn(masaIpGuard, 'canActivate').mockImplementation(() => {
+        throw new ForbiddenException('IP is not allowed');
+      });
+
+      return request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .expect('X-Source', 'Verseau2')
+        .expect(403);
     });
 
     it('/webhook/masa/agent-verseau (POST) - Should return 200 OK', async () => {
@@ -203,6 +230,7 @@ describe('Controller (e2e) - Access control', () => {
           statut: MasaWebhookStatus.INTEGRE,
           rapport: 'test',
         })
+        .expect('X-Source', 'Verseau2')
         .expect(200);
       return response;
     });
