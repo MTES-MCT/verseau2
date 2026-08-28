@@ -273,7 +273,7 @@ describe('Controller (e2e) - Access control', () => {
       const payload = {
         verseau2DepotId: 'dep_01m0fnz8t33qwq4pzqw6tney3a',
         numeroDepotVerseau1: 'NULL',
-        statut: 'Erreur Bloquante',
+        statut: 'Erreur bloquante',
         rapport: "<p>Le dépôt automatique du fichier n'a pas pu être effectué.</p>",
       };
 

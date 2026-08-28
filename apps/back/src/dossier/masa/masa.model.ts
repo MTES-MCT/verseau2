@@ -15,7 +15,7 @@ export enum MasaWebhookStatus {
   INTEGRE = 'Intégré',
   ARCHIVE_ACCEPTE = 'Archivé - Accepté',
   ARCHIVE_REJETE = 'Archivé - Rejeté',
-  ERREUR_BLOQUANTE = 'Erreur Bloquante',
+  ERREUR_BLOQUANTE = 'Erreur bloquante',
 }
 
 export type MasaModel = {
