@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { ControleMetierProcessorService } from './controleMetierProcessor.service';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
@@ -103,5 +103,59 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
     });
 
     expect(mockDepotCoordinatorService.checkControlesCompletion).toHaveBeenCalledWith(depotId);
+  });
+
+  it('should keep SQL injection-shaped XML fields as control input values', async () => {
+    const depotId = 'depot_test_sqli';
+    const ouvragePayload = "STEU001' OR '1'='1' --";
+    const systemePayload = "SCL001'); DROP TABLE controles; --";
+    const xml = `
+      <FctAssain>
+        <Scenario>
+          <CodeScenario>FCT_ASSAIN</CodeScenario>
+          <VersionScenario>4</VersionScenario>
+          <DateDebutReference>2024-01-01</DateDebutReference>
+          <Emetteur>
+            <CdIntervenant>00000000000000</CdIntervenant>
+            <NomIntervenant>Test</NomIntervenant>
+          </Emetteur>
+        </Scenario>
+        <OuvrageDepollution>
+          <CdOuvrageDepollution>${ouvragePayload}</CdOuvrageDepollution>
+          <TypeOuvrageDepollution>4</TypeOuvrageDepollution>
+        </OuvrageDepollution>
+        <SystemeCollecte>
+          <CdSystemeCollecte>${systemePayload}</CdSystemeCollecte>
+        </SystemeCollecte>
+      </FctAssain>`;
+    const manager = {} as EntityManager;
+
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(xml));
+    (mockDataSource.transaction as jest.Mock).mockImplementation(
+      async (callback: (entityManager: EntityManager) => Promise<unknown>) => callback(manager),
+    );
+    (mockControleV1Service.execute as jest.Mock).mockResolvedValue([]);
+    (mockControleMetierV2Service.execute as jest.Mock).mockResolvedValue([]);
+    (mockDepotService.update as jest.Mock).mockResolvedValue({});
+    (mockDepotCoordinatorService.checkControlesCompletion as jest.Mock).mockResolvedValue(undefined);
+
+    await service.process({ depotId, filePath: 'sqli.xml' });
+
+    expect(mockControleV1Service.execute).toHaveBeenCalledWith(
+      depotId,
+      expect.objectContaining({
+        ouvrages: [expect.objectContaining({ cdOuvrageDepollution: ouvragePayload })],
+        systemesCollecte: [expect.objectContaining({ cdSystemeCollecte: systemePayload })],
+      }),
+      manager,
+    );
+    expect(mockControleMetierV2Service.execute).toHaveBeenCalledWith(
+      depotId,
+      expect.objectContaining({
+        ouvrages: [expect.objectContaining({ cdOuvrageDepollution: ouvragePayload })],
+        systemesCollecte: [expect.objectContaining({ cdSystemeCollecte: systemePayload })],
+      }),
+      manager,
+    );
   });
 });
