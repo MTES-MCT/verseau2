@@ -6,4 +6,5 @@ export type IntervenantForAuthentication = {
 export type OrionContact = {
   nom: string | null;
   prenom: string | null;
+  email: string | null;
 };

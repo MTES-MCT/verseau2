@@ -160,6 +160,7 @@ export class LanceleauRepository implements LanceleauGateway {
       .createQueryBuilder('ag')
       .select('ag.agNomLb', 'nom')
       .addSelect('ag.agPrenomLb', 'prenom')
+      .addSelect('ag.agMailLb', 'email')
       .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
       .where('LOWER(TRIM(oc.mail)) = LOWER(:mail)', { mail: mail.trim() })
       .getRawOne<OrionContact>();
@@ -171,6 +172,7 @@ export class LanceleauRepository implements LanceleauGateway {
     return {
       nom: row.nom?.trim() || null,
       prenom: row.prenom?.trim() || null,
+      email: row.email?.trim() || null,
     };
   }
 }

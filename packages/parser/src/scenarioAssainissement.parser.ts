@@ -129,10 +129,20 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
 }
 
 export function addNameTagToXml(xml: string, nomContact: string): string {
-  const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
-  const hasNomContactInEmetteur = /<Emetteur>[\s\S]*?<NomContact>[\s\S]*?<\/NomContact>[\s\S]*?<\/Emetteur>/.test(xml);
+  return addContactTagToXml(xml, 'NomContact', nomContact);
+}
 
-  if (hasNomContactInEmetteur) {
+export function addEmailTagToXml(xml: string, emailContact: string): string {
+  return addContactTagToXml(xml, 'MelContact', emailContact);
+}
+
+function addContactTagToXml(xml: string, tagName: 'NomContact' | 'MelContact', value: string): string {
+  const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
+  const hasContactTagInEmetteur = new RegExp(
+    `<Emetteur>[\\s\\S]*?<${tagName}>[\\s\\S]*?<\\/${tagName}>[\\s\\S]*?<\\/Emetteur>`,
+  ).test(xml);
+
+  if (hasContactTagInEmetteur) {
     return xml;
   }
 
@@ -145,16 +155,16 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
       return xml.replace(/(\s*)(<Destinataire>)/, (match, p1, p2) => {
         const indent = p1.match(/[^\r\n]*$/)?.[0] || '';
         const contactIndent = indent + '  ';
-        const nomContactIndent = contactIndent + '  ';
-        return `${p1}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${indent}</Emetteur>${p1}${p2}`;
+        const contactTagIndent = contactIndent + '  ';
+        return `${p1}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${contactTagIndent}<${tagName}>${value}</${tagName}>${lineEnding}${contactIndent}</Contact>${lineEnding}${indent}</Emetteur>${p1}${p2}`;
       });
     } else {
       return xml.replace(/(<Scenario>)(\s*)([\s\S]*?)(<\/Scenario>)/, (match, p1, p2, p3, p4) => {
         const scenarioIndent = p2.match(/[^\r\n]*$/)?.[0] || '';
         const emetteurIndent = scenarioIndent + '  ';
         const contactIndent = emetteurIndent + '  ';
-        const nomContactIndent = contactIndent + '  ';
-        return `${p1}${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>${p3}${lineEnding}${scenarioIndent}${p4}`;
+        const contactTagIndent = contactIndent + '  ';
+        return `${p1}${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${contactTagIndent}<${tagName}>${value}</${tagName}>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>${p3}${lineEnding}${scenarioIndent}${p4}`;
       });
     }
   }
@@ -165,15 +175,15 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
     return xml.replace(/(<Emetteur>[\s\S]*?<Contact>)([\s\S]*?)(\s*)(<\/Contact>)/, (match, p1, p2, p3, p4) => {
       const closingIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
       const childIndent = closingIndent + '  ';
-      return `${p1}${p2}${lineEnding}${childIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${closingIndent}${p4}`;
+      return `${p1}${p2}${lineEnding}${childIndent}<${tagName}>${value}</${tagName}>${lineEnding}${closingIndent}${p4}`;
     });
   }
 
   return xml.replace(/(<Emetteur>)([\s\S]*?)(\s*)(<\/Emetteur>)/, (match, p1, p2, p3, p4) => {
     const emetteurIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
     const contactIndent = emetteurIndent + '  ';
-    const nomContactIndent = contactIndent + '  ';
-    return `${p1}${p2}${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}${p4}`;
+    const contactTagIndent = contactIndent + '  ';
+    return `${p1}${p2}${lineEnding}${contactIndent}<Contact>${lineEnding}${contactTagIndent}<${tagName}>${value}</${tagName}>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}${p4}`;
   });
 }
 

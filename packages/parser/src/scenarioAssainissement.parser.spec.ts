@@ -1,4 +1,4 @@
-import { addNameTagToXml, parseScenarioAssainissementXml } from './scenarioAssainissement.parser';
+import { addEmailTagToXml, addNameTagToXml, parseScenarioAssainissementXml } from './scenarioAssainissement.parser';
 import { compliantXml } from './xml/compliant';
 import { compliantXmlWithNomContact } from './xml/compliantWithNomContact';
 import { nonCompliantXml } from './xml/nonCompliantBadStructure';
@@ -228,6 +228,70 @@ describe('Sandre Parser', () => {
 
     expect(xml).toContain(`<NomContact>${nomContact}</NomContact>`);
     expect(xml).toContain(`\r\n      <Contact>\r\n        <NomContact>${nomContact}</NomContact>\r\n      </Contact>`);
+    expect(xml).not.toMatch(/(?<!\r)\n/);
+  });
+
+  it('should write the MelContact tag inside an existing sender Contact tag', () => {
+    const originalXml = `
+  <Scenario>
+    <Emetteur>
+      <Contact>
+        <NomContact>Mon nom</NomContact>
+      </Contact>
+    </Emetteur>
+  </Scenario>`;
+
+    const xml = addEmailTagToXml(originalXml, 'agent@example.com');
+
+    expect(xml).toContain(`
+        <NomContact>Mon nom</NomContact>
+        <MelContact>agent@example.com</MelContact>
+      </Contact>`);
+  });
+
+  it('should create sender tags when MelContact only exists in Destinataire', () => {
+    const originalXml = `
+    <Scenario>
+      <Destinataire>
+        <Contact>
+          <MelContact>destinataire@example.com</MelContact>
+        </Contact>
+      </Destinataire>
+    </Scenario>`;
+
+    const xml = addEmailTagToXml(originalXml, 'agent@example.com');
+
+    expect(xml).toMatch(/<Emetteur>[\s\S]*?<MelContact>agent@example.com<\/MelContact>[\s\S]*?<\/Emetteur>/);
+    expect(xml).toContain('<MelContact>destinataire@example.com</MelContact>');
+  });
+
+  it('should not overwrite MelContact when it already exists in Emetteur', () => {
+    const originalXml = `
+    <Scenario>
+      <Emetteur>
+        <Contact>
+          <MelContact>existing@example.com</MelContact>
+        </Contact>
+      </Emetteur>
+    </Scenario>`;
+
+    expect(addEmailTagToXml(originalXml, 'agent@example.com')).toEqual(originalXml);
+  });
+
+  it('should preserve CRLF line endings when adding the MelContact tag', () => {
+    const originalXml = [
+      '<Scenario>',
+      '  <Emetteur>',
+      '    <Contact>',
+      '      <NomContact>Mon nom</NomContact>',
+      '    </Contact>',
+      '  </Emetteur>',
+      '</Scenario>',
+    ].join('\r\n');
+
+    const xml = addEmailTagToXml(originalXml, 'agent@example.com');
+
+    expect(xml).toContain('\r\n      <MelContact>agent@example.com</MelContact>\r\n');
     expect(xml).not.toMatch(/(?<!\r)\n/);
   });
 });

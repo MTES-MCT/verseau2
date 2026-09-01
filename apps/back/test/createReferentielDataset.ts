@@ -327,7 +327,8 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
       pr_cdn INTEGER PRIMARY KEY,
       itv_cdn INTEGER,
       ag_nom_lb VARCHAR,
-      ag_prenom_lb VARCHAR
+      ag_prenom_lb VARCHAR,
+      ag_mail_lb VARCHAR
     )
   `);
 
@@ -580,13 +581,14 @@ export async function seedAg(
   itvCdn: number,
   nom?: string,
   prenom?: string,
+  email?: string,
 ): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO lanceleau.ag (pr_cdn, itv_cdn, ag_nom_lb, ag_prenom_lb)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO lanceleau.ag (pr_cdn, itv_cdn, ag_nom_lb, ag_prenom_lb, ag_mail_lb)
+    VALUES ($1, $2, $3, $4, $5)
   `,
-    [prCdn, itvCdn, nom ?? null, prenom ?? null],
+    [prCdn, itvCdn, nom ?? null, prenom ?? null, email ?? null],
   );
 }
 

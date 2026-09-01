@@ -55,23 +55,35 @@ describe('LanceleauRepository', () => {
   });
 
   it('should find and normalize an agent contact by Orion email', async () => {
-    queryBuilder.getRawOne.mockResolvedValue({ nom: '  Doe  ', prenom: '  John  ' });
+    queryBuilder.getRawOne.mockResolvedValue({
+      nom: '  Doe  ',
+      prenom: '  John  ',
+      email: '  agent@example.com  ',
+    });
 
     await expect(repository.findOrionContactByEmail('  User@Example.COM  ')).resolves.toEqual({
       nom: 'Doe',
       prenom: 'John',
+      email: 'agent@example.com',
     });
 
     expect(agRepository.createQueryBuilder).toHaveBeenCalledWith('ag');
     expect(queryBuilder.select).toHaveBeenCalledWith('ag.agNomLb', 'nom');
     expect(queryBuilder.addSelect).toHaveBeenCalledWith('ag.agPrenomLb', 'prenom');
-    expect(queryBuilder.innerJoin).toHaveBeenCalledWith(
-      OrionCredentialsEntity,
-      'oc',
-      'oc.pr_cdn = ag.pr_cdn',
-    );
+    expect(queryBuilder.addSelect).toHaveBeenCalledWith('ag.agMailLb', 'email');
+    expect(queryBuilder.innerJoin).toHaveBeenCalledWith(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn');
     expect(queryBuilder.where).toHaveBeenCalledWith('LOWER(TRIM(oc.mail)) = LOWER(:mail)', {
       mail: 'User@Example.COM',
+    });
+  });
+
+  it('should return a contact without email when ag_mail_lb is empty', async () => {
+    queryBuilder.getRawOne.mockResolvedValue({ nom: 'Doe', prenom: 'John', email: null });
+
+    await expect(repository.findOrionContactByEmail('user@example.com')).resolves.toEqual({
+      nom: 'Doe',
+      prenom: 'John',
+      email: null,
     });
   });
 

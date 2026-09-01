@@ -13,4 +13,7 @@ export class AgEntity {
 
   @Column({ name: 'ag_prenom_lb', type: 'varchar', nullable: true })
   agPrenomLb: string | null;
+
+  @Column({ name: 'ag_mail_lb', type: 'varchar', nullable: true })
+  agMailLb: string | null;
 }
