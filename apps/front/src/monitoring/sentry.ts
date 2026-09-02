@@ -14,6 +14,9 @@ export function initSentry() {
   const options: Parameters<typeof Sentry.init>[0] = {
     dsn: SENTRY_DSN,
     environment: APP_ENV || undefined,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    integrations: [Sentry.replayIntegration()],
   };
 
   if (SENTRY_RELEASE) {
