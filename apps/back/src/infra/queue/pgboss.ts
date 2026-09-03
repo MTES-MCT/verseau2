@@ -21,6 +21,7 @@ export type WorkOptions = {
   includeMetadata?: boolean;
   priority?: boolean;
   batchSize?: number;
+  localConcurrency?: number;
   ignoreStartAfter?: boolean;
   pollingIntervalSeconds?: number;
 };
