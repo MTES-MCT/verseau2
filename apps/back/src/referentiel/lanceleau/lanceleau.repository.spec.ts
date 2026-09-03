@@ -15,10 +15,11 @@ import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
 
 describe('LanceleauRepository', () => {
   let repository: LanceleauRepository;
-  let orionCredentialsRepository: jest.Mocked<Repository<OrionCredentialsEntity>>;
+  let agRepository: jest.Mocked<Repository<AgEntity>>;
   let queryBuilder: {
     select: jest.Mock;
     addSelect: jest.Mock;
+    innerJoin: jest.Mock;
     where: jest.Mock;
     getRawOne: jest.Mock;
   };
@@ -27,12 +28,13 @@ describe('LanceleauRepository', () => {
     queryBuilder = {
       select: jest.fn().mockReturnThis(),
       addSelect: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       getRawOne: jest.fn(),
     };
-    orionCredentialsRepository = {
+    agRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
-    } as unknown as jest.Mocked<Repository<OrionCredentialsEntity>>;
+    } as unknown as jest.Mocked<Repository<AgEntity>>;
 
     const emptyRepository = {};
     const module: TestingModule = await Test.createTestingModule({
@@ -44,28 +46,36 @@ describe('LanceleauRepository', () => {
         { provide: getRepositoryToken(ParEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(UrfEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(OrionRoleForPrincipalEntity), useValue: emptyRepository },
-        { provide: getRepositoryToken(AgEntity), useValue: emptyRepository },
+        { provide: getRepositoryToken(AgEntity), useValue: agRepository },
         { provide: getRepositoryToken(VSteuSclItvEntity), useValue: emptyRepository },
-        { provide: getRepositoryToken(OrionCredentialsEntity), useValue: orionCredentialsRepository },
       ],
     }).compile();
 
     repository = module.get(LanceleauRepository);
   });
 
-  it('should find and normalize an Orion contact by email', async () => {
+  it('should find and normalize an agent contact by Orion email', async () => {
     queryBuilder.getRawOne.mockResolvedValue({ nom: '  Doe  ', prenom: '  John  ' });
 
-    await expect(repository.findOrionContactByEmail('  user@example.com  ')).resolves.toEqual({
+    await expect(repository.findOrionContactByEmail('  User@Example.COM  ')).resolves.toEqual({
       nom: 'Doe',
       prenom: 'John',
     });
 
-    expect(orionCredentialsRepository.createQueryBuilder).toHaveBeenCalledWith('oc');
-    expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.mail) = :mail', { mail: 'user@example.com' });
+    expect(agRepository.createQueryBuilder).toHaveBeenCalledWith('ag');
+    expect(queryBuilder.select).toHaveBeenCalledWith('ag.agNomLb', 'nom');
+    expect(queryBuilder.addSelect).toHaveBeenCalledWith('ag.agPrenomLb', 'prenom');
+    expect(queryBuilder.innerJoin).toHaveBeenCalledWith(
+      OrionCredentialsEntity,
+      'oc',
+      'oc.pr_cdn = ag.pr_cdn',
+    );
+    expect(queryBuilder.where).toHaveBeenCalledWith('LOWER(TRIM(oc.mail)) = LOWER(:mail)', {
+      mail: 'User@Example.COM',
+    });
   });
 
-  it('should return null when no Orion contact matches the email', async () => {
+  it('should return null when no agent contact matches the Orion email', async () => {
     queryBuilder.getRawOne.mockResolvedValue(null);
 
     await expect(repository.findOrionContactByEmail('unknown@example.com')).resolves.toBeNull();
