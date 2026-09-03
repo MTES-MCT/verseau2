@@ -12,14 +12,17 @@ import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
 import { CdbEntity } from '@referentiel/lanceleau/entities/cdb.entity';
 
-function createRoseauRepository(steuRepository: Repository<SteuEntity>): RoseauRepository {
+function createRoseauRepository(
+  steuRepository: Repository<SteuEntity>,
+  cpyRepository = {} as Repository<CpyEntity>,
+): RoseauRepository {
   return new RoseauRepository(
     {} as Repository<SclEntity>,
     steuRepository,
     {} as Repository<CxnadmEntity>,
     {} as Repository<PmoEntity>,
     {} as Repository<TlrefEntity>,
-    {} as Repository<CpyEntity>,
+    cpyRepository,
     {} as Repository<ResaEntity>,
     {} as Repository<StchanEntity>,
     {} as Repository<AlrEntity>,
@@ -92,6 +95,31 @@ describe('RoseauRepository', () => {
       const repository = createRoseauRepository(steuRepository);
 
       await expect(repository.findAgenceEauNomBySteuCode('STEU001')).resolves.toBeNull();
+    });
+  });
+
+  describe('findCapaciteNominaleBatch', () => {
+    it('should bind XML-derived STEU codes instead of adding them to SQL', async () => {
+      const payload = "STEU001' OR '1'='1' --";
+      const queryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+      const cpyRepository = {
+        createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+      } as unknown as Repository<CpyEntity>;
+      const repository = createRoseauRepository({} as Repository<SteuEntity>, cpyRepository);
+
+      await expect(repository.findCapaciteNominaleBatch([payload], 2024)).resolves.toEqual([]);
+
+      expect(queryBuilder.where).toHaveBeenCalledWith('steu.steu_sandre_cda IN (:...steuSandreCdas)', {
+        steuSandreCdas: [payload],
+      });
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith('cpy.cpy_an = :year', { year: 2024 });
     });
   });
 });
