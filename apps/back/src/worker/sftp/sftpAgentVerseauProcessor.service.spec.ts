@@ -6,11 +6,12 @@ import { S3 } from '@s3/s3';
 import { DepotService } from '@dossier/depot/depot.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotStatus, DepotStep, EtapeMetier } from '@lib/dossier';
-import { addNameTagToXml } from '@lib/parser';
+import { addEmailTagToXml, addNameTagToXml } from '@lib/parser';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
 jest.mock('@lib/parser', () => ({
   addNameTagToXml: jest.fn((xml, name) => `${xml}<!-- added ${name} -->`),
+  addEmailTagToXml: jest.fn((xml, email) => `${xml}<!-- added ${email} -->`),
 }));
 
 describe('SftpAgentVerseauProcessorService', () => {
@@ -41,7 +42,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     } as unknown as DepotService;
 
     mockLanceleauGateway = {
-      findOrionContactByEmail: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' }),
+      findOrionContactByEmail: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John', email: 'agent@example.com' }),
     } as unknown as jest.Mocked<LanceleauGateway>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -69,7 +70,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     service = module.get<SftpAgentVerseauProcessorService>(SftpAgentVerseauProcessorService);
   });
 
-  it('should download, modify XML with user name, and send to SFTP', async () => {
+  it('should download, modify XML with agent contact, and send to SFTP', async () => {
     const depotId = 'depot-1';
     const filePath = 's3/path.xml';
     const originalXml = '<xml></xml>';
@@ -86,14 +87,31 @@ describe('SftpAgentVerseauProcessorService', () => {
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
     expect(mockLanceleauGateway.findOrionContactByEmail).toHaveBeenCalledWith('user@example.com');
     expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
+    expect(addEmailTagToXml).toHaveBeenCalledWith(`${originalXml}<!-- added DOE John -->`, 'agent@example.com');
 
-    const expectedXml = `${originalXml}<!-- added DOE John -->`;
+    const expectedXml = `${originalXml}<!-- added DOE John --><!-- added agent@example.com -->`;
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'remote/path.xml');
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
 
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       step: DepotStep.SFTP_COMPLETED,
     });
+  });
+
+  it('should send the file with NomContact when the agent email is missing', async () => {
+    const originalXml = '<xml></xml>';
+    mockLanceleauGateway.findOrionContactByEmail.mockResolvedValue({ nom: 'Doe', prenom: 'John', email: null });
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(originalXml));
+
+    await service.process({ depotId: 'depot-1', filePath: 's3/path.xml' });
+
+    expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
+    expect(addEmailTagToXml).not.toHaveBeenCalled();
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(
+      1,
+      Buffer.from(`${originalXml}<!-- added DOE John -->`),
+      'remote/path.xml',
+    );
   });
 
   it('should fail without sending files if no user is found', async () => {
@@ -112,6 +130,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     );
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
+    expect(addEmailTagToXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       status: DepotStatus.REJETE,
@@ -121,8 +140,8 @@ describe('SftpAgentVerseauProcessorService', () => {
 
   it.each([
     ['missing', null],
-    ['without last name', { nom: null, prenom: 'John' }],
-    ['without first name', { nom: 'Doe', prenom: null }],
+    ['without last name', { nom: null, prenom: 'John', email: 'agent@example.com' }],
+    ['without first name', { nom: 'Doe', prenom: null, email: 'agent@example.com' }],
   ])('should fail without sending files when Orion contact is %s', async (_label, contact) => {
     mockLanceleauGateway.findOrionContactByEmail.mockResolvedValue(contact);
 
@@ -131,6 +150,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     );
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
+    expect(addEmailTagToXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
     expect(mockDepotService.update).toHaveBeenCalledWith('depot-1', {
       status: DepotStatus.REJETE,

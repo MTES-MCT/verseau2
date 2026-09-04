@@ -33,8 +33,6 @@ export class LanceleauRepository implements LanceleauGateway {
     private readonly agRepository: Repository<AgEntity>,
     @InjectRepository(VSteuSclItvEntity)
     private readonly vSteuSclItvRepository: Repository<VSteuSclItvEntity>,
-    @InjectRepository(OrionCredentialsEntity)
-    private readonly orionCredentialsRepository: Repository<OrionCredentialsEntity>,
   ) {}
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
@@ -158,11 +156,13 @@ export class LanceleauRepository implements LanceleauGateway {
   }
 
   async findOrionContactByEmail(mail: string): Promise<OrionContact | null> {
-    const row = await this.orionCredentialsRepository
-      .createQueryBuilder('oc')
-      .select('oc.lastName', 'nom')
-      .addSelect('oc.firstName', 'prenom')
-      .where('TRIM(oc.mail) = :mail', { mail: mail.trim() })
+    const row = await this.agRepository
+      .createQueryBuilder('ag')
+      .select('ag.agNomLb', 'nom')
+      .addSelect('ag.agPrenomLb', 'prenom')
+      .addSelect('ag.agMailLb', 'email')
+      .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
+      .where('LOWER(TRIM(oc.mail)) = LOWER(:mail)', { mail: mail.trim() })
       .getRawOne<OrionContact>();
 
     if (!row) {
@@ -172,6 +172,7 @@ export class LanceleauRepository implements LanceleauGateway {
     return {
       nom: row.nom?.trim() || null,
       prenom: row.prenom?.trim() || null,
+      email: row.email?.trim() || null,
     };
   }
 }

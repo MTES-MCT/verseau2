@@ -42,10 +42,10 @@ export async function seedUserWithDroits(dataSource: DataSource, data: UserWithD
   );
 
   // Create orion credentials linking email to prCdn
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub, data.nom ?? 'Test', data.prenom ?? 'User');
+  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub);
 
   // Create ag linking prCdn to itvCdn
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedAg(dataSource, prCdn, data.itvCdn, data.nom ?? 'Test', data.prenom ?? 'User', data.email);
 
   // If itvRfa is provided, create the ItvEntity and role 301
   if (data.itvRfa) {
@@ -109,8 +109,8 @@ export async function seedUserExpertBassin(dataSource: DataSource, data: UserWit
     [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub, data.nom ?? 'Test', data.prenom ?? 'User');
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub);
+  await seedAg(dataSource, prCdn, data.itvCdn, data.nom ?? 'Test', data.prenom ?? 'User', data.email);
 
   if (data.itvRfa) {
     await seedItv(dataSource, data.itvCdn, data.itvRfa);

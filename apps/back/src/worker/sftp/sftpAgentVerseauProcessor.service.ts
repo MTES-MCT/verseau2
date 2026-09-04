@@ -5,7 +5,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
-import { addNameTagToXml } from '@lib/parser';
+import { addEmailTagToXml, addNameTagToXml } from '@lib/parser';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
 @Injectable()
@@ -48,10 +48,15 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       const file = await this.s3.download(filePath);
       const xmlContent = file.toString('utf-8');
       const fullName = `${contact.nom.toUpperCase()} ${contact.prenom}`;
-      const modifiedXml = addNameTagToXml(xmlContent, fullName);
+      let modifiedXml = addNameTagToXml(xmlContent, fullName);
+      if (contact.email) {
+        modifiedXml = addEmailTagToXml(modifiedXml, contact.email);
+      }
       const fileToSend = Buffer.from(modifiedXml, 'utf-8');
 
-      this.logger.log(`Added NomContact tag to XML for user ${depot.userId} in depot ${depotId}`);
+      this.logger.log(
+        `Added name: ${fullName} and email: ${contact.email} to XML for user ${depot.userId} in depot ${depotId}`,
+      );
 
       await this.agentVerseauClient.send(fileToSend, depot.path);
       await this.agentVerseauClient.send(Buffer.alloc(0), `${depot.path}.ack`);
