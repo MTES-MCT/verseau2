@@ -97,7 +97,9 @@ class AuthService {
 
     // Validate state
     if (!expectedState || state !== expectedState) {
-      throw new Error('Invalid state parameter - possible CSRF attack');
+      throw new Error(
+        'La vérification de sécurité de la connexion a échoué. Votre demande de connexion a peut-être expiré ou a été ouverte dans un autre onglet. Veuillez réessayer.',
+      );
     }
 
     if (!expectedNonce) {
