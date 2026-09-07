@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AuthRefreshState } from './auth.service';
 
 const STORAGE_KEY = 'verseau_session';
 const NOW = new Date('2026-09-07T10:00:00.000Z');
@@ -46,10 +45,8 @@ describe('authService refresh lifecycle', () => {
   const refreshResponse = (expiresIn = 3600) => Response.json({ expiresIn });
   const unauthorizedResponse = () => new Response('Unauthorized', { status: 401 });
 
-  it('deduplicates concurrent silent refreshes without activating reconnection', async () => {
+  it('deduplicates concurrent refreshes', async () => {
     const authService = await loadAuthService();
-    const states: AuthRefreshState[] = [];
-    authService.subscribeToRefreshState((state) => states.push(state));
 
     let resolveRefresh!: (value: Response) => void;
     vi.mocked(fetch).mockReturnValue(
@@ -61,86 +58,26 @@ describe('authService refresh lifecycle', () => {
     const promises = [authService.refreshToken(), authService.refreshToken(), authService.refreshToken()];
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(states).toEqual(['idle']);
 
     resolveRefresh(refreshResponse());
     await Promise.all(promises);
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(authService.getRefreshState()).toBe('idle');
   });
 
-  it('activates reconnection for a 401 and clears it as soon as refresh succeeds', async () => {
+  it('allows a new refresh after a failed operation', async () => {
     const authService = await loadAuthService();
-    let resolveRefresh!: (value: Response) => void;
-    vi.mocked(fetch).mockReturnValue(
-      new Promise<Response>((resolve) => {
-        resolveRefresh = resolve;
-      }),
-    );
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response('Unavailable', { status: 503 }))
+      .mockResolvedValueOnce(refreshResponse());
 
-    const refresh = authService.refreshAfterUnauthorized();
-    expect(authService.getRefreshState()).toBe('reconnecting');
+    await expect(authService.refreshToken()).rejects.toThrow('Failed to refresh token');
+    await expect(authService.refreshToken()).resolves.toBeUndefined();
 
-    resolveRefresh(refreshResponse());
-    await refresh;
-
-    expect(authService.getRefreshState()).toBe('idle');
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('lets a 401 join an existing silent refresh without a duplicate request', async () => {
-    const authService = await loadAuthService();
-    let resolveRefresh!: (value: Response) => void;
-    vi.mocked(fetch).mockReturnValue(
-      new Promise<Response>((resolve) => {
-        resolveRefresh = resolve;
-      }),
-    );
-
-    const silentRefresh = authService.refreshToken();
-    const blockingRefresh = authService.refreshAfterUnauthorized();
-
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(authService.getRefreshState()).toBe('reconnecting');
-
-    resolveRefresh(refreshResponse());
-    await Promise.all([silentRefresh, blockingRefresh]);
-
-    expect(authService.getRefreshState()).toBe('idle');
-  });
-
-  it('keeps reconnection active for every caller waiting on the shared refresh', async () => {
-    const authService = await loadAuthService();
-    let resolveRefresh!: (value: Response) => void;
-    vi.mocked(fetch).mockReturnValue(
-      new Promise<Response>((resolve) => {
-        resolveRefresh = resolve;
-      }),
-    );
-
-    const first = authService.refreshAfterUnauthorized();
-    const second = authService.refreshAfterUnauthorized();
-    await Promise.resolve();
-
-    expect(authService.getRefreshState()).toBe('reconnecting');
-    expect(fetch).toHaveBeenCalledTimes(1);
-
-    resolveRefresh(refreshResponse());
-    await Promise.all([first, second]);
-
-    expect(authService.getRefreshState()).toBe('idle');
-  });
-
-  it('clears reconnection and exposes a recoverable failure', async () => {
-    const authService = await loadAuthService();
-    vi.mocked(fetch).mockResolvedValueOnce(new Response('Unavailable', { status: 503 }));
-
-    await expect(authService.refreshAfterUnauthorized()).rejects.toThrow('Failed to refresh token');
-
-    expect(authService.getRefreshState()).toBe('failed');
-  });
-
-  it('bounds a blocking refresh and clears the loading state on timeout', async () => {
+  it('bounds refresh operations with a timeout', async () => {
     const authService = await loadAuthService();
     vi.mocked(fetch).mockImplementation((_input, init) => {
       return new Promise<Response>((_resolve, reject) => {
@@ -148,14 +85,11 @@ describe('authService refresh lifecycle', () => {
       });
     });
 
-    const refresh = authService.refreshAfterUnauthorized();
+    const refresh = authService.refreshToken();
     const rejection = expect(refresh).rejects.toThrow('Token refresh timed out');
-    expect(authService.getRefreshState()).toBe('reconnecting');
 
     await vi.advanceTimersByTimeAsync(15_000);
     await rejection;
-
-    expect(authService.getRefreshState()).toBe('failed');
   });
 
   it('returns a still-valid token immediately while starting a due silent refresh', async () => {
@@ -166,7 +100,6 @@ describe('authService refresh lifecycle', () => {
     await expect(authService.getAccessToken()).resolves.toBe('cookie-stored');
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(authService.getRefreshState()).toBe('idle');
   });
 
   it('uses the silent restoration flow for locally expired metadata', async () => {
@@ -177,7 +110,6 @@ describe('authService refresh lifecycle', () => {
     await expect(authService.getAccessToken()).resolves.toBe('cookie-stored');
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(authService.getRefreshState()).toBe('idle');
   });
 
   it('schedules long-lived sessions two minutes before expiration', async () => {
@@ -278,29 +210,6 @@ describe('authService refresh lifecycle', () => {
 
     expect(fetch).toHaveBeenCalledTimes(4);
     expect(authService.isAuthenticated()).toBe(true);
-    expect(authService.getRefreshState()).toBe('idle');
-  });
-
-  it('does not continue silent retries after a 401 joined and the shared refresh failed', async () => {
-    const authService = await loadAuthService();
-    storeSession(10 * 60 * 1000, 0);
-    let rejectRefresh!: (reason: Error) => void;
-    vi.mocked(fetch).mockReturnValue(
-      new Promise<Response>((_resolve, reject) => {
-        rejectRefresh = reject;
-      }),
-    );
-    stopLifecycle = authService.startLifecycle();
-    await vi.advanceTimersByTimeAsync(0);
-
-    const blockingRefresh = authService.refreshAfterUnauthorized();
-    const rejection = expect(blockingRefresh).rejects.toThrow('shared failure');
-    rejectRefresh(new Error('shared failure'));
-    await rejection;
-    await vi.advanceTimersByTimeAsync(60_000);
-
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(authService.getRefreshState()).toBe('failed');
   });
 
   it('skips a duplicate refresh when another tab renews the session under the Web Lock', async () => {
@@ -342,7 +251,7 @@ describe('authService refresh lifecycle', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('uses blocking refresh for /auth/me 401 and retries that request once', async () => {
+  it('refreshes after an /auth/me 401 and retries that request once', async () => {
     const authService = await loadAuthService();
     const user = { user: { cerbereId: 'user-1' }, intervenant: null, isExpertNational: false };
     vi.mocked(fetch)
@@ -353,7 +262,6 @@ describe('authService refresh lifecycle', () => {
     await expect(authService.getCurrentUser()).resolves.toEqual(user);
 
     expect(fetch).toHaveBeenCalledTimes(3);
-    expect(authService.getRefreshState()).toBe('idle');
   });
 
   it('does not recursively refresh when the /auth/me retry also returns 401', async () => {

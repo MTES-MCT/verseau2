@@ -3,24 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuth } from '../hooks/useAuth';
 import { AuthProvider } from './AuthContext';
 
-const {
-  getAccessToken,
-  getCurrentUser,
-  logout,
-  setSentryUser,
-  getRefreshState,
-  subscribeToRefreshState,
-  startLifecycle,
-  refreshAfterUnauthorized,
-} = vi.hoisted(() => ({
+const { getAccessToken, getCurrentUser, logout, setSentryUser, startLifecycle } = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
   getCurrentUser: vi.fn(),
   logout: vi.fn(),
   setSentryUser: vi.fn(),
-  getRefreshState: vi.fn(() => 'idle'),
-  subscribeToRefreshState: vi.fn(),
   startLifecycle: vi.fn(),
-  refreshAfterUnauthorized: vi.fn(),
 }));
 
 vi.mock('../services/auth.service', () => ({
@@ -29,10 +17,7 @@ vi.mock('../services/auth.service', () => ({
     getCurrentUser,
     login: vi.fn(),
     logout,
-    getRefreshState,
-    subscribeToRefreshState,
     startLifecycle,
-    refreshAfterUnauthorized,
   },
 }));
 
@@ -63,24 +48,13 @@ function LogoutButton() {
   );
 }
 
-function RefreshStatus() {
-  const { isReconnecting, hasReconnectionError } = useAuth();
-  return <span>{`${isReconnecting}:${hasReconnectionError}`}</span>;
-}
-
 describe('AuthProvider Sentry user', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getAccessToken.mockResolvedValue('cookie-stored');
     getCurrentUser.mockResolvedValue(authenticatedUser);
     logout.mockResolvedValue(undefined);
-    getRefreshState.mockReturnValue('idle');
-    subscribeToRefreshState.mockImplementation((listener: (state: string) => void) => {
-      listener('idle');
-      return vi.fn();
-    });
     startLifecycle.mockReturnValue(vi.fn());
-    refreshAfterUnauthorized.mockResolvedValue(undefined);
   });
 
   it('sets the Sentry user after loading the authenticated user', async () => {
@@ -107,29 +81,5 @@ describe('AuthProvider Sentry user', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Logout' }));
 
     await waitFor(() => expect(setSentryUser).toHaveBeenLastCalledWith(null));
-  });
-
-  it('exposes refresh state changes independently from loading and authentication', async () => {
-    let listener!: (state: string) => void;
-    subscribeToRefreshState.mockImplementation((nextListener: (state: string) => void) => {
-      listener = nextListener;
-      nextListener('idle');
-      return vi.fn();
-    });
-
-    render(
-      <AuthProvider>
-        <RefreshStatus />
-      </AuthProvider>,
-    );
-    await waitFor(() => expect(screen.getByText('false:false')).toBeInTheDocument());
-
-    getRefreshState.mockReturnValue('reconnecting');
-    listener('reconnecting');
-    await waitFor(() => expect(screen.getByText('true:false')).toBeInTheDocument());
-
-    getRefreshState.mockReturnValue('failed');
-    listener('failed');
-    await waitFor(() => expect(screen.getByText('false:true')).toBeInTheDocument());
   });
 });

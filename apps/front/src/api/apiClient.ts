@@ -22,10 +22,9 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     credentials: 'include',
   });
 
-  // Only a 401 activates the blocking reconnection state.
   if (response.status === 401) {
     try {
-      await authService.refreshAfterUnauthorized();
+      await authService.refreshToken();
     } catch {
       throw new ApiError('Unable to renew the session', 401, 'Unauthorized');
     }

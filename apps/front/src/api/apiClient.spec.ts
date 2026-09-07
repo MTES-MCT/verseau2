@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getControles, getMasa } from '@lib/dossier';
 
-const mockRefreshAfterUnauthorized = vi.fn();
+const mockRefreshToken = vi.fn();
 
 vi.mock('../services/auth.service', () => ({
   authService: {
-    refreshAfterUnauthorized: mockRefreshAfterUnauthorized,
+    refreshToken: mockRefreshToken,
   },
 }));
 
 describe('authenticatedFetch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRefreshAfterUnauthorized.mockReset();
+    mockRefreshToken.mockReset();
     vi.stubGlobal('fetch', vi.fn());
 
     vi.resetModules();
@@ -34,17 +34,17 @@ describe('authenticatedFetch', () => {
     const response = await authenticatedFetch('/api/test');
 
     expect(response.status).toBe(200);
-    expect(mockRefreshAfterUnauthorized).not.toHaveBeenCalled();
+    expect(mockRefreshToken).not.toHaveBeenCalled();
   });
 
   it('refreshes token and retries on 401', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
     vi.mocked(fetch).mockResolvedValueOnce(unauthorized401()).mockResolvedValueOnce(ok200());
-    mockRefreshAfterUnauthorized.mockResolvedValueOnce(undefined);
+    mockRefreshToken.mockResolvedValueOnce(undefined);
 
     const response = await authenticatedFetch('/api/test');
 
-    expect(mockRefreshAfterUnauthorized).toHaveBeenCalledTimes(1);
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(response.status).toBe(200);
   });
@@ -53,7 +53,7 @@ describe('authenticatedFetch', () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
 
     // The service mock resolves independently; real deduplication is covered by auth.service.spec.ts.
-    mockRefreshAfterUnauthorized.mockResolvedValue(undefined);
+    mockRefreshToken.mockResolvedValue(undefined);
 
     // First 3 fetch calls → 401, subsequent calls → 200 (retries)
     let callCount = 0;
@@ -73,7 +73,7 @@ describe('authenticatedFetch', () => {
 
     const responses = await Promise.all(promises);
 
-    expect(mockRefreshAfterUnauthorized).toHaveBeenCalledTimes(3);
+    expect(mockRefreshToken).toHaveBeenCalledTimes(3);
     // 3 initial + 3 retries
     expect(fetch).toHaveBeenCalledTimes(6);
     expect(responses).toHaveLength(3);
@@ -83,7 +83,7 @@ describe('authenticatedFetch', () => {
   it('throws a neutral error without clearing session or redirecting when refresh fails', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
     vi.mocked(fetch).mockResolvedValueOnce(unauthorized401());
-    mockRefreshAfterUnauthorized.mockRejectedValueOnce(new Error('refresh failed'));
+    mockRefreshToken.mockRejectedValueOnce(new Error('refresh failed'));
 
     await expect(authenticatedFetch('/api/test')).rejects.toThrow('Unable to renew the session');
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -92,24 +92,24 @@ describe('authenticatedFetch', () => {
   it('returns the single retry response without refreshing recursively on another 401', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
     vi.mocked(fetch).mockResolvedValueOnce(unauthorized401()).mockResolvedValueOnce(unauthorized401());
-    mockRefreshAfterUnauthorized.mockResolvedValueOnce(undefined);
+    mockRefreshToken.mockResolvedValueOnce(undefined);
 
     const response = await authenticatedFetch('/api/test');
 
     expect(response.status).toBe(401);
-    expect(mockRefreshAfterUnauthorized).toHaveBeenCalledTimes(1);
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('propagates a network failure from the retry after reconnection has settled', async () => {
+  it('propagates a network failure from the retry after refresh succeeds', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
     const networkError = new TypeError('Network unavailable');
     vi.mocked(fetch).mockResolvedValueOnce(unauthorized401()).mockRejectedValueOnce(networkError);
-    mockRefreshAfterUnauthorized.mockResolvedValueOnce(undefined);
+    mockRefreshToken.mockResolvedValueOnce(undefined);
 
     await expect(authenticatedFetch('/api/test')).rejects.toBe(networkError);
 
-    expect(mockRefreshAfterUnauthorized).toHaveBeenCalledTimes(1);
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

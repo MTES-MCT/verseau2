@@ -25,8 +25,6 @@ interface OIDCConfiguration {
   scope: string;
 }
 
-export type AuthRefreshState = 'idle' | 'reconnecting' | 'failed';
-
 const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
 const NONCE_KEY = 'oidc_nonce';
@@ -42,15 +40,9 @@ class AuthService {
   private storage: Storage;
   private sessionStorage: Storage;
   private refreshPromise: Promise<void> | null = null;
-  private refreshOperationId: symbol | null = null;
   private refreshAbortController: AbortController | null = null;
-  private refreshState: AuthRefreshState = 'idle';
-  private refreshStateListeners = new Set<(state: AuthRefreshState) => void>();
-  private blockingRefreshRequested = false;
-  private reconnectionPaintPromise: Promise<void> | null = null;
   private refreshTimer: number | null = null;
   private backgroundRetryCount = 0;
-  private backgroundRetryAt: number | null = null;
   private lifecycleSubscribers = 0;
 
   constructor() {
@@ -170,82 +162,18 @@ class AuthService {
     }
   }
 
-  /** Silent by default. Call refreshAfterUnauthorized() only in direct response to a 401. */
-  async refreshToken(): Promise<void> {
-    return this.requestRefresh(false);
-  }
-
-  async refreshAfterUnauthorized(): Promise<void> {
-    return this.requestRefresh(true);
-  }
-
-  private requestRefresh(blocking: boolean): Promise<void> {
-    if (blocking) {
-      this.blockingRefreshRequested = true;
-      this.setRefreshState('reconnecting');
-      this.reconnectionPaintPromise ??= this.waitForReconnectionPaint();
-    }
-
+  refreshToken(): Promise<void> {
     if (this.refreshPromise) {
       return this.refreshPromise;
     }
 
-    const operationId = Symbol('refresh-operation');
-    const operation = this.doRefreshToken().then(
-      () => this.finishRefresh(operationId, false),
-      async (error: unknown) => {
-        await this.finishRefresh(operationId, true);
-        throw error;
-      },
-    );
-    this.refreshOperationId = operationId;
-    this.refreshPromise = operation;
-    return operation;
-  }
-
-  private async finishRefresh(operationId: symbol, failed: boolean): Promise<void> {
-    if (this.blockingRefreshRequested) {
-      await this.reconnectionPaintPromise;
-    }
-
-    if (this.refreshOperationId !== operationId) {
-      return;
-    }
-
-    this.refreshPromise = null;
-    this.refreshOperationId = null;
-    if (this.blockingRefreshRequested) {
-      this.setRefreshState(failed ? 'failed' : 'idle');
-    }
-    this.blockingRefreshRequested = false;
-    this.reconnectionPaintPromise = null;
-  }
-
-  private waitForReconnectionPaint(): Promise<void> {
-    if (
-      typeof window.requestAnimationFrame !== 'function' ||
-      typeof document === 'undefined' ||
-      document.visibilityState === 'hidden' ||
-      this.refreshStateListeners.size === 0
-    ) {
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        window.clearTimeout(timeout);
-        resolve();
-      };
-      const timeout = window.setTimeout(finish, 100);
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(finish);
-      });
+    const refreshPromise = this.doRefreshToken().finally(() => {
+      if (this.refreshPromise === refreshPromise) {
+        this.refreshPromise = null;
+      }
     });
+    this.refreshPromise = refreshPromise;
+    return refreshPromise;
   }
 
   private async doRefreshToken(): Promise<void> {
@@ -257,6 +185,7 @@ class AuthService {
     const refreshWithLock = async () => {
       const currentSession = this.getSession();
       if (this.wasRenewedSince(currentSession, sessionBeforeLock)) {
+        this.resetBackgroundRetries();
         this.scheduleRefresh();
         return;
       }
@@ -307,7 +236,7 @@ class AuthService {
     const response = await this.fetchCurrentUser();
 
     if (response.status === 401) {
-      await this.refreshAfterUnauthorized();
+      await this.refreshToken();
       const retryResponse = await this.fetchCurrentUser();
 
       if (!retryResponse.ok) {
@@ -329,16 +258,6 @@ class AuthService {
       method: 'GET',
       credentials: 'include',
     });
-  }
-
-  getRefreshState(): AuthRefreshState {
-    return this.refreshState;
-  }
-
-  subscribeToRefreshState(listener: (state: AuthRefreshState) => void): () => void {
-    this.refreshStateListeners.add(listener);
-    listener(this.refreshState);
-    return () => this.refreshStateListeners.delete(listener);
   }
 
   startLifecycle(): () => void {
@@ -393,7 +312,7 @@ class AuthService {
     this.scheduleRefresh();
   };
 
-  private scheduleRefresh(): void {
+  private scheduleRefresh(retryDelay?: number): void {
     this.clearRefreshTimer();
     if (this.lifecycleSubscribers === 0 || !this.isPageActive()) {
       return;
@@ -404,16 +323,8 @@ class AuthService {
       return;
     }
 
-    let refreshAt = session.refresh_at ?? this.calculateRefreshAt(session.expires_at, Date.now());
-    if (this.backgroundRetryAt !== null) {
-      refreshAt = Math.max(refreshAt, this.backgroundRetryAt);
-    }
-
-    if (this.backgroundRetryCount > BACKGROUND_RETRY_DELAYS_MS.length && refreshAt <= Date.now()) {
-      return;
-    }
-
-    const delay = Math.max(0, refreshAt - Date.now());
+    const refreshAt = session.refresh_at ?? this.calculateRefreshAt(session.expires_at, Date.now());
+    const delay = retryDelay ?? Math.max(0, refreshAt - Date.now());
     this.refreshTimer = window.setTimeout(() => {
       this.refreshTimer = null;
       this.runBackgroundRefresh();
@@ -421,15 +332,11 @@ class AuthService {
   }
 
   private runBackgroundRefresh(): void {
-    if (!this.isPageActive()) {
+    if (!this.isPageActive() || this.refreshPromise) {
       return;
     }
 
     void this.refreshToken().catch(() => {
-      if (this.refreshState === 'failed') {
-        return;
-      }
-
       const session = this.getSession();
       if (!session || session.expires_at <= Date.now()) {
         return;
@@ -438,12 +345,10 @@ class AuthService {
       const retryDelay = BACKGROUND_RETRY_DELAYS_MS[this.backgroundRetryCount];
       this.backgroundRetryCount += 1;
       if (retryDelay === undefined) {
-        this.backgroundRetryAt = null;
         return;
       }
 
-      this.backgroundRetryAt = Date.now() + retryDelay;
-      this.scheduleRefresh();
+      this.scheduleRefresh(retryDelay);
     });
   }
 
@@ -510,17 +415,8 @@ class AuthService {
     }
   }
 
-  private setRefreshState(state: AuthRefreshState): void {
-    if (this.refreshState === state) {
-      return;
-    }
-    this.refreshState = state;
-    this.refreshStateListeners.forEach((listener) => listener(state));
-  }
-
   private resetBackgroundRetries(): void {
     this.backgroundRetryCount = 0;
-    this.backgroundRetryAt = null;
   }
 
   private clearRefreshTimer(): void {
@@ -534,9 +430,6 @@ class AuthService {
     this.clearRefreshTimer();
     this.refreshAbortController?.abort();
     this.refreshAbortController = null;
-    this.blockingRefreshRequested = false;
-    this.reconnectionPaintPromise = null;
-    this.setRefreshState('idle');
     this.resetBackgroundRetries();
 
     try {
