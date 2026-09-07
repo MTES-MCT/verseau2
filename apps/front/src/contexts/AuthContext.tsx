@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { authService } from '../services/auth.service';
+import type { AuthRefreshState } from '../services/auth.service';
 import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
 import { reportError, setSentryUser } from '../monitoring/sentry';
 import { AuthContext, type AuthContextValue } from './authContextDefinition';
@@ -11,6 +12,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUserWithIntervenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshState, setRefreshState] = useState<AuthRefreshState>(() => authService.getRefreshState());
 
   const refreshUser = useCallback(async () => {
     try {
@@ -27,10 +29,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     } catch (error) {
       reportError(error, { source: 'AuthContext.refreshUser' });
-      setAuthenticatedUser(null);
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = authService.subscribeToRefreshState(setRefreshState);
+    const stopLifecycle = authService.startLifecycle();
+    return () => {
+      unsubscribe();
+      stopLifecycle();
+    };
   }, []);
 
   useEffect(() => {
@@ -77,13 +87,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const retryReconnection = useCallback(async () => {
+    await authService.refreshAfterUnauthorized();
+    await refreshUser();
+  }, [refreshUser]);
+
   const value: AuthContextValue = {
     authenticatedUser,
     isAuthenticated: !!authenticatedUser,
     isLoading,
+    isReconnecting: refreshState === 'reconnecting',
+    hasReconnectionError: refreshState === 'failed',
     login,
     logout,
     refreshUser,
+    retryReconnection,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,5 @@
 import { authService } from '../services/auth.service';
-import { APP_HOME_PATH, API_BASE_URL } from '../appConfig';
+import { API_BASE_URL } from '../appConfig';
 import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
 import { buildRoutePath } from '@lib/dossier';
 import { ApiError } from './apiError';
@@ -22,23 +22,18 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
     credentials: 'include',
   });
 
-  // Handle 401 by attempting to refresh token (dedup handled by authService)
+  // Only a 401 activates the blocking reconnection state.
   if (response.status === 401) {
     try {
-      await authService.refreshToken();
-
-      const retryResponse = await fetch(url, {
-        ...options,
-        credentials: 'include',
-      });
-
-      return retryResponse;
+      await authService.refreshAfterUnauthorized();
     } catch {
-      // Refresh failed, redirect to login
-      authService.clearSession();
-      window.location.href = APP_HOME_PATH;
-      throw new ApiError('Session expired', 401, 'Unauthorized');
+      throw new ApiError('Unable to renew the session', 401, 'Unauthorized');
     }
+
+    return fetch(url, {
+      ...options,
+      credentials: 'include',
+    });
   }
 
   return response;
