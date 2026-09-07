@@ -34,38 +34,35 @@ export function ReconnectionLayout({ children, isReconnecting, hasError, onRetry
 
   return (
     <div className="reconnection-layout">
-      <div
-        className="reconnection-layout__content"
-        inert={isBlocking || undefined}
-        aria-hidden={isBlocking || undefined}
-      >
-        {children}
-      </div>
-
       {isBlocking && (
         <div className="reconnection-layout__overlay">
           <div
             ref={panelRef}
-            className={`${fr.cx('fr-container', 'fr-p-4w')} reconnection-layout__panel`}
+            className={`${fr.cx('fr-p-2w')} reconnection-layout__panel`}
             tabIndex={-1}
             role={hasError ? 'alert' : 'status'}
             aria-live={hasError ? 'assertive' : 'polite'}
             aria-busy={isReconnecting || undefined}
           >
             {isReconnecting ? (
-              <>
+              <div className="reconnection-layout__message">
                 <span className="fr-icon-loader-5-line fr-icon--lg reconnection-layout__spinner" aria-hidden="true" />
-                <h1 className={fr.cx('fr-h2', 'fr-mb-2w')}>Reconnexion</h1>
-                <p className={fr.cx('fr-text--lead', 'fr-mb-0')}>
-                  Veuillez patienter pendant le renouvellement de votre session.
-                </p>
-              </>
+                <div>
+                  <h2 className={fr.cx('fr-text--lg', 'fr-text--bold', 'fr-mb-0')}>Reconnexion</h2>
+                  <p className={fr.cx('fr-text--sm', 'fr-mb-0')}>
+                    Veuillez patienter pendant le renouvellement de votre session.
+                  </p>
+                </div>
+              </div>
             ) : (
               <>
-                <h1 className={fr.cx('fr-h2', 'fr-mb-2w')}>Connexion interrompue</h1>
-                <p className={fr.cx('fr-text--lead', 'fr-mb-3w')}>
-                  Le renouvellement de la connexion n’a pas abouti. Vous pouvez réessayer ou vous connecter à nouveau.
-                </p>
+                <div className="reconnection-layout__message">
+                  <span className="fr-icon-warning-fill fr-icon--lg" aria-hidden="true" />
+                  <div>
+                    <h2 className={fr.cx('fr-text--lg', 'fr-text--bold', 'fr-mb-0')}>Connexion interrompue</h2>
+                    <p className={fr.cx('fr-text--sm', 'fr-mb-0')}>Le renouvellement de la connexion n’a pas abouti.</p>
+                  </div>
+                </div>
                 <div className={fr.cx('fr-btns-group', 'fr-btns-group--inline-md')}>
                   <Button onClick={onRetry}>Réessayer</Button>
                   <Button priority="secondary" onClick={onLogin}>
@@ -77,6 +74,14 @@ export function ReconnectionLayout({ children, isReconnecting, hasError, onRetry
           </div>
         </div>
       )}
+
+      <div
+        className="reconnection-layout__content"
+        inert={isBlocking || undefined}
+        aria-hidden={isBlocking || undefined}
+      >
+        {children}
+      </div>
     </div>
   );
 }

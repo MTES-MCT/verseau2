@@ -9,45 +9,51 @@
 }
 
 .reconnection-layout__overlay {
-  position: absolute;
-  inset: 0;
+  position: sticky;
+  top: 0;
   z-index: 10;
+  height: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 5rem 1rem 2rem;
-  background: rgba(224, 224, 224, 0.88);
+  pointer-events: none;
 }
 
 .reconnection-layout__panel {
-  width: min(100%, 42rem);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
   text-align: center;
-  background: color-mix(in srgb, var(--background-default-grey) 88%, transparent);
-  border-top: 0.25rem solid var(--border-active-blue-france);
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 18 / 18%);
+  box-shadow: 0 0.25rem 0.75rem rgb(0 0 18 / 16%);
+  pointer-events: auto;
+  background-color: white;
 }
 
 .reconnection-layout__panel:focus {
-  outline: 2px solid var(--border-active-blue-france);
-  outline-offset: 2px;
+  outline: none;
+}
+
+.reconnection-layout__message {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
 }
 
 .reconnection-layout__spinner {
-  display: inline-block;
-  margin-bottom: 1rem;
+  flex: none;
 }
 
 .reconnection-layout__panel .fr-btns-group {
-  justify-content: center;
+  flex: none;
   margin-bottom: 0;
 }
 
 @media (max-width: 47.99em) {
-  .reconnection-layout__overlay {
-    padding-top: 2rem;
-  }
-
   .reconnection-layout__panel {
-    text-align: left;
+    align-items: stretch;
+    flex-direction: column;
   }
 }

@@ -36,11 +36,12 @@ describe('ReconnectionLayout', () => {
     expect(status).toHaveAttribute('aria-live', 'polite');
     expect(status).toHaveAttribute('aria-busy', 'true');
     expect(status).toHaveFocus();
-    expect(screen.getByRole('heading', { name: 'Reconnexion' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Reconnexion' })).toBeInTheDocument();
     expect(screen.getByText('Veuillez patienter pendant le renouvellement de votre session.')).toBeInTheDocument();
     const pageInput = screen.getByLabelText('Nom du fichier');
     expect(pageInput).toBeVisible();
     expect(pageInput.closest('[inert]')).toHaveAttribute('aria-hidden', 'true');
+    expect(status.closest('.reconnection-layout__overlay')?.nextElementSibling).toContainElement(pageInput);
   });
 
   it('preserves form state while the overlay appears and disappears', () => {
