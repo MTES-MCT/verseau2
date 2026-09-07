@@ -25,7 +25,7 @@ describe('ReconnectionLayout', () => {
     expect(screen.queryByRole('heading', { name: 'Reconnexion' })).not.toBeInTheDocument();
   });
 
-  it('announces a blocking reconnection and disables the mounted page', () => {
+  it('announces a blocking reconnection over the visible mounted page and disables interaction', () => {
     render(
       <ReconnectionLayout {...defaultProps} isReconnecting>
         <StatefulPage />
@@ -38,7 +38,9 @@ describe('ReconnectionLayout', () => {
     expect(status).toHaveFocus();
     expect(screen.getByRole('heading', { name: 'Reconnexion' })).toBeInTheDocument();
     expect(screen.getByText('Veuillez patienter pendant le renouvellement de votre session.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Nom du fichier').closest('[inert]')).toHaveAttribute('aria-hidden', 'true');
+    const pageInput = screen.getByLabelText('Nom du fichier');
+    expect(pageInput).toBeVisible();
+    expect(pageInput.closest('[inert]')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('preserves form state while the overlay appears and disappears', () => {

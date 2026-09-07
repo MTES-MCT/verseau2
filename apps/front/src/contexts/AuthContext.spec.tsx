@@ -124,10 +124,11 @@ describe('AuthProvider Sentry user', () => {
     );
     await waitFor(() => expect(screen.getByText('false:false')).toBeInTheDocument());
 
-    fireEvent.click(document.body);
+    getRefreshState.mockReturnValue('reconnecting');
     listener('reconnecting');
     await waitFor(() => expect(screen.getByText('true:false')).toBeInTheDocument());
 
+    getRefreshState.mockReturnValue('failed');
     listener('failed');
     await waitFor(() => expect(screen.getByText('false:true')).toBeInTheDocument());
   });

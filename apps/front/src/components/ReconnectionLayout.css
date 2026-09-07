@@ -4,8 +4,6 @@
 }
 
 .reconnection-layout__content[aria-hidden='true'] {
-  filter: blur(2px);
-  opacity: 0.35;
   pointer-events: none;
   user-select: none;
 }
@@ -18,13 +16,13 @@
   align-items: flex-start;
   justify-content: center;
   padding: 5rem 1rem 2rem;
-  background: color-mix(in srgb, var(--background-default-grey) 72%, transparent);
+  background: transparent;
 }
 
 .reconnection-layout__panel {
   width: min(100%, 42rem);
   text-align: center;
-  background: var(--background-default-grey);
+  background: color-mix(in srgb, var(--background-default-grey) 88%, transparent);
   border-top: 0.25rem solid var(--border-active-blue-france);
   box-shadow: 0 0.5rem 1.5rem rgb(0 0 18 / 18%);
 }
@@ -51,11 +49,5 @@
 
   .reconnection-layout__panel {
     text-align: left;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reconnection-layout__content[aria-hidden='true'] {
-    filter: none;
   }
 }

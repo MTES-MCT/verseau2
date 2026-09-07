@@ -42,10 +42,12 @@ class AuthService {
   private storage: Storage;
   private sessionStorage: Storage;
   private refreshPromise: Promise<void> | null = null;
+  private refreshOperationId: symbol | null = null;
   private refreshAbortController: AbortController | null = null;
   private refreshState: AuthRefreshState = 'idle';
   private refreshStateListeners = new Set<(state: AuthRefreshState) => void>();
   private blockingRefreshRequested = false;
+  private reconnectionPaintPromise: Promise<void> | null = null;
   private refreshTimer: number | null = null;
   private backgroundRetryCount = 0;
   private backgroundRetryAt: number | null = null;
@@ -181,30 +183,69 @@ class AuthService {
     if (blocking) {
       this.blockingRefreshRequested = true;
       this.setRefreshState('reconnecting');
+      this.reconnectionPaintPromise ??= this.waitForReconnectionPaint();
     }
 
-    if (!this.refreshPromise) {
-      const operation = this.doRefreshToken();
-      this.refreshPromise = operation;
-      operation.then(
-        () => this.finishRefresh(operation, false),
-        () => this.finishRefresh(operation, true),
-      );
+    if (this.refreshPromise) {
+      return this.refreshPromise;
     }
 
-    return this.refreshPromise;
+    const operationId = Symbol('refresh-operation');
+    const operation = this.doRefreshToken().then(
+      () => this.finishRefresh(operationId, false),
+      async (error: unknown) => {
+        await this.finishRefresh(operationId, true);
+        throw error;
+      },
+    );
+    this.refreshOperationId = operationId;
+    this.refreshPromise = operation;
+    return operation;
   }
 
-  private finishRefresh(operation: Promise<void>, failed: boolean): void {
-    if (this.refreshPromise !== operation) {
+  private async finishRefresh(operationId: symbol, failed: boolean): Promise<void> {
+    if (this.blockingRefreshRequested) {
+      await this.reconnectionPaintPromise;
+    }
+
+    if (this.refreshOperationId !== operationId) {
       return;
     }
 
     this.refreshPromise = null;
+    this.refreshOperationId = null;
     if (this.blockingRefreshRequested) {
       this.setRefreshState(failed ? 'failed' : 'idle');
     }
     this.blockingRefreshRequested = false;
+    this.reconnectionPaintPromise = null;
+  }
+
+  private waitForReconnectionPaint(): Promise<void> {
+    if (
+      typeof window.requestAnimationFrame !== 'function' ||
+      typeof document === 'undefined' ||
+      document.visibilityState === 'hidden' ||
+      this.refreshStateListeners.size === 0
+    ) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        window.clearTimeout(timeout);
+        resolve();
+      };
+      const timeout = window.setTimeout(finish, 100);
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(finish);
+      });
+    });
   }
 
   private async doRefreshToken(): Promise<void> {
@@ -494,6 +535,7 @@ class AuthService {
     this.refreshAbortController?.abort();
     this.refreshAbortController = null;
     this.blockingRefreshRequested = false;
+    this.reconnectionPaintPromise = null;
     this.setRefreshState('idle');
     this.resetBackgroundRetries();
 

@@ -78,9 +78,9 @@ export class AuthenticationService implements Authentication {
       .setIssuedAt();
 
     if (expiresIn) {
-      jwt.setExpirationTime(`${expiresIn}s`);
+      jwt.setExpirationTime(`10s`);
     } else {
-      jwt.setExpirationTime('1h');
+      jwt.setExpirationTime('10s');
     }
 
     return jwt.sign(this.jwtSecret);

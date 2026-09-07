@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore, type ReactNode } from 'react';
 import { authService } from '../services/auth.service';
-import type { AuthRefreshState } from '../services/auth.service';
 import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
 import { reportError, setSentryUser } from '../monitoring/sentry';
 import { AuthContext, type AuthContextValue } from './authContextDefinition';
@@ -9,10 +8,13 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const subscribeToRefreshState = (listener: () => void) => authService.subscribeToRefreshState(listener);
+const getRefreshState = () => authService.getRefreshState();
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUserWithIntervenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshState, setRefreshState] = useState<AuthRefreshState>(() => authService.getRefreshState());
+  const refreshState = useSyncExternalStore(subscribeToRefreshState, getRefreshState, getRefreshState);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -35,12 +37,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = authService.subscribeToRefreshState(setRefreshState);
     const stopLifecycle = authService.startLifecycle();
-    return () => {
-      unsubscribe();
-      stopLifecycle();
-    };
+    return stopLifecycle;
   }, []);
 
   useEffect(() => {
