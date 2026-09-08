@@ -1,4 +1,5 @@
 import { Footer } from '@codegouvfr/react-dsfr/Footer';
+import { AppRoutes } from '../routes';
 
 export function AppFooter() {
   return (
@@ -20,7 +21,9 @@ export function AppFooter() {
           SUR LE CLIMAT ET LA NATURE
         </span>
       }
+      homeLinkProps={{ href: AppRoutes.HOME, title: 'Accueil' }}
       accessibility="non compliant"
+      accessibilityLinkProps={{ href: AppRoutes.ACCESSIBILITY }}
       contentDescription="VERSEAU2 est propulsé par la direction de l'eau et de la biodiversité. Le code source est disponible en licence libre."
       partnersLogos={{
         sub: [

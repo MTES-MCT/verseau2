@@ -95,6 +95,8 @@ export const Breadcrumb = () => {
     currentPageLabel = 'Bilans';
   } else if (location.pathname === AppRoutes.TRANSMISSION_AS_RETARD_DASHBOARD) {
     currentPageLabel = 'Transmission AS en retard';
+  } else if (location.pathname === AppRoutes.ACCESSIBILITY) {
+    currentPageLabel = "Déclaration d'accessibilité";
   }
 
   return (
