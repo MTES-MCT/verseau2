@@ -14,6 +14,7 @@ import { DesignSystemPage } from './pages/DesignSystemPage';
 import { EvenementDashboard } from './pages/suivi-regulier/evenement/EvenementDashboard';
 import { BilanDashboard } from './pages/suivi-regulier/bilan/BilanDashboard';
 import { TransmissionASRetardDashboard } from './pages/suivi-regulier/transmissionASRetard/TransmissionASRetardDashboard';
+import { AccessibilityPage } from './pages/AccessibilityPage';
 import { APP_BASE_PATH } from './appConfig';
 import { AppHeader } from './components/Header';
 import { AppFooter } from './components/Footer';
@@ -144,6 +145,7 @@ function App() {
               }
             />
             <Route path={AppRoutes.MOCK_AUTHORIZATION} element={<MockAuthorizationPage />} />
+            <Route path={AppRoutes.ACCESSIBILITY} element={<AccessibilityPage />} />
             {import.meta.env.DEV && <Route path={AppRoutes.DESIGN_SYSTEM} element={<DesignSystemPage />} />}
           </Routes>
         </main>
