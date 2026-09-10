@@ -60,6 +60,23 @@ describe('Dashboard', () => {
     });
   });
 
+  it('affiche le nom complet du fichier en tooltip même avec un numéro de dépôt', () => {
+    const longFileName = '202512-argences_031402001000_un_nom_long_trestreslong.xml';
+    mockUseDepots.mockReturnValue({
+      data: [{ ...depot, numeroDepotVerseau1: 'DEPOT693914', nomOriginalFichier: longFileName }],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      isExpertNational: false,
+    } as ReturnType<typeof useDepots>);
+    renderDashboard();
+
+    const fileCell = screen.getByTitle(longFileName);
+    expect(fileCell).toBeInTheDocument();
+    expect(fileCell).toHaveClass('fixed-height-table__cell-content');
+    expect(screen.getByText('DEPOT693914')).toBeInTheDocument();
+  });
+
   it("affiche l'heure de dépôt dans le fuseau du navigateur", () => {
     renderDashboard();
 
