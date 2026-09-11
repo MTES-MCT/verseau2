@@ -106,12 +106,14 @@ export interface OuvrageIntervenantRow {
 
 export interface SteuDetailRow {
   ouvrageDepollutionCode: string;
+  ouvrageDepollutionNom: string | null;
   dateMiseEnService: string | null;
   intervenants: OuvrageIntervenantRow[];
 }
 
 export interface SclDetailRow {
   systemeCollecteCode: string;
+  systemeCollecteNom: string | null;
   intervenants: OuvrageIntervenantRow[];
 }
 

@@ -232,6 +232,7 @@ describe('BilanController (e2e)', () => {
       ]);
       mockMasaProvider.findSteuDetail.mockResolvedValue({
         ouvrageDepollutionCode: 'STEU_TEST_001',
+        ouvrageDepollutionNom: 'Station test',
         dateMiseEnService: '2000-01-01',
         intervenants: [
           { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },
@@ -246,6 +247,7 @@ describe('BilanController (e2e)', () => {
 
       expect(response.body).toMatchObject({
         ouvrageDepollutionCode: 'STEU_TEST_001',
+        ouvrageDepollutionNom: 'Station test',
         dateMiseEnService: '2000-01-01',
         exploitants: [{ intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' }],
         maitresOuvrage: [{ intervenantNom: 'MOA test', intervenantSiret: '43210987654321' }],
@@ -347,6 +349,7 @@ describe('BilanController (e2e)', () => {
       ]);
       mockMasaProvider.findSclDetail.mockResolvedValue({
         systemeCollecteCode: 'SCL_TEST_001',
+        systemeCollecteNom: 'Systeme collecte test',
         intervenants: [
           { role: 'exploitant', intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' },
           { role: 'maitre_ouvrage', intervenantNom: 'MOA test', intervenantSiret: '43210987654321' },
@@ -360,6 +363,7 @@ describe('BilanController (e2e)', () => {
 
       expect(response.body).toMatchObject({
         systemeCollecteCode: 'SCL_TEST_001',
+        systemeCollecteNom: 'Systeme collecte test',
         exploitants: [{ intervenantNom: 'Exploitant test', intervenantSiret: '12345678901234' }],
         maitresOuvrage: [{ intervenantNom: 'MOA test', intervenantSiret: '43210987654321' }],
       });

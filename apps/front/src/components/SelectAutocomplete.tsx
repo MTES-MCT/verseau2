@@ -118,6 +118,18 @@ export const SelectAutocomplete = ({
     setHighlightedIndex(-1);
   };
 
+  // Clear obsolete draft/open state when external navigation changes the selection,
+  // without firing onChange or writing back to the URL.
+  const previousValueRef = useRef(value);
+  useEffect(() => {
+    if (previousValueRef.current !== value) {
+      previousValueRef.current = value;
+      setIsOpen(false);
+      setSearchText(null);
+      setHighlightedIndex(-1);
+    }
+  }, [value]);
+
   const selectOption = (option: AutocompleteOption) => {
     if (isFetching) {
       return;
