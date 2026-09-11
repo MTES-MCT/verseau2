@@ -36,6 +36,14 @@ describe('authService.refreshToken deduplication', () => {
       headers: { 'Content-Type': 'application/json' },
     });
 
+  it('exposes the refresh response status', async () => {
+    const authService = await loadAuthService();
+
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ expiresIn: 3600 }), { status: 201 }));
+
+    await expect(authService.refreshToken()).resolves.toBe(201);
+  });
+
   it('deduplicates concurrent refreshToken calls into a single fetch', async () => {
     const authService = await loadAuthService();
 

@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuth } from '../hooks/useAuth';
 import { AuthProvider } from './AuthContext';
 
-const { getAccessToken, getCurrentUser, logout, setSentryUser } = vi.hoisted(() => ({
+const { getAccessToken, getCurrentUser, logout, setSentryUser, startRefreshAuth, stopRefreshAuth } = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
   getCurrentUser: vi.fn(),
   logout: vi.fn(),
   setSentryUser: vi.fn(),
+  startRefreshAuth: vi.fn(),
+  stopRefreshAuth: vi.fn(),
 }));
 
 vi.mock('../services/auth.service', () => ({
@@ -16,6 +18,13 @@ vi.mock('../services/auth.service', () => ({
     getCurrentUser,
     login: vi.fn(),
     logout,
+  },
+}));
+
+vi.mock('../services/refreshAuth.service', () => ({
+  refreshAuthService: {
+    start: startRefreshAuth,
+    stop: stopRefreshAuth,
   },
 }));
 
@@ -52,6 +61,16 @@ describe('AuthProvider Sentry user', () => {
     getAccessToken.mockResolvedValue('cookie-stored');
     getCurrentUser.mockResolvedValue(authenticatedUser);
     logout.mockResolvedValue(undefined);
+  });
+
+  it('starts proactive refresh for the provider lifetime', async () => {
+    const { unmount } = render(<AuthProvider>Content</AuthProvider>);
+
+    await waitFor(() => expect(startRefreshAuth).toHaveBeenCalledTimes(1));
+
+    unmount();
+
+    expect(stopRefreshAuth).toHaveBeenCalledTimes(1);
   });
 
   it('sets the Sentry user after loading the authenticated user', async () => {

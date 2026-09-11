@@ -3,6 +3,7 @@ import { authService } from '../services/auth.service';
 import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
 import { reportError, setSentryUser } from '../monitoring/sentry';
 import { AuthContext, type AuthContextValue } from './authContextDefinition';
+import { refreshAuthService } from '../services/refreshAuth.service';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -11,6 +12,13 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUserWithIntervenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    refreshAuthService.start();
+    return () => {
+      refreshAuthService.stop();
+    };
+  }, []);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -57,6 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     try {
       await authService.login();
+      refreshAuthService.start();
     } catch (error) {
       reportError(error, { source: 'AuthContext.login' });
       setIsLoading(false);
