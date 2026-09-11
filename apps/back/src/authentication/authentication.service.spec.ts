@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthenticationService } from './authentication.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DroitsUserService } from '@user/droitsUser.service';
-import { UnauthorizedException } from '@nestjs/common';
+import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedUser } from './authentication';
 
 // Mock external modules
@@ -302,16 +302,56 @@ describe('AuthenticationService', () => {
       expect(result.accessToken).toBe('mock-internal-jwt');
     });
 
-    it('should propagate errors from refreshTokenGrant as generic 401', async () => {
-      (refreshTokenGrant as jest.Mock).mockRejectedValue(new Error('Invalid refresh token'));
+    it('should reject invalid grants as unauthorized', async () => {
+      const invalidGrant = Object.assign(new Error('Invalid refresh token'), { error: 'invalid_grant' });
+      (refreshTokenGrant as jest.Mock).mockRejectedValue(invalidGrant);
 
       await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
 
       // Detailed error is logged server-side (message + original error object)
       expect(mockLogger.error).toHaveBeenCalledWith(
         'OIDC refresh token grant failed: Invalid refresh token',
-        expect.any(Error),
+        invalidGrant,
       );
+    });
+
+    it('should expose refresh provider failures as retryable service unavailability', async () => {
+      (refreshTokenGrant as jest.Mock).mockRejectedValue(new Error('Connection reset'));
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('should expose business claim failures as retryable service unavailability', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({
+        access_token: 'new-access-token',
+        expires_in: 3600,
+      });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'user-123' });
+      mockDroitsUserService.resolveItvCdn.mockRejectedValue(new Error('Database unavailable'));
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('should reject user-info authorization failures as unauthorized', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({
+        access_token: 'new-access-token',
+        expires_in: 3600,
+      });
+      (fetchUserInfo as jest.Mock).mockRejectedValue(Object.assign(new Error('Forbidden'), { status: 403 }));
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should read user-info authorization status from the processing error cause', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({
+        access_token: 'new-access-token',
+        expires_in: 3600,
+      });
+      (fetchUserInfo as jest.Mock).mockRejectedValue(
+        Object.assign(new Error('Operation processing failed'), { cause: { status: 403 } }),
+      );
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
     });
   });
 

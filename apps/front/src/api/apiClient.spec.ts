@@ -2,12 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getControles, getMasa } from '@lib/dossier';
 
 const mockRefreshToken = vi.fn();
-const mockClearSession = vi.fn();
+const mockClearSessionIfCurrent = vi.fn();
+const mockGetSessionSnapshot = vi.fn(() => 'session-1');
+const MockSessionExpiredError = vi.hoisted(() => class extends Error {});
 
 vi.mock('../services/auth.service', () => ({
+  SessionExpiredError: MockSessionExpiredError,
   authService: {
     refreshToken: mockRefreshToken,
-    clearSession: mockClearSession,
+    clearSessionIfCurrent: mockClearSessionIfCurrent,
+    getSessionSnapshot: mockGetSessionSnapshot,
   },
 }));
 
@@ -15,7 +19,8 @@ describe('authenticatedFetch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefreshToken.mockReset();
-    mockClearSession.mockReset();
+    mockClearSessionIfCurrent.mockReset();
+    mockGetSessionSnapshot.mockReturnValue('session-1');
     vi.stubGlobal('fetch', vi.fn());
 
     vi.resetModules();
@@ -55,8 +60,7 @@ describe('authenticatedFetch', () => {
   it('delegates refresh to authService for each 401 (dedup is in authService)', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
 
-    // authService.refreshToken is mocked, so each call resolves independently.
-    // The real deduplication happens inside authService.refreshToken().
+    // The service mock resolves independently; real deduplication is covered by auth.service.spec.ts.
     mockRefreshToken.mockResolvedValue(undefined);
 
     // First 3 fetch calls → 401, subsequent calls → 200 (retries)
@@ -77,7 +81,6 @@ describe('authenticatedFetch', () => {
 
     const responses = await Promise.all(promises);
 
-    // Each 401 delegates to authService.refreshToken (which deduplicates internally)
     expect(mockRefreshToken).toHaveBeenCalledTimes(3);
     // 3 initial + 3 retries
     expect(fetch).toHaveBeenCalledTimes(6);
@@ -85,18 +88,51 @@ describe('authenticatedFetch', () => {
     responses.forEach((r) => expect(r.status).toBe(200));
   });
 
-  it('redirects to / and throws when refresh fails', async () => {
+  it('preserves a transient refresh failure as service unavailable', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
-
-    const locationSpy = { href: '' };
-    vi.stubGlobal('location', locationSpy);
-
     vi.mocked(fetch).mockResolvedValueOnce(unauthorized401());
     mockRefreshToken.mockRejectedValueOnce(new Error('refresh failed'));
 
-    await expect(authenticatedFetch('/api/test')).rejects.toThrow('Session expired');
-    expect(mockClearSession).toHaveBeenCalledTimes(1);
-    expect(locationSpy.href).toBe('/');
+    await expect(authenticatedFetch('/api/test')).rejects.toEqual(
+      expect.objectContaining({ status: 503, message: 'Session renewal is temporarily unavailable' }),
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes rejected refresh credentials as unauthorized', async () => {
+    const authenticatedFetch = await loadAuthenticatedFetch();
+    vi.mocked(fetch).mockResolvedValueOnce(unauthorized401());
+    mockRefreshToken.mockRejectedValueOnce(new MockSessionExpiredError());
+
+    await expect(authenticatedFetch('/api/test')).rejects.toEqual(
+      expect.objectContaining({ status: 401, message: 'Unable to renew the session' }),
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the single retry response without refreshing recursively on another 401', async () => {
+    const authenticatedFetch = await loadAuthenticatedFetch();
+    vi.mocked(fetch).mockResolvedValueOnce(unauthorized401()).mockResolvedValueOnce(unauthorized401());
+    mockRefreshToken.mockResolvedValueOnce(undefined);
+
+    const response = await authenticatedFetch('/api/test');
+
+    expect(response.status).toBe(401);
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+    expect(mockClearSessionIfCurrent).toHaveBeenCalledWith('session-1');
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates a network failure from the retry after refresh succeeds', async () => {
+    const authenticatedFetch = await loadAuthenticatedFetch();
+    const networkError = new TypeError('Network unavailable');
+    vi.mocked(fetch).mockResolvedValueOnce(unauthorized401()).mockRejectedValueOnce(networkError);
+    mockRefreshToken.mockResolvedValueOnce(undefined);
+
+    await expect(authenticatedFetch('/api/test')).rejects.toBe(networkError);
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
 

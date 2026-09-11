@@ -258,7 +258,10 @@ export class AuthenticationService implements Authentication {
         `OIDC refresh token grant failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );
-      throw new UnauthorizedException();
+      if (this.getOAuthError(error) === 'invalid_grant') {
+        throw new UnauthorizedException();
+      }
+      throw new ServiceUnavailableException('OIDC provider unavailable during token refresh');
     }
 
     let user: AuthenticatedUser;
@@ -273,7 +276,13 @@ export class AuthenticationService implements Authentication {
       this.logger.error(
         `Failed to fetch user info after token refresh: ${error instanceof Error ? error.message : String(error)}`,
       );
-      throw new UnauthorizedException();
+      if (
+        [401, 403].includes(this.getErrorStatus(error) ?? 0) ||
+        this.getErrorCode(error) === 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED'
+      ) {
+        throw new UnauthorizedException();
+      }
+      throw new ServiceUnavailableException('OIDC user info unavailable during token refresh');
     }
 
     let itvCdn: number | null;
@@ -285,7 +294,7 @@ export class AuthenticationService implements Authentication {
       this.logger.error(
         `Failed to resolve business claims for cerbereId=${user.cerbereId}: ${error instanceof Error ? error.message : String(error)}`,
       );
-      throw new UnauthorizedException();
+      throw new ServiceUnavailableException('Business claims unavailable during token refresh');
     }
 
     // Re-forger le JWT interne Verseau2
@@ -309,6 +318,31 @@ export class AuthenticationService implements Authentication {
       expiresIn: tokens.expires_in,
       cerbereAccessToken: tokens.access_token,
     };
+  }
+
+  private getOAuthError(error: unknown): string | undefined {
+    return typeof error === 'object' && error !== null && 'error' in error && typeof error.error === 'string'
+      ? error.error
+      : undefined;
+  }
+
+  private getErrorCode(error: unknown): string | undefined {
+    return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : undefined;
+  }
+
+  private getErrorStatus(error: unknown): number | undefined {
+    if (typeof error !== 'object' || error === null) {
+      return undefined;
+    }
+    if ('status' in error && typeof error.status === 'number') {
+      return error.status;
+    }
+    if ('cause' in error && typeof error.cause === 'object' && error.cause !== null && 'status' in error.cause) {
+      return typeof error.cause.status === 'number' ? error.cause.status : undefined;
+    }
+    return undefined;
   }
 
   private get baseCookieOptions(): CookieOptions {

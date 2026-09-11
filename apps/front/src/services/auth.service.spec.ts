@@ -1,28 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('authService.refreshToken deduplication', () => {
+const reportError = vi.hoisted(() => vi.fn());
+
+vi.mock('../monitoring/sentry', () => ({ reportError }));
+
+const STORAGE_KEY = 'verseau_session';
+const NOW = new Date('2026-09-07T10:00:00.000Z');
+
+describe('authService refresh lifecycle', () => {
+  let stopLifecycle: (() => void) | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    localStorage.clear();
+    sessionStorage.clear();
     vi.stubGlobal('fetch', vi.fn());
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
+  });
 
-    // Provide localStorage stub
-    const store: Record<string, string> = {};
-    vi.stubGlobal('localStorage', {
-      getItem: (key: string) => store[key] ?? null,
-      setItem: (key: string, value: string) => {
-        store[key] = value;
-      },
-      removeItem: (key: string) => {
-        delete store[key];
-      },
-    });
-
-    vi.stubGlobal('sessionStorage', {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-    });
+  afterEach(() => {
+    stopLifecycle?.();
+    stopLifecycle = undefined;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   async function loadAuthService() {
@@ -30,13 +35,21 @@ describe('authService.refreshToken deduplication', () => {
     return mod.authService;
   }
 
-  const refreshResponse = (expiresIn = 3600) =>
-    new Response(JSON.stringify({ expiresIn }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  function storeSession(expiresInMs: number, refreshInMs?: number, updatedAt = Date.now()) {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        expires_at: Date.now() + expiresInMs,
+        refresh_at: refreshInMs === undefined ? undefined : Date.now() + refreshInMs,
+        updated_at: updatedAt,
+      }),
+    );
+  }
 
-  it('deduplicates concurrent refreshToken calls into a single fetch', async () => {
+  const refreshResponse = (expiresIn = 3600) => Response.json({ expiresIn });
+  const unauthorizedResponse = () => new Response('Unauthorized', { status: 401 });
+
+  it('deduplicates concurrent refreshes', async () => {
     const authService = await loadAuthService();
 
     let resolveRefresh!: (value: Response) => void;
@@ -46,50 +59,368 @@ describe('authService.refreshToken deduplication', () => {
       }),
     );
 
-    // Fire 5 concurrent refresh calls
-    const promises = [
-      authService.refreshToken(),
-      authService.refreshToken(),
-      authService.refreshToken(),
-      authService.refreshToken(),
-      authService.refreshToken(),
-    ];
+    const promises = [authService.refreshToken(), authService.refreshToken(), authService.refreshToken()];
 
-    // Only one fetch should have been made
     expect(fetch).toHaveBeenCalledTimes(1);
 
-    // Resolve the single fetch
     resolveRefresh(refreshResponse());
-
     await Promise.all(promises);
 
-    // Still only one fetch call
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('allows a new refresh after the previous one completes', async () => {
+  it('allows a new refresh after a failed operation', async () => {
     const authService = await loadAuthService();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response('Unavailable', { status: 503 }))
+      .mockResolvedValueOnce(refreshResponse());
 
-    vi.mocked(fetch).mockResolvedValueOnce(refreshResponse()).mockResolvedValueOnce(refreshResponse());
-
-    await authService.refreshToken();
-    await authService.refreshToken();
+    await expect(authService.refreshToken()).rejects.toThrow('Failed to refresh token');
+    await expect(authService.refreshToken()).resolves.toBeUndefined();
 
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('rejects all concurrent callers when refresh fails', async () => {
+  it('bounds refresh operations with a timeout', async () => {
+    const authService = await loadAuthService();
+    vi.mocked(fetch).mockImplementation((_input, init) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      });
+    });
+
+    const refresh = authService.refreshToken();
+    const rejection = expect(refresh).rejects.toThrow('Token refresh timed out');
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    await rejection;
+  });
+
+  it('does not restore session metadata when logout interrupts a refresh', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    let resolveRefresh!: (value: Response) => void;
+    vi.mocked(fetch)
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const refresh = authService.refreshToken();
+    const refreshRejection = expect(refresh).rejects.toThrow('session was cleared');
+    const logout = authService.logout();
+    resolveRefresh(refreshResponse());
+
+    await refreshRejection;
+    await logout;
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('does not clear a newer session that appears while logout is in flight', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    let resolveLogout!: (value: Response) => void;
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveLogout = resolve;
+      }),
+    );
+
+    const logout = authService.logout();
+    const newSession = JSON.stringify({
+      expires_at: Date.now() + 60_000,
+      refresh_at: Date.now() + 30_000,
+      updated_at: Date.now() + 1,
+    });
+    localStorage.setItem(STORAGE_KEY, newSession);
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, oldValue: null, newValue: newSession }));
+    resolveLogout(new Response(null, { status: 204 }));
+
+    await logout;
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(newSession);
+  });
+
+  it('only clears the session matching a failed request', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 30_000);
+    const oldSession = localStorage.getItem(STORAGE_KEY);
+    storeSession(120_000, 90_000, Date.now() + 1);
+    const newSession = localStorage.getItem(STORAGE_KEY);
+
+    authService.clearSessionIfCurrent(oldSession);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(newSession);
+
+    authService.clearSessionIfCurrent(newSession);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('does not restore session metadata after another tab logs out', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    let resolveRefresh!: (value: Response) => void;
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveRefresh = resolve;
+      }),
+    );
+
+    const refresh = authService.refreshToken();
+    const refreshRejection = expect(refresh).rejects.toThrow('session changed');
+    localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, oldValue: '{}', newValue: null }));
+    resolveRefresh(refreshResponse());
+
+    await refreshRejection;
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('returns a still-valid token immediately while starting a due silent refresh', async () => {
+    const authService = await loadAuthService();
+    storeSession(30_000, -1);
+    vi.mocked(fetch).mockReturnValue(new Promise<Response>(() => undefined));
+
+    await expect(authService.getAccessToken()).resolves.toBe('cookie-stored');
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the silent restoration flow for locally expired metadata', async () => {
+    const authService = await loadAuthService();
+    storeSession(-1_000, -2_000);
+    vi.mocked(fetch).mockResolvedValueOnce(refreshResponse());
+
+    await expect(authService.getAccessToken()).resolves.toBe('cookie-stored');
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not block expired-session restoration while offline', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const authService = await loadAuthService();
+    storeSession(-1_000, -2_000);
+
+    await expect(authService.getAccessToken()).resolves.toBeNull();
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+  });
+
+  it('schedules long-lived sessions two minutes before expiration', async () => {
+    const authService = await loadAuthService();
+    storeSession(60 * 60 * 1000);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(58 * 60 * 1000 - 1);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reduces the refresh margin for short-lived tokens', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(48_000 - 1);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a positive refresh interval for tokens shorter than the minimum margin', async () => {
+    const authService = await loadAuthService();
+    storeSession(4_000);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(1_999);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses scheduling while hidden and rechecks when the tab becomes visible', async () => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fetch).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks a due refresh when the window regains focus', async () => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    window.dispatchEvent(new Event('focus'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks a due refresh when network connectivity returns', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('cleans up scheduled refreshes when the lifecycle stops', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 10_000);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+    stopLifecycle();
+    stopLifecycle = undefined;
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('continues retrying at a capped delay after the initial backoff is exhausted', async () => {
+    const authService = await loadAuthService();
+    storeSession(10 * 60 * 1000, 0);
+    vi.mocked(fetch).mockResolvedValue(new Response('Unavailable', { status: 503 }));
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(fetch).toHaveBeenCalledTimes(6);
+    expect(authService.isAuthenticated()).toBe(true);
+    expect(reportError).toHaveBeenCalledTimes(1);
+  });
+
+  it('reschedules when a foreground refresh consumes the background timer and fails', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 10_000);
+    let resolveRefresh!: (value: Response) => void;
+    vi.mocked(fetch)
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    const foregroundRefresh = authService.refreshToken();
+    const foregroundRejection = expect(foregroundRefresh).rejects.toThrow('status 503');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    resolveRefresh(new Response('Unavailable', { status: 503 }));
+    await foregroundRejection;
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears the session immediately when refresh credentials are rejected', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    vi.mocked(fetch).mockResolvedValue(new Response('Unauthorized', { status: 401 }));
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(authService.isAuthenticated()).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips a duplicate refresh when another tab renews the session under the Web Lock', async () => {
+    storeSession(60_000, 0);
+    const previousSession = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as { updated_at: number };
+    const request = vi.fn(
+      async (_name: string, _options: LockOptions, callback: (lock: Lock | null) => Promise<void>) => {
+        storeSession(60 * 60 * 1000, 58 * 60 * 1000, previousSession.updated_at + 1);
+        return callback({ name: 'verseau-auth-refresh', mode: 'exclusive' } as Lock);
+      },
+    );
+    Object.defineProperty(navigator, 'locks', { configurable: true, value: { request } });
     const authService = await loadAuthService();
 
-    vi.mocked(fetch).mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
+    await authService.refreshToken();
 
-    const promises = [authService.refreshToken(), authService.refreshToken(), authService.refreshToken()];
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
-    const results = await Promise.allSettled(promises);
+  it('reschedules when another tab updates session metadata', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 10_000);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
 
-    // All should reject
-    results.forEach((r) => expect(r.status).toBe('rejected'));
-    // Only one fetch was made
+    storeSession(120_000, 70_000, Date.now() + 1);
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: STORAGE_KEY,
+        newValue: localStorage.getItem(STORAGE_KEY),
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes after an /auth/me 401 and retries that request once', async () => {
+    const authService = await loadAuthService();
+    const user = { user: { cerbereId: 'user-1' }, intervenant: null, isExpertNational: false };
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(unauthorizedResponse())
+      .mockResolvedValueOnce(refreshResponse())
+      .mockResolvedValueOnce(Response.json(user));
+
+    await expect(authService.getCurrentUser()).resolves.toEqual(user);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not recursively refresh when the /auth/me retry also returns 401', async () => {
+    const authService = await loadAuthService();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(unauthorizedResponse())
+      .mockResolvedValueOnce(refreshResponse())
+      .mockResolvedValueOnce(unauthorizedResponse());
+
+    await expect(authService.getCurrentUser()).rejects.toThrow('Session refresh rejected with status 401');
+
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 });

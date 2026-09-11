@@ -26,12 +26,12 @@ import { fr } from '@codegouvfr/react-dsfr';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { useAuth } from './hooks/useAuth';
 
-function App() {
+function AppContent() {
   const { authenticatedUser } = useAuth();
   const isExpertNational = authenticatedUser?.isExpertNational ?? false;
 
   return (
-    <BrowserRouter basename={APP_BASE_PATH === '/' ? undefined : APP_BASE_PATH}>
+    <>
       <AppHeader />
       <div className={`${fr.cx('fr-container')} app-container`}>
         <Breadcrumb />
@@ -151,6 +151,14 @@ function App() {
         </main>
       </div>
       <AppFooter />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter basename={APP_BASE_PATH === '/' ? undefined : APP_BASE_PATH}>
+      <AppContent />
     </BrowserRouter>
   );
 }
