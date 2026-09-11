@@ -10,7 +10,7 @@
 
 .dashboard-depots-table th:nth-child(2),
 .dashboard-depots-table td:nth-child(2) {
-  width: 25%;
+  width: 30%;
 }
 
 .dashboard-depots-table th:nth-child(3),
@@ -20,7 +20,7 @@
 
 .dashboard-depots-table th:nth-child(4),
 .dashboard-depots-table td:nth-child(4) {
-  width: 16%;
+  width: 11%;
 }
 
 .dashboard-depots-table th:nth-child(5),
