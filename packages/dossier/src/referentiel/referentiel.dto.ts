@@ -9,6 +9,7 @@ export type IntervenantDetailDto = z.infer<typeof IntervenantDetailDtoSchema>;
 
 export const SteuDetailDtoSchema = z.object({
   ouvrageDepollutionCode: z.string(),
+  ouvrageDepollutionNom: z.string().nullable(),
   dateMiseEnService: z.string().nullable(),
   exploitants: z.array(IntervenantDetailDtoSchema),
   maitresOuvrage: z.array(IntervenantDetailDtoSchema),
@@ -18,6 +19,7 @@ export type SteuDetailDto = z.infer<typeof SteuDetailDtoSchema>;
 
 export const SclDetailDtoSchema = z.object({
   systemeCollecteCode: z.string(),
+  systemeCollecteNom: z.string().nullable(),
   exploitants: z.array(IntervenantDetailDtoSchema),
   maitresOuvrage: z.array(IntervenantDetailDtoSchema),
 });

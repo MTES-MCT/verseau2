@@ -14,6 +14,7 @@ export function mapIntervenantsByRole(
 export function toSteuDetailResponse(detail: SteuDetailRow): RouteResponse<typeof getSteuDetail> {
   return {
     ouvrageDepollutionCode: detail.ouvrageDepollutionCode,
+    ouvrageDepollutionNom: detail.ouvrageDepollutionNom,
     dateMiseEnService: detail.dateMiseEnService,
     exploitants: mapIntervenantsByRole(detail.intervenants, 'exploitant'),
     maitresOuvrage: mapIntervenantsByRole(detail.intervenants, 'maitre_ouvrage'),
@@ -23,6 +24,7 @@ export function toSteuDetailResponse(detail: SteuDetailRow): RouteResponse<typeo
 export function toSclDetailResponse(detail: SclDetailRow): RouteResponse<typeof getSclDetail> {
   return {
     systemeCollecteCode: detail.systemeCollecteCode,
+    systemeCollecteNom: detail.systemeCollecteNom,
     exploitants: mapIntervenantsByRole(detail.intervenants, 'exploitant'),
     maitresOuvrage: mapIntervenantsByRole(detail.intervenants, 'maitre_ouvrage'),
   };

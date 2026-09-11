@@ -39,6 +39,7 @@ import { ParEntity } from '@referentiel/lanceleau/entities/par.entity';
 
 interface OuvrageRawDetailRow {
   code: string;
+  nom: string | null;
   date_mise_en_service?: Date | string | null;
   role: OuvrageIntervenantRole;
   intervenant_nom: string | null;
@@ -448,12 +449,14 @@ export class RoseauRepository implements RoseauGateway {
           SELECT
             steu.steu_cdn,
             RTRIM(steu.steu_sandre_cda) AS code,
+            NULLIF(BTRIM(steu.steu_nom_lb), '') AS nom,
             steu.steu_serv_en_mise_dt AS date_mise_en_service
           FROM roseau.steu steu
           WHERE RTRIM(steu.steu_sandre_cda) = BTRIM($1)
         )
         SELECT DISTINCT
           target.code,
+          target.nom,
           target.date_mise_en_service,
           'exploitant' AS role,
           COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
@@ -468,6 +471,7 @@ export class RoseauRepository implements RoseauGateway {
         UNION ALL
         SELECT DISTINCT
           target.code,
+          target.nom,
           target.date_mise_en_service,
           'maitre_ouvrage' AS role,
           COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
@@ -491,6 +495,7 @@ export class RoseauRepository implements RoseauGateway {
 
     return {
       ouvrageDepollutionCode: row.code?.trim() ?? '',
+      ouvrageDepollutionNom: trimToNull(row.nom),
       dateMiseEnService: toISODateOrNull(row.date_mise_en_service ?? null) ?? null,
       intervenants: rows
         .map((detailRow) => ({
@@ -508,12 +513,14 @@ export class RoseauRepository implements RoseauGateway {
         WITH target AS (
           SELECT
             scl.scl_cdn,
-            RTRIM(scl.scl_sandre_cda) AS code
+            RTRIM(scl.scl_sandre_cda) AS code,
+            NULLIF(BTRIM(scl.scl_lb), '') AS nom
           FROM roseau.scl scl
           WHERE RTRIM(scl.scl_sandre_cda) = BTRIM($1)
         )
         SELECT DISTINCT
           target.code,
+          target.nom,
           'exploitant' AS role,
           COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
           NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
@@ -527,6 +534,7 @@ export class RoseauRepository implements RoseauGateway {
         UNION ALL
         SELECT DISTINCT
           target.code,
+          target.nom,
           'maitre_ouvrage' AS role,
           COALESCE(NULLIF(BTRIM(itv.itv_nom_lb), ''), NULLIF(BTRIM(itv.itv_mnemo_lb), '')) AS intervenant_nom,
           NULLIF(BTRIM(itv.itv_rfa), '') AS intervenant_siret
@@ -549,6 +557,7 @@ export class RoseauRepository implements RoseauGateway {
 
     return {
       systemeCollecteCode: row.code?.trim() ?? '',
+      systemeCollecteNom: trimToNull(row.nom),
       intervenants: rows
         .map((detailRow) => ({
           role: detailRow.role,
