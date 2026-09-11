@@ -11,7 +11,9 @@ import {
   Res,
   UseGuards,
   HttpCode,
+  HttpException,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Authentication, AuthenticatedUserWithIntervenant, AuthenticatedUserAndNomPrenom } from './authentication';
@@ -128,7 +130,10 @@ export class AuthenticationController {
         `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error : undefined,
       );
-      throw new UnauthorizedException();
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new ServiceUnavailableException('Token refresh is temporarily unavailable');
     }
   }
 

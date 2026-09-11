@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const reportError = vi.hoisted(() => vi.fn());
+
+vi.mock('../monitoring/sentry', () => ({ reportError }));
+
 const STORAGE_KEY = 'verseau_session';
 const NOW = new Date('2026-09-07T10:00:00.000Z');
 
@@ -92,6 +96,86 @@ describe('authService refresh lifecycle', () => {
     await rejection;
   });
 
+  it('does not restore session metadata when logout interrupts a refresh', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    let resolveRefresh!: (value: Response) => void;
+    vi.mocked(fetch)
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const refresh = authService.refreshToken();
+    const refreshRejection = expect(refresh).rejects.toThrow('session was cleared');
+    const logout = authService.logout();
+    resolveRefresh(refreshResponse());
+
+    await refreshRejection;
+    await logout;
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('does not clear a newer session that appears while logout is in flight', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    let resolveLogout!: (value: Response) => void;
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveLogout = resolve;
+      }),
+    );
+
+    const logout = authService.logout();
+    const newSession = JSON.stringify({
+      expires_at: Date.now() + 60_000,
+      refresh_at: Date.now() + 30_000,
+      updated_at: Date.now() + 1,
+    });
+    localStorage.setItem(STORAGE_KEY, newSession);
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, oldValue: null, newValue: newSession }));
+    resolveLogout(new Response(null, { status: 204 }));
+
+    await logout;
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(newSession);
+  });
+
+  it('only clears the session matching a failed request', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 30_000);
+    const oldSession = localStorage.getItem(STORAGE_KEY);
+    storeSession(120_000, 90_000, Date.now() + 1);
+    const newSession = localStorage.getItem(STORAGE_KEY);
+
+    authService.clearSessionIfCurrent(oldSession);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(newSession);
+
+    authService.clearSessionIfCurrent(newSession);
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('does not restore session metadata after another tab logs out', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    let resolveRefresh!: (value: Response) => void;
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveRefresh = resolve;
+      }),
+    );
+
+    const refresh = authService.refreshToken();
+    const refreshRejection = expect(refresh).rejects.toThrow('session changed');
+    localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, oldValue: '{}', newValue: null }));
+    resolveRefresh(refreshResponse());
+
+    await refreshRejection;
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
   it('returns a still-valid token immediately while starting a due silent refresh', async () => {
     const authService = await loadAuthService();
     storeSession(30_000, -1);
@@ -110,6 +194,17 @@ describe('authService refresh lifecycle', () => {
     await expect(authService.getAccessToken()).resolves.toBe('cookie-stored');
 
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not block expired-session restoration while offline', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const authService = await loadAuthService();
+    storeSession(-1_000, -2_000);
+
+    await expect(authService.getAccessToken()).resolves.toBeNull();
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
   });
 
   it('schedules long-lived sessions two minutes before expiration', async () => {
@@ -132,6 +227,19 @@ describe('authService refresh lifecycle', () => {
     stopLifecycle = authService.startLifecycle();
 
     await vi.advanceTimersByTimeAsync(48_000 - 1);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a positive refresh interval for tokens shorter than the minimum margin', async () => {
+    const authService = await loadAuthService();
+    storeSession(4_000);
+    vi.mocked(fetch).mockResolvedValue(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(1_999);
     expect(fetch).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
@@ -196,7 +304,7 @@ describe('authService refresh lifecycle', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('uses bounded backoff after silent refresh failures while the JWT is valid', async () => {
+  it('continues retrying at a capped delay after the initial backoff is exhausted', async () => {
     const authService = await loadAuthService();
     storeSession(10 * 60 * 1000, 0);
     vi.mocked(fetch).mockResolvedValue(new Response('Unavailable', { status: 503 }));
@@ -207,9 +315,49 @@ describe('authService refresh lifecycle', () => {
     await vi.advanceTimersByTimeAsync(15_000);
     await vi.advanceTimersByTimeAsync(30_000);
     await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
 
-    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch).toHaveBeenCalledTimes(6);
     expect(authService.isAuthenticated()).toBe(true);
+    expect(reportError).toHaveBeenCalledTimes(1);
+  });
+
+  it('reschedules when a foreground refresh consumes the background timer and fails', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 10_000);
+    let resolveRefresh!: (value: Response) => void;
+    vi.mocked(fetch)
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(refreshResponse());
+    stopLifecycle = authService.startLifecycle();
+
+    const foregroundRefresh = authService.refreshToken();
+    const foregroundRejection = expect(foregroundRefresh).rejects.toThrow('status 503');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    resolveRefresh(new Response('Unavailable', { status: 503 }));
+    await foregroundRejection;
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears the session immediately when refresh credentials are rejected', async () => {
+    const authService = await loadAuthService();
+    storeSession(60_000, 0);
+    vi.mocked(fetch).mockResolvedValue(new Response('Unauthorized', { status: 401 }));
+    stopLifecycle = authService.startLifecycle();
+
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(authService.isAuthenticated()).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('skips a duplicate refresh when another tab renews the session under the Web Lock', async () => {
@@ -271,7 +419,7 @@ describe('authService refresh lifecycle', () => {
       .mockResolvedValueOnce(refreshResponse())
       .mockResolvedValueOnce(unauthorizedResponse());
 
-    await expect(authService.getCurrentUser()).rejects.toThrow('Failed to get user info after session renewal');
+    await expect(authService.getCurrentUser()).rejects.toThrow('Session refresh rejected with status 401');
 
     expect(fetch).toHaveBeenCalledTimes(3);
   });

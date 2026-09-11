@@ -2,10 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getControles, getMasa } from '@lib/dossier';
 
 const mockRefreshToken = vi.fn();
+const mockClearSessionIfCurrent = vi.fn();
+const mockGetSessionSnapshot = vi.fn(() => 'session-1');
+const MockSessionExpiredError = vi.hoisted(() => class extends Error {});
 
 vi.mock('../services/auth.service', () => ({
+  SessionExpiredError: MockSessionExpiredError,
   authService: {
     refreshToken: mockRefreshToken,
+    clearSessionIfCurrent: mockClearSessionIfCurrent,
+    getSessionSnapshot: mockGetSessionSnapshot,
   },
 }));
 
@@ -13,6 +19,8 @@ describe('authenticatedFetch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRefreshToken.mockReset();
+    mockClearSessionIfCurrent.mockReset();
+    mockGetSessionSnapshot.mockReturnValue('session-1');
     vi.stubGlobal('fetch', vi.fn());
 
     vi.resetModules();
@@ -80,12 +88,25 @@ describe('authenticatedFetch', () => {
     responses.forEach((r) => expect(r.status).toBe(200));
   });
 
-  it('throws a neutral error without clearing session or redirecting when refresh fails', async () => {
+  it('preserves a transient refresh failure as service unavailable', async () => {
     const authenticatedFetch = await loadAuthenticatedFetch();
     vi.mocked(fetch).mockResolvedValueOnce(unauthorized401());
     mockRefreshToken.mockRejectedValueOnce(new Error('refresh failed'));
 
-    await expect(authenticatedFetch('/api/test')).rejects.toThrow('Unable to renew the session');
+    await expect(authenticatedFetch('/api/test')).rejects.toEqual(
+      expect.objectContaining({ status: 503, message: 'Session renewal is temporarily unavailable' }),
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes rejected refresh credentials as unauthorized', async () => {
+    const authenticatedFetch = await loadAuthenticatedFetch();
+    vi.mocked(fetch).mockResolvedValueOnce(unauthorized401());
+    mockRefreshToken.mockRejectedValueOnce(new MockSessionExpiredError());
+
+    await expect(authenticatedFetch('/api/test')).rejects.toEqual(
+      expect.objectContaining({ status: 401, message: 'Unable to renew the session' }),
+    );
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -98,6 +119,7 @@ describe('authenticatedFetch', () => {
 
     expect(response.status).toBe(401);
     expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+    expect(mockClearSessionIfCurrent).toHaveBeenCalledWith('session-1');
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 

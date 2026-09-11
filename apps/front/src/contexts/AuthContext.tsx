@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { authService } from '../services/auth.service';
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { authService, SessionExpiredError } from '../services/auth.service';
 import type { AuthenticatedUserWithIntervenant } from '../types/auth.types';
 import { reportError, setSentryUser } from '../monitoring/sentry';
 import { AuthContext, type AuthContextValue } from './authContextDefinition';
@@ -11,8 +11,11 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUserWithIntervenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const refreshRequestId = useRef(0);
+  const sessionSnapshot = useSyncExternalStore(authService.subscribe, authService.getSessionSnapshot, () => null);
 
   const refreshUser = useCallback(async () => {
+    const requestId = ++refreshRequestId.current;
     try {
       // Use getAccessToken() instead of isAuthenticated() so that an
       // expired access token triggers a refresh via the refresh-token
@@ -20,15 +23,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // may have expired while a valid refresh token still exists.
       const token = await authService.getAccessToken();
       if (token) {
+        const sessionBeforeUserFetch = authService.getSessionSnapshot();
+        if (!sessionBeforeUserFetch) {
+          setAuthenticatedUser(null);
+          return;
+        }
         const userData = await authService.getCurrentUser();
-        setAuthenticatedUser(userData);
+        if (requestId === refreshRequestId.current && authService.getSessionSnapshot() === sessionBeforeUserFetch) {
+          setAuthenticatedUser(userData);
+        }
       } else {
-        setAuthenticatedUser(null);
+        if (requestId === refreshRequestId.current) {
+          setAuthenticatedUser(null);
+        }
       }
     } catch (error) {
-      reportError(error, { source: 'AuthContext.refreshUser' });
+      if (!(error instanceof SessionExpiredError)) {
+        reportError(error, { source: 'AuthContext.refreshUser' });
+      }
+      if (!authService.getSessionSnapshot() && requestId === refreshRequestId.current) {
+        setAuthenticatedUser(null);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === refreshRequestId.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -39,7 +58,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     refreshUser();
-  }, [refreshUser]);
+  }, [refreshUser, sessionSnapshot]);
 
   useEffect(() => {
     if (!authenticatedUser) {
@@ -70,12 +89,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     setIsLoading(true);
+    refreshRequestId.current += 1;
+    setAuthenticatedUser(null);
     try {
       await authService.logout();
-      setAuthenticatedUser(null);
     } catch (error) {
       reportError(error, { source: 'AuthContext.logout' });
-      setAuthenticatedUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const value: AuthContextValue = {
     authenticatedUser,
-    isAuthenticated: !!authenticatedUser,
+    isAuthenticated: !!authenticatedUser && sessionSnapshot !== null,
     isLoading,
     login,
     logout,

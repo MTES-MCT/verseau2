@@ -1,4 +1,4 @@
-import { authService } from '../services/auth.service';
+import { authService, SessionExpiredError } from '../services/auth.service';
 import { API_BASE_URL } from '../appConfig';
 import type { RouteDefinition, RouteResponse, RouteParams, RouteQuery, RouteBody } from '@lib/dossier';
 import { buildRoutePath } from '@lib/dossier';
@@ -25,14 +25,22 @@ export async function authenticatedFetch(url: string, options: RequestInit = {})
   if (response.status === 401) {
     try {
       await authService.refreshToken();
-    } catch {
-      throw new ApiError('Unable to renew the session', 401, 'Unauthorized');
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        throw new ApiError('Unable to renew the session', 401, 'Unauthorized');
+      }
+      throw new ApiError('Session renewal is temporarily unavailable', 503, 'Service Unavailable');
     }
 
-    return fetch(url, {
+    const sessionBeforeRetry = authService.getSessionSnapshot();
+    const retryResponse = await fetch(url, {
       ...options,
       credentials: 'include',
     });
+    if (retryResponse.status === 401) {
+      authService.clearSessionIfCurrent(sessionBeforeRetry);
+    }
+    return retryResponse;
   }
 
   return response;

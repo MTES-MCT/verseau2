@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { AuthenticationController } from './authentication.controller';
 import { Authentication, OIDCTokens } from './authentication';
 import { UserService } from '@user/user.service';
@@ -146,9 +146,19 @@ describe('AuthenticationController', () => {
       const res = makeResponse();
       mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
 
-      mockAuthentication.refreshTokens.mockRejectedValue(new Error('invalid_grant'));
+      mockAuthentication.refreshTokens.mockRejectedValue(new UnauthorizedException());
 
       await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
+
+    it('should preserve retryable refresh failures as service unavailable', async () => {
+      const req = makeRequest({ refresh_token: 'refresh-token', access_token: 'internal-jwt' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(new ServiceUnavailableException());
+
+      await expect(controller.refresh(req, res)).rejects.toThrow(ServiceUnavailableException);
       expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
   });
