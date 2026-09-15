@@ -5,10 +5,12 @@ const S3Service = require('./s3-service');
 const PgService = require('./pg-service');
 const SchemaManager = require('./schema-manager');
 const { EXCLUDED_TABLES } = require('./schemas');
+const { sendReport } = require('./restore-report');
 require('./server');
 
 async function main() {
   let tempFilePath = null;
+  let errorMessage;
 
   const startedAt = new Date();
 
@@ -58,13 +60,22 @@ async function main() {
 
     console.log('\n✅ Sync process finished successfully!');
   } catch (error) {
+    errorMessage = error instanceof Error ? error.message : String(error);
     console.error('\n❌ Sync process failed:', error);
 
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      console.log('Cleaning up temporary file after error...');
-      fs.unlinkSync(tempFilePath);
+    try {
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        console.log('Cleaning up temporary file after error...');
+        fs.unlinkSync(tempFilePath);
+      }
+    } catch (cleanupError) {
+      console.error('Temporary file cleanup failed:', cleanupError);
     }
+  } finally {
+    await sendReport(errorMessage);
+  }
 
+  if (errorMessage !== undefined) {
     process.exit(1);
   }
 }
