@@ -75,10 +75,12 @@ services:
       - verseau2-network
     volumes:
       - ../tools/sync-pg:/app
+      - sync-pg-node-modules:/app/node_modules
     command: ['pnpm', 'run', 'dev']
 
 volumes:
   verseau2-postgres-data:
+  sync-pg-node-modules:
 
 networks:
   verseau2-network:

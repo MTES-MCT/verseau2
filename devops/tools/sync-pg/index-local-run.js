@@ -28,7 +28,8 @@ async function main() {
 
     // Step 1: Download dump from S3 and verify contents
     console.log('=== Step 1/4: Download & verify dump ===');
-    tempFilePath = await s3Service.downloadFile();
+    // tempFilePath = await s3Service.downloadFile();
+    tempFilePath = "./lanceleau_dump_20260913"
     console.log('Downloaded file:', tempFilePath);
     await pgService.verifyDumpContents(tempFilePath);
 
@@ -66,7 +67,7 @@ async function main() {
     try {
       if (tempFilePath && fs.existsSync(tempFilePath)) {
         console.log('Cleaning up temporary file after error...');
-        fs.unlinkSync(tempFilePath);
+        // fs.unlinkSync(tempFilePath);
       }
     } catch (cleanupError) {
       console.error('Temporary file cleanup failed:', cleanupError);
