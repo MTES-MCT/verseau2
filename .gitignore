@@ -90,3 +90,5 @@ scripts/xml/
 *.db
 .playwright-cli/
 .understand-anything/
+
+.worktrees/
