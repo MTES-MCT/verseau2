@@ -12,7 +12,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "NODE_ENV=development node index.js",
+    "dev": "NODE_ENV=development node index-local-run.js",
     "test": "node --test --test-concurrency=1 ./*.test.js"
   },
   "dependencies": {
