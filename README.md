@@ -56,8 +56,8 @@ Le projet est organisé en monorepo avec les composants suivants :
 
 ## Prérequis
 
-- Node.js (version 24+)
-- pnpm (version 10+)
+- Node.js (version 24.15 minimum)
+- pnpm (version 12+)
 - Docker et Docker Compose (pour l'environnement local)
 - PostgreSQL (via Docker)
 - Stockage S3 compatible (AWS S3, Outscale, ou mock local)
