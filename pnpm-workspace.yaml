@@ -2,3 +2,29 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+catalog:
+  zod: '4.6.5'
+
+# pnpm 12 defaults to a one-day release quarantine. Only the exact upgraded
+# versions below are exempted; all future releases keep the default policy.
+minimumReleaseAgeExclude:
+  - '@aws-sdk/client-s3@3.1133.0'
+  - '@tanstack/query-core@5.103.0'
+  - '@tanstack/react-query@5.103.0'
+  - '@types/node@22.20.3'
+  - '@types/node@24.13.5'
+  - '@types/nodemailer@8.0.2'
+  - baseline-browser-mapping@2.11.24
+  - browserslist@4.29.0
+  - electron-to-chromium@1.5.430
+  - prettier@3.9.7
+  - react-router@8.4.0
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@sentry/cli': true
+  cpu-features: false
+  esbuild: true
+  protobufjs: true
+  ssh2: true
+  unrs-resolver: true

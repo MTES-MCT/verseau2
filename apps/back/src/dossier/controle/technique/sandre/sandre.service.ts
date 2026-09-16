@@ -90,6 +90,7 @@ export class SandreService {
       if (axios.isAxiosError(error)) {
         throw new Error(
           `SANDRE upload failed: ${error.message}${error.response ? ` - Status: ${error.response.status}` : ''}`,
+          { cause: error },
         );
       }
       throw error;
@@ -121,6 +122,7 @@ export class SandreService {
           `SANDRE validation fetch failed: ${error.message}${
             error.response ? ` - Status: ${error.response.status}` : ''
           }`,
+          { cause: error },
         );
       }
       throw error;

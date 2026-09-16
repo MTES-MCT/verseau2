@@ -2,29 +2,28 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
 import { EmailParams, EmailTemplate } from '../notification';
-import * as brevo from '@getbrevo/brevo';
+import { Brevo, BrevoClient } from '@getbrevo/brevo';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class EmailBrevoProvider implements EmailProvider {
-  private emailsApi: brevo.TransactionalEmailsApi;
+  private readonly brevo: BrevoClient;
 
   constructor(
     private readonly config: ConfigService,
     private readonly logger: LoggerService,
   ) {
     const apiKey = this.config.getOrThrow<string>('BREVO_API_KEY');
-    this.emailsApi = new brevo.TransactionalEmailsApi();
-    this.emailsApi.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, apiKey);
+    this.brevo = new BrevoClient({ apiKey, maxRetries: 0 });
     this.logger.setContext(EmailBrevoProvider.name);
   }
 
   async send(template: EmailTemplate, emailParams: EmailParams): Promise<{ response: object; body: object }> {
-    const sendSmtpEmail = new brevo.SendSmtpEmail();
-
-    sendSmtpEmail.templateId = template;
-    sendSmtpEmail.to = emailParams.to;
-    sendSmtpEmail.params = emailParams;
+    const sendSmtpEmail: Brevo.SendTransacEmailRequest = {
+      templateId: template,
+      to: emailParams.to,
+      params: { ...emailParams },
+    };
 
     if (emailParams.from) {
       sendSmtpEmail.sender = { email: emailParams.from };
@@ -43,9 +42,11 @@ export class EmailBrevoProvider implements EmailProvider {
     }
 
     try {
-      const data = await this.emailsApi.sendTransacEmail(sendSmtpEmail);
+      const { data, rawResponse } = await this.brevo.transactionalEmails
+        .sendTransacEmail(sendSmtpEmail)
+        .withRawResponse();
       this.logger.log(`Email sent successfully to ${emailParams.to.map((t) => t.email).join(', ')}`);
-      return { response: data.response, body: data.body };
+      return { response: rawResponse, body: data };
     } catch (error) {
       this.logger.error('Error sending email via Brevo', error);
       throw error;
