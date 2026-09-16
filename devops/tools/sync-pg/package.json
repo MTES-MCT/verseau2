@@ -4,7 +4,7 @@
   "description": "",
   "license": "ISC",
   "author": "",
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@12.4.2",
   "engines": {
     "node": "24.x"
   },
@@ -16,17 +16,12 @@
     "test": "node --test --test-concurrency=1 ./*.test.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.939.0",
+    "@aws-sdk/client-s3": "^3.1133.0",
     "matrix-bot-sdk": "^0.8.0",
-    "pg": "^8.11.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@testcontainers/postgresql": "^11.9.0",
-    "dotenv": "^17.2.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@matrix-org/matrix-sdk-crypto-nodejs"
-    ]
+    "@testcontainers/postgresql": "^12.1.0",
+    "dotenv": "^17.4.2"
   }
 }

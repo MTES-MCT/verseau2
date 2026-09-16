@@ -13,7 +13,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "sax": "^1.4.3"
+    "sax": "^1.6.1"
   },
   "devDependencies": {
     "@types/sax": "^1.2.7"

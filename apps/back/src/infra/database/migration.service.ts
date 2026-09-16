@@ -49,7 +49,9 @@ export class MigrationService {
       // Lock is automatically released when connection closes
     } catch (error) {
       this.logger.error('Failed to run migrations', error);
-      throw new Error(`Migration execution failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Migration execution failed: ${error instanceof Error ? error.message : String(error)}`, {
+        cause: error,
+      });
     } finally {
       await queryRunner.release();
     }

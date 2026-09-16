@@ -65,7 +65,9 @@ export class AgenceEauClientService implements AgenceEauClient {
       this.logger.error('Erreur lors du parsing de SFTP_AGENCY_CONFIG', {
         error: error instanceof Error ? error.message : String(error),
       });
-      throw new Error(`Configuration SFTP invalide: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Configuration SFTP invalide: ${error instanceof Error ? error.message : String(error)}`, {
+        cause: error,
+      });
     }
   }
 
