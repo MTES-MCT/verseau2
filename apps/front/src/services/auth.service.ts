@@ -17,6 +17,13 @@ interface RefreshResponse {
   expiresIn?: number;
 }
 
+export type SessionChange =
+  | { type: 'login'; expiresAt: number }
+  | { type: 'refresh'; expiresAt: number; status: number }
+  | { type: 'cleared' };
+
+type StoredSessionChange = { type: 'login' } | { type: 'refresh'; status: number };
+
 interface OIDCConfiguration {
   authorizationEndpoint: string;
   clientId: string;
@@ -28,12 +35,13 @@ const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
 const NONCE_KEY = 'oidc_nonce';
 
-class AuthService {
+export class AuthService {
   private storage: Storage;
   private sessionStorage: Storage;
 
   /** Shared promise so concurrent refreshes trigger only one request. */
-  private refreshPromise: Promise<void> | null = null;
+  private refreshPromise: Promise<number> | null = null;
+  private readonly sessionListeners = new Set<(change: SessionChange) => void>();
 
   constructor() {
     this.storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage);
@@ -128,9 +136,12 @@ class AuthService {
 
     // Tokens are set as httpOnly cookies by the backend.
     // We only store the expiration timestamp so the frontend can proactively refresh.
-    this.storeSession({
-      expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
-    });
+    this.storeSession(
+      {
+        expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
+      },
+      { type: 'login' },
+    );
   }
 
   /**
@@ -176,7 +187,7 @@ class AuthService {
   /**
    * Refresh the access token (deduplicated: concurrent calls share a single request)
    */
-  async refreshToken(): Promise<void> {
+  async refreshToken(): Promise<number> {
     if (!this.refreshPromise) {
       this.refreshPromise = this.doRefreshToken().finally(() => {
         this.refreshPromise = null;
@@ -185,7 +196,7 @@ class AuthService {
     return this.refreshPromise;
   }
 
-  private async doRefreshToken(): Promise<void> {
+  private async doRefreshToken(): Promise<number> {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
@@ -197,9 +208,14 @@ class AuthService {
 
     const data: RefreshResponse = await response.json();
 
-    this.storeSession({
-      expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
-    });
+    this.storeSession(
+      {
+        expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
+      },
+      { type: 'refresh', status: response.status },
+    );
+
+    return response.status;
   }
 
   /**
@@ -249,12 +265,26 @@ class AuthService {
     return response.json();
   }
 
-  private storeSession(session: SessionStorage): void {
+  getSessionExpiresAt(): number | null {
+    return this.getSession()?.expires_at ?? null;
+  }
+
+  subscribeToSessionChanges(listener: (change: SessionChange) => void): () => void {
+    this.sessionListeners.add(listener);
+    return () => {
+      this.sessionListeners.delete(listener);
+    };
+  }
+
+  private storeSession(session: SessionStorage, change: StoredSessionChange): void {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
       reportError(error, { source: 'AuthService.storeSession' });
+      return;
     }
+
+    this.sessionListeners.forEach((listener) => listener({ ...change, expiresAt: session.expires_at }));
   }
 
   private getSession(): SessionStorage | null {
@@ -278,6 +308,8 @@ class AuthService {
     } catch (error) {
       reportError(error, { source: 'AuthService.clearSession' });
     }
+
+    this.sessionListeners.forEach((listener) => listener({ type: 'cleared' }));
   }
 }
 
