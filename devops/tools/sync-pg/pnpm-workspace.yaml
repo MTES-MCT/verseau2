@@ -1,10 +1,8 @@
 packages:
   - '.'
 
-# pnpm 12 defaults to a one-day release quarantine. Only the exact upgraded
-# version below is exempted; all future releases keep the default policy.
-minimumReleaseAgeExclude:
-  - '@aws-sdk/client-s3@3.1133.0'
+# Require all package releases to age for two days before they are eligible.
+minimumReleaseAge: 2880
 
 allowBuilds:
   '@matrix-org/matrix-sdk-crypto-nodejs': true
