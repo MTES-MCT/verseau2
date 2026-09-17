@@ -521,6 +521,60 @@ describe('BilanDashboard', () => {
       expect(currentSearchParams().get('page')).toBe('5');
     });
 
+    it('retrouve le nom de la station du lien et le restaure malgré une autre recherche locale', () => {
+      const alpha = { ouvrageDepollutionCode: '060969152001', ouvrageDepollutionNom: 'Station Alpha' };
+      const beta = { ouvrageDepollutionCode: '060969152002', ouvrageDepollutionNom: 'Station Beta' };
+      mockUseAsyncOuvragesSearch.mockImplementation(
+        (search) =>
+          ({
+            data: search === alpha.ouvrageDepollutionCode ? [beta, alpha] : search ? [beta] : [],
+          }) as ReturnType<typeof useAsyncOuvragesSearch>,
+      );
+
+      renderPageWithUrl('?ouvrageDepollutionCode=060969152001&page=5');
+
+      const station = screen.getByRole('combobox', { name: /station/i });
+      expect(station).toHaveValue('Station Alpha');
+      expect(currentSearchParams().get('ouvrageDepollutionCode')).toBe(alpha.ouvrageDepollutionCode);
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCode: alpha.ouvrageDepollutionCode, page: 5 }),
+        true,
+      );
+
+      fireEvent.change(station, { target: { value: 'Beta' } });
+      fireEvent.click(screen.getByRole('option', { name: 'Station Beta' }));
+      expect(station).toHaveValue('Station Beta');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retour navigateur' }));
+      expect(station).toHaveValue('Station Alpha');
+      expect(currentSearchParams().get('ouvrageDepollutionCode')).toBe(alpha.ouvrageDepollutionCode);
+      expect(currentSearchParams().get('page')).toBe('5');
+    });
+
+    it('retrouve le nom du SCL sélectionné même s’il est absent des options de recherche', () => {
+      mockUseAsyncSystemesCollecteSearch.mockImplementation(
+        (search) =>
+          ({
+            data:
+              search === 'SCL001'
+                ? [
+                    { systemeCollecteCode: 'SCL002', systemeCollecteNom: 'Collecteur Beta' },
+                    { systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Collecteur Alpha' },
+                  ]
+                : [],
+          }) as ReturnType<typeof useAsyncSystemesCollecteSearch>,
+      );
+
+      renderPageWithUrl('?mode=scl&systemeCollecteCode=SCL001');
+
+      expect(screen.getByRole('combobox', { name: /système de collecte/i })).toHaveValue('Collecteur Alpha');
+      expect(currentSearchParams().get('systemeCollecteCode')).toBe('SCL001');
+      expect(mockUseBilanScl).toHaveBeenLastCalledWith(
+        expect.objectContaining({ systemeCollecteCode: 'SCL001' }),
+        true,
+      );
+    });
+
     it('restaure les filtres SCL, le point de mesure et le tri', () => {
       mockUsePointsMesure.mockReturnValue({
         data: [

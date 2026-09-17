@@ -72,6 +72,10 @@ export const BilanDashboard = () => {
   const { data: ouvrages = [], isFetching: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
   const { data: systemesCollecte = [], isFetching: systemesCollecteLoading } =
     useAsyncSystemesCollecteSearch(sclSearch);
+  const { data: selectedStations = [] } = useAsyncOuvragesSearch(isScl ? '' : filters.ouvrageDepollutionCode);
+  const { data: selectedSystemesCollecte = [] } = useAsyncSystemesCollecteSearch(
+    isScl ? filters.systemeCollecteCode : '',
+  );
 
   const yearOptions = useMemo(
     () =>
@@ -93,9 +97,12 @@ export const BilanDashboard = () => {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
   const currentOuvrageValue = isScl ? filters.systemeCollecteCode : filters.ouvrageDepollutionCode;
+  const selectedOuvrageName = isScl
+    ? selectedSystemesCollecte.find((s) => s.systemeCollecteCode === currentOuvrageValue)?.systemeCollecteNom
+    : selectedStations.find((o) => o.ouvrageDepollutionCode === currentOuvrageValue)?.ouvrageDepollutionNom;
   // A shared URL can select an ouvrage before its remote search options are loaded.
   if (currentOuvrageValue && !ouvragesOptions.some((option) => option.value === currentOuvrageValue)) {
-    ouvragesOptions.push({ value: currentOuvrageValue, label: currentOuvrageValue });
+    ouvragesOptions.push({ value: currentOuvrageValue, label: selectedOuvrageName || currentOuvrageValue });
   }
   const hasOuvrageSelected = !!currentOuvrageValue;
   const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
