@@ -93,6 +93,10 @@ export const BilanDashboard = () => {
 
   const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
   const currentOuvrageValue = isScl ? filters.systemeCollecteCode : filters.ouvrageDepollutionCode;
+  // A shared URL can select an ouvrage before its remote search options are loaded.
+  if (currentOuvrageValue && !ouvragesOptions.some((option) => option.value === currentOuvrageValue)) {
+    ouvragesOptions.push({ value: currentOuvrageValue, label: currentOuvrageValue });
+  }
   const hasOuvrageSelected = !!currentOuvrageValue;
   const pointMesureOptions: AutocompleteOption[] = pmos.map((p) => ({
     value: p.pointMesureId.toString(),
