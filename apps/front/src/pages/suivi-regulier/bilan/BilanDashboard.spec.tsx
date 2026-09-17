@@ -6,7 +6,6 @@ import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
 import { CURRENT_BILAN_YEAR } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BilanDashboard } from './BilanDashboard';
-import { BILAN_UNAVAILABLE_MESSAGE } from '../../../hooks/useBilanDashboard';
 import * as bilanApi from '../../../api/bilan';
 import * as mesuresApi from '../../../api/mesures';
 import * as referentielApi from '../../../api/referentiel';
@@ -292,17 +291,21 @@ describe('BilanDashboard URL integration', () => {
     });
   });
 
-  it('replaces a page beyond the last page, or page 1 for empty results', async () => {
-    mockFetchBilanSteu.mockResolvedValue({ data: [], total: 45, page: 9, pageSize: 20 });
-    renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001&page=9`]);
+  it.each([
+    { total: 45, expectedPage: 3 },
+    { total: 0, expectedPage: 1 },
+  ])('replaces an out-of-range page with $expectedPage for $total results', async ({ total, expectedPage }) => {
+    mockFetchBilanSteu.mockImplementation(async (query) => ({ data: [], total, page: query.page, pageSize: 20 }));
+    renderAt(['/previous', `/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001&page=9`]);
 
     await waitFor(() => {
-      expect(locationText()).toContain('page=3');
-      expect(locationText()).not.toContain('page=9');
+      expect(mockFetchBilanSteu).toHaveBeenLastCalledWith(expect.objectContaining({ page: expectedPage }));
     });
+    goBack();
+    await waitFor(() => expect(locationText()).toBe('/previous'));
   });
 
-  it('uses the same validated query for the table and the CSV export', async () => {
+  it('uses the same filters for the table and the CSV export', async () => {
     renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001&parametreCode=1313`]);
 
     expect(await screen.findByText('DBO5')).toBeInTheDocument();
@@ -321,66 +324,90 @@ describe('BilanDashboard URL integration', () => {
     }
   });
 
-  it('shows the same unavailable message for unknown STEU and blocks results/export', async () => {
+  it('requests STEU results even when details are unavailable', async () => {
     renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=UNKNOWN`]);
 
-    expect(await screen.findByText(BILAN_UNAVAILABLE_MESSAGE)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mockFetchBilanSteu).toHaveBeenCalledWith(expect.objectContaining({ ouvrageDepollutionCode: 'UNKNOWN' })),
+    );
     expect(screen.getByRole('combobox', { name: /station/i })).toHaveValue('UNKNOWN');
-    expect(mockFetchBilanSteu).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: /exporter csv/i })).toBeDisabled();
     expect(locationText()).toContain('ouvrageDepollutionCode=UNKNOWN');
   });
 
-  it('shows the same unavailable message for unknown SCL', async () => {
+  it('requests SCL results even when details are unavailable', async () => {
     renderAt([`/suivi-regulier/bilan?mode=scl&year=${YEAR}&systemeCollecteCode=UNKNOWN`]);
 
-    expect(await screen.findByText(BILAN_UNAVAILABLE_MESSAGE)).toBeInTheDocument();
-    expect(mockFetchBilanScl).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockFetchBilanScl).toHaveBeenCalledWith(expect.objectContaining({ systemeCollecteCode: 'UNKNOWN' })),
+    );
+    expect(await screen.findByRole('button', { name: /exporter csv/i })).toBeDisabled();
+  });
+
+  it('lets the results endpoint handle a point absent from the options', async () => {
+    renderAt([`/suivi-regulier/bilan?mode=scl&year=${YEAR}&systemeCollecteCode=SCL001&pointMesureId=99`]);
+
+    await waitFor(() => expect(mockFetchBilanScl).toHaveBeenCalledWith(expect.objectContaining({ pointMesureId: 99 })));
+  });
+
+  it('loads STEU results and enables export even if the detail request fails', async () => {
+    mockFetchSteuDetail.mockRejectedValue(new Error('network down'));
+    renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001`]);
+
+    expect(await screen.findByText('DBO5')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeEnabled();
+    expect(locationText()).toContain('ouvrageDepollutionCode=STEU001');
+  });
+
+  it('loads STEU results while details are still pending', async () => {
+    mockFetchSteuDetail.mockReturnValue(new Promise(() => {}));
+    renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001`]);
+    expect(await screen.findByText('DBO5')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /station/i })).toHaveValue('STEU001');
+  });
+
+  it.each(['', '&pointMesureId=7'])('loads SCL results while details and points are pending (%s)', async (point) => {
+    mockFetchSclDetail.mockReturnValue(new Promise(() => {}));
+    mockFetchPointsMesure.mockReturnValue(new Promise(() => {}));
+    renderAt([`/suivi-regulier/bilan?mode=scl&year=${YEAR}&systemeCollecteCode=SCL001${point}`]);
+    expect(await screen.findByText('Collecteur Beta')).toBeInTheDocument();
+    expect(mockFetchPointsMesure).toHaveBeenCalledWith('scl', 'SCL001', 'tous');
+    expect(screen.getByRole('button', { name: /exporter csv/i })).toBeEnabled();
+  });
+
+  it('loads and exports SCL results even if details and points fail', async () => {
+    mockFetchSclDetail.mockRejectedValue(new Error('detail failed'));
+    mockFetchPointsMesure.mockRejectedValue(new Error('points failed'));
+    renderAt([`/suivi-regulier/bilan?mode=scl&year=${YEAR}&systemeCollecteCode=SCL001&pointMesureId=7&statut=TP`]);
+    expect(await screen.findByText('Collecteur Beta')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
+    await waitFor(() => expect(mockDownloadScl).toHaveBeenCalledWith(mockFetchBilanScl.mock.calls[0][0]));
+  });
+
+  it('shows result request failures and disables export', async () => {
+    mockFetchBilanSteu.mockRejectedValue(new Error('results failed'));
+    renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001`]);
+    expect(await screen.findByText(/erreur est survenue lors du chargement des bilans/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /exporter csv/i })).toBeDisabled();
   });
 
-  it('blocks bilan requests when the point does not belong to the SCL', async () => {
-    renderAt([`/suivi-regulier/bilan?mode=scl&year=${YEAR}&systemeCollecteCode=SCL001&pointMesureId=99`]);
-
-    expect(await screen.findByText(BILAN_UNAVAILABLE_MESSAGE)).toBeInTheDocument();
-    expect(mockFetchBilanScl).not.toHaveBeenCalled();
-  });
-
-  it('treats detail network failures as retryable errors, not as absence', async () => {
-    mockFetchSteuDetail.mockRejectedValueOnce(new Error('network down'));
-    mockFetchSteuDetail.mockImplementation(async (code) => (code === 'STEU001' ? steuDetail001 : null));
-    renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001`]);
-
-    expect(await screen.findByRole('button', { name: /réessayer/i })).toBeInTheDocument();
-    expect(screen.queryByText(BILAN_UNAVAILABLE_MESSAGE)).not.toBeInTheDocument();
-    expect(mockFetchBilanSteu).not.toHaveBeenCalled();
-    expect(locationText()).toContain('ouvrageDepollutionCode=STEU001');
-
-    fireEvent.click(screen.getByRole('button', { name: /réessayer/i }));
-    expect(await screen.findByText('DBO5')).toBeInTheDocument();
-    expect(mockFetchSteuDetail).toHaveBeenCalledTimes(2);
-  });
-
-  it('blocks on invalid filter values, keeps them in the URL, and resumes once corrected', async () => {
+  it('defaults invalid status and removes it when clearing the selection', async () => {
     renderAt([`/suivi-regulier/bilan?mode=scl&year=${YEAR}&systemeCollecteCode=SCL001&statut=XX`]);
 
-    expect(screen.getByLabelText(/statut/i)).toHaveAccessibleDescription(/statut.*invalide|« XX »/i);
-    expect(mockFetchBilanScl).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/statut/i)).toHaveValue('');
+    expect(await screen.findByText('Collecteur Beta')).toBeInTheDocument();
+    expect(mockFetchBilanScl.mock.calls[0][0]).not.toHaveProperty('statut');
     expect(locationText()).toContain('statut=XX');
 
-    fireEvent.change(screen.getByLabelText(/statut/i), { target: { value: 'TP' } });
-
-    await waitFor(() => {
-      expect(mockFetchBilanScl).toHaveBeenCalledWith(expect.objectContaining({ statut: 'TP' }));
-    });
-    expect(locationText()).toContain('statut=TP');
-    expect(locationText()).not.toContain('statut=XX');
+    fireEvent.change(screen.getByLabelText(/statut/i), { target: { value: '' } });
+    expect(locationText()).not.toContain('statut=');
   });
 
   it('requires choosing a supported year when the requested year is unavailable', async () => {
     renderAt([`/suivi-regulier/bilan?year=1999&ouvrageDepollutionCode=STEU001`]);
 
     expect(screen.getByLabelText(/année/i)).toHaveAccessibleDescription(/1999.*pas disponible/i);
+    expect(screen.getByLabelText(/année/i)).toHaveValue('1999');
     expect(mockFetchBilanSteu).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText(/année/i), { target: { value: String(YEAR) } });
@@ -390,14 +417,13 @@ describe('BilanDashboard URL integration', () => {
     });
   });
 
-  it('restores default pagination with a warning on invalid page syntax', async () => {
+  it('uses default pagination without rewriting the URL on load', async () => {
     renderAt([`/suivi-regulier/bilan?year=${YEAR}&ouvrageDepollutionCode=STEU001&page=abc`]);
 
-    expect(await screen.findByText(/page.*invalide/i)).toBeInTheDocument();
-    await waitFor(() => {
-      expect(locationText()).not.toContain('page=abc');
-    });
     expect(await screen.findByText('DBO5')).toBeInTheDocument();
+    expect(mockFetchBilanSteu).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+    expect(locationText()).toContain('page=abc');
+    expect(screen.queryByText('URL corrigée')).not.toBeInTheDocument();
   });
 
   it('clears obsolete autocomplete draft state on external navigation without extra writes', async () => {

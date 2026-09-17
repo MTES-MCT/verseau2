@@ -1,12 +1,14 @@
-import type { ChangeEvent } from 'react';
-import type {
-  BilanSclSortByValue,
-  BilanSclDto,
-  BilanSteuDto,
-  BilanSteuSortByValue,
-  IntervenantDetailDto,
-  PaginatedBilanSclResponse,
-  PaginatedBilanSteuResponse,
+import { useEffect, useState, type ChangeEvent } from 'react';
+import { useLocation } from 'react-router';
+import {
+  BilanSclSortBy,
+  BilanSteuSortBy,
+  CURRENT_BILAN_YEAR,
+  FIRST_BILAN_YEAR,
+  listBilanScl,
+  listBilanSteu,
+  type IntervenantDetailDto,
+  type RouteQuery,
 } from '@lib/dossier';
 import { Notice } from '@codegouvfr/react-dsfr/Notice';
 import { Alert } from '@codegouvfr/react-dsfr/Alert';
@@ -15,8 +17,23 @@ import { RadioButtons } from '@codegouvfr/react-dsfr/RadioButtons';
 import { Select } from '@codegouvfr/react-dsfr/Select';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Tooltip } from '@codegouvfr/react-dsfr/Tooltip';
-import { BILAN_UNAVAILABLE_MESSAGE, useBilanDashboard } from '../../../hooks/useBilanDashboard';
-import { SelectAutocomplete } from '../../../components/SelectAutocomplete';
+import { useBilanFilters, type SortByValue } from '../../../hooks/useBilanFilters';
+import {
+  useBilanScl,
+  useBilanSclDetail,
+  useBilanSteu,
+  useBilanSteuDetail,
+  useBilanSteuParametres,
+} from '../../../hooks/useBilan';
+import { usePointsMesure } from '../../../hooks/usePointsMesure';
+import { useAsyncOuvragesSearch } from '../../../hooks/useAsyncOuvragesSearch';
+import { useAsyncSystemesCollecteSearch } from '../../../hooks/useAsyncSystemesCollecteSearch';
+import { useCsvExportDownload } from '../../../hooks/useCsvExportDownload';
+import { downloadBilanSclExport, downloadBilanSteuExport } from '../../../api/bilan';
+import { buildPointMesureLabel } from '../../../helper/pointMesureLabel';
+import { formatOption } from '../../../helper/optionsFormatter';
+import { BILAN_PAGE_SIZE, buildBilanPageHref } from '../../../helper/bilanUrlFilters';
+import { SelectAutocomplete, type AutocompleteOption } from '../../../components/SelectAutocomplete';
 import { getPreviousSunday } from '@lib/shared';
 import { fr } from '@codegouvfr/react-dsfr';
 import { SortableHeader } from '../../../components/SortableHeader';
@@ -52,61 +69,121 @@ function formatIntervenants(intervenants: IntervenantDetailDto[], key: 'interven
 }
 
 export const BilanDashboard = () => {
-  const {
-    filters,
-    updateFilter,
+  const { filters, updateFilter, searchParams, yearError } = useBilanFilters();
+  const { hash } = useLocation();
+  const { page } = filters;
+  const pageSize = BILAN_PAGE_SIZE;
+  const isScl = filters.mode === 'scl';
+  const currentOuvrageValue = isScl ? filters.systemeCollecteCode : filters.ouvrageDepollutionCode;
+  const hasOuvrageSelected = currentOuvrageValue !== '';
+  const canFetchList = hasOuvrageSelected && !yearError;
+  const yearOptions = [CURRENT_BILAN_YEAR, FIRST_BILAN_YEAR];
+  const [ouvrageSearch, setOuvrageSearch] = useState('');
+  const [sclSearch, setSclSearch] = useState('');
+
+  // External navigation restores the selection and clears obsolete search drafts.
+  useEffect(() => {
+    setOuvrageSearch('');
+    setSclSearch('');
+  }, [currentOuvrageValue, isScl]);
+
+  const { data: parametres = [], isLoading: parametresLoading } = useBilanSteuParametres();
+  const { data: ouvrages = [], isFetching: ouvragesLoading } = useAsyncOuvragesSearch(ouvrageSearch);
+  const { data: systemesCollecte = [], isFetching: systemesCollecteLoading } =
+    useAsyncSystemesCollecteSearch(sclSearch);
+  const { data: steuDetail } = useBilanSteuDetail(filters.ouvrageDepollutionCode, !isScl);
+  const { data: sclDetail } = useBilanSclDetail(filters.systemeCollecteCode, isScl);
+  const { data: pmos = [] } = usePointsMesure('scl', isScl ? filters.systemeCollecteCode : null);
+  const detail = isScl ? sclDetail : steuDetail;
+
+  const steuSortBy = BilanSteuSortBy.safeParse(filters.sortBy).data;
+  const sclSortBy = BilanSclSortBy.safeParse(filters.sortBy).data;
+  const steuQuery: RouteQuery<typeof listBilanSteu> = {
     page,
-    setPage,
     pageSize,
-    issues,
-    normalizationWarnings,
-    dismissNormalizationWarnings,
-    isScl,
-    hasOuvrageSelected,
-    currentOuvrageValue,
-    yearOptions,
-    setOuvrageSearch,
-    setSclSearch,
-    ouvragesOptions,
-    ouvragesLoadingCurrent,
-    pointMesureOptions,
-    parametreOptions,
-    parametresLoading,
-    resourceStatus,
-    detail,
-    steuDetail,
-    retryResource,
-    displayData,
-    total,
-    isListPending,
-    isListFetching,
-    canExport,
-    isExportLoading,
-    downloadError,
-    setDownloadError,
-    handleExport,
-    handleOuvrageChange,
-    handlePointMesureChange,
-    handleModeChange,
-    handleParametreChange,
-    handleDateSort,
-    getPageHref,
-  } = useBilanDashboard();
-
-  const issueFor = (field: string) => issues.find((issue) => issue.field === field);
-  const yearIssue = issueFor('year');
-  const statutIssue = issueFor('statut');
-  const pointIssue = issueFor('pointMesureId');
-  const parametreIssue = issueFor('parametreCode');
-
-  const showResourceLoader =
-    hasOuvrageSelected && issues.length === 0 && (resourceStatus === 'loading' || isListPending);
-
+    year: filters.year,
+    ...(filters.ouvrageDepollutionCode ? { ouvrageDepollutionCode: filters.ouvrageDepollutionCode } : {}),
+    ...(filters.parametreCode ? { parametreCode: filters.parametreCode } : {}),
+    ...(steuSortBy ? { sortBy: steuSortBy } : {}),
+    ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
+  };
+  const sclQuery: RouteQuery<typeof listBilanScl> = {
+    page,
+    pageSize,
+    year: filters.year,
+    ...(filters.systemeCollecteCode ? { systemeCollecteCode: filters.systemeCollecteCode } : {}),
+    ...(filters.pointMesureId ? { pointMesureId: Number(filters.pointMesureId) } : {}),
+    ...(filters.statut ? { statut: filters.statut } : {}),
+    ...(sclSortBy ? { sortBy: sclSortBy } : {}),
+    ...(filters.sortOrder ? { sortOrder: filters.sortOrder } : {}),
+  };
+  const steuList = useBilanSteu(steuQuery, !isScl && canFetchList);
+  const sclList = useBilanScl(sclQuery, isScl && canFetchList);
+  const activeList = isScl ? sclList : steuList;
+  const isListPending = canFetchList && activeList.isPending;
+  const isListFetching = canFetchList && activeList.isFetching;
+  const listError = canFetchList && activeList.isError;
+  const showResults = canFetchList && !listError;
+  const total = showResults ? (activeList.data?.total ?? 0) : 0;
   const tableData = isScl
-    ? buildBilanSclTableRows(((displayData as PaginatedBilanSclResponse | undefined)?.data ?? []) as BilanSclDto[])
-    : buildBilanSteuTableRows(
-        ((displayData as PaginatedBilanSteuResponse | undefined)?.data ?? []) as BilanSteuDto[],
-      );
+    ? buildBilanSclTableRows(showResults ? (sclList.data?.data ?? []) : [])
+    : buildBilanSteuTableRows(showResults ? (steuList.data?.data ?? []) : []);
+
+  const resultTotal = activeList.data?.total;
+  const isPlaceholder = activeList.isPlaceholderData;
+  const isSuccess = activeList.isSuccess;
+  useEffect(() => {
+    if (!canFetchList || !isSuccess || isPlaceholder || resultTotal === undefined) {
+      return;
+    }
+    const lastPage = Math.max(1, Math.ceil(resultTotal / BILAN_PAGE_SIZE));
+    if (page > lastPage) {
+      updateFilter({ page: lastPage }, 'replace');
+    }
+  }, [canFetchList, isSuccess, isPlaceholder, resultTotal, page, updateFilter]);
+
+  const steuExport = useCsvExportDownload(downloadBilanSteuExport);
+  const sclExport = useCsvExportDownload(downloadBilanSclExport);
+  const { isLoading: isExportLoading, downloadError, setDownloadError } = isScl ? sclExport : steuExport;
+  const canExport = showResults && !isListPending && !isListFetching && total > 0;
+  const handleExport = () => {
+    if (!canExport) {
+      return;
+    }
+    if (isScl) {
+      void sclExport.download(sclQuery, `bilan-scl-${filters.year}.csv`);
+    } else {
+      void steuExport.download(steuQuery, `bilan-steu-${filters.year}.csv`);
+    }
+  };
+
+  const ouvragesOptions: AutocompleteOption[] = isScl
+    ? systemesCollecte.map((s) => ({
+        value: s.systemeCollecteCode,
+        label: s.systemeCollecteNom ?? s.systemeCollecteCode,
+      }))
+    : ouvrages.map((o) => ({
+        value: o.ouvrageDepollutionCode,
+        label: o.ouvrageDepollutionNom ?? o.ouvrageDepollutionCode,
+      }));
+  if (hasOuvrageSelected && !ouvragesOptions.some((option) => option.value === currentOuvrageValue)) {
+    const name = isScl ? sclDetail?.systemeCollecteNom : steuDetail?.ouvrageDepollutionNom;
+    ouvragesOptions.push({ value: currentOuvrageValue, label: name ?? currentOuvrageValue });
+  }
+  const ouvragesLoadingCurrent = isScl ? systemesCollecteLoading : ouvragesLoading;
+  const pointMesureOptions = pmos.map((p) => ({ value: String(p.pointMesureId), label: buildPointMesureLabel(p) }));
+  const parametreOptions = parametres.map((option) =>
+    formatOption({
+      elementNomenclatureCode: option.parametreAnalyseCode,
+      elementNomenclatureLibelle: option.parametreNomCourt,
+    }),
+  );
+  const handleOuvrageChange = (value: string | null) => {
+    setOuvrageSearch('');
+    setSclSearch('');
+    updateFilter(isScl ? { systemeCollecteCode: value ?? '' } : { ouvrageDepollutionCode: value ?? '' });
+  };
+  const handleDateSort = (sortBy: SortByValue, sortOrder: 'ASC' | 'DESC') => updateFilter({ sortBy, sortOrder });
 
   let headers;
   if (isScl) {
@@ -116,13 +193,13 @@ export const BilanDashboard = () => {
       }
 
       return (
-        <SortableHeader<BilanSclSortByValue>
+        <SortableHeader<SortByValue>
           key="date"
           label={header.label}
           field="date"
-          sortBy={filters.sortBy as BilanSclSortByValue | undefined}
+          sortBy={filters.sortBy}
           sortOrder={filters.sortOrder}
-          onSort={handleDateSort as (nextSortBy: BilanSclSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+          onSort={handleDateSort}
         />
       );
     });
@@ -141,13 +218,13 @@ export const BilanDashboard = () => {
       }
 
       return (
-        <SortableHeader<BilanSteuSortByValue>
+        <SortableHeader<SortByValue>
           key="date"
           label={header.label}
           field="date"
-          sortBy={filters.sortBy as BilanSteuSortByValue | undefined}
+          sortBy={filters.sortBy}
           sortOrder={filters.sortOrder}
-          onSort={handleDateSort as (nextSortBy: BilanSteuSortByValue, nextSortOrder: 'ASC' | 'DESC') => void}
+          onSort={handleDateSort}
         />
       );
     });
@@ -162,8 +239,6 @@ export const BilanDashboard = () => {
   const exploitantMoaLabel = formatIntervenants(detailIntervenants, 'intervenantNom');
   const siretLabel = formatIntervenants(detailIntervenants, 'intervenantSiret');
   const steuMiseEnServiceLabel = !isScl ? formatInfoDate(steuDetail?.dateMiseEnService ?? null) : '-';
-
-  const showDetail = resourceStatus === 'ready' && detail;
 
   return (
     <div className={fr.cx('fr-container', 'fr-py-2w')}>
@@ -186,46 +261,13 @@ export const BilanDashboard = () => {
         />
       )}
 
-      {normalizationWarnings.map((warning, index) => (
-        <Alert
-          key={`normalization-${index}`}
-          severity="warning"
-          title="URL corrigée"
-          description={warning}
-          closable
-          onClose={dismissNormalizationWarnings}
-          className={fr.cx('fr-mb-2w')}
-        />
-      ))}
-
-      {issues.map((issue) => (
-        <Alert
-          key={`${issue.field}-${issue.code}`}
-          severity="error"
-          title="Sélection invalide"
-          description={issue.message}
-          className={fr.cx('fr-mb-2w')}
-        />
-      ))}
-
-      {issues.length === 0 && resourceStatus === 'unavailable' && (
-        <Alert severity="error" title="Ouvrage indisponible" description={BILAN_UNAVAILABLE_MESSAGE} className={fr.cx('fr-mb-2w')} />
-      )}
-
-      {issues.length === 0 && resourceStatus === 'error' && (
+      {listError && (
         <Alert
           severity="error"
           title="Erreur de chargement"
-          description="Le chargement des informations de l’ouvrage a échoué. Votre sélection a été conservée, vous pouvez réessayer."
+          description="Une erreur est survenue lors du chargement des bilans."
           className={fr.cx('fr-mb-2w')}
         />
-      )}
-      {issues.length === 0 && resourceStatus === 'error' && (
-        <div className={fr.cx('fr-mb-2w')}>
-          <Button type="button" priority="secondary" onClick={retryResource}>
-            Réessayer
-          </Button>
-        </div>
       )}
 
       <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
@@ -239,14 +281,14 @@ export const BilanDashboard = () => {
                 label: 'STEU',
                 nativeInputProps: {
                   checked: filters.mode === 'steu',
-                  onChange: () => handleModeChange('steu'),
+                  onChange: () => updateFilter({ mode: 'steu' }),
                 },
               },
               {
                 label: 'SCL',
                 nativeInputProps: {
                   checked: filters.mode === 'scl',
-                  onChange: () => handleModeChange('scl'),
+                  onChange: () => updateFilter({ mode: 'scl' }),
                 },
               },
             ]}
@@ -256,13 +298,14 @@ export const BilanDashboard = () => {
           <Select
             label="Année"
             hint={<br />}
-            state={yearIssue ? 'error' : 'default'}
-            stateRelatedMessage={yearIssue?.message}
+            state={yearError ? 'error' : 'default'}
+            stateRelatedMessage={yearError}
             nativeSelectProps={{
               value: filters.year.toString(),
               onChange: (e: ChangeEvent<HTMLSelectElement>) => updateFilter({ year: parseInt(e.target.value) }),
             }}
           >
+            {yearError && <option value={filters.year}>{filters.year} (indisponible)</option>}
             {yearOptions.map((year) => (
               <option key={year} value={year}>
                 {year}
@@ -291,9 +334,7 @@ export const BilanDashboard = () => {
               placeholder={parametresLoading ? 'Chargement…' : 'Tous les paramètres'}
               options={parametreOptions}
               value={filters.parametreCode || null}
-              onChange={handleParametreChange}
-              state={parametreIssue ? 'error' : 'default'}
-              stateRelatedMessage={parametreIssue?.message}
+              onChange={(value) => updateFilter({ parametreCode: value ?? '' })}
             />
           </div>
         )}
@@ -307,9 +348,7 @@ export const BilanDashboard = () => {
                 placeholder="Rechercher un point de mesure"
                 options={pointMesureOptions}
                 value={filters.pointMesureId || null}
-                onChange={handlePointMesureChange}
-                state={pointIssue ? 'error' : 'default'}
-                stateRelatedMessage={pointIssue?.message}
+                onChange={(value) => updateFilter({ pointMesureId: value ?? '' })}
               />
             </div>
             <div className="fr-col-12 fr-col-lg-6 fr-col-xl-2">
@@ -317,8 +356,6 @@ export const BilanDashboard = () => {
                 label="Statut"
                 hint={<br />}
                 disabled={!hasOuvrageSelected}
-                state={statutIssue ? 'error' : 'default'}
-                stateRelatedMessage={statutIssue?.message}
                 nativeSelectProps={{
                   value: filters.statut,
                   onChange: (e: ChangeEvent<HTMLSelectElement>) =>
@@ -334,7 +371,7 @@ export const BilanDashboard = () => {
         )}
       </div>
 
-      {showDetail && (
+      {detail && (
         <div className="fr-grid-row fr-grid-row--gutters fr-mb-3w">
           <div className="fr-col-12">
             <div className="fr-callout fr-callout--blue-ecume">
@@ -358,11 +395,7 @@ export const BilanDashboard = () => {
         </div>
       )}
 
-      <TableLoader
-        isLoading={showResourceLoader}
-        isFetching={isListFetching}
-        hasOuvrageSelected={hasOuvrageSelected}
-      >
+      <TableLoader isLoading={isListPending} isFetching={isListFetching} hasOuvrageSelected={hasOuvrageSelected}>
         <div className={fr.cx('fr-mb-2w')} style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button type="button" priority="secondary" onClick={handleExport} disabled={!canExport || isExportLoading}>
             Exporter CSV
@@ -381,10 +414,10 @@ export const BilanDashboard = () => {
             count={Math.ceil(total / pageSize)}
             defaultPage={page}
             getPageLinkProps={(pageNumber: number) => ({
-              href: getPageHref(pageNumber),
+              href: buildBilanPageHref(searchParams, pageNumber, hash),
               onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
                 e.preventDefault();
-                setPage(pageNumber);
+                updateFilter({ page: pageNumber });
               },
             })}
           />
