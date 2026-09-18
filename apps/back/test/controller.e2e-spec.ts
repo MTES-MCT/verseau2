@@ -118,7 +118,7 @@ describe('Controller (e2e) - Access control', () => {
       const attackerBody = attackerLogin.body as { state?: unknown; nonce?: unknown };
       expect(typeof attackerBody.state).toBe('string');
       expect(typeof attackerBody.nonce).toBe('string');
-      expect((attackerLogin.headers['set-cookie'] ?? []).join(';')).toMatch(/verseau_oidc=/);
+      expect(String(attackerLogin.headers['set-cookie'] ?? '')).toMatch(/verseau_oidc=/);
       const attackerState = attackerBody.state as string;
 
       // La victime initie sa propre connexion dans son navigateur.
@@ -134,7 +134,7 @@ describe('Controller (e2e) - Access control', () => {
         .type('form')
         .send({ code: 'attacker-code', state: attackerState })
         .expect(401);
-      expect((response.headers['set-cookie'] ?? []).join(';')).not.toMatch(/access_token=/);
+      expect(String(response.headers['set-cookie'] ?? '')).not.toMatch(/access_token=/);
     });
 
     it('/auth/refresh (POST) - Should return 201', async () => {
