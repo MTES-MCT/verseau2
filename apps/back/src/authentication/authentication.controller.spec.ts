@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthenticationController } from './authentication.controller';
 import { Authentication, OIDCTokens } from './authentication';
+import { OidcTransactionService } from './oidcTransaction.service';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
@@ -13,13 +14,19 @@ const makeResponse = (): jest.Mocked<Response> =>
   ({
     cookie: jest.fn(),
     clearCookie: jest.fn(),
+    set: jest.fn(),
   }) as unknown as jest.Mocked<Response>;
 
 const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ cookies }) as unknown as CustomRequest;
 
+const TRANSACTION_COOKIE = '__Host-verseau_oidc';
+const TRANSACTION_STATE = 'state-abc';
+const TRANSACTION_NONCE = 'nonce-from-cookie';
+
 describe('AuthenticationController', () => {
   let controller: AuthenticationController;
   let mockAuthentication: jest.Mocked<Authentication>;
+  let mockOidcTransaction: jest.Mocked<OidcTransactionService>;
   let mockUserService: jest.Mocked<UserService>;
   let mockDroitsUserService: jest.Mocked<DroitsUserService>;
 
@@ -32,7 +39,7 @@ describe('AuthenticationController', () => {
       refreshTokens: jest.fn(),
       buildCookieResponse: jest.fn(),
       clearCookieResponse: jest.fn(),
-    } as jest.Mocked<Authentication>;
+    };
 
     mockUserService = {
       findOrCreateUser: jest.fn(),
@@ -47,12 +54,35 @@ describe('AuthenticationController', () => {
       findIntervenantByUserSub: jest.fn(),
     } as unknown as jest.Mocked<DroitsUserService>;
 
+    mockOidcTransaction = {
+      cookieName: TRANSACTION_COOKIE,
+      createTransaction: jest.fn(),
+      verifyTransactionToken: jest.fn(),
+      readTransactionToken: jest.fn((cookies: unknown) => {
+        if (typeof cookies !== 'object' || cookies === null) {
+          return undefined;
+        }
+        const token = (cookies as Record<string, unknown>)[TRANSACTION_COOKIE];
+        return typeof token === 'string' ? token : undefined;
+      }),
+      setTransactionCookie: jest.fn(),
+      clearTransactionCookie: jest.fn(),
+    } as unknown as jest.Mocked<OidcTransactionService>;
+    mockOidcTransaction.verifyTransactionToken.mockResolvedValue({
+      state: TRANSACTION_STATE,
+      nonce: TRANSACTION_NONCE,
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthenticationController],
       providers: [
         {
           provide: Authentication,
           useValue: mockAuthentication,
+        },
+        {
+          provide: OidcTransactionService,
+          useValue: mockOidcTransaction,
         },
         {
           provide: UserService,
@@ -163,22 +193,72 @@ describe('AuthenticationController', () => {
     });
   });
 
+  describe('login', () => {
+    it('should return server-generated state/nonce and set the transaction cookie', async () => {
+      const res = makeResponse();
+      mockAuthentication.getOIDCConfiguration.mockResolvedValue({
+        authorizationEndpoint: 'https://auth.example.com/authorize',
+        clientId: 'test-client-id',
+        redirectUri: 'https://app.example.com/callback',
+        scope: 'openid profile',
+      });
+      mockOidcTransaction.createTransaction.mockResolvedValue({
+        state: TRANSACTION_STATE,
+        nonce: TRANSACTION_NONCE,
+        token: 'signed-transaction-token',
+      });
+
+      const result = await controller.login(res);
+
+      expect(result).toEqual(expect.objectContaining({ state: TRANSACTION_STATE, nonce: TRANSACTION_NONCE }));
+      expect(mockOidcTransaction.setTransactionCookie).toHaveBeenCalledWith(res, 'signed-transaction-token');
+      expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    });
+  });
+
   describe('callback', () => {
+    const validCookies = { [TRANSACTION_COOKIE]: 'signed-transaction-token' };
+
     it('should throw BadRequestException when code is missing', async () => {
       const res = makeResponse();
-      await expect(controller.callback('', 'nonce', '', '', res)).rejects.toThrow(BadRequestException);
+      await expect(controller.callback('', TRANSACTION_STATE, '', '', makeRequest(validCookies), res)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
-    it('should throw BadRequestException when nonce is missing', async () => {
+    it('should throw BadRequestException when state is missing', async () => {
       const res = makeResponse();
-      await expect(controller.callback('code', '', '', '', res)).rejects.toThrow(BadRequestException);
+      await expect(controller.callback('code', '', '', '', makeRequest(validCookies), res)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when OIDC error is present', async () => {
       const res = makeResponse();
-      await expect(controller.callback('code', 'nonce', 'access_denied', 'User denied', res)).rejects.toThrow(
-        BadRequestException,
+      await expect(
+        controller.callback('code', TRANSACTION_STATE, 'access_denied', 'User denied', makeRequest(validCookies), res),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw UnauthorizedException when the transaction cookie is missing or invalid', async () => {
+      const res = makeResponse();
+      mockOidcTransaction.verifyTransactionToken.mockRejectedValueOnce(new UnauthorizedException());
+
+      await expect(controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest({}), res)).rejects.toThrow(
+        UnauthorizedException,
       );
+      expect(mockOidcTransaction.clearTransactionCookie).not.toHaveBeenCalled();
+      expect(mockAuthentication.handleCallback).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when state does not match the transaction (login CSRF)', async () => {
+      const res = makeResponse();
+
+      await expect(
+        controller.callback('attacker-code', 'attacker-state', '', '', makeRequest(validCookies), res),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockOidcTransaction.clearTransactionCookie).not.toHaveBeenCalled();
+      expect(mockAuthentication.handleCallback).not.toHaveBeenCalled();
     });
 
     it('should set cookies and return user on successful callback', async () => {
@@ -199,9 +279,11 @@ describe('AuthenticationController', () => {
       });
       mockUserService.findOrCreateUser.mockResolvedValue({} as never);
 
-      const result = await controller.callback('auth-code', 'nonce-abc', '', '', res);
+      const result = await controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res);
 
-      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith('auth-code', 'nonce-abc');
+      // Le nonce utilisé vient du cookie vérifié, jamais du corps HTTP.
+      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith('auth-code', TRANSACTION_NONCE);
+      expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
       expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith('user-123', {
         email: 'user@example.com',
         nom: 'Doe',
@@ -209,6 +291,17 @@ describe('AuthenticationController', () => {
       });
       expect(mockAuthentication.buildCookieResponse).toHaveBeenCalled();
       expect(result).toEqual({ user: mockUser, expiresIn: 3600 });
+    });
+
+    it('should clear the transaction cookie when the OIDC exchange fails', async () => {
+      const res = makeResponse();
+      mockAuthentication.handleCallback.mockRejectedValueOnce(new Error('invalid_grant'));
+
+      await expect(
+        controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
   });
 });

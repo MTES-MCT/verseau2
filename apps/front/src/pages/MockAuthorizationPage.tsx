@@ -22,12 +22,9 @@ export default function MockAuthorizationPage() {
     try {
       // Simule un code d'autorisation
       const mockCode = 'mock-authorization-code-' + Date.now();
-      const mockState = 'mock-state-' + Date.now();
-      const mockNonce = 'mock-nonce-' + Date.now();
 
-      // Stocke temporairement state et nonce comme le ferait le flow réel
-      sessionStorage.setItem('oidc_state', mockState);
-      sessionStorage.setItem('oidc_nonce', mockNonce);
+      // Initialise une vraie tentative côté serveur (cookie de transaction signé)
+      const mockState = await authService.initMockTransaction();
 
       // Simule le callback OIDC
       await authService.handleCallback(mockCode, mockState);

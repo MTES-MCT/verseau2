@@ -106,6 +106,45 @@ describe('Controller (e2e) - Access control', () => {
       return request(app.getHttpServer()).post('/auth/callback').send({}).expect(400);
     });
 
+    it('/auth/callback (POST) - Should return 401 without transaction cookie', async () => {
+      // Sans tentative initiée via GET /auth/login, aucun échange OIDC ne doit avoir lieu.
+      return request(app.getHttpServer()).post('/auth/callback').send({ code: 'code', state: 'state' }).expect(401);
+    });
+
+    it('/auth/callback (POST) - Should return 401 on cross-origin login CSRF with attacker code+state', async () => {
+      // L'attaquant initie sa propre connexion et récupère un couple valide pour son compte.
+      const attacker = request.agent(app.getHttpServer());
+      const attackerLogin = await attacker.get('/auth/login').expect(200);
+      const attackerBody = attackerLogin.body as { state?: unknown; nonce?: unknown };
+      expect(typeof attackerBody.state).toBe('string');
+      expect(typeof attackerBody.nonce).toBe('string');
+      const attackerCookie = String(attackerLogin.headers['set-cookie'] ?? '');
+      expect(attackerCookie).toMatch(/^__Host-verseau_oidc=/);
+      expect(attackerCookie).toContain('; Secure');
+      const attackerState = attackerBody.state as string;
+
+      // La victime initie sa propre connexion dans son navigateur.
+      const victim = request.agent(app.getHttpServer());
+      const victimLogin = await victim.get('/auth/login').expect(200);
+      const victimBody = victimLogin.body as { state?: unknown };
+      expect(victimBody.state).not.toBe(attackerState);
+      const victimCookie = String(victimLogin.headers['set-cookie'] ?? '').split(';')[0];
+      expect(victimCookie).toMatch(/^__Host-verseau_oidc=/);
+      const handleCallbackSpy = jest.spyOn(authService, 'handleCallback');
+
+      // Le formulaire auto-soumis cross-origin rejoue le code/state de l'attaquant
+      // avec les cookies de la victime : la session ne doit pas être établie.
+      const response = await victim
+        .post('/auth/callback')
+        // Supertest utilise HTTP : transmettre explicitement le cookie Secure.
+        .set('Cookie', victimCookie)
+        .type('form')
+        .send({ code: 'attacker-code', state: attackerState })
+        .expect(401);
+      expect(String(response.headers['set-cookie'] ?? '')).not.toMatch(/access_token=/);
+      expect(handleCallbackSpy).not.toHaveBeenCalled();
+    });
+
     it('/auth/refresh (POST) - Should return 201', async () => {
       jest.spyOn(authService, 'extractSubjectFromExpiredToken').mockResolvedValueOnce('test-user-id');
       jest.spyOn(authService, 'refreshTokens').mockResolvedValueOnce({
