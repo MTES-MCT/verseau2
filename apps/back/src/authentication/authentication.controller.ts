@@ -21,6 +21,10 @@ import { MeGuard } from './me.guard';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { LoggerService } from '@shared/logger/logger.service';
+import { OidcTransactionService } from './oidcTransaction.service';
+
+const MAX_CODE_LENGTH = 8192;
+const MAX_STATE_LENGTH = 512;
 
 @Throttle({ default: { ttl: 60000, limit: 10 } })
 @Controller('auth')
@@ -30,22 +34,29 @@ export class AuthenticationController {
     private readonly userService: UserService,
     private readonly droitsUserService: DroitsUserService,
     private readonly logger: LoggerService,
+    private readonly oidcTransaction: OidcTransactionService,
   ) {
     this.logger.setContext(AuthenticationController.name);
   }
 
   @Get('login')
-  login() {
-    // Return OIDC configuration for frontend to build authorization URL
-    return this.authentication.getOIDCConfiguration();
+  async login(@Res({ passthrough: true }) res: Response) {
+    // La tentative OIDC (state + nonce) est générée côté serveur et liée au
+    // navigateur par un cookie signé, pour empêcher un CSRF de connexion.
+    const configuration = await this.authentication.getOIDCConfiguration();
+    const transaction = await this.oidcTransaction.createTransaction();
+    this.oidcTransaction.setTransactionCookie(res, transaction.token);
+    res.set('Cache-Control', 'no-store');
+    return { ...configuration, state: transaction.state, nonce: transaction.nonce };
   }
 
   @Post('callback')
   async callback(
-    @Body('code') code: string,
-    @Body('nonce') nonce: string,
+    @Body('code') code: unknown,
+    @Body('state') state: unknown,
     @Body('error') error: string,
     @Body('error_description') errorDescription: string,
+    @Req() req: CustomRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
     // Handle OIDC errors
@@ -53,16 +64,35 @@ export class AuthenticationController {
       throw new BadRequestException(`OIDC Error: ${error} - ${errorDescription || 'No description'}`);
     }
 
-    if (!code) {
-      throw new BadRequestException('Missing code parameter');
+    if (typeof code !== 'string' || code.trim().length === 0 || code.length > MAX_CODE_LENGTH) {
+      throw new BadRequestException('Missing or invalid code parameter');
     }
 
-    if (!nonce) {
-      throw new BadRequestException('Missing nonce parameter');
+    if (typeof state !== 'string' || state.trim().length === 0 || state.length > MAX_STATE_LENGTH) {
+      throw new BadRequestException('Missing or invalid state parameter');
     }
+
+    // La tentative doit avoir été créée par ce même navigateur via GET /auth/login.
+    let transaction: { state: string; nonce: string };
+    try {
+      transaction = await this.oidcTransaction.verifyTransactionToken(
+        this.oidcTransaction.readTransactionToken(req.cookies),
+      );
+    } catch {
+      throw new UnauthorizedException('Invalid OIDC transaction');
+    }
+
+    if (transaction.state !== state) {
+      throw new UnauthorizedException('Invalid OIDC transaction');
+    }
+
+    // La tentative est à usage unique : elle est nettoyée avant l'échange OIDC,
+    // y compris si l'échange échoue ensuite.
+    this.oidcTransaction.clearTransactionCookie(res);
 
     try {
-      const result = await this.authentication.handleCallback(code, nonce);
+      // Le nonce utilisé est celui du cookie vérifié, jamais celui du corps HTTP.
+      const result = await this.authentication.handleCallback(code, transaction.nonce);
 
       // Sync user data to DB
       try {

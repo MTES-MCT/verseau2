@@ -18,9 +18,7 @@ interface RefreshResponse {
 }
 
 export type SessionChange =
-  | { type: 'login'; expiresAt: number }
-  | { type: 'refresh'; expiresAt: number; status: number }
-  | { type: 'cleared' };
+  { type: 'login'; expiresAt: number } | { type: 'refresh'; expiresAt: number; status: number } | { type: 'cleared' };
 
 type StoredSessionChange = { type: 'login' } | { type: 'refresh'; status: number };
 
@@ -29,11 +27,12 @@ interface OIDCConfiguration {
   clientId: string;
   redirectUri: string;
   scope: string;
+  state: string;
+  nonce: string;
 }
 
 const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
-const NONCE_KEY = 'oidc_nonce';
 
 export class AuthService {
   private storage: Storage;
@@ -49,34 +48,32 @@ export class AuthService {
   }
 
   /**
-   * Generate a random UUID for state/nonce
+   * Récupère la configuration OIDC et la tentative de connexion générée côté serveur.
+   * Le cookie de transaction est posé par le backend sur cette réponse.
    */
-  private generateRandomValue(): string {
-    return crypto.randomUUID();
-  }
-
-  /**
-   * Initiate the OIDC login flow
-   */
-  async login(): Promise<void> {
-    // Get OIDC configuration from backend
+  private async fetchLoginConfiguration(): Promise<OIDCConfiguration> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     if (!response.ok) {
       throw new Error('Failed to get OIDC configuration');
     }
 
-    const config: OIDCConfiguration = await response.json();
+    return response.json();
+  }
 
-    // Generate state and nonce on frontend
-    const state = this.generateRandomValue();
-    const nonce = this.generateRandomValue();
+  /**
+   * Initiate the OIDC login flow.
+   * Le state et le nonce sont générés côté serveur et liés au navigateur
+   * par un cookie de transaction vérifié au callback.
+   */
+  async login(): Promise<void> {
+    const config = await this.fetchLoginConfiguration();
 
-    // Store state and nonce in sessionStorage for validation
-    this.sessionStorage.setItem(STATE_KEY, state);
-    this.sessionStorage.setItem(NONCE_KEY, nonce);
+    // Mémorise le state pour la vérification côté client au retour de l'IdP.
+    this.sessionStorage.setItem(STATE_KEY, config.state);
 
     // Build authorization URL
     const authUrl = new URL(config.authorizationEndpoint);
@@ -84,24 +81,31 @@ export class AuthService {
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', config.redirectUri);
     authUrl.searchParams.set('scope', config.scope);
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('nonce', nonce);
+    authUrl.searchParams.set('state', config.state);
+    authUrl.searchParams.set('nonce', config.nonce);
 
     // Redirect to authorization endpoint
     window.location.href = authUrl.toString();
   }
 
   /**
+   * Initialise une tentative de connexion sans rediriger (page mock de développement).
+   */
+  async initMockTransaction(): Promise<string> {
+    const config = await this.fetchLoginConfiguration();
+    this.sessionStorage.setItem(STATE_KEY, config.state);
+    return config.state;
+  }
+
+  /**
    * Handle the OIDC callback after user authentication
    */
   async handleCallback(code: string, state: string): Promise<void> {
-    // Retrieve state and nonce from sessionStorage
+    // Retrieve state from sessionStorage
     const expectedState = this.sessionStorage.getItem(STATE_KEY);
-    const expectedNonce = this.sessionStorage.getItem(NONCE_KEY);
 
     // Clean up
     this.sessionStorage.removeItem(STATE_KEY);
-    this.sessionStorage.removeItem(NONCE_KEY);
 
     // Validate state
     if (!expectedState || state !== expectedState) {
@@ -110,11 +114,8 @@ export class AuthService {
       );
     }
 
-    if (!expectedNonce) {
-      throw new Error('Missing nonce');
-    }
-
-    // Send code and nonce to backend
+    // Send code and state to backend. Le nonce est relu par le backend
+    // dans le cookie de transaction signé, jamais depuis le corps HTTP.
     const response = await fetch(`${API_BASE_URL}/auth/callback`, {
       method: 'POST',
       headers: {
@@ -122,7 +123,7 @@ export class AuthService {
       },
       body: JSON.stringify({
         code,
-        nonce: expectedNonce,
+        state,
       }),
       credentials: 'include',
     });
