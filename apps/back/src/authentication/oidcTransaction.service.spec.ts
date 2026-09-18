@@ -9,7 +9,7 @@ import { OidcTransactionService } from './oidcTransaction.service';
 
 const JWT_SECRET = 'test-secret-key-that-is-at-least-32-characters-long!!';
 
-function buildConfigService(nodeEnv: string): jest.Mocked<ConfigService> {
+function buildConfigService(nodeEnv?: string): jest.Mocked<ConfigService> {
   return {
     get: jest.fn((key: string) => {
       if (key === 'NODE_ENV') {
@@ -26,7 +26,7 @@ function buildConfigService(nodeEnv: string): jest.Mocked<ConfigService> {
   } as unknown as jest.Mocked<ConfigService>;
 }
 
-async function buildService(nodeEnv = 'test'): Promise<OidcTransactionService> {
+async function buildService(nodeEnv?: string): Promise<OidcTransactionService> {
   const module: TestingModule = await Test.createTestingModule({
     providers: [{ provide: ConfigService, useValue: buildConfigService(nodeEnv) }, OidcTransactionService],
   }).compile();
@@ -101,27 +101,22 @@ describe('OidcTransactionService', () => {
     expect(service.readTransactionToken({})).toBeUndefined();
   });
 
-  it('should use a __Host- prefixed secure cookie in production only', async () => {
-    const devService = await buildService('test');
-    const prodService = await buildService('production');
+  it.each([undefined, 'development', 'test', 'staging', 'production'])(
+    'should set and clear a __Host- prefixed secure cookie with NODE_ENV=%s',
+    async (nodeEnv) => {
+      const service = await buildService(nodeEnv);
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+      const cookieOptions = { httpOnly: true, secure: true, sameSite: 'lax', path: '/' };
 
-    expect(devService.cookieName).toBe('verseau_oidc');
-    expect(prodService.cookieName).toBe('__Host-verseau_oidc');
+      expect(service.cookieName).toBe('__Host-verseau_oidc');
+      service.setTransactionCookie(res, 'token');
+      expect(res.cookie).toHaveBeenCalledWith('__Host-verseau_oidc', 'token', {
+        ...cookieOptions,
+        maxAge: 10 * 60 * 1000,
+      });
 
-    const devRes = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
-    devService.setTransactionCookie(devRes, 'token');
-    expect(devRes.cookie).toHaveBeenCalledWith(
-      'verseau_oidc',
-      'token',
-      expect.objectContaining({ httpOnly: true, secure: false, sameSite: 'lax', path: '/' }),
-    );
-
-    const prodRes = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
-    prodService.setTransactionCookie(prodRes, 'token');
-    expect(prodRes.cookie).toHaveBeenCalledWith(
-      '__Host-verseau_oidc',
-      'token',
-      expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'lax', path: '/' }),
-    );
-  });
+      service.clearTransactionCookie(res);
+      expect(res.clearCookie).toHaveBeenCalledWith('__Host-verseau_oidc', cookieOptions);
+    },
+  );
 });

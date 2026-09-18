@@ -25,19 +25,14 @@ const MAX_TRANSACTION_TOKEN_LENGTH = 4096;
 @Injectable()
 export class OidcTransactionService {
   private readonly transactionKey: Uint8Array;
-  private readonly isSecure: boolean;
 
   constructor(private readonly configService: ConfigService) {
     const jwtSecret = this.configService.getOrThrow<string>('JWT_SECRET');
     this.transactionKey = createHmac('sha256', jwtSecret).update(OIDC_TRANSACTION_DERIVATION_INFO).digest();
-    this.isSecure = this.configService.get<string>('NODE_ENV') === 'production';
   }
 
   get cookieName(): string {
-    if (this.isSecure) {
-      return '__Host-verseau_oidc';
-    }
-    return 'verseau_oidc';
+    return '__Host-verseau_oidc';
   }
 
   async createTransaction(): Promise<OidcTransaction & { token: string }> {
@@ -49,7 +44,7 @@ export class OidcTransactionService {
       .setIssuer(OIDC_TRANSACTION_ISSUER)
       .setAudience(OIDC_TRANSACTION_AUDIENCE)
       .setJti(randomUUID())
-      .setExpirationTime('10m')
+      .setExpirationTime(`${OIDC_TRANSACTION_TTL_MS / 1000}s`)
       .sign(this.transactionKey);
     return { state, nonce, token };
   }
@@ -93,7 +88,7 @@ export class OidcTransactionService {
   private get baseCookieOptions(): CookieOptions {
     return {
       httpOnly: true,
-      secure: this.isSecure,
+      secure: true,
       sameSite: 'lax',
       path: '/',
     };

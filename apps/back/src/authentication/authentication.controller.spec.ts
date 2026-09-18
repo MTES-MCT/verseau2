@@ -19,7 +19,7 @@ const makeResponse = (): jest.Mocked<Response> =>
 
 const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ cookies }) as unknown as CustomRequest;
 
-const TRANSACTION_COOKIE = 'verseau_oidc';
+const TRANSACTION_COOKIE = '__Host-verseau_oidc';
 const TRANSACTION_STATE = 'state-abc';
 const TRANSACTION_NONCE = 'nonce-from-cookie';
 
