@@ -13,8 +13,8 @@ peerDependencyRules:
     '@nestjs/throttler@6.5.0>@nestjs/common': '12.0.3'
     '@nestjs/throttler@6.5.0>@nestjs/core': '12.0.3'
 
-# Require all package releases to age for two days before they are eligible.
-minimumReleaseAge: 2880
+# Require all package releases to age for five days before they are eligible.
+minimumReleaseAge: 7200
 
 allowBuilds:
   '@parcel/watcher': true
