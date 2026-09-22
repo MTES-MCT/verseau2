@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import { jest as esmJest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { AuthenticationService } from './authentication.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedUser } from './authentication';
 
-// Mock external modules
-jest.mock('openid-client', () => ({
+// Register ESM mocks before loading AuthenticationService and its dependencies.
+esmJest.unstable_mockModule('openid-client', () => ({
   Configuration: jest.fn(),
   discovery: jest.fn(),
   authorizationCodeGrant: jest.fn(),
@@ -21,7 +21,7 @@ const mockSetProtectedHeader = jest.fn().mockReturnThis();
 const mockSetIssuedAt = jest.fn().mockReturnThis();
 const mockSetExpirationTime = jest.fn().mockReturnThis();
 
-jest.mock('jose', () => ({
+esmJest.unstable_mockModule('jose', () => ({
   jwtVerify: jest.fn(),
   SignJWT: jest.fn().mockImplementation(() => ({
     setProtectedHeader: mockSetProtectedHeader,
@@ -31,6 +31,7 @@ jest.mock('jose', () => ({
   })),
 }));
 
+import { AuthenticationService } from './authentication.service';
 import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
 import { jwtVerify } from 'jose';
 
