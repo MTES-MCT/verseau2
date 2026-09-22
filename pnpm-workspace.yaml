@@ -17,7 +17,7 @@ peerDependencyRules:
 minimumReleaseAge: 7200
 
 allowBuilds:
-  '@parcel/watcher': true
+  '@parcel/watcher': false
   '@sentry/cli': true
   cpu-features: false
   esbuild: true
