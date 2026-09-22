@@ -87,17 +87,6 @@ export class AuthenticationService implements Authentication {
   }
 
   /**
-   * Résout les claims métier (itvCdn, isExpertNational) depuis Lanceleau via DroitsUserService.
-   */
-  private async resolveBusinessClaims(sub: string): Promise<{ itvCdn: number | null; isExpertNational: boolean }> {
-    const [itvCdn, isExpertNational] = await Promise.all([
-      this.droitsUserService.resolveItvCdn(sub),
-      this.droitsUserService.isExpertNationalVerseau(sub),
-    ]);
-    return { itvCdn, isExpertNational };
-  }
-
-  /**
    * Valide exclusivement le JWT interne signé par Verseau2.
    * Tout token non signé par JWT_SECRET est rejeté (pas de fallback Cerbere).
    */
@@ -175,8 +164,8 @@ export class AuthenticationService implements Authentication {
     const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
     const user = this.mapOpenIdUserToUser(userInfo);
 
-    // Résoudre les claims métier depuis Lanceleau
-    const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
+    // Vérifier les droits et résoudre les claims avant toute création de compte local.
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
 
     // Forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(
@@ -191,8 +180,8 @@ export class AuthenticationService implements Authentication {
       ...user,
       itvCdn,
       isExpertNational,
-      nom: (userInfo.family_name as string) || undefined,
-      prenom: (userInfo.given_name as string) || undefined,
+      nom: userInfo.family_name || undefined,
+      prenom: userInfo.given_name || undefined,
     };
 
     return {
@@ -276,17 +265,8 @@ export class AuthenticationService implements Authentication {
       throw new UnauthorizedException();
     }
 
-    let itvCdn: number | null;
-    let isExpertNational: boolean;
-    try {
-      // Re-résoudre les claims métier (peuvent avoir changé)
-      ({ itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId));
-    } catch (error) {
-      this.logger.error(
-        `Failed to resolve business claims for cerbereId=${user.cerbereId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      throw new UnauthorizedException();
-    }
+    // Re-vérifier les droits et re-résoudre les claims métier, qui peuvent avoir changé.
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
 
     // Re-forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(

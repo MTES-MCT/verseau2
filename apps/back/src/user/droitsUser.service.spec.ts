@@ -14,6 +14,7 @@ describe('DroitsUserService', () => {
 
   const mockMasaProvider = {
     findAgByEmail: jest.fn(),
+    findRolesByPrCdn: jest.fn(),
     findIntervenantById: jest.fn(),
     hasRole: jest.fn(),
   };
@@ -38,6 +39,69 @@ describe('DroitsUserService', () => {
 
     service = module.get<DroitsUserService>(DroitsUserService);
     jest.clearAllMocks();
+  });
+
+  describe('resolveVerseauAccess', () => {
+    const email = 'user@example.com';
+    const principalIdentifiant = 999;
+    const intervenantId = 100;
+
+    beforeEach(() => {
+      mockMasaProvider.findAgByEmail.mockResolvedValue({ principalIdentifiant, intervenantId });
+    });
+
+    it.each([301, 303, 305, 306, 307, 308])('autorise le rôle Orion %i', async (roleOrionId) => {
+      mockMasaProvider.findRolesByPrCdn.mockResolvedValue([{ principalIdentifiant, roleOrionId }]);
+
+      await expect(service.resolveVerseauAccess(email)).resolves.toEqual({
+        itvCdn: intervenantId,
+        isExpertNational: roleOrionId === Number(ROLE.EXPERT_NATIONAL_VERSEAU),
+      });
+    });
+
+    it('autorise plusieurs rôles dès que l’un est un rôle Verseau', async () => {
+      mockMasaProvider.findRolesByPrCdn.mockResolvedValue([
+        { principalIdentifiant, roleOrionId: 100 },
+        { principalIdentifiant, roleOrionId: ROLE.EXPERT_SERVICE_VERSEAU },
+      ]);
+
+      await expect(service.resolveVerseauAccess(email)).resolves.toEqual({
+        itvCdn: intervenantId,
+        isExpertNational: false,
+      });
+    });
+
+    it('refuse un utilisateur sans rôle Verseau avec le code stable', async () => {
+      mockMasaProvider.findRolesByPrCdn.mockResolvedValue([{ principalIdentifiant, roleOrionId: 100 }]);
+
+      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({
+        status: 403,
+        response: expect.objectContaining({ code: 'VERSEAU_ACCESS_DENIED' }) as object,
+      });
+    });
+
+    it('refuse un email absent sans interroger le référentiel', async () => {
+      await expect(service.resolveVerseauAccess('')).rejects.toMatchObject({ status: 403 });
+
+      expect(mockMasaProvider.findAgByEmail).not.toHaveBeenCalled();
+    });
+
+    it('refuse un utilisateur sans agent', async () => {
+      mockMasaProvider.findAgByEmail.mockResolvedValue(null);
+
+      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({ status: 403 });
+      expect(mockMasaProvider.findRolesByPrCdn).not.toHaveBeenCalled();
+    });
+
+    it.each(['agent', 'roles'])('distingue une indisponibilité du référentiel lors de la lecture %s', async (step) => {
+      if (step === 'agent') {
+        mockMasaProvider.findAgByEmail.mockRejectedValue(new Error('database unavailable'));
+      } else {
+        mockMasaProvider.findRolesByPrCdn.mockRejectedValue(new Error('database unavailable'));
+      }
+
+      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({ status: 503 });
+    });
   });
 
   describe('isExpertNationalVerseau', () => {

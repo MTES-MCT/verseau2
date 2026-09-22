@@ -11,6 +11,7 @@ import {
   Res,
   UseGuards,
   HttpCode,
+  HttpException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
@@ -119,6 +120,13 @@ export class AuthenticationController {
         expiresIn: result.expiresIn,
       };
     } catch (error: unknown) {
+      if (error instanceof HttpException) {
+        if (error.getStatus() === 403) {
+          this.authentication.clearCookieResponse(res);
+        }
+        throw error;
+      }
+
       throw new UnauthorizedException(
         `Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
@@ -158,6 +166,14 @@ export class AuthenticationController {
         `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error : undefined,
       );
+
+      if (error instanceof HttpException) {
+        if (error.getStatus() === 403) {
+          this.authentication.clearCookieResponse(res);
+        }
+        throw error;
+      }
+
       throw new UnauthorizedException();
     }
   }

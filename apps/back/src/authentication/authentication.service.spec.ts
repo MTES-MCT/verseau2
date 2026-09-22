@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DroitsUserService } from '@user/droitsUser.service';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedUser } from './authentication';
 
 // Register ESM mocks before loading AuthenticationService and its dependencies.
@@ -106,6 +106,7 @@ describe('AuthenticationService', () => {
 
     // Mock DroitsUserService
     mockDroitsUserService = {
+      resolveVerseauAccess: jest.fn().mockResolvedValue({ itvCdn: null, isExpertNational: false }),
       resolveItvCdn: jest.fn().mockResolvedValue(null),
       isExpertNationalVerseau: jest.fn().mockResolvedValue(false),
       canConsultDepot: jest.fn(),
@@ -210,6 +211,25 @@ describe('AuthenticationService', () => {
           mel: 'minimal@example.com',
         }),
       );
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('minimal@example.com');
+    });
+
+    it('refuse une première connexion avant la création du compte local', async () => {
+      const mockTokens = {
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        claims: () => ({ sub: 'new-user' }),
+      };
+      (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'new-user', email: 'new.user@example.com' });
+      mockDroitsUserService.resolveVerseauAccess.mockRejectedValue(
+        new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
+      );
+
+      await expect(service.handleCallback('mock-code', 'mock-nonce')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('new.user@example.com');
+      expect(mockSign).not.toHaveBeenCalled();
     });
   });
 
@@ -268,15 +288,13 @@ describe('AuthenticationService', () => {
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
-      mockDroitsUserService.resolveItvCdn.mockResolvedValue(42);
-      mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(true);
+      mockDroitsUserService.resolveVerseauAccess.mockResolvedValue({ itvCdn: 42, isExpertNational: true });
 
       const result = await service.refreshTokens(mockRefreshToken, 'user-123');
 
       expect(refreshTokenGrant).toHaveBeenCalledWith(mockConfiguration, mockRefreshToken);
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-cerbere-access-token', 'user-123');
-      expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('user-123');
-      expect(mockDroitsUserService.isExpertNationalVerseau).toHaveBeenCalledWith('user-123');
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('john.doe@example.com');
 
       // Le token retourné est un JWT interne (pas le token Cerbere)
       expect(result.accessToken).toBe('mock-internal-jwt');
@@ -313,6 +331,17 @@ describe('AuthenticationService', () => {
         'OIDC refresh token grant failed: Invalid refresh token',
         expect.any(Error),
       );
+    });
+
+    it('refuse le renouvellement lorsque les droits ont été retirés', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({ access_token: 'new-access-token', expires_in: 3600 });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'user-123', email: 'user@example.com' });
+      mockDroitsUserService.resolveVerseauAccess.mockRejectedValue(
+        new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
+      );
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockSign).not.toHaveBeenCalled();
     });
   });
 

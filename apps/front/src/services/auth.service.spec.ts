@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 describe('authService.refreshToken deduplication', () => {
+  let store: Record<string, string>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.stubGlobal('fetch', vi.fn());
 
     // Provide localStorage stub
-    const store: Record<string, string> = {};
+    store = {};
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => store[key] ?? null,
       setItem: (key: string, value: string) => {
@@ -99,6 +101,26 @@ describe('authService.refreshToken deduplication', () => {
     results.forEach((r) => expect(r.status).toBe('rejected'));
     // Only one fetch was made
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the local session and notifies listeners when Verseau access is denied', async () => {
+    const authService = await loadAuthService();
+    store['verseau_session'] = JSON.stringify({ expires_at: Date.now() + 3600000 });
+    const listener = vi.fn();
+    authService.subscribeToSessionChanges(listener);
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'VERSEAU_ACCESS_DENIED' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(authService.refreshToken()).rejects.toThrow(
+      "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.",
+    );
+
+    expect(store['verseau_session']).toBeUndefined();
+    expect(listener).toHaveBeenCalledWith({ type: 'cleared' });
   });
 });
 
@@ -197,5 +219,20 @@ describe('authService OIDC transaction', () => {
     await expect(authService.handleCallback('attacker-code', 'attacker-state')).rejects.toThrow();
 
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('exposes an explicit message when Verseau access is denied', async () => {
+    const authService = await loadAuthService();
+    sessionStore['oidc_state'] = 'server-state-abc';
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'VERSEAU_ACCESS_DENIED' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await expect(authService.handleCallback('auth-code', 'server-state-abc')).rejects.toThrow(
+      "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.",
+    );
   });
 });

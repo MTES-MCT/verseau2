@@ -3,14 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuth } from '../hooks/useAuth';
 import { AuthProvider } from './AuthContext';
 
-const { getAccessToken, getCurrentUser, logout, setSentryUser, startRefreshAuth, stopRefreshAuth } = vi.hoisted(() => ({
-  getAccessToken: vi.fn(),
-  getCurrentUser: vi.fn(),
-  logout: vi.fn(),
-  setSentryUser: vi.fn(),
-  startRefreshAuth: vi.fn(),
-  stopRefreshAuth: vi.fn(),
-}));
+const { getAccessToken, getCurrentUser, logout, setSentryUser, startRefreshAuth, stopRefreshAuth, subscribe } =
+  vi.hoisted(() => ({
+    getAccessToken: vi.fn(),
+    getCurrentUser: vi.fn(),
+    logout: vi.fn(),
+    setSentryUser: vi.fn(),
+    startRefreshAuth: vi.fn(),
+    stopRefreshAuth: vi.fn(),
+    subscribe: vi.fn(),
+  }));
 
 vi.mock('../services/auth.service', () => ({
   authService: {
@@ -18,6 +20,7 @@ vi.mock('../services/auth.service', () => ({
     getCurrentUser,
     login: vi.fn(),
     logout,
+    subscribeToSessionChanges: subscribe,
   },
 }));
 
@@ -55,12 +58,23 @@ function LogoutButton() {
   );
 }
 
+function AuthenticationStatus() {
+  const { isAuthenticated } = useAuth();
+  return <span>{isAuthenticated ? 'Authenticated' : 'Anonymous'}</span>;
+}
+
 describe('AuthProvider Sentry user', () => {
+  let sessionListener: ((change: { type: 'cleared' }) => void) | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
     getAccessToken.mockResolvedValue('cookie-stored');
     getCurrentUser.mockResolvedValue(authenticatedUser);
     logout.mockResolvedValue(undefined);
+    subscribe.mockImplementation((listener: (change: { type: 'cleared' }) => void) => {
+      sessionListener = listener;
+      return vi.fn();
+    });
   });
 
   it('starts proactive refresh for the provider lifetime', async () => {
@@ -97,5 +111,18 @@ describe('AuthProvider Sentry user', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Logout' }));
 
     await waitFor(() => expect(setSentryUser).toHaveBeenLastCalledWith(null));
+  });
+
+  it('actualise le contexte quand la session est refusée au renouvellement', async () => {
+    render(
+      <AuthProvider>
+        <AuthenticationStatus />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('Authenticated');
+    sessionListener?.({ type: 'cleared' });
+
+    await screen.findByText('Anonymous');
   });
 });

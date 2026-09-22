@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthenticationController } from './authentication.controller';
 import { Authentication, OIDCTokens } from './authentication';
 import { OidcTransactionService } from './oidcTransaction.service';
@@ -47,6 +52,7 @@ describe('AuthenticationController', () => {
     } as unknown as jest.Mocked<UserService>;
 
     mockDroitsUserService = {
+      resolveVerseauAccess: jest.fn(),
       resolveItvCdn: jest.fn(),
       isExpertNationalVerseau: jest.fn(),
       canConsultDepot: jest.fn(),
@@ -181,6 +187,26 @@ describe('AuthenticationController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
       expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
+
+    it('préserve le 403 et nettoie les cookies lorsque les droits ont été retirés', async () => {
+      const req = makeRequest({ refresh_token: 'refresh-token', access_token: 'internal-jwt' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }));
+
+      await expect(controller.refresh(req, res)).rejects.toMatchObject({ status: 403 });
+      expect(mockAuthentication.clearCookieResponse).toHaveBeenCalledWith(res);
+    });
+
+    it('préserve le 503 sans nettoyer la session lors d’une indisponibilité du référentiel', async () => {
+      const req = makeRequest({ refresh_token: 'refresh-token', access_token: 'internal-jwt' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(new ServiceUnavailableException());
+
+      await expect(controller.refresh(req, res)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(mockAuthentication.clearCookieResponse).not.toHaveBeenCalled();
+    });
   });
 
   describe('logout', () => {
@@ -301,6 +327,19 @@ describe('AuthenticationController', () => {
         controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
       ).rejects.toThrow(UnauthorizedException);
       expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
+
+    it('préserve le 403, nettoie la session et ne synchronise pas le compte refusé', async () => {
+      const res = makeResponse();
+      mockAuthentication.handleCallback.mockRejectedValue(new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }));
+
+      await expect(
+        controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
+      ).rejects.toMatchObject({ status: 403 });
+
+      expect(mockAuthentication.clearCookieResponse).toHaveBeenCalledWith(res);
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
       expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
   });
