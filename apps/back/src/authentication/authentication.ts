@@ -1,3 +1,6 @@
+export const INTERNAL_TOKEN_ISSUER = 'verseau2';
+export const INTERNAL_TOKEN_AUDIENCE = 'verseau2-api';
+
 export interface OIDCTokens {
   accessToken: string;
   refreshToken?: string;

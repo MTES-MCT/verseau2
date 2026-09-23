@@ -6,6 +6,8 @@ import {
   OIDCTokens,
   OIDCConfiguration,
   AuthenticatedUserAndNomPrenom,
+  INTERNAL_TOKEN_ISSUER,
+  INTERNAL_TOKEN_AUDIENCE,
 } from './authentication';
 import type { CookieOptions, Response } from 'express';
 import { DroitsUserService } from '@user/droitsUser.service';
@@ -36,6 +38,8 @@ export class AuthenticationMockService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
       });
       return {
         cerbereId: (payload.sub as string) || '',
@@ -56,6 +60,8 @@ export class AuthenticationMockService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
         clockTolerance: 7 * 24 * 60 * 60,
       });
       if (!payload.sub) {
@@ -156,7 +162,9 @@ export class AuthenticationMockService implements Authentication {
   ): Promise<string> {
     const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt();
+      .setIssuedAt()
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience(INTERNAL_TOKEN_AUDIENCE);
 
     if (expiresIn) {
       jwt.setExpirationTime(`${expiresIn}s`);

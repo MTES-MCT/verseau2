@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SignJWT } from 'jose';
 import { AuthenticationMockService } from './authentication.mock.service';
+import { INTERNAL_TOKEN_ISSUER } from './authentication';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
@@ -130,5 +132,33 @@ describe('AuthenticationMockService', () => {
 
   it('fails when extractSubjectFromExpiredToken receives an empty token', async () => {
     await expect(service.extractSubjectFromExpiredToken('')).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token signed with the secret but without iss/aud claims (token-type confusion)', async () => {
+    const forged = await new SignJWT({
+      sub: 'real-sub',
+      email: 'attacker@example.com',
+      itvCdn: 42,
+      isExpertNational: true,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    await expect(service.validateToken(forged)).rejects.toThrow(UnauthorizedException);
+    await expect(service.extractSubjectFromExpiredToken(forged)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token with a wrong audience even if correctly signed', async () => {
+    const forged = await new SignJWT({ sub: 'real-sub' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience('verseau2-oidc-transaction')
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    await expect(service.validateToken(forged)).rejects.toThrow(UnauthorizedException);
   });
 });

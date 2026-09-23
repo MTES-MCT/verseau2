@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import { AuthenticatedUser } from './authentication';
+import { AuthenticatedUser, INTERNAL_TOKEN_AUDIENCE, INTERNAL_TOKEN_ISSUER } from './authentication';
 
 // Register ESM mocks before loading AuthenticationService and its dependencies.
 esmJest.unstable_mockModule('openid-client', () => ({
@@ -19,6 +19,8 @@ esmJest.unstable_mockModule('openid-client', () => ({
 const mockSign = jest.fn().mockResolvedValue('mock-internal-jwt');
 const mockSetProtectedHeader = jest.fn().mockReturnThis();
 const mockSetIssuedAt = jest.fn().mockReturnThis();
+const mockSetIssuer = jest.fn().mockReturnThis();
+const mockSetAudience = jest.fn().mockReturnThis();
 const mockSetExpirationTime = jest.fn().mockReturnThis();
 
 esmJest.unstable_mockModule('jose', () => ({
@@ -26,6 +28,8 @@ esmJest.unstable_mockModule('jose', () => ({
   SignJWT: jest.fn().mockImplementation(() => ({
     setProtectedHeader: mockSetProtectedHeader,
     setIssuedAt: mockSetIssuedAt,
+    setIssuer: mockSetIssuer,
+    setAudience: mockSetAudience,
     setExpirationTime: mockSetExpirationTime,
     sign: mockSign,
   })),
@@ -159,7 +163,11 @@ describe('AuthenticationService', () => {
 
       const result = await service.validateToken('mock.jwt.token');
 
-      expect(jwtVerify).toHaveBeenCalledWith('mock.jwt.token', expect.any(Uint8Array), { algorithms: ['HS256'] });
+      expect(jwtVerify).toHaveBeenCalledWith('mock.jwt.token', expect.any(Uint8Array), {
+        algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
+      });
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-123',
@@ -243,6 +251,8 @@ describe('AuthenticationService', () => {
 
       expect(jwtVerify).toHaveBeenCalledWith('expired.jwt.token', expect.any(Uint8Array), {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
         clockTolerance: 7 * 24 * 60 * 60,
       });
       expect(result).toBe('user-123');
