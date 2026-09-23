@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { loadTchapConfig, loadLogsUrl } = require('./tchap-config');
+const { loadTchapConfig, loadEnvironment, loadLogsUrl } = require('./tchap-config');
 
 const env = {
   TCHAP_HOMESERVER_URL: 'https://matrix.example.org',
@@ -11,6 +11,7 @@ const env = {
   TCHAP_ROOM_ID: '!room:example.org',
   TCHAP_USER_ID: '@bot:example.org',
   SYNC_PG_LOGS_URL: 'https://logs.example.org/dashboard?service=sync-pg',
+  SYNC_PG_ENV: 'Recette',
 };
 const logger = { log() {}, warn() {}, error() {} };
 const config = { aws: { bucket: 'dump' }, pg: { connectionString: 'postgres://db/test' } };
@@ -39,6 +40,7 @@ function loadReport({ environment = env, collectFreshness = async () => freshnes
         case './config': return config;
         case './tchap-config': return {
           loadTchapConfig: () => loadTchapConfig(environment, log),
+          loadEnvironment: () => loadEnvironment(environment, log),
           loadLogsUrl: () => loadLogsUrl(environment, log),
         };
         case './restore-report.repository': return {
@@ -69,15 +71,26 @@ test('validates Tchap configuration and the optional logs link independently', (
   for (const value of ['invalid', 'javascript:alert(1)', 'https://user:password@logs.example.org', 'https://logs.example.org/\ninjected']) {
     assert.equal(loadLogsUrl({ SYNC_PG_LOGS_URL: value }, logger), undefined);
   }
+  assert.deepEqual(loadEnvironment({}, logger), undefined);
+  assert.deepEqual(loadEnvironment({ SYNC_PG_ENV: '  Recette ' }, logger), { label: 'Recette', isProduction: false });
+  assert.deepEqual(loadEnvironment({ SYNC_PG_ENV: 'production' }, logger), { label: 'production', isProduction: true });
+  assert.deepEqual(loadEnvironment({ SYNC_PG_ENV: 'PROD' }, logger), { label: 'PROD', isProduction: true });
+  const warned = [];
+  for (const value of ['', '  ', 'multi\nline', 'x'.repeat(41)]) {
+    assert.equal(loadEnvironment({ SYNC_PG_ENV: value }, { warn: (...args) => warned.push(args) }), undefined);
+  }
+  assert.equal(warned.length, 2);
 });
 
 for (const error of [undefined, 'Restore failed', '']) {
   test(`creates a final report and collects current freshness: ${JSON.stringify(error)}`, async () => {
     let queries = 0;
     const { createReport } = loadReport({ collectFreshness: async () => { queries++; return freshness; } });
-    const text = await createReport({ ...report, error });
+    const { text, html } = await createReport({ ...report, error });
     assert.equal(queries, 1);
     assert.ok(text.includes(error === undefined ? 'RÉUSSIE' : 'ERREUR'));
+    assert.equal(text.split('\n')[1], 'Environnement : Recette');
+    assert.equal(html, undefined);
     if (error !== undefined) assert.ok(text.includes(`Erreur : ${error}`));
     assert.ok(text.includes('- 2026-09-18 : lanceleau.t_orion_credentials.beginning_date'));
     assert.ok(text.includes('- valeur nulle : roseau.resa'));
@@ -89,10 +102,32 @@ for (const error of [undefined, 'Restore failed', '']) {
   });
 }
 
+test('highlights the production environment in bold HTML while keeping a plain-text body', async () => {
+  const { createReport } = loadReport({ environment: { ...env, SYNC_PG_ENV: 'production' } });
+  const { text, html } = await createReport({ ...report, error: '<script> & "quotes"' });
+  assert.ok(text.startsWith('Bilan de restauration PostgreSQL : ERREUR\nEnvironnement : PRODUCTION\n'));
+  assert.ok(html.startsWith('Bilan de restauration PostgreSQL : ERREUR<br>Environnement : <strong>PRODUCTION</strong><br>Erreur : &lt;script&gt; &amp; &quot;quotes&quot;'));
+});
+
+for (const [environmentValue, expected] of [[undefined, undefined], ['Recette', 'Recette']]) {
+  test(`environment line follows the SYNC_PG_ENV value: ${String(environmentValue)}`, async () => {
+    const { createReport } = loadReport({
+      environment: environmentValue === undefined ? { ...env, SYNC_PG_ENV: undefined } : env,
+    });
+    const { text, html } = await createReport(report);
+    if (expected) {
+      assert.ok(text.includes(`Environnement : ${expected}`));
+    } else {
+      assert.doesNotMatch(text, /Environnement/);
+    }
+    assert.equal(html, undefined);
+  });
+}
+
 test('formats unavailable filenames, empty exclusions, and duration boundaries', async () => {
   const { createReport } = loadReport();
   for (const [durationMs, duration] of [[0, '0 h 0 min 0 s'], [999, '0 h 0 min 0 s'], [60_000, '0 h 1 min 0 s'], [90_000_000, '25 h 0 min 0 s']]) {
-    const text = await createReport({ excludedTables: [], durationMs });
+    const { text } = await createReport({ excludedTables: [], durationMs });
     assert.ok(text.includes('Fichier du dump : indisponible'));
     assert.ok(text.includes('Tables exclues configurées :\n- aucune'));
     assert.ok(text.includes(`Durée du traitement : ${duration}`));
