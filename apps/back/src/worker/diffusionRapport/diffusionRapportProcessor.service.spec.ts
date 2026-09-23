@@ -92,7 +92,7 @@ describe('DiffusionRapportProcessorService', () => {
       findById: jest.fn().mockResolvedValue(masa),
       findByDepotId: jest.fn(),
       saveMasaRetour: jest.fn(),
-    } as unknown as jest.Mocked<MasaGateway>;
+    };
 
     depotGateway = {
       createDepot: jest.fn(),
@@ -102,38 +102,38 @@ describe('DiffusionRapportProcessorService', () => {
       updateDepot: jest.fn().mockResolvedValue(depot),
       findByUserId: jest.fn(),
       findByItvCdn: jest.fn(),
-    } as unknown as jest.Mocked<DepotGateway>;
+    };
 
     notificationGateway = {
       sendEmail: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<NotificationGateway>;
+    };
 
     controleGateway = {
       findByDepotId: jest.fn().mockResolvedValue([]),
       createControle: jest.fn(),
       createControles: jest.fn(),
-    } as unknown as jest.Mocked<ControleGateway>;
+    };
 
     reponseSandreGateway = {
       findByDepotId: jest.fn().mockResolvedValue([]),
       createReponseSandre: jest.fn(),
       updateReponseSandre: jest.fn(),
-    } as unknown as jest.Mocked<ReponseSandreGateway>;
+    };
 
     s3 = {
       upload: jest.fn().mockResolvedValue(undefined),
       download: jest.fn().mockResolvedValue(xmlBuffer),
-    } as unknown as jest.Mocked<S3>;
+    };
 
     agencyTransferClient = {
       send: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<TransferClient>;
+    };
 
     agenceEauClient = {
       getClient: jest.fn().mockReturnValue(agencyTransferClient),
       hasClient: jest.fn().mockReturnValue(true),
       getConfiguredAgencies: jest.fn().mockReturnValue(['SEINE-NORMANDIE']),
-    } as unknown as jest.Mocked<AgenceEauClient>;
+    };
 
     pdfGenerator = {
       generateReport: jest.fn().mockResolvedValue(pdfBuffer),

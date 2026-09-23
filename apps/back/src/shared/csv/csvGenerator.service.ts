@@ -15,7 +15,20 @@ export class CsvGeneratorService implements CsvGenerator {
       return '';
     }
 
-    const normalizedValue = value instanceof Date ? value.toISOString() : String(value);
+    let normalizedValue: string;
+    if (value instanceof Date) {
+      normalizedValue = value.toISOString();
+    } else if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint'
+    ) {
+      normalizedValue = String(value);
+    } else {
+      normalizedValue = JSON.stringify(value) ?? '';
+    }
+
     const escapedValue = normalizedValue.replace(/"/g, '""');
 
     return `"${escapedValue}"`;

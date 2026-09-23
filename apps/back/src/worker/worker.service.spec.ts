@@ -3,7 +3,6 @@ import type { CustomClsStore } from '@shared/logger/cls-store.interface';
 import { QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import type { LoggerService } from '@shared/logger/logger.service';
-import type { EmailProvider } from '@notification/email.provider';
 import type { FileProcessorService } from './fileProcessor/fileProcessor.service';
 import type { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
 import type { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
@@ -43,7 +42,7 @@ describe('WorkerService', () => {
       { process: jest.fn() } as unknown as ControleSandrePollProcessorService,
       { process: jest.fn() } as unknown as MasaWebhookProcessorService,
       { process: jest.fn() } as unknown as DiffusionRapportProcessorService,
-      { send: jest.fn() } as unknown as EmailProvider,
+      { send: jest.fn() },
       cls,
       logger,
     );

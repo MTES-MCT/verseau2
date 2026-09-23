@@ -5,9 +5,6 @@ import { MasaProvider } from '@masa/masa.provider';
 import { CodeParametre } from '@lib/dossier';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
 import { BilanService } from './bilan.service';
-import { LoggerService } from '@shared/logger/logger.service';
-import { LoggerServiceMock } from '@shared/logger/logger.mock';
-import { TraceCalls } from '@shared/logger/traceCalls.decorator';
 
 describe('BilanService', () => {
   let service: BilanService;
@@ -88,8 +85,8 @@ describe('BilanService', () => {
       expect(masaProviderMock.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU1']);
       expect(masaProviderMock.findBilanSteu).toHaveBeenCalledWith({
         ouvrageDepollutionIds: [123],
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
+        startDate: expect.any(Date) as Date,
+        endDate: expect.any(Date) as Date,
         parametreCodes: [
           CodeParametre.DBO5,
           CodeParametre.DCO,
@@ -177,8 +174,8 @@ describe('BilanService', () => {
       expect(masaProviderMock.findSclBatchBySandreCdas).toHaveBeenCalledWith(['SCL1']);
       expect(masaProviderMock.findBilanScl).toHaveBeenCalledWith({
         systemeCollecteIds: [456],
-        startDate: expect.any(Date),
-        endDate: expect.any(Date),
+        startDate: expect.any(Date) as Date,
+        endDate: expect.any(Date) as Date,
         page: 1,
         pageSize: 10,
       });

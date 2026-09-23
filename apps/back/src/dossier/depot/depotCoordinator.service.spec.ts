@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DepotCoordinatorService } from './depotCoordinator.service';
 import { DepotService } from './depot.service';
 import { QueueName, QueueGateway, RapportDestinataire } from '@queue/queue';
-import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus, DepotDto } from '@lib/dossier';
+import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { DepotModel } from './depot.model';
 
 jest.mock('pg-boss', () => ({}));
@@ -53,7 +53,7 @@ describe('DepotCoordinatorService', () => {
     const depotId = 'test-depot-id';
 
     it('should return early if depot is already in INTEGRE status', async () => {
-      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.INTEGRE } as DepotDto);
+      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.INTEGRE });
 
       await service.checkControlesCompletion(depotId);
 
@@ -63,7 +63,7 @@ describe('DepotCoordinatorService', () => {
     });
 
     it('should return early if depot is already in REJETE status', async () => {
-      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.REJETE } as DepotDto);
+      depotService.findById.mockResolvedValue({ id: depotId, status: DepotStatus.REJETE });
 
       await service.checkControlesCompletion(depotId);
 
@@ -72,7 +72,7 @@ describe('DepotCoordinatorService', () => {
     });
 
     it('should return early if depot step indicates SFTP is already dispatched', async () => {
-      depotService.findById.mockResolvedValue({ id: depotId, step: DepotStep.READY_FOR_SFTP } as DepotModel);
+      depotService.findById.mockResolvedValue({ id: depotId, step: DepotStep.READY_FOR_SFTP });
 
       await service.checkControlesCompletion(depotId);
 
@@ -88,7 +88,7 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as DepotModel);
+      });
 
       await service.checkControlesCompletion(depotId);
 
@@ -134,7 +134,7 @@ describe('DepotCoordinatorService', () => {
         path: '/path/to/file',
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as DepotModel);
+      });
 
       await service.checkControlesCompletion(depotId);
 
@@ -159,7 +159,7 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as DepotModel);
+      });
 
       await service.checkControlesCompletion(depotId);
 
@@ -184,7 +184,7 @@ describe('DepotCoordinatorService', () => {
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as DepotModel);
+      });
 
       await service.checkControlesCompletion(depotId);
 

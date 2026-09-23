@@ -49,7 +49,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
     try {
       // Poll the validation result from SANDRE
       const validationResult = await this.sandreService.getValidationResult(jeton);
-      const acceptationStatus = Number(validationResult.ACQ.AccuseReception.Acceptation) as SandreAcceptationStatus;
+      const acceptationStatus: SandreAcceptationStatus = Number(validationResult.ACQ.AccuseReception.Acceptation);
 
       this.logger.log(`Depot ${depotId} - SANDRE validation status`, {
         jeton,

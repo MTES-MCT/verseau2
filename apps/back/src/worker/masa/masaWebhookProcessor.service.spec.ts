@@ -29,7 +29,7 @@ describe('MasaWebhookProcessorService', () => {
       }),
       findByDepotId: jest.fn(),
       saveMasaRetour: jest.fn(),
-    } as unknown as jest.Mocked<MasaGateway>;
+    };
 
     depotGateway = {
       findDepotByIdWithUser: jest.fn().mockResolvedValue({ id: 'depot_1' }),
@@ -39,7 +39,7 @@ describe('MasaWebhookProcessorService', () => {
     queueService = {
       send: jest.fn().mockResolvedValue('job_1'),
       work: jest.fn(),
-    } as unknown as jest.Mocked<Queue>;
+    };
 
     const logger = {
       setContext: jest.fn(),

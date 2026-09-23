@@ -38,7 +38,7 @@ describe('ControleSandreUploadProcessorService', () => {
     mockQueueService = {
       send: jest.fn(),
       work: jest.fn(),
-    } as unknown as Queue;
+    };
 
     mockDepotCoordinatorService = {
       checkControlesCompletion: jest.fn().mockResolvedValue(undefined),

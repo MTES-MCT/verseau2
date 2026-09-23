@@ -12,4 +12,4 @@ async function bootstrapWorker() {
 
   await app.init();
 }
-bootstrapWorker();
+void bootstrapWorker();
