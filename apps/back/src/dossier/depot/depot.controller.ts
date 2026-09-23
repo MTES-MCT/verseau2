@@ -15,7 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { LoggerService } from '@shared/logger/logger.service';
-import { XML_EXTENSION, XML_MIME_TYPES } from '@shared/constants/mimeTypes';
+import { XML_EXTENSION, XML_MIME_TYPES, MAX_DEPOT_FILE_SIZE_BYTES } from '@shared/constants/mimeTypes';
 import { DeposerUnFichier } from './usecase/deposerUnFichier';
 import { DroitsDepotService } from './droitsDepot.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
@@ -62,7 +62,7 @@ export class DepotController {
 
   @Post('upload')
   @Throttle({ default: { ttl: 60000, limit: 20 } })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_DEPOT_FILE_SIZE_BYTES } }))
   async uploadFile(
     @UploadedFile() file: MulterFile | undefined,
     @Req() req: CustomRequest,
