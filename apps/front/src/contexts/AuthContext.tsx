@@ -15,15 +15,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     refreshAuthService.start();
-    const unsubscribe = authService.subscribeToSessionChanges((change) => {
-      if (change.type === 'cleared') {
-        setAuthenticatedUser(null);
-        setIsLoading(false);
-      }
-    });
-
     return () => {
-      unsubscribe();
       refreshAuthService.stop();
     };
   }, []);

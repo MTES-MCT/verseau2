@@ -33,25 +33,6 @@ interface OIDCConfiguration {
 
 const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
-const VERSEAU_ACCESS_DENIED_CODE = 'VERSEAU_ACCESS_DENIED';
-const VERSEAU_ACCESS_DENIED_MESSAGE = "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.";
-
-interface AuthenticationErrorPayload {
-  code?: unknown;
-  message?: unknown;
-}
-
-class AuthenticationHttpError extends Error {
-  readonly status: number;
-  readonly code?: string;
-
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.name = 'AuthenticationHttpError';
-    this.status = status;
-    this.code = code;
-  }
-}
 
 export class AuthService {
   private storage: Storage;
@@ -148,11 +129,9 @@ export class AuthService {
     });
 
     if (!response.ok) {
-      const error = await this.createAuthenticationError(response, "Échec de l'authentification");
-      if (error.code === VERSEAU_ACCESS_DENIED_CODE) {
-        this.clearSession();
-      }
-      throw error;
+      // Surface le message du backend lorsqu'il est présent (ex: accès Verseau refusé).
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(payload?.message ?? "Échec de l'authentification");
     }
 
     const data: AuthCallbackResponse = await response.json();
@@ -226,11 +205,7 @@ export class AuthService {
     });
 
     if (!response.ok) {
-      const error = await this.createAuthenticationError(response, 'Failed to refresh token');
-      if (error.code === VERSEAU_ACCESS_DENIED_CODE) {
-        this.clearSession();
-      }
-      throw error;
+      throw new Error('Failed to refresh token');
     }
 
     const data: RefreshResponse = await response.json();
@@ -337,23 +312,6 @@ export class AuthService {
     }
 
     this.sessionListeners.forEach((listener) => listener({ type: 'cleared' }));
-  }
-
-  private async createAuthenticationError(response: Response, fallbackMessage: string): Promise<AuthenticationHttpError> {
-    let payload: AuthenticationErrorPayload | null = null;
-    try {
-      payload = (await response.json()) as AuthenticationErrorPayload;
-    } catch {
-      // The status remains sufficient when an intermediary returns a non-JSON body.
-    }
-
-    const code = typeof payload?.code === 'string' ? payload.code : undefined;
-    if (code === VERSEAU_ACCESS_DENIED_CODE) {
-      return new AuthenticationHttpError(VERSEAU_ACCESS_DENIED_MESSAGE, response.status, code);
-    }
-
-    const message = typeof payload?.message === 'string' ? payload.message : fallbackMessage;
-    return new AuthenticationHttpError(message, response.status, code);
   }
 }
 

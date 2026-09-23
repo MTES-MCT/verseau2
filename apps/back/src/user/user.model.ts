@@ -20,7 +20,6 @@ export const VERSEAU_AUTHORIZED_ROLES: readonly ROLE[] = [
   ROLE.DEPOSANT_SATESE,
 ];
 
-export const VERSEAU_ACCESS_DENIED_CODE = 'VERSEAU_ACCESS_DENIED';
 export const VERSEAU_ACCESS_DENIED_MESSAGE =
   "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.";
 

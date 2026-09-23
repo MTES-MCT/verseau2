@@ -120,10 +120,14 @@ export class AuthenticationController {
         expiresIn: result.expiresIn,
       };
     } catch (error: unknown) {
+      this.logger.error(
+        `Authentication callback failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error : undefined,
+      );
+
+      // Les HttpException métier (ex: 403 droits Verseau) passent telles quelles,
+      // les autres erreurs deviennent un 401.
       if (error instanceof HttpException) {
-        if (error.getStatus() === 403) {
-          this.authentication.clearCookieResponse(res);
-        }
         throw error;
       }
 
@@ -167,10 +171,9 @@ export class AuthenticationController {
         error instanceof Error ? error : undefined,
       );
 
+      // Les HttpException métier (ex: 403 droits Verseau retirés) passent telles quelles,
+      // les autres erreurs deviennent un 401.
       if (error instanceof HttpException) {
-        if (error.getStatus() === 403) {
-          this.authentication.clearCookieResponse(res);
-        }
         throw error;
       }
 

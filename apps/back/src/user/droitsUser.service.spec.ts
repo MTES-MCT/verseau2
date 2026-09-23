@@ -71,13 +71,10 @@ describe('DroitsUserService', () => {
       });
     });
 
-    it('refuse un utilisateur sans rôle Verseau avec le code stable', async () => {
+    it('refuse un utilisateur sans rôle Verseau', async () => {
       mockMasaProvider.findRolesByPrCdn.mockResolvedValue([{ principalIdentifiant, roleOrionId: 100 }]);
 
-      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({
-        status: 403,
-        response: expect.objectContaining({ code: 'VERSEAU_ACCESS_DENIED' }) as object,
-      });
+      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({ status: 403 });
     });
 
     it('refuse un email absent sans interroger le référentiel', async () => {
@@ -93,14 +90,10 @@ describe('DroitsUserService', () => {
       expect(mockMasaProvider.findRolesByPrCdn).not.toHaveBeenCalled();
     });
 
-    it.each(['agent', 'roles'])('distingue une indisponibilité du référentiel lors de la lecture %s', async (step) => {
-      if (step === 'agent') {
-        mockMasaProvider.findAgByEmail.mockRejectedValue(new Error('database unavailable'));
-      } else {
-        mockMasaProvider.findRolesByPrCdn.mockRejectedValue(new Error('database unavailable'));
-      }
+    it('laisse remonter une indisponibilité du référentiel sans la transformer en refus', async () => {
+      mockMasaProvider.findAgByEmail.mockRejectedValue(new Error('database unavailable'));
 
-      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({ status: 503 });
+      await expect(service.resolveVerseauAccess(email)).rejects.toThrow('database unavailable');
     });
   });
 
