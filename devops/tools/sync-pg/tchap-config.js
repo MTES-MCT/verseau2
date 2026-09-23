@@ -5,6 +5,18 @@ const REQUIRED_VARIABLES = [
   'TCHAP_USER_ID',
 ];
 
+const MAX_ENVIRONMENT_LABEL_LENGTH = 40;
+
+function loadEnvironment(env = process.env, logger = console) {
+  const value = env.SYNC_PG_ENV?.trim();
+  if (!value) return undefined;
+  if (/[\u0000-\u001f\u007f]/.test(value) || value.length > MAX_ENVIRONMENT_LABEL_LENGTH) {
+    logger.warn('SYNC_PG_ENV invalide : mention de l\'environnement omise.');
+    return undefined;
+  }
+  return { label: value, isProduction: /^(production|prod)$/i.test(value) };
+}
+
 function isMatrixIdentifier(value, sigil) {
   return typeof value === 'string' && value.startsWith(sigil) && /^.[^:\s]+:[^\s]+$/.test(value);
 }
@@ -73,4 +85,4 @@ function loadTchapConfig(env = process.env, logger = console) {
   };
 }
 
-module.exports = { REQUIRED_VARIABLES, loadTchapConfig, loadLogsUrl };
+module.exports = { REQUIRED_VARIABLES, MAX_ENVIRONMENT_LABEL_LENGTH, loadEnvironment, loadTchapConfig, loadLogsUrl };

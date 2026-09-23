@@ -34,3 +34,41 @@ test('checks bot identity, caps request timeouts, and sends chunks sequentially'
   await assert.rejects(service.sendText('test'), /TCHAP_USER_ID/);
   assert.equal(sent.length, 0);
 });
+
+test('sends a single HTML-formatted message when the text fits in one chunk', async () => {
+  const sent = [];
+  class Client {
+    async doRequest() {}
+    async getUserId() { return '@bot:example.org'; }
+    async sendText(room, text) { sent.push({ room, text }); }
+    async sendMessage(room, content) { sent.push({ room, content }); }
+  }
+  const service = new TchapService({ userId: '@bot:example.org', roomId: '!room:example.org' }, {
+    MatrixClientClass: Client, maxMessageBytes: 100,
+  });
+  const text = 'Bilan : RÉUSSIE\nEnvironnement : PRODUCTION';
+  const html = 'Bilan : RÉUSSIE<br>Environnement : <strong>PRODUCTION</strong>';
+  await service.sendText(text, html);
+  assert.deepEqual(sent, [{
+    room: '!room:example.org',
+    content: { body: text, msgtype: 'm.text', format: 'org.matrix.custom.html', formatted_body: html },
+  }]);
+});
+
+test('falls back to plain chunked text when an HTML report must be split', async () => {
+  const sent = [];
+  class Client {
+    async doRequest() {}
+    async getUserId() { return '@bot:example.org'; }
+    async sendText(room, text) { sent.push({ room, text }); }
+    async sendMessage(room, content) { sent.push({ room, content }); }
+  }
+  const service = new TchapService({ userId: '@bot:example.org', roomId: '!room:example.org' }, {
+    MatrixClientClass: Client, maxMessageBytes: 100,
+  });
+  const text = 'Environnement : PRODUCTION\n' + 'détail '.repeat(100);
+  await service.sendText(text, 'Environnement : <strong>PRODUCTION</strong><br>' + 'détail '.repeat(100));
+  assert.ok(sent.length > 1);
+  assert.ok(sent.every(({ content }) => content === undefined));
+  assert.deepEqual(sent.map(({ text }) => text), splitMessage(text, 100));
+});

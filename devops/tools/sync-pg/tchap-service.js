@@ -83,7 +83,7 @@ class TchapService {
       );
   }
 
-  async sendText(text) {
+  async sendText(text, html) {
     const authenticatedUserId = await this.client.getUserId();
     if (authenticatedUserId !== this.config.userId) {
       throw new Error(
@@ -92,6 +92,15 @@ class TchapService {
     }
 
     const messages = splitMessage(text, this.maxMessageBytes);
+    if (html && messages.length === 1) {
+      await this.client.sendMessage(this.config.roomId, {
+        body: text,
+        msgtype: 'm.text',
+        format: 'org.matrix.custom.html',
+        formatted_body: html,
+      });
+      return;
+    }
     for (const message of messages) {
       await this.client.sendText(this.config.roomId, message);
     }
