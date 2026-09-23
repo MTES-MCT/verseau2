@@ -164,7 +164,6 @@ export class AuthenticationService implements Authentication {
     const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
     const user = this.mapOpenIdUserToUser(userInfo);
 
-    // Vérifier les droits et résoudre les claims avant toute création de compte local.
     const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
 
     // Forger le JWT interne Verseau2
@@ -265,7 +264,6 @@ export class AuthenticationService implements Authentication {
       throw new UnauthorizedException();
     }
 
-    // Re-vérifier les droits et re-résoudre les claims métier, qui peuvent avoir changé.
     const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
 
     // Re-forger le JWT interne Verseau2

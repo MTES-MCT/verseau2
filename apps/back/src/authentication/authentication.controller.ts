@@ -125,8 +125,6 @@ export class AuthenticationController {
         error instanceof Error ? error : undefined,
       );
 
-      // Les HttpException métier (ex: 403 droits Verseau) passent telles quelles,
-      // les autres erreurs deviennent un 401.
       if (error instanceof HttpException) {
         throw error;
       }
@@ -171,8 +169,6 @@ export class AuthenticationController {
         error instanceof Error ? error : undefined,
       );
 
-      // Les HttpException métier (ex: 403 droits Verseau retirés) passent telles quelles,
-      // les autres erreurs deviennent un 401.
       if (error instanceof HttpException) {
         throw error;
       }

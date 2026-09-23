@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { VERSEAU_ACCESS_DENIED_MESSAGE } from '@lib/shared';
 
 describe('authService.refreshToken deduplication', () => {
   let store: Record<string, string>;
@@ -207,7 +208,7 @@ describe('authService OIDC transaction', () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          message: "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.",
+          message: VERSEAU_ACCESS_DENIED_MESSAGE,
           error: 'Forbidden',
           statusCode: 403,
         }),
@@ -219,7 +220,7 @@ describe('authService OIDC transaction', () => {
     );
 
     await expect(authService.handleCallback('auth-code', 'server-state-abc')).rejects.toThrow(
-      "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.",
+      VERSEAU_ACCESS_DENIED_MESSAGE,
     );
   });
 });

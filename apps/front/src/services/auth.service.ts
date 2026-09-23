@@ -129,7 +129,6 @@ export class AuthService {
     });
 
     if (!response.ok) {
-      // Surface le message du backend lorsqu'il est présent (ex: accès Verseau refusé).
       const payload = (await response.json().catch(() => null)) as { message?: string } | null;
       throw new Error(payload?.message ?? "Échec de l'authentification");
     }

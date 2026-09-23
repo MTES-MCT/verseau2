@@ -19,11 +19,3 @@ export const VERSEAU_AUTHORIZED_ROLES: readonly ROLE[] = [
   ROLE.EXPERT_SERVICE_VERSEAU,
   ROLE.DEPOSANT_SATESE,
 ];
-
-export const VERSEAU_ACCESS_DENIED_MESSAGE =
-  "Vous ne disposez pas des autorisations nécessaires pour accéder à VERS'EAU.";
-
-export interface VerseauAccessClaims {
-  itvCdn: number;
-  isExpertNational: boolean;
-}

@@ -3,9 +3,11 @@ import { Inject } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { IntervenantForAuthentication } from '@referentiel/lanceleau/lanceleau.model';
+import { VerseauAccessClaims } from '@authentication/authentication';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MasaProvider } from '@masa/masa.provider';
-import { ROLE, VERSEAU_ACCESS_DENIED_MESSAGE, VERSEAU_AUTHORIZED_ROLES, VerseauAccessClaims } from './user.model';
+import { ROLE, VERSEAU_AUTHORIZED_ROLES } from './user.model';
+import { VERSEAU_ACCESS_DENIED_MESSAGE } from '@lib/shared';
 
 @Injectable()
 export class DroitsUserService {
@@ -17,11 +19,6 @@ export class DroitsUserService {
     this.logger.setContext(DroitsUserService.name);
   }
 
-  /**
-   * Vérifie que l'utilisateur détient au moins un rôle Verseau (t_orion_role_for_principal)
-   * et résout les claims métier issus de la même lecture du référentiel.
-   * Les indisponibilités du référentiel remontent telles quelles (jamais de refus fallacieux).
-   */
   async resolveVerseauAccess(email: string): Promise<VerseauAccessClaims> {
     if (!email.trim()) {
       throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
