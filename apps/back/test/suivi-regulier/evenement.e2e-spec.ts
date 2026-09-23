@@ -1,3 +1,11 @@
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({
+  path: path.join(__dirname, '../test.envfile'),
+  override: true,
+});
+
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
