@@ -29,6 +29,7 @@ interface OIDCConfiguration {
   scope: string;
   state: string;
   nonce: string;
+  codeChallenge: string;
 }
 
 const STORAGE_KEY = 'verseau_session';
@@ -75,7 +76,8 @@ export class AuthService {
     // Mémorise le state pour la vérification côté client au retour de l'IdP.
     this.sessionStorage.setItem(STATE_KEY, config.state);
 
-    // Build authorization URL
+    // Build authorization URL (PKCE : challenge S256 généré côté serveur,
+    // le code_verifier reste dans le cookie de transaction signé)
     const authUrl = new URL(config.authorizationEndpoint);
     authUrl.searchParams.set('client_id', config.clientId);
     authUrl.searchParams.set('response_type', 'code');
@@ -83,6 +85,8 @@ export class AuthService {
     authUrl.searchParams.set('scope', config.scope);
     authUrl.searchParams.set('state', config.state);
     authUrl.searchParams.set('nonce', config.nonce);
+    authUrl.searchParams.set('code_challenge', config.codeChallenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
 
     // Redirect to authorization endpoint
     window.location.href = authUrl.toString();

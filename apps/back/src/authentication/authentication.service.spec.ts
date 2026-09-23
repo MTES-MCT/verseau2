@@ -210,8 +210,13 @@ describe('AuthenticationService', () => {
       (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(minimalUserInfo);
 
-      const result = await service.handleCallback('mock-code', 'mock-nonce');
+      const result = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
+      // PKCE : le code_verifier est transmis à l'échange de code (openid-client).
+      expect(authorizationCodeGrant).toHaveBeenCalledWith(mockConfiguration, expect.any(URL), {
+        expectedNonce: 'mock-nonce',
+        pkceCodeVerifier: 'mock-code-verifier',
+      });
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'mock-access-token', 'user-minimal');
       expect(result.user).toEqual(
         expect.objectContaining({

@@ -1,12 +1,14 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SignJWT, jwtVerify } from 'jose';
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import type { CookieOptions, Response } from 'express';
 
 export interface OidcTransaction {
   state: string;
   nonce: string;
+  /** PKCE code_verifier (RFC 7636), secret côté serveur, envoyé à l'échange de code. */
+  codeVerifier: string;
 }
 
 const OIDC_TRANSACTION_ISSUER = 'verseau2';
@@ -35,10 +37,13 @@ export class OidcTransactionService {
     return '__Host-verseau_oidc';
   }
 
-  async createTransaction(): Promise<OidcTransaction & { token: string }> {
+  async createTransaction(): Promise<OidcTransaction & { token: string; codeChallenge: string }> {
     const state = randomUUID();
     const nonce = randomUUID();
-    const token = await new SignJWT({ state, nonce })
+    // RFC 7636 : code_verifier de 43 à 128 caractères, challenge = BASE64URL(SHA256(verifier)).
+    const codeVerifier = randomBytes(64).toString('base64url');
+    const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
+    const token = await new SignJWT({ state, nonce, code_verifier: codeVerifier })
       .setProtectedHeader({ alg: 'HS256', typ: OIDC_TRANSACTION_TYP })
       .setIssuedAt()
       .setIssuer(OIDC_TRANSACTION_ISSUER)
@@ -46,7 +51,7 @@ export class OidcTransactionService {
       .setJti(randomUUID())
       .setExpirationTime(`${OIDC_TRANSACTION_TTL_MS / 1000}s`)
       .sign(this.transactionKey);
-    return { state, nonce, token };
+    return { state, nonce, codeVerifier, codeChallenge, token };
   }
 
   async verifyTransactionToken(token: unknown): Promise<OidcTransaction> {
@@ -59,13 +64,21 @@ export class OidcTransactionService {
         issuer: OIDC_TRANSACTION_ISSUER,
         audience: OIDC_TRANSACTION_AUDIENCE,
         typ: OIDC_TRANSACTION_TYP,
-        requiredClaims: ['state', 'nonce', 'exp', 'iat', 'jti'],
+        requiredClaims: ['state', 'nonce', 'code_verifier', 'exp', 'iat', 'jti'],
       });
-      const { state, nonce } = payload as { state?: unknown; nonce?: unknown };
-      if (!isTransactionValue(state) || !isTransactionValue(nonce)) {
+      const {
+        state,
+        nonce,
+        code_verifier: codeVerifier,
+      } = payload as {
+        state?: unknown;
+        nonce?: unknown;
+        code_verifier?: unknown;
+      };
+      if (!isTransactionValue(state) || !isTransactionValue(nonce) || !isCodeVerifier(codeVerifier)) {
         throw new UnauthorizedException('Invalid OIDC transaction');
       }
-      return { state, nonce };
+      return { state, nonce, codeVerifier };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -108,4 +121,8 @@ export class OidcTransactionService {
 
 function isTransactionValue(value: unknown): value is string {
   return typeof value === 'string' && value.length >= 16 && value.length <= 256;
+}
+
+function isCodeVerifier(value: unknown): value is string {
+  return typeof value === 'string' && value.length >= 43 && value.length <= 128;
 }

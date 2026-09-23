@@ -115,9 +115,10 @@ describe('Controller (e2e) - Access control', () => {
       // L'attaquant initie sa propre connexion et récupère un couple valide pour son compte.
       const attacker = request.agent(app.getHttpServer());
       const attackerLogin = await attacker.get('/auth/login').expect(200);
-      const attackerBody = attackerLogin.body as { state?: unknown; nonce?: unknown };
+      const attackerBody = attackerLogin.body as { state?: unknown; nonce?: unknown; codeChallenge?: unknown };
       expect(typeof attackerBody.state).toBe('string');
       expect(typeof attackerBody.nonce).toBe('string');
+      expect(typeof attackerBody.codeChallenge).toBe('string');
       const attackerCookie = String(attackerLogin.headers['set-cookie'] ?? '');
       expect(attackerCookie).toMatch(/^__Host-verseau_oidc=/);
       expect(attackerCookie).toContain('; Secure');
@@ -126,8 +127,9 @@ describe('Controller (e2e) - Access control', () => {
       // La victime initie sa propre connexion dans son navigateur.
       const victim = request.agent(app.getHttpServer());
       const victimLogin = await victim.get('/auth/login').expect(200);
-      const victimBody = victimLogin.body as { state?: unknown };
+      const victimBody = victimLogin.body as { state?: unknown; codeChallenge?: unknown };
       expect(victimBody.state).not.toBe(attackerState);
+      expect(victimBody.codeChallenge).not.toBe(attackerBody.codeChallenge);
       const victimCookie = String(victimLogin.headers['set-cookie'] ?? '').split(';')[0];
       expect(victimCookie).toMatch(/^__Host-verseau_oidc=/);
       const handleCallbackSpy = jest.spyOn(authService, 'handleCallback');

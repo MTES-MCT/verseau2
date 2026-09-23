@@ -82,9 +82,14 @@ export class AuthenticationMockService implements Authentication {
     });
   }
 
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
+  async handleCallback(
+    code: string,
+    nonce: string,
+    codeVerifier: string,
+  ): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     void code;
     void nonce;
+    void codeVerifier;
     const user = await this.getMockUser();
 
     const expiresIn = 3600;

@@ -68,7 +68,7 @@ describe('AuthenticationMockService', () => {
   });
 
   it('returns the configured real user from OIDC_MOCK_EMAIL', async () => {
-    const result = await service.handleCallback('mock-code', 'mock-nonce');
+    const result = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
     expect(mockDataSource.getRepository).toHaveBeenCalledWith(UserEntity);
     expect(mockFindOne).toHaveBeenCalledWith({ where: { email: 'real.user@example.com' } });
@@ -92,12 +92,12 @@ describe('AuthenticationMockService', () => {
   });
 
   it('extracts subject from a token issued by the mock service', async () => {
-    const { accessToken } = await service.handleCallback('mock-code', 'mock-nonce');
+    const { accessToken } = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
     await expect(service.extractSubjectFromExpiredToken(accessToken)).resolves.toBe('real-sub');
   });
 
   it('refreshes tokens for the same mock user', async () => {
-    const initial = await service.handleCallback('mock-code', 'mock-nonce');
+    const initial = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
     const refreshed = await service.refreshTokens(initial.refreshToken ?? '', 'real-sub');
 
@@ -113,13 +113,17 @@ describe('AuthenticationMockService', () => {
   it('fails when OIDC_MOCK_EMAIL is missing', async () => {
     mockConfigService.get.mockReturnValue(undefined);
 
-    await expect(service.handleCallback('mock-code', 'mock-nonce')).rejects.toThrow(UnauthorizedException);
+    await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('fails when the configured user does not exist', async () => {
     mockFindOne.mockResolvedValueOnce(null);
 
-    await expect(service.handleCallback('mock-code', 'mock-nonce')).rejects.toThrow(UnauthorizedException);
+    await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('fails when the expected subject does not match on refresh', async () => {

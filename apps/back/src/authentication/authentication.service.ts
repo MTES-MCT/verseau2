@@ -154,14 +154,21 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
+  async handleCallback(
+    code: string,
+    nonce: string,
+    codeVerifier: string,
+  ): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     const configuration = await this.getConfiguration();
     const callbackUrl = new URL(this.redirectUri);
     callbackUrl.searchParams.set('code', code);
 
+    // PKCE (RFC 7636) : le code_verifier vient du cookie de transaction signé,
+    // jamais du corps HTTP. Le challenge S256 correspondant a été envoyé dans
+    // la requête d'autorisation via GET /auth/login.
     const tokens = await authorizationCodeGrant(configuration, callbackUrl, {
       expectedNonce: nonce,
-      pkceCodeVerifier: undefined,
+      pkceCodeVerifier: codeVerifier,
     });
 
     const idTokenClaims = tokens.claims();
