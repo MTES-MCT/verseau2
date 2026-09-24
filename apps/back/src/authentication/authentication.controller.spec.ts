@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { AuthenticationController } from './authentication.controller';
 import { Authentication, OIDCTokens } from './authentication';
 import { OidcTransactionService } from './oidcTransaction.service';
@@ -47,6 +47,7 @@ describe('AuthenticationController', () => {
     } as unknown as jest.Mocked<UserService>;
 
     mockDroitsUserService = {
+      resolveVerseauAccess: jest.fn(),
       resolveItvCdn: jest.fn(),
       isExpertNationalVerseau: jest.fn(),
       canConsultDepot: jest.fn(),
@@ -181,6 +182,16 @@ describe('AuthenticationController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
       expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
+
+    it('préserve le 403 lorsque les droits Verseau ont été retirés', async () => {
+      const req = makeRequest({ refresh_token: 'refresh-token', access_token: 'internal-jwt' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(new ForbiddenException());
+
+      await expect(controller.refresh(req, res)).rejects.toMatchObject({ status: 403 });
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
   });
 
   describe('logout', () => {
@@ -301,6 +312,18 @@ describe('AuthenticationController', () => {
         controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
       ).rejects.toThrow(UnauthorizedException);
       expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
+
+    it('préserve le 403 et ne synchronise pas le compte refusé', async () => {
+      const res = makeResponse();
+      mockAuthentication.handleCallback.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
+      ).rejects.toMatchObject({ status: 403 });
+
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
       expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
   });

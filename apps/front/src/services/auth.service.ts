@@ -129,8 +129,8 @@ export class AuthService {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Authentication failed: ${error}`);
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(payload?.message ?? "Échec de l'authentification");
     }
 
     const data: AuthCallbackResponse = await response.json();

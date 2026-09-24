@@ -180,14 +180,12 @@ export class AuthenticationMockService implements Authentication {
       throw new UnauthorizedException(MOCK_AUTHENTICATION_FAILED_MESSAGE);
     }
 
-    const [itvCdn, isExpertNational] = await Promise.all([
-      this.droitsUserService.resolveItvCdn(user.sub),
-      this.droitsUserService.isExpertNationalVerseau(user.sub),
-    ]);
+    const email = user.email || mockEmail;
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(email);
 
     return {
       cerbereId: user.sub,
-      mel: user.email || mockEmail,
+      mel: email,
       itvCdn,
       isExpertNational,
       nom: user.nom || undefined,

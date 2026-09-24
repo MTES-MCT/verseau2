@@ -41,13 +41,14 @@ describe('AuthenticationMockService', () => {
       prenom: 'User',
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as UserEntity);
+    });
 
     mockDataSource = {
       getRepository: jest.fn().mockReturnValue({ findOne: mockFindOne }),
     };
 
     mockDroitsUserService = {
+      resolveVerseauAccess: jest.fn().mockResolvedValue({ itvCdn: 917072, isExpertNational: false }),
       resolveItvCdn: jest.fn().mockResolvedValue(917072),
       isExpertNationalVerseau: jest.fn().mockResolvedValue(false),
     } as unknown as jest.Mocked<DroitsUserService>;
@@ -70,7 +71,7 @@ describe('AuthenticationMockService', () => {
     expect(mockDataSource.getRepository).toHaveBeenCalledWith(UserEntity);
     expect(mockFindOne).toHaveBeenCalledWith({ where: { email: 'real.user@example.com' } });
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('real-sub');
+    expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('real.user@example.com');
     expect(result.user).toEqual({
       cerbereId: 'real-sub',
       mel: 'real.user@example.com',

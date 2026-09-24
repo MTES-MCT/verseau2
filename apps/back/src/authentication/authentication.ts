@@ -38,6 +38,11 @@ export interface AuthenticatedUserAndNomPrenom extends AuthenticatedUser {
   prenom?: string;
 }
 
+export interface VerseauAccessClaims {
+  itvCdn: number;
+  isExpertNational: boolean;
+}
+
 export interface AuthenticatedUserWithIntervenant {
   user: AuthenticatedUser;
   intervenant: IntervenantForAuthentication | null;

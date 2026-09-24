@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { VERSEAU_ACCESS_DENIED_MESSAGE } from '@lib/shared';
 
 describe('authService.refreshToken deduplication', () => {
+  let store: Record<string, string>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.stubGlobal('fetch', vi.fn());
 
     // Provide localStorage stub
-    const store: Record<string, string> = {};
+    store = {};
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => store[key] ?? null,
       setItem: (key: string, value: string) => {
@@ -197,5 +200,27 @@ describe('authService OIDC transaction', () => {
     await expect(authService.handleCallback('attacker-code', 'attacker-state')).rejects.toThrow();
 
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('exposes the backend message when Verseau access is denied', async () => {
+    const authService = await loadAuthService();
+    sessionStore['oidc_state'] = 'server-state-abc';
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          message: VERSEAU_ACCESS_DENIED_MESSAGE,
+          error: 'Forbidden',
+          statusCode: 403,
+        }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await expect(authService.handleCallback('auth-code', 'server-state-abc')).rejects.toThrow(
+      VERSEAU_ACCESS_DENIED_MESSAGE,
+    );
   });
 });
