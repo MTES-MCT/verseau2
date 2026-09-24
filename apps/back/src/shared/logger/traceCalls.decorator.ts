@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return*/
 
-import { Logger, LogLevel } from '@nestjs/common';
+import { LogLevel } from '@nestjs/common';
 import { performance } from 'perf_hooks';
 import { ulid } from 'ulid';
 import { LoggerService } from './logger.service';
@@ -10,7 +10,7 @@ function bufferLine(logLines: string[], callIdPrefix: string, msg: string) {
 }
 
 function flush(logLines: string[], logger: LoggerService, level: LogLevel) {
-  const logMethod = logger[level as keyof Logger] as (msg: string) => void;
+  const logMethod = (logger as unknown as Record<LogLevel, (msg: string) => void>)[level];
   if (typeof logMethod === 'function') {
     logLines.forEach((line) => logMethod.call(logger, line));
   } else {

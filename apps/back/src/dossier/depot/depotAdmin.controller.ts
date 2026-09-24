@@ -30,6 +30,7 @@ export class DepotAdminController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=rapport-${depot.id}.pdf`,
+      'Cache-Control': 'private, no-store',
     });
 
     res.send(pdfBuffer);
@@ -45,6 +46,7 @@ export class DepotAdminController {
 
     res.attachment(depot.nomOriginalFichier);
     res.type('application/xml');
+    res.set('Cache-Control', 'private, no-store');
     res.send(xmlBuffer);
   }
 }

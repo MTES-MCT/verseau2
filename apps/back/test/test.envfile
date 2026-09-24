@@ -16,7 +16,7 @@ SFTP_USERNAME=user
 SFTP_PRIVATE_KEY=key
 
 # JWT interne Verseau2
-JWT_SECRET=unsupersecret
+JWT_SECRET=unsupersecretde32caracteresminimum
 
 # MASA webhook
 MASA_API_KEY=private-token

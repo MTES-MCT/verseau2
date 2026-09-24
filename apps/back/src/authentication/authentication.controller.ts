@@ -48,7 +48,14 @@ export class AuthenticationController {
     const transaction = await this.oidcTransaction.createTransaction();
     this.oidcTransaction.setTransactionCookie(res, transaction.token);
     res.set('Cache-Control', 'no-store');
-    return { ...configuration, state: transaction.state, nonce: transaction.nonce };
+    // Le code_challenge (PKCE S256) part vers l'IdP ; le code_verifier
+    // reste dans le cookie signé jusqu'à l'échange du code.
+    return {
+      ...configuration,
+      state: transaction.state,
+      nonce: transaction.nonce,
+      codeChallenge: transaction.codeChallenge,
+    };
   }
 
   @Post('callback')
@@ -74,7 +81,7 @@ export class AuthenticationController {
     }
 
     // La tentative doit avoir été créée par ce même navigateur via GET /auth/login.
-    let transaction: { state: string; nonce: string };
+    let transaction: { state: string; nonce: string; codeVerifier: string };
     try {
       transaction = await this.oidcTransaction.verifyTransactionToken(
         this.oidcTransaction.readTransactionToken(req.cookies),
@@ -92,8 +99,9 @@ export class AuthenticationController {
     this.oidcTransaction.clearTransactionCookie(res);
 
     try {
-      // Le nonce utilisé est celui du cookie vérifié, jamais celui du corps HTTP.
-      const result = await this.authentication.handleCallback(code, transaction.nonce);
+      // Le nonce et le code_verifier utilisés viennent du cookie vérifié,
+      // jamais du corps HTTP.
+      const result = await this.authentication.handleCallback(code, transaction.nonce, transaction.codeVerifier);
 
       // Sync user data to DB
       try {

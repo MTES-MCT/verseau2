@@ -17,7 +17,6 @@ import { AgacEntity } from './entities/agac.entity';
 import { PleEntity } from './entities/ple.entity';
 import { AlrEntity } from './entities/alr.entity';
 import { PabEntity } from './entities/pab.entity';
-import { ItvEntity } from '@referentiel/lanceleau/entities/itv.entity';
 import { CdbEntity } from '@referentiel/lanceleau/entities/cdb.entity';
 import {
   SclDetailRow,

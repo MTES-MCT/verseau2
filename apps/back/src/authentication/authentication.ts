@@ -1,3 +1,6 @@
+export const INTERNAL_TOKEN_ISSUER = 'verseau2';
+export const INTERNAL_TOKEN_AUDIENCE = 'verseau2-api';
+
 export interface OIDCTokens {
   accessToken: string;
   refreshToken?: string;
@@ -20,7 +23,11 @@ export interface Authentication {
   /** Verify the internal JWT signature (ignoring expiration) and return the `sub` claim. */
   extractSubjectFromExpiredToken(token: string): Promise<string>;
   getOIDCConfiguration(): Promise<OIDCConfiguration>;
-  handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
+  handleCallback(
+    code: string,
+    nonce: string,
+    codeVerifier: string,
+  ): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }>;
   refreshTokens(refreshToken: string, expectedSubject: string): Promise<OIDCTokens>;
   buildCookieResponse(res: Response, tokens: OIDCTokens): void;
   clearCookieResponse(res: Response): void;

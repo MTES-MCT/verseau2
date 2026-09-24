@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
 import { SignJWT } from 'jose';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import type { Response } from 'express';
 import { OidcTransactionService } from './oidcTransaction.service';
 
@@ -42,6 +42,7 @@ describe('OidcTransactionService', () => {
     await expect(service.verifyTransactionToken(transaction.token)).resolves.toEqual({
       state: transaction.state,
       nonce: transaction.nonce,
+      codeVerifier: transaction.codeVerifier,
     });
   });
 
@@ -54,7 +55,29 @@ describe('OidcTransactionService', () => {
     await expect(second.verifyTransactionToken(transaction.token)).resolves.toEqual({
       state: transaction.state,
       nonce: transaction.nonce,
+      codeVerifier: transaction.codeVerifier,
     });
+  });
+
+  it('should derive codeChallenge as S256 of codeVerifier (PKCE RFC 7636)', async () => {
+    const service = await buildService();
+
+    const transaction = await service.createTransaction();
+
+    const expectedChallenge = createHash('sha256').update(transaction.codeVerifier).digest('base64url');
+    expect(transaction.codeChallenge).toBe(expectedChallenge);
+    expect(transaction.codeVerifier.length).toBeGreaterThanOrEqual(43);
+    expect(transaction.codeVerifier.length).toBeLessThanOrEqual(128);
+  });
+
+  it('should generate a unique codeVerifier per transaction', async () => {
+    const service = await buildService();
+
+    const first = await service.createTransaction();
+    const second = await service.createTransaction();
+
+    expect(first.codeVerifier).not.toBe(second.codeVerifier);
+    expect(first.codeChallenge).not.toBe(second.codeChallenge);
   });
 
   it('should reject a tampered transaction token', async () => {
@@ -89,6 +112,40 @@ describe('OidcTransactionService', () => {
       .sign(derivedKey);
 
     await expect(service.verifyTransactionToken(expired)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject a valid transaction token without code_verifier (pre-PKCE token)', async () => {
+    const service = await buildService();
+    const derivedKey = createHmac('sha256', JWT_SECRET).update('verseau2-oidc-transaction-v1').digest();
+    const noVerifier = await new SignJWT({ state: 's'.repeat(32), nonce: 'n'.repeat(32) })
+      .setProtectedHeader({ alg: 'HS256', typ: 'OIDC-TX' })
+      .setIssuedAt()
+      .setIssuer('verseau2')
+      .setAudience('verseau2-oidc-transaction')
+      .setJti('jti')
+      .setExpirationTime('10m')
+      .sign(derivedKey);
+
+    await expect(service.verifyTransactionToken(noVerifier)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject a transaction token with an out-of-spec code_verifier length', async () => {
+    const service = await buildService();
+    const derivedKey = createHmac('sha256', JWT_SECRET).update('verseau2-oidc-transaction-v1').digest();
+    const shortVerifier = await new SignJWT({
+      state: 's'.repeat(32),
+      nonce: 'n'.repeat(32),
+      code_verifier: 'too-short',
+    })
+      .setProtectedHeader({ alg: 'HS256', typ: 'OIDC-TX' })
+      .setIssuedAt()
+      .setIssuer('verseau2')
+      .setAudience('verseau2-oidc-transaction')
+      .setJti('jti')
+      .setExpirationTime('10m')
+      .sign(derivedKey);
+
+    await expect(service.verifyTransactionToken(shortVerifier)).rejects.toThrow(UnauthorizedException);
   });
 
   it('should reject missing or malformed tokens without leaking details', async () => {

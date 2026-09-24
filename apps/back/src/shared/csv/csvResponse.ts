@@ -6,6 +6,7 @@ export function sendCsvResponse(res: Response, filename: string, csvContent: str
   res.set({
     'Content-Type': CSV_CONTENT_TYPE,
     'Content-Disposition': `attachment; filename=${sanitizeFilename(filename)}`,
+    'Cache-Control': 'private, no-store',
   });
 
   res.send(csvContent);

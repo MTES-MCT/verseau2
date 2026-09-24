@@ -17,6 +17,8 @@ import {
   OIDCTokens,
   OIDCConfiguration,
   AuthenticatedUserAndNomPrenom,
+  INTERNAL_TOKEN_ISSUER,
+  INTERNAL_TOKEN_AUDIENCE,
 } from './authentication';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
@@ -75,7 +77,9 @@ export class AuthenticationService implements Authentication {
   ): Promise<string> {
     const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt();
+      .setIssuedAt()
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience(INTERNAL_TOKEN_AUDIENCE);
 
     if (expiresIn) {
       jwt.setExpirationTime(`${expiresIn}s`);
@@ -94,6 +98,8 @@ export class AuthenticationService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
       });
 
       return this.mapInternalClaimsToUser(payload);
@@ -112,6 +118,8 @@ export class AuthenticationService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
         // Le refresh est appelé précisément quand l'access token a expiré.
         // On tolère une expiration de 7 jours (durée max du refresh token).
         clockTolerance: 7 * 24 * 60 * 60,
@@ -146,14 +154,21 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
+  async handleCallback(
+    code: string,
+    nonce: string,
+    codeVerifier: string,
+  ): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     const configuration = await this.getConfiguration();
     const callbackUrl = new URL(this.redirectUri);
     callbackUrl.searchParams.set('code', code);
 
+    // PKCE (RFC 7636) : le code_verifier vient du cookie de transaction signé,
+    // jamais du corps HTTP. Le challenge S256 correspondant a été envoyé dans
+    // la requête d'autorisation via GET /auth/login.
     const tokens = await authorizationCodeGrant(configuration, callbackUrl, {
       expectedNonce: nonce,
-      pkceCodeVerifier: undefined,
+      pkceCodeVerifier: codeVerifier,
     });
 
     const idTokenClaims = tokens.claims();

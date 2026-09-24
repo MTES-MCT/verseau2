@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SignJWT } from 'jose';
 import { AuthenticationMockService } from './authentication.mock.service';
+import { INTERNAL_TOKEN_ISSUER } from './authentication';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
@@ -66,7 +68,7 @@ describe('AuthenticationMockService', () => {
   });
 
   it('returns the configured real user from OIDC_MOCK_EMAIL', async () => {
-    const result = await service.handleCallback('mock-code', 'mock-nonce');
+    const result = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
     expect(mockDataSource.getRepository).toHaveBeenCalledWith(UserEntity);
     expect(mockFindOne).toHaveBeenCalledWith({ where: { email: 'real.user@example.com' } });
@@ -90,12 +92,12 @@ describe('AuthenticationMockService', () => {
   });
 
   it('extracts subject from a token issued by the mock service', async () => {
-    const { accessToken } = await service.handleCallback('mock-code', 'mock-nonce');
+    const { accessToken } = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
     await expect(service.extractSubjectFromExpiredToken(accessToken)).resolves.toBe('real-sub');
   });
 
   it('refreshes tokens for the same mock user', async () => {
-    const initial = await service.handleCallback('mock-code', 'mock-nonce');
+    const initial = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
     const refreshed = await service.refreshTokens(initial.refreshToken ?? '', 'real-sub');
 
@@ -111,13 +113,17 @@ describe('AuthenticationMockService', () => {
   it('fails when OIDC_MOCK_EMAIL is missing', async () => {
     mockConfigService.get.mockReturnValue(undefined);
 
-    await expect(service.handleCallback('mock-code', 'mock-nonce')).rejects.toThrow(UnauthorizedException);
+    await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('fails when the configured user does not exist', async () => {
     mockFindOne.mockResolvedValueOnce(null);
 
-    await expect(service.handleCallback('mock-code', 'mock-nonce')).rejects.toThrow(UnauthorizedException);
+    await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('fails when the expected subject does not match on refresh', async () => {
@@ -130,5 +136,33 @@ describe('AuthenticationMockService', () => {
 
   it('fails when extractSubjectFromExpiredToken receives an empty token', async () => {
     await expect(service.extractSubjectFromExpiredToken('')).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token signed with the secret but without iss/aud claims (token-type confusion)', async () => {
+    const forged = await new SignJWT({
+      sub: 'real-sub',
+      email: 'attacker@example.com',
+      itvCdn: 42,
+      isExpertNational: true,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    await expect(service.validateToken(forged)).rejects.toThrow(UnauthorizedException);
+    await expect(service.extractSubjectFromExpiredToken(forged)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token with a wrong audience even if correctly signed', async () => {
+    const forged = await new SignJWT({ sub: 'real-sub' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience('verseau2-oidc-transaction')
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    await expect(service.validateToken(forged)).rejects.toThrow(UnauthorizedException);
   });
 });

@@ -22,6 +22,8 @@ const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ 
 const TRANSACTION_COOKIE = '__Host-verseau_oidc';
 const TRANSACTION_STATE = 'state-abc';
 const TRANSACTION_NONCE = 'nonce-from-cookie';
+const TRANSACTION_CODE_VERIFIER = 'code-verifier-from-cookie';
+const TRANSACTION_CODE_CHALLENGE = 'code-challenge-abc';
 
 describe('AuthenticationController', () => {
   let controller: AuthenticationController;
@@ -72,6 +74,7 @@ describe('AuthenticationController', () => {
     mockOidcTransaction.verifyTransactionToken.mockResolvedValue({
       state: TRANSACTION_STATE,
       nonce: TRANSACTION_NONCE,
+      codeVerifier: TRANSACTION_CODE_VERIFIER,
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -216,14 +219,24 @@ describe('AuthenticationController', () => {
       mockOidcTransaction.createTransaction.mockResolvedValue({
         state: TRANSACTION_STATE,
         nonce: TRANSACTION_NONCE,
+        codeVerifier: TRANSACTION_CODE_VERIFIER,
+        codeChallenge: TRANSACTION_CODE_CHALLENGE,
         token: 'signed-transaction-token',
       });
 
       const result = await controller.login(res);
 
-      expect(result).toEqual(expect.objectContaining({ state: TRANSACTION_STATE, nonce: TRANSACTION_NONCE }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          state: TRANSACTION_STATE,
+          nonce: TRANSACTION_NONCE,
+          codeChallenge: TRANSACTION_CODE_CHALLENGE,
+        }),
+      );
       expect(mockOidcTransaction.setTransactionCookie).toHaveBeenCalledWith(res, 'signed-transaction-token');
       expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      // Le code_verifier ne doit jamais quitter le serveur.
+      expect(result).not.toHaveProperty('codeVerifier');
     });
   });
 
@@ -292,8 +305,12 @@ describe('AuthenticationController', () => {
 
       const result = await controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res);
 
-      // Le nonce utilisé vient du cookie vérifié, jamais du corps HTTP.
-      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith('auth-code', TRANSACTION_NONCE);
+      // Le nonce et le code_verifier utilisés viennent du cookie vérifié, jamais du corps HTTP.
+      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith(
+        'auth-code',
+        TRANSACTION_NONCE,
+        TRANSACTION_CODE_VERIFIER,
+      );
       expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
       expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith('user-123', {
         email: 'user@example.com',

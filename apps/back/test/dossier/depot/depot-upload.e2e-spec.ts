@@ -1,3 +1,11 @@
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({
+  path: path.join(__dirname, '../../test.envfile'),
+  override: true,
+});
+
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -7,6 +15,7 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
+import { MAX_DEPOT_FILE_SIZE_BYTES } from '@shared/constants/mimeTypes';
 import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { Authentication } from '@authentication/authentication';
 import { AuthenticationMiddleware } from '@authentication/authentication.middleware';
@@ -164,6 +173,19 @@ describe('Depot upload (e2e)', () => {
       .set('Cookie', ['access_token=test-token'])
       .attach('file', Buffer.from('plain text'), { filename: 'sample.txt', contentType: 'text/plain' })
       .expect(400);
+
+    expect(s3Mock.uploads).toHaveLength(0);
+    expect(queueMock.jobs).toHaveLength(0);
+  });
+
+  it('rejects files exceeding the size limit with 413 and stores nothing', async () => {
+    const oversizedContent = Buffer.alloc(MAX_DEPOT_FILE_SIZE_BYTES + 1, 'a');
+
+    await request(app.getHttpServer())
+      .post('/depot/upload')
+      .set('Cookie', ['access_token=test-token'])
+      .attach('file', oversizedContent, { filename: 'sample.xml', contentType: 'application/xml' })
+      .expect(413);
 
     expect(s3Mock.uploads).toHaveLength(0);
     expect(queueMock.jobs).toHaveLength(0);

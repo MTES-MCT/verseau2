@@ -51,7 +51,7 @@ export class SandreMockService {
    * @param params Upload parameters including file and scenario information
    * @returns Token response with links to check validation status
    */
-  async validateFile(params: SandreUploadParams): Promise<SandreTokenResponse> {
+  validateFile(params: SandreUploadParams): Promise<SandreTokenResponse> {
     this.logger.warn('MOCK: Validating file with SANDRE', {
       xsd: params.xsd,
       nomSI: params.nomSI,
@@ -97,11 +97,11 @@ export class SandreMockService {
       acceptationStatus,
     });
 
-    return {
+    return Promise.resolve({
       jeton,
       lienAcquittement: `http://mock.sandre.eaufrance.fr/acquittement/${jeton}`,
       lienCertificat: `http://mock.sandre.eaufrance.fr/certificat/${jeton}`,
-    };
+    });
   }
 
   /**
@@ -109,7 +109,7 @@ export class SandreMockService {
    * @param token The jeton token from validateFile response
    * @returns Validation result with status and errors
    */
-  async getValidationResult(token: string): Promise<SandreValidationResult> {
+  getValidationResult(token: string): Promise<SandreValidationResult> {
     this.logger.warn('MOCK: Fetching validation result', { token });
 
     const validationData = this.validationResults.get(token);
@@ -205,7 +205,7 @@ export class SandreMockService {
       },
     };
 
-    return mockResult;
+    return Promise.resolve(mockResult);
   }
 
   /**

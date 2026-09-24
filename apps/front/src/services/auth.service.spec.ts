@@ -156,6 +156,7 @@ describe('authService OIDC transaction', () => {
         scope: 'openid profile',
         state,
         nonce: 'server-nonce-abc',
+        codeChallenge: 'server-code-challenge-abc',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
