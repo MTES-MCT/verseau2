@@ -76,6 +76,16 @@ services:
     volumes:
       - ../tools/sync-pg:/app
       - sync-pg-node-modules:/app/node_modules
+    command: ['pnpm', 'start']
+  
+  sync-pg-test:
+    build: ../tools/sync-pg
+    container_name: verseau2-sync-pg-test
+    networks:
+      - verseau2-network
+    volumes:
+      - ../tools/sync-pg:/app
+      - sync-pg-node-modules:/app/node_modules
     command: ['pnpm', 'run', 'dev']
 
 volumes:

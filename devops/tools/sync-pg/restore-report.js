@@ -8,14 +8,22 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;');
 }
 
-async function createReport({ error, fileName, excludedTables, durationMs }) {
-  const lines = [`Bilan de restauration PostgreSQL : ${error === undefined ? 'RÉUSSIE' : 'ERREUR'}`];
+async function createReport({ error, fileName, excludedTables, durationMs, skipped = false }) {
+  let status = 'RÉUSSIE';
+  if (error !== undefined) {
+    status = 'ERREUR';
+  } else if (skipped) {
+    status = 'IGNORÉE';
+  }
+  const lines = [`Bilan de restauration PostgreSQL : ${status}`];
   const environment = loadEnvironment();
   if (environment) {
     lines.push(`Environnement : ${environment.isProduction ? 'PRODUCTION' : environment.label}`);
   }
   if (error !== undefined) {
     lines.push(`Erreur : ${error}`);
+  } else if (skipped) {
+    lines.push('Aucun nouveau dump : ce fichier a déjà été restauré.');
   }
 
   const seconds = Math.floor(durationMs / 1000);
