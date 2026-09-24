@@ -253,9 +253,10 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, systemeCollecteCode, trancheObligationRfa, impact, page, pageSize } = filters;
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!findConformiteScl called with filters:', filters);
+    const { systemeCollecteIds, year, systemeCollecteCode, trancheObligationRfa, impact, page, pageSize } = filters;
 
-    if (ouvrageDepollutionIds.length === 0) {
+    if (systemeCollecteIds.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -284,8 +285,8 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
     };
 
     const anneePlaceholder = addParam(year);
-    const steuPlaceholders = ouvrageDepollutionIds.map((steuCdn) => addParam(steuCdn)).join(', ');
-    const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
+    const sclPlaceholders = systemeCollecteIds.map((sclCdn) => addParam(sclCdn)).join(', ');
+    const whereClauses = [`scl.scl_cdn IN (${sclPlaceholders})`];
 
     if (systemeCollecteCode) {
       whereClauses.push(`RTRIM(scl.scl_sandre_cda) = ${addParam(systemeCollecteCode)}`);
