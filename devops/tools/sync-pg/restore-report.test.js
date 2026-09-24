@@ -134,6 +134,22 @@ test('formats unavailable filenames, empty exclusions, and duration boundaries',
   }
 });
 
+test('reports an already restored dump as skipped rather than successful', async () => {
+  const { createReport } = loadReport();
+  const { text } = await createReport({ ...report, skipped: true });
+  assert.ok(text.startsWith('Bilan de restauration PostgreSQL : IGNORÉE'));
+  assert.ok(text.includes('Aucun nouveau dump : ce fichier a déjà été restauré.'));
+  assert.ok(text.includes('Fichier du dump : dump.backup'));
+  assert.ok(text.includes('Fraîcheur actuelle de la base :'));
+
+  const { html } = await loadReport({ environment: { ...env, SYNC_PG_ENV: 'production' } }).createReport({
+    ...report,
+    skipped: true,
+  });
+  assert.ok(html.includes('Environnement : <strong>PRODUCTION</strong>'));
+  assert.ok(html.includes('Aucun nouveau dump : ce fichier a déjà été restauré.'));
+});
+
 test('freshness failure and invalid logs links do not prevent sending the final status', async () => {
   const sent = [];
   const { sendReport } = loadReport({
@@ -188,7 +204,9 @@ for (const { error, missingConfig } of [
       static now() { return now; }
     }
     class Services {
-      async downloadFile() { return './dump.backup'; }
+      async getMostRecentKey() { return 'backups/dump.backup'; }
+      async getLastRestoredDumpSource() { return null; }
+      async downloadFile(key) { assert.equal(key, 'backups/dump.backup'); return './dump.backup'; }
       async verifyDumpContents(filePath) {
         verifiedFilePath = filePath;
         now += 2000;
@@ -216,6 +234,7 @@ for (const { error, missingConfig } of [
         async sendReport(metadata) {
           assert.equal(metadata.error, error instanceof Error ? error.message : error);
           assert.equal(metadata.fileName, verifiedFilePath ? path.basename(verifiedFilePath) : undefined);
+          assert.equal(metadata.skipped, false);
           assert.equal(metadata.excludedTables, report.excludedTables);
           assert.equal(metadata.durationMs, missingConfig ? 0 : 3000);
           now += 5000;
@@ -233,5 +252,57 @@ for (const { error, missingConfig } of [
       process: { exit(code) { assert.equal(code, 1); events.push('exit'); } },
     });
     assert.deepEqual(events, error === undefined ? ['sent'] : ['sent', 'exit']);
+  });
+}
+
+for (const [lastRestoredDump, shouldRestore] of [
+  ['dump.backup', false],
+  ['previous.backup', true],
+  [null, true],
+]) {
+  test(`compares the latest S3 filename to the last restored dump: ${String(lastRestoredDump)}`, async () => {
+    const calls = [];
+    class Services {
+      async getMostRecentKey() { calls.push('list'); return 'backups/dump.backup'; }
+      async getLastRestoredDumpSource() { calls.push('last restored'); return lastRestoredDump; }
+      async downloadFile(key) {
+        assert.equal(key, 'backups/dump.backup');
+        calls.push('download');
+        return './dump.backup';
+      }
+      async verifyDumpContents() { calls.push('verify'); }
+      async dropStagingSchemas() { calls.push('clean staging'); }
+      async restoreToStaging() { calls.push('restore'); }
+      async validateStagingSchemas() { calls.push('validate'); return {}; }
+      async swapStagingToLive(source) { assert.equal(source, 'dump.backup'); calls.push('swap'); }
+      async createVSteuSclItvMaterializedView() { calls.push('materialized view'); }
+    }
+    const modules = {
+      fs: { unlinkSync() { calls.push('delete temporary dump'); } },
+      path,
+      './config': config,
+      './s3-service': Services,
+      './pg-service': Services,
+      './schema-manager': Services,
+      './schemas': { EXCLUDED_TABLES: [] },
+      './server': {},
+      './restore-report': {
+        async sendReport(metadata) {
+          assert.equal(metadata.fileName, 'dump.backup');
+          assert.equal(metadata.skipped, !shouldRestore);
+          assert.equal(metadata.error, undefined);
+          calls.push('report');
+        },
+      },
+    };
+    await vm.runInNewContext(indexSource, {
+      require(name) { assert.ok(Object.hasOwn(modules, name)); return modules[name]; },
+      Date,
+      console: logger,
+      process: { exit: assert.fail },
+    });
+    assert.deepEqual(calls, shouldRestore
+      ? ['list', 'last restored', 'download', 'verify', 'clean staging', 'restore', 'validate', 'swap', 'materialized view', 'delete temporary dump', 'report']
+      : ['list', 'last restored', 'report']);
   });
 }

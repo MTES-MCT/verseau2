@@ -10,7 +10,9 @@ require('./server');
 
 async function main() {
   let tempFilePath = null;
+  let fileName;
   let errorMessage;
+  let skipped = false;
 
   const startedAt = new Date();
 
@@ -26,9 +28,19 @@ async function main() {
     const pgService = new PgService(config);
     const schemaManager = new SchemaManager(config);
 
+    // Check the latest S3 dump against the last completed schema swap before downloading.
+    const key = await s3Service.getMostRecentKey();
+    fileName = path.basename(key);
+    const lastRestoredDump = await schemaManager.getLastRestoredDumpSource();
+    if (fileName === lastRestoredDump) {
+      skipped = true;
+      console.log(`Dump ${fileName} already restored; skipping sync.`);
+      return;
+    }
+
     // Step 1: Download dump from S3 and verify contents
     console.log('=== Step 1/4: Download & verify dump ===');
-    tempFilePath = await s3Service.downloadFile();
+    tempFilePath = await s3Service.downloadFile(key);
     console.log('Downloaded file:', tempFilePath);
     await pgService.verifyDumpContents(tempFilePath);
 
@@ -74,7 +86,8 @@ async function main() {
   } finally {
     await sendReport({
       error: errorMessage,
-      fileName: tempFilePath ? path.basename(tempFilePath) : undefined,
+      fileName,
+      skipped,
       excludedTables: EXCLUDED_TABLES,
       durationMs: Date.now() - startedAt.getTime(),
     });
