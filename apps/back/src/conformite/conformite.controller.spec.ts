@@ -5,6 +5,7 @@ import type { CustomRequest } from '@shared/constants/customRequest';
 import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 import { ConformiteController } from './conformite.controller';
 import { ConformiteService } from './conformite.service';
+import type { Response } from 'express';
 
 describe('ConformiteController', () => {
   let controller: ConformiteController;
@@ -14,6 +15,7 @@ describe('ConformiteController', () => {
     const mockConformiteService: jest.Mocked<Partial<ConformiteService>> = {
       listConformiteSteu: jest.fn(),
       listConformiteScl: jest.fn(),
+      exportConformiteSclCsv: jest.fn(),
       getConformiteSteuDetail: jest.fn(),
       getConformiteSclDetail: jest.fn(),
     };
@@ -117,7 +119,7 @@ describe('ConformiteController', () => {
     });
   });
 
-  it('delegates listConformiteScl with authorized STEU codes and query filters', async () => {
+  it('delegates listConformiteScl with authorized SCL codes and query filters', async () => {
     const response = {
       data: [
         {
@@ -152,7 +154,7 @@ describe('ConformiteController', () => {
     });
 
     expect(conformiteService.listConformiteScl).toHaveBeenCalledWith({
-      authorizedSteuCdas: ['STEU002'],
+      authorizedSclCdas: ['SCL001'],
       year: 2023,
       trancheObligationRfa: '40',
       impact: 'sans',
@@ -181,6 +183,22 @@ describe('ConformiteController', () => {
       page: 2,
       pageSize: 10,
     });
+  });
+
+  it('exports conformity only for authorized SCL codes', async () => {
+    conformiteService.exportConformiteSclCsv.mockResolvedValue('csv-content');
+    const res = { set: jest.fn(), send: jest.fn() } as unknown as Response;
+
+    await controller.exportConformiteScl(
+      makeRequest(['STEU002'], ['SCL001']),
+      { year: 2025, page: 1, pageSize: 20 },
+      res,
+    );
+
+    expect(conformiteService.exportConformiteSclCsv).toHaveBeenCalledWith(
+      expect.objectContaining({ authorizedSclCdas: ['SCL001'], year: 2025 }),
+    );
+    expect(res.send).toHaveBeenCalledWith('csv-content');
   });
 
   it('delegates getConformiteSteuDetail with route param and authorized STEU codes', async () => {
