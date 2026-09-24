@@ -13,7 +13,7 @@ const sampleName = 'lanceleau_dump_20260913_sample';
 const databaseName = 'sync_pg_test_ab';
 const samplePath = path.join(__dirname, 'db', sampleName);
 
-async function runLocalTest({ childExit = 0, uploadFails = false, sampleMissing = false, missingFolder = false, missingS3Credentials = false } = {}) {
+async function runLocalTest({ childExit = 0, uploadFails = false, dropFails = false, createFails = false, sampleMissing = false, missingFolder = false, missingS3Credentials = false } = {}) {
   const calls = [];
   const messages = [];
   const errors = [];
@@ -25,7 +25,16 @@ async function runLocalTest({ childExit = 0, uploadFails = false, sampleMissing 
   class Client {
     constructor({ connectionString }) { assert.equal(connectionString, 'postgres://db/main'); }
     async connect() { calls.push('connect'); }
-    async query(sql) { assert.equal(sql, `CREATE DATABASE "${databaseName}"`); calls.push('create database'); }
+    async query(sql) {
+      if (sql === `CREATE DATABASE ${databaseName}`) {
+        calls.push('create database');
+        if (createFails) throw new Error('Create failed');
+      } else {
+        assert.equal(sql, `DROP DATABASE ${databaseName} WITH (FORCE)`);
+        calls.push('drop database');
+        if (dropFails) throw new Error('Drop failed');
+      }
+    }
     async end() { calls.push('close database connection'); }
   }
   class PutObjectCommand { constructor(input) { this.input = input; } }
@@ -63,6 +72,7 @@ async function runLocalTest({ childExit = 0, uploadFails = false, sampleMissing 
         assert.equal(options.env.S3_DUMP_FOLDER, 'dump_test');
         assert.equal(options.env.S3_BUCKET, 'test-bucket');
         assert.equal(options.env.S3_ENDPOINT, 'https://s3.example.test');
+        assert.equal(options.env.TCHAP_ACCESS_TOKEN, 'local-token');
         calls.push('run index.js');
         const child = new EventEmitter();
         setImmediate(() => child.emit('close', childExit, null));
@@ -86,6 +96,7 @@ async function runLocalTest({ childExit = 0, uploadFails = false, sampleMissing 
             S3_BUCKET: 'test-bucket', S3_REGION: 'fr-par', S3_ACCESS_KEY: 'access',
             S3_SECRET_KEY: missingS3Credentials ? '' : 'secret',
             S3_ENDPOINT: 'https://s3.example.test',
+            TCHAP_ACCESS_TOKEN: 'local-token',
             S3_DUMP_FOLDER: 'dump', DATABASE_URL: 'postgres://db/prod',
           });
           return { parsed: state.env };
@@ -108,18 +119,19 @@ async function runLocalTest({ childExit = 0, uploadFails = false, sampleMissing 
   return { calls, messages, errors, exitCode: state.exitCode };
 }
 
-test('uploads a sample, runs index.js against a preserved test database and deletes only the S3 object', async () => {
+test('uploads a sample, runs index.js and deletes the S3 object and test database', async () => {
   const { calls, messages, errors, exitCode } = await runLocalTest();
   assert.equal(exitCode, 0, errors.map((entry) => entry.join(' ')).join('\n'));
-  assert.deepEqual(calls, ['connect', 'create database', 'close database connection', 'upload', 'run index.js', 'delete', 'close S3 client']);
+  assert.deepEqual(calls, ['connect', 'create database', 'upload', 'run index.js', 'delete', 'close S3 client', 'drop database', 'close database connection']);
   assert.ok(messages.some((message) => message.includes(`Test database created: ${databaseName}`)));
+  assert.ok(messages.some((message) => message.includes(`Removed test database ${databaseName}`)));
 });
 
-test('deletes the uploaded S3 object and preserves the database if index.js fails', async () => {
+test('deletes the uploaded S3 object and database if index.js fails', async () => {
   const { calls, exitCode } = await runLocalTest({ childExit: 1 });
   assert.equal(exitCode, 1);
   assert.ok(calls.includes('delete'));
-  assert.ok(calls.includes('create database'));
+  assert.ok(calls.includes('drop database'));
 });
 
 test('does not delete an object if the conditional upload fails', async () => {
@@ -127,6 +139,26 @@ test('does not delete an object if the conditional upload fails', async () => {
   assert.equal(exitCode, 1);
   assert.ok(!calls.includes('delete'));
   assert.ok(!calls.includes('run index.js'));
+  assert.ok(calls.includes('drop database'));
+});
+
+test('does not drop a database that was not created', async () => {
+  const { calls, exitCode } = await runLocalTest({ createFails: true });
+  assert.equal(exitCode, 1);
+  assert.deepEqual(calls, ['connect', 'create database', 'close database connection']);
+});
+
+test('reports a failed database cleanup without hiding an earlier sync error', async () => {
+  const { calls, errors, exitCode } = await runLocalTest({ childExit: 1, dropFails: true });
+  assert.equal(exitCode, 1);
+  assert.ok(calls.includes('drop database'));
+  assert.match(errors.at(-1)[1].message, /index\.js exited with code 1/);
+});
+
+test('fails the local run if the temporary database could not be removed', async () => {
+  const { errors, exitCode } = await runLocalTest({ dropFails: true });
+  assert.equal(exitCode, 1);
+  assert.match(errors.at(-1)[1].message, /Drop failed/);
 });
 
 test('does not start if the sample or dump_test folder is unavailable', async () => {
@@ -142,7 +174,7 @@ test('identifies missing S3 settings before creating a database', async () => {
   const { calls, errors, exitCode } = await runLocalTest({ missingS3Credentials: true });
   assert.equal(exitCode, 1);
   assert.deepEqual(calls, []);
-  assert.match(errors[0][1].message, /Missing S3 configuration: S3_SECRET_KEY/);
+  assert.match(errors[0][1].message, /Missing S3 configuration in .*\.env\.local: S3_SECRET_KEY/);
   assert.match(errors[0][1].message, /\.env\.local/);
 });
 

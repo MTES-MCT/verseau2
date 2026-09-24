@@ -7,86 +7,50 @@ const { Client } = require('pg');
 const dotenv = require('dotenv');
 
 const samplePath = path.join(__dirname, 'db', 'lanceleau_dump_20260913_sample');
-const localEnvPath = path.join(__dirname, '.env.local');
-const testEnvPath = path.join(__dirname, '.env.test');
-
-function quoteIdentifier(name) {
-  return `"${name.replaceAll('"', '""')}"`;
-}
-
-async function runSync(env) {
-  await new Promise((resolve, reject) => {
-    // index.js starts a health server; close it so the local child exits after main().
-    const child = spawn(process.execPath, ['-e', 'require("./index.js"); require("./server").close();'], {
-      cwd: __dirname,
-      env,
-      stdio: 'inherit',
-    });
-    child.on('error', reject);
-    child.on('close', (code, signal) => {
-      if (code === 0) resolve();
-      else reject(new Error(`index.js exited with ${signal ? `signal ${signal}` : `code ${code}`}`));
-    });
-  });
-}
 
 async function main() {
+  const localEnvPath = path.join(__dirname, '.env.local');
+  const testEnvPath = path.join(__dirname, '.env.test');
+  const localEnv = dotenv.config({ path: localEnvPath, override: true, quiet: true });
+  if (localEnv.error) throw localEnv.error;
+
+  const testEnv = dotenv.config({ path: testEnvPath, processEnv: {}, quiet: true });
+  if (testEnv.error || !testEnv.parsed?.DATABASE_URL) {
+    throw new Error(`DATABASE_URL is required in ${testEnvPath}`);
+  }
+  if (testEnv.parsed.S3_DUMP_FOLDER !== 'dump_test') {
+    throw new Error(`S3_DUMP_FOLDER=dump_test is required in ${testEnvPath}`);
+  }
+  const missingS3 = ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY', 'S3_SECRET_KEY']
+    .filter((name) => !process.env[name]);
+  if (missingS3.length) throw new Error(`Missing S3 configuration in ${localEnvPath}: ${missingS3.join(', ')}`);
+  if (!fs.existsSync(samplePath)) throw new Error(`Sample dump not found: ${samplePath}`);
+
+  // The generated name contains only ASCII letters, digits and underscores.
+  const databaseName = `sync_pg_test_${randomUUID().replaceAll('-', '')}`;
+  const admin = new Client({ connectionString: testEnv.parsed.DATABASE_URL });
+  const databaseUrl = new URL(testEnv.parsed.DATABASE_URL);
+  databaseUrl.pathname = `/${databaseName}`;
+
+  const bucket = process.env.S3_BUCKET;
+  const key = `dump_test/${path.basename(samplePath)}`;
   let s3;
-  let bucket;
-  let key;
+  let databaseCreated = false;
   let uploaded = false;
-  let databaseName;
   let error;
-
   try {
-    const localEnv = dotenv.config({ path: localEnvPath, override: true, quiet: true });
-    if (localEnv.error) {
-      throw new Error(`Could not load ${localEnvPath}: ${localEnv.error.message}`);
-    }
-    // Read overrides without applying them to the S3 settings from .env.local.
-    const testEnv = dotenv.config({ path: testEnvPath, processEnv: {}, quiet: true });
-    if (testEnv.error || !testEnv.parsed?.DATABASE_URL) {
-      throw new Error(`DATABASE_URL is required in ${testEnvPath}`);
-    }
-    if (testEnv.parsed.S3_DUMP_FOLDER !== 'dump_test') {
-      throw new Error(`S3_DUMP_FOLDER=dump_test is required in ${testEnvPath}`);
-    }
-    const missingS3Variables = ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY', 'S3_SECRET_KEY']
-      .filter((name) => !process.env[name]);
-    if (missingS3Variables.length > 0) {
-      throw new Error(`Missing S3 configuration: ${missingS3Variables.join(', ')}. Set these in ${localEnvPath} (and set S3_ENDPOINT for a custom S3 service).`);
-    }
-    if (!fs.existsSync(samplePath)) {
-      throw new Error(`Sample dump not found: ${samplePath}`);
-    }
+    await admin.connect();
+    await admin.query(`CREATE DATABASE ${databaseName}`);
+    databaseCreated = true;
+    console.log(`Test database created: ${databaseName} on ${databaseUrl.host}.`);
 
-    const adminConnectionString = testEnv.parsed.DATABASE_URL;
-    databaseName = `sync_pg_test_${randomUUID().replaceAll('-', '')}`;
-    const adminClient = new Client({ connectionString: adminConnectionString });
-    try {
-      await adminClient.connect();
-      await adminClient.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
-    } finally {
-      await adminClient.end();
-    }
-
-    const databaseUrl = new URL(adminConnectionString);
-    databaseUrl.pathname = `/${databaseName}`;
-    console.log(`Test database created: ${databaseName} on ${databaseUrl.host} (preserved after the run).`);
-
-    bucket = process.env.S3_BUCKET;
-    key = `${testEnv.parsed.S3_DUMP_FOLDER}/${path.basename(samplePath)}`;
     s3 = new S3Client({
       region: process.env.S3_REGION,
       endpoint: process.env.S3_ENDPOINT,
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY,
-        secretAccessKey: process.env.S3_SECRET_KEY,
-      },
+      credentials: { accessKeyId: process.env.S3_ACCESS_KEY, secretAccessKey: process.env.S3_SECRET_KEY },
       forcePathStyle: true,
       requestChecksumCalculation: 'WHEN_REQUIRED',
     });
-
     console.log(`Uploading sample to s3://${bucket}/${key}...`);
     await s3.send(new PutObjectCommand({
       Bucket: bucket,
@@ -97,15 +61,21 @@ async function main() {
     }));
     uploaded = true;
 
-    await runSync({
-      ...process.env,
-      S3_DUMP_FOLDER: testEnv.parsed.S3_DUMP_FOLDER,
-      DATABASE_URL: databaseUrl.toString(),
+    // index.js runs the sync and sends its Tchap report; close its health server so the child exits.
+    await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, ['-e', 'require("./index.js"); require("./server").close();'], {
+        cwd: __dirname,
+        env: { ...process.env, DATABASE_URL: databaseUrl.toString(), S3_DUMP_FOLDER: 'dump_test' },
+        stdio: 'inherit',
+      });
+      child.on('error', reject);
+      child.on('close', (code, signal) => {
+        if (code === 0) resolve();
+        else reject(new Error(`index.js exited with ${signal ? `signal ${signal}` : `code ${code}`}`));
+      });
     });
-    console.log(`✅ Sync finished; database ${databaseName} is available for inspection.`);
   } catch (cause) {
     error = cause;
-    console.error('❌ Local sync test failed:', cause);
   } finally {
     if (uploaded) {
       try {
@@ -113,13 +83,32 @@ async function main() {
         console.log(`Removed s3://${bucket}/${key}.`);
       } catch (cause) {
         error ??= cause;
-        console.error(`❌ Could not remove s3://${bucket}/${key}:`, cause);
+        console.error(`Could not remove s3://${bucket}/${key}:`, cause);
       }
     }
     s3?.destroy();
+    if (databaseCreated) {
+      try {
+        await admin.query(`DROP DATABASE ${databaseName} WITH (FORCE)`);
+        console.log(`Removed test database ${databaseName}.`);
+      } catch (cause) {
+        error ??= cause;
+        console.error(`Could not remove test database ${databaseName}:`, cause);
+      }
+    }
+    try {
+      await admin.end();
+    } catch (cause) {
+      error ??= cause;
+      console.error('Could not close PostgreSQL connection:', cause);
+    }
   }
 
-  if (error) process.exitCode = 1;
+  if (error) throw error;
+  console.log('✅ Local sync test finished and temporary resources removed.');
 }
 
-main();
+main().catch((error) => {
+  console.error('❌ Local sync test failed:', error);
+  process.exitCode = 1;
+});
