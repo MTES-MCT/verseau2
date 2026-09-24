@@ -240,7 +240,9 @@ describe('AuthenticationService', () => {
         new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
       );
 
-      await expect(service.handleCallback('mock-code', 'mock-nonce')).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
       expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('new.user@example.com');
       expect(mockSign).not.toHaveBeenCalled();
     });
