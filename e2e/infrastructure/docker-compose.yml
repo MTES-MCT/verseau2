@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: verseau_e2e
+    ports:
+      - '54329:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d verseau_e2e']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  s3:
+    image: adobe/s3mock:4.7.0
+    environment:
+      initialBuckets: verseau-e2e
+      retainFilesOnExit: 'false'
+    ports:
+      - '9099:9090'

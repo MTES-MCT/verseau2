@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'e2e'
 
 catalog:
   zod: '4.6.5'
@@ -17,6 +18,8 @@ peerDependencyRules:
 minimumReleaseAge: 7200
 
 allowBuilds:
+  '@badeball/cypress-cucumber-preprocessor': false
+  cypress: true
   '@parcel/watcher': false
   '@sentry/cli': true
   cpu-features: false
