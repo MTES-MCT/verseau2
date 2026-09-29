@@ -128,53 +128,167 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
   });
 }
 
+const EMETTEUR_OPEN_TAG = '<Emetteur>';
+const EMETTEUR_CLOSE_TAG = '</Emetteur>';
+const CONTACT_OPEN_TAG = '<Contact>';
+const CONTACT_CLOSE_TAG = '</Contact>';
+const NOM_CONTACT_OPEN_TAG = '<NomContact>';
+const NOM_CONTACT_CLOSE_TAG = '</NomContact>';
+const DESTINATAIRE_OPEN_TAG = '<Destinataire>';
+const SCENARIO_OPEN_TAG = '<Scenario>';
+const SCENARIO_CLOSE_TAG = '</Scenario>';
+
+/**
+ * Checks a character code against the exact set matched by the JS regex `\s` class
+ * (ECMAScript WhiteSpace + LineTerminator).
+ */
+function isWhitespaceCode(code: number): boolean {
+  return (
+    code === 0x09 || // \t
+    code === 0x0a || // \n
+    code === 0x0b || // \v
+    code === 0x0c || // \f
+    code === 0x0d || // \r
+    code === 0x20 || // space
+    code === 0xa0 || // no-break space
+    code === 0x1680 || // ogham space mark
+    (code >= 0x2000 && code <= 0x200a) || // en quad … hair space
+    code === 0x2028 || // line separator
+    code === 0x2029 || // paragraph separator
+    code === 0x202f || // narrow no-break space
+    code === 0x205f || // medium mathematical space
+    code === 0x3000 || // ideographic space
+    code === 0xfeff // zero-width no-break space
+  );
+}
+
+/** Start index of the maximal whitespace run ending right before `pos`. */
+function whitespaceRunStart(s: string, pos: number): number {
+  let start = pos;
+  while (start > 0 && isWhitespaceCode(s.charCodeAt(start - 1))) {
+    start--;
+  }
+  return start;
+}
+
+/** End index (exclusive) of the maximal whitespace run starting at `pos`. */
+function whitespaceRunEnd(s: string, pos: number): number {
+  let end = pos;
+  while (end < s.length && isWhitespaceCode(s.charCodeAt(end))) {
+    end++;
+  }
+  return end;
+}
+
+/** Part of `ws` located after the last \r or \n (equivalent to `ws.match(/[^\r\n]*$/)?.[0] || ''`). */
+function trailingIndent(ws: string): string {
+  for (let i = ws.length - 1; i >= 0; i--) {
+    const code = ws.charCodeAt(i);
+    if (code === 0x0a || code === 0x0d) {
+      return ws.slice(i + 1);
+    }
+  }
+  return ws;
+}
+
+/**
+ * Adds a <NomContact> tag to the emitter block of a SANDRE scenario XML.
+ *
+ * Implemented with indexOf/slice scans only: the previous regex-based version used
+ * chained lazy [\s\S]*? quantifiers over the whole (attacker-controlled, up to 70 MB)
+ * XML string, whose backtracking on non-matching inputs was catastrophic
+ * (O(n³) on chained <Emetteur>/<NomContact> opens, O(n²) on whitespace runs),
+ * stalling the single-threaded worker. Every lookup searches the first occurrence
+ * in document order, reproducing the leftmost-match semantics of the old regexes.
+ */
 export function addNameTagToXml(xml: string, nomContact: string): string {
   const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
-  const hasNomContactInEmetteur = /<Emetteur>[\s\S]*?<NomContact>[\s\S]*?<\/NomContact>[\s\S]*?<\/Emetteur>/.test(xml);
+  const emetteurOpen = xml.indexOf(EMETTEUR_OPEN_TAG);
 
-  if (hasNomContactInEmetteur) {
-    return xml;
-  }
-
-  const hasEmetteur = /<Emetteur>[\s\S]*?<\/Emetteur>/.test(xml);
-
-  if (!hasEmetteur) {
-    const hasDestinataire = /<Destinataire>/.test(xml);
-
-    if (hasDestinataire) {
-      return xml.replace(/(\s*)(<Destinataire>)/, (match, p1, p2) => {
-        const indent = p1.match(/[^\r\n]*$/)?.[0] || '';
-        const contactIndent = indent + '  ';
-        const nomContactIndent = contactIndent + '  ';
-        return `${p1}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${indent}</Emetteur>${p1}${p2}`;
-      });
-    } else {
-      return xml.replace(/(<Scenario>)(\s*)([\s\S]*?)(<\/Scenario>)/, (match, p1, p2, p3, p4) => {
-        const scenarioIndent = p2.match(/[^\r\n]*$/)?.[0] || '';
-        const emetteurIndent = scenarioIndent + '  ';
-        const contactIndent = emetteurIndent + '  ';
-        const nomContactIndent = contactIndent + '  ';
-        return `${p1}${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>${p3}${lineEnding}${scenarioIndent}${p4}`;
-      });
+  if (emetteurOpen !== -1) {
+    // "<Emetteur> … <NomContact> … </NomContact> … </Emetteur>" in order → nothing to add.
+    const nomContactOpen = xml.indexOf(NOM_CONTACT_OPEN_TAG, emetteurOpen + EMETTEUR_OPEN_TAG.length);
+    if (nomContactOpen !== -1) {
+      const nomContactClose = xml.indexOf(NOM_CONTACT_CLOSE_TAG, nomContactOpen + NOM_CONTACT_OPEN_TAG.length);
+      if (nomContactClose !== -1) {
+        const emetteurCloseAfterNomContact = xml.indexOf(
+          EMETTEUR_CLOSE_TAG,
+          nomContactClose + NOM_CONTACT_CLOSE_TAG.length,
+        );
+        if (emetteurCloseAfterNomContact !== -1) {
+          return xml;
+        }
+      }
     }
   }
 
-  const hasContact = /<Emetteur>[\s\S]*?<Contact>[\s\S]*?<\/Contact>[\s\S]*?<\/Emetteur>/.test(xml);
+  // An <Emetteur> only counts when a matching </Emetteur> follows it.
+  const hasEmetteur =
+    emetteurOpen !== -1 && xml.indexOf(EMETTEUR_CLOSE_TAG, emetteurOpen + EMETTEUR_OPEN_TAG.length) !== -1;
 
-  if (hasContact) {
-    return xml.replace(/(<Emetteur>[\s\S]*?<Contact>)([\s\S]*?)(\s*)(<\/Contact>)/, (match, p1, p2, p3, p4) => {
-      const closingIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
-      const childIndent = closingIndent + '  ';
-      return `${p1}${p2}${lineEnding}${childIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${closingIndent}${p4}`;
-    });
-  }
+  if (!hasEmetteur) {
+    const destinataireOpen = xml.indexOf(DESTINATAIRE_OPEN_TAG);
+    if (destinataireOpen !== -1) {
+      const runStart = whitespaceRunStart(xml, destinataireOpen);
+      const leading = xml.slice(runStart, destinataireOpen);
+      const indent = trailingIndent(leading);
+      const contactIndent = indent + '  ';
+      const nomContactIndent = contactIndent + '  ';
+      const emetteurBlock = `${leading}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${indent}</Emetteur>${leading}`;
+      return xml.slice(0, runStart) + emetteurBlock + xml.slice(destinataireOpen);
+    }
 
-  return xml.replace(/(<Emetteur>)([\s\S]*?)(\s*)(<\/Emetteur>)/, (match, p1, p2, p3, p4) => {
-    const emetteurIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
+    const scenarioOpen = xml.indexOf(SCENARIO_OPEN_TAG);
+    if (scenarioOpen === -1) {
+      return xml;
+    }
+    const indentRunEnd = whitespaceRunEnd(xml, scenarioOpen + SCENARIO_OPEN_TAG.length);
+    const scenarioClose = xml.indexOf(SCENARIO_CLOSE_TAG, indentRunEnd);
+    if (scenarioClose === -1) {
+      return xml;
+    }
+    const scenarioIndent = trailingIndent(xml.slice(scenarioOpen + SCENARIO_OPEN_TAG.length, indentRunEnd));
+    const inner = xml.slice(indentRunEnd, scenarioClose);
+    const emetteurIndent = scenarioIndent + '  ';
     const contactIndent = emetteurIndent + '  ';
     const nomContactIndent = contactIndent + '  ';
-    return `${p1}${p2}${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}${p4}`;
-  });
+    return (
+      xml.slice(0, scenarioOpen) +
+      `${SCENARIO_OPEN_TAG}${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>${inner}${lineEnding}${scenarioIndent}${SCENARIO_CLOSE_TAG}` +
+      xml.slice(scenarioClose + SCENARIO_CLOSE_TAG.length)
+    );
+  }
+
+  const contactOpen = xml.indexOf(CONTACT_OPEN_TAG, emetteurOpen + EMETTEUR_OPEN_TAG.length);
+  if (contactOpen !== -1) {
+    const contactClose = xml.indexOf(CONTACT_CLOSE_TAG, contactOpen + CONTACT_OPEN_TAG.length);
+    if (contactClose !== -1) {
+      const emetteurCloseAfterContact = xml.indexOf(EMETTEUR_CLOSE_TAG, contactClose + CONTACT_CLOSE_TAG.length);
+      if (emetteurCloseAfterContact !== -1) {
+        const runStart = whitespaceRunStart(xml, contactClose);
+        const beforeRun = xml.slice(contactOpen + CONTACT_OPEN_TAG.length, runStart);
+        const closingIndent = trailingIndent(xml.slice(runStart, contactClose));
+        const childIndent = closingIndent + '  ';
+        return (
+          xml.slice(0, contactOpen + CONTACT_OPEN_TAG.length) +
+          `${beforeRun}${lineEnding}${childIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${closingIndent}${CONTACT_CLOSE_TAG}` +
+          xml.slice(contactClose + CONTACT_CLOSE_TAG.length)
+        );
+      }
+    }
+  }
+
+  const emetteurClose = xml.indexOf(EMETTEUR_CLOSE_TAG, emetteurOpen + EMETTEUR_OPEN_TAG.length);
+  const runStart = whitespaceRunStart(xml, emetteurClose);
+  const inner = xml.slice(emetteurOpen + EMETTEUR_OPEN_TAG.length, runStart);
+  const emetteurIndent = trailingIndent(xml.slice(runStart, emetteurClose));
+  const contactIndent = emetteurIndent + '  ';
+  const nomContactIndent = contactIndent + '  ';
+  return (
+    xml.slice(0, emetteurOpen + EMETTEUR_OPEN_TAG.length) +
+    `${inner}${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}${EMETTEUR_CLOSE_TAG}` +
+    xml.slice(emetteurClose + EMETTEUR_CLOSE_TAG.length)
+  );
 }
 
 export function checkScenarioCodeAndVersion(scenario: Scenario): boolean {
