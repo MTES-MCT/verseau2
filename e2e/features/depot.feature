@@ -7,3 +7,9 @@ Fonctionnalité: Dépôt d'un fichier d'autosurveillance
     Alors le dépôt apparaît dans mon tableau de bord
     Et son traitement par le worker est terminé
     Et ses résultats de contrôle sont consultables
+
+  Scénario: Un déposant sans droits sur un ouvrage du fichier ne peut pas déposer le XML
+    Étant donné que je suis connecté comme déposant autorisé
+    Quand je sélectionne un fichier d'autosurveillance pour un ouvrage non autorisé
+    Alors mes droits de dépôt sur ce fichier sont refusés
+    Et je ne peux pas finaliser le dépôt

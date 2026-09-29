@@ -52,3 +52,25 @@ Then('ses résultats de contrôle sont consultables', () => {
   cy.get('[data-testid="clickable-stat-card-Succès"] button').click();
   cy.contains('h2', 'Contrôles métiers, référentiels et de cohérence des données (ROSEAU)').should('be.visible');
 });
+
+When("je sélectionne un fichier d'autosurveillance pour un ouvrage non autorisé", () => {
+  cy.intercept('GET', '**/api/depot/droits-de-depot*').as('droitsDeDepot');
+  cy.intercept('POST', '**/api/depot/upload').as('uploadRefuse');
+  cy.visit('/depot/upload');
+  cy.get('input[type="file"]').selectFile('fixtures/files/depot-sans-droits.xml');
+  cy.contains('button', "Passer à l'étape 2").click();
+});
+
+Then('mes droits de dépôt sur ce fichier sont refusés', () => {
+  cy.wait('@droitsDeDepot').then(({ response }) => {
+    expect(response?.statusCode).to.eq(200);
+    expect(response?.body).to.deep.eq({ authorized: false, errorCode: 'DROITS_INSUFFISANTS' });
+  });
+  cy.contains('Droits de dépôt - habilitations du déposant insuffisantes').should('be.visible');
+});
+
+Then('je ne peux pas finaliser le dépôt', () => {
+  cy.contains('button', 'Étape 3 finaliser le dépôt').should('be.disabled');
+  cy.get('@uploadRefuse.all').should('have.length', 0);
+  cy.location('pathname').should('eq', '/depot/upload/recap');
+});
