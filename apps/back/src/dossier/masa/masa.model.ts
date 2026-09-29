@@ -28,3 +28,16 @@ export type MasaModel = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+/**
+ * Acquittement renvoyé pour un webhook MASA dont le statut n'est pas final
+ * (en cours de traitement côté MASA) : le retour est acquitté (HTTP 200) sans
+ * être persisté ni transitionner le dépôt, afin qu'un statut final ultérieur
+ * puisse encore être traité.
+ */
+export interface MasaWebhookAcknowledgment {
+  processed: false;
+  statutMasa: MasaWebhookStatus;
+}
+
+export type MasaWebhookResult = MasaModel | MasaWebhookAcknowledgment;

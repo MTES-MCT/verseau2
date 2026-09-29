@@ -3,6 +3,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { MasaGateway } from '@dossier/masa/masa.gateway';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { MasaStatus } from '@dossier/masa/masa.model';
+import { isDepotAwaitingMasaRetour } from '@dossier/masa/masaDepotState';
 import { DepotStatus, DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
 import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
@@ -40,7 +41,21 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         throw new Error(`Depot not found: ${depotId}`);
       }
 
-      // 2. Mettre à jour le statut du dépôt selon le retour MASA
+      // 2. Un retour MASA ne peut transitionner qu'un dépôt en attente de ce retour
+      // (envoi SFTP réussi, statut EN_COURS_DE_TRAITEMENT). Sinon, no-op idempotent :
+      // une livraison en double ou un re-job pg-boss ne doit ni re-transitionner le
+      // dépôt ni re-déclencher la diffusion du rapport.
+      if (!isDepotAwaitingMasaRetour(depot)) {
+        this.logger.warn('Depot is not awaiting a MASA return, skipping transition', {
+          masaId,
+          depotId,
+          status: depot.status,
+          step: depot.step,
+        });
+        return;
+      }
+
+      // 3. Mettre à jour le statut du dépôt selon le retour MASA
       const newStatus = this.mapMasaStatusToDepotStatus(masa.statut);
       await this.depotGateway.updateDepot(depotId, {
         status: newStatus,
@@ -48,7 +63,7 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         etapeMetier: null,
       });
 
-      // 3. Déléguer la diffusion du rapport selon le statut MASA.
+      // 4. Déléguer la diffusion du rapport selon le statut MASA.
       await this.queueService.send<DiffusionRapportJobData>(QueueName.diffusion_rapport, {
         depotId,
         masaId,
