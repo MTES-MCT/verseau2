@@ -14,8 +14,17 @@ import {
   SystemeCollecte,
   ValeurCaracteristiqueRejet,
 } from './scenarioAssainissement';
+import { XmlParseBudgetError, XmlParseBudgetKind, XmlParseBudgets, DEFAULT_XML_PARSE_BUDGETS } from './xmlParseBudgets';
 
-export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAssainissement> {
+// Taille des morceaux transmis à sax : permet d'interrompre le parsing dès qu'un
+// budget est dépassé au lieu de tokeniser tout le fichier d'un seul tenant.
+const SAX_WRITE_CHUNK_SIZE = 64 * 1024;
+
+export function parseScenarioAssainissementXml(
+  xmlInput: string,
+  budgets?: Partial<XmlParseBudgets>,
+): Promise<FctAssainissement> {
+  const limits: XmlParseBudgets = { ...DEFAULT_XML_PARSE_BUDGETS, ...budgets };
   return new Promise((resolve, reject) => {
     const parser = sax.parser(true, {
       trim: true,
@@ -34,7 +43,34 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
     let root: any = {};
     stack.push(root);
 
+    // Budget accounting: once a budget is exceeded (or sax fails), the parser
+    // stops building the graph and the promise is settled exactly once.
+    let aborted = false;
+    let elementCount = 0;
+    let textLength = 0;
+
+    const abortForBudget = (kind: XmlParseBudgetKind, limit: number): void => {
+      aborted = true;
+      reject(new XmlParseBudgetError(kind, limit));
+    };
+
     parser.onopentag = (node: sax.QualifiedTag) => {
+      if (aborted) {
+        return;
+      }
+
+      elementCount += 1;
+      if (elementCount > limits.maxElements) {
+        abortForBudget(XmlParseBudgetKind.ELEMENTS, limits.maxElements);
+        return;
+      }
+      // stack holds the root plus one entry per open element, so pushing a new
+      // element at depth `stack.length` requires one slot of headroom.
+      if (stack.length > limits.maxDepth) {
+        abortForBudget(XmlParseBudgetKind.DEPTH, limits.maxDepth);
+        return;
+      }
+
       const tagName = node.local;
       const newObj: any = {};
 
@@ -62,6 +98,16 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
     };
 
     parser.ontext = (text) => {
+      if (aborted) {
+        return;
+      }
+
+      textLength += text.length;
+      if (textLength > limits.maxTextLength) {
+        abortForBudget(XmlParseBudgetKind.TEXT, limits.maxTextLength);
+        return;
+      }
+
       const current = stack[stack.length - 1];
       if (current) {
         if (!current._text) current._text = '';
@@ -70,6 +116,10 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
     };
 
     parser.onclosetag = (tagName) => {
+      if (aborted) {
+        return;
+      }
+
       const current = stack.pop();
       const name = current._name;
 
@@ -117,6 +167,7 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
     };
 
     parser.onerror = (err) => {
+      aborted = true;
       reject(err);
     };
 
@@ -124,7 +175,14 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
       resolve(result);
     };
 
-    parser.write(xmlInput).close();
+    // Feed sax incrementally so that an exceeded budget stops the parsing of
+    // the remaining input instead of tokenizing the whole file up front.
+    for (let offset = 0; offset < xmlInput.length && !aborted; offset += SAX_WRITE_CHUNK_SIZE) {
+      parser.write(xmlInput.substring(offset, offset + SAX_WRITE_CHUNK_SIZE));
+    }
+    if (!aborted) {
+      parser.close();
+    }
   });
 }
 
