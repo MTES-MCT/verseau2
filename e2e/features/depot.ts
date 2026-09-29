@@ -1,11 +1,12 @@
 import { When, Then } from '@badeball/cypress-cucumber-preprocessor';
 
 const filename = 'depot-valide.xml';
+const failedFilename = 'depot-controle-en-echec.xml';
 let depotId: string;
 
-When("je dépose un fichier d'autosurveillance valide", () => {
+function uploadFile(file: string) {
   cy.visit('/depot/upload');
-  cy.get('input[type="file"]').selectFile(`fixtures/files/${filename}`);
+  cy.get('input[type="file"]').selectFile(`fixtures/files/${file}`);
   cy.contains('button', "Passer à l'étape 2").click();
   cy.contains('button', 'Étape 3 finaliser le dépôt').should('be.enabled');
   cy.intercept('POST', '**/api/depot/upload').as('upload');
@@ -15,6 +16,14 @@ When("je dépose un fichier d'autosurveillance valide", () => {
     depotId = (response?.body as { id: string }).id;
   });
   cy.location('pathname').should('eq', '/dashboard');
+}
+
+When("je dépose un fichier d'autosurveillance valide", () => {
+  uploadFile(filename);
+});
+
+When("je dépose un fichier d'autosurveillance avec un type d'ouvrage inconnu", () => {
+  uploadFile(failedFilename);
 });
 
 Then('le dépôt apparaît dans mon tableau de bord', () => {
@@ -51,6 +60,16 @@ Then('ses résultats de contrôle sont consultables', () => {
   // Successful controls are hidden by the page's default filters.
   cy.get('[data-testid="clickable-stat-card-Succès"] button').click();
   cy.contains('h2', 'Contrôles métiers, référentiels et de cohérence des données (ROSEAU)').should('be.visible');
+});
+
+Then("je consulte l'erreur du fichier sur la page des contrôles", () => {
+  cy.contains('tr', failedFilename, { timeout: 20000 }).contains('a', 'Voir').click();
+  cy.location('pathname').should('eq', `/controle/${depotId}`);
+  cy.contains('h1', 'Résultats des contrôles').should('be.visible');
+  cy.contains('tr', 'CTL024').within(() => {
+    cy.contains('Échec').should('be.visible');
+    cy.contains("Le code Sandre 9999 du type d'ouvrage de dépollution est inconnu").should('be.visible');
+  });
 });
 
 When("je sélectionne un fichier d'autosurveillance pour un ouvrage non autorisé", () => {

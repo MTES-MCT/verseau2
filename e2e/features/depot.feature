@@ -8,6 +8,12 @@ Fonctionnalité: Dépôt d'un fichier d'autosurveillance
     Et son traitement par le worker est terminé
     Et ses résultats de contrôle sont consultables
 
+  Scénario: Consulter une erreur de contrôle d'un fichier déposé
+    Étant donné que je suis connecté comme déposant autorisé
+    Quand je dépose un fichier d'autosurveillance avec un type d'ouvrage inconnu
+    Alors son traitement par le worker est terminé
+    Et je consulte l'erreur du fichier sur la page des contrôles
+
   Scénario: Un déposant sans droits sur un ouvrage du fichier ne peut pas déposer le XML
     Étant donné que je suis connecté comme déposant autorisé
     Quand je sélectionne un fichier d'autosurveillance pour un ouvrage non autorisé
