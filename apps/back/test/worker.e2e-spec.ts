@@ -251,7 +251,7 @@ describe('Worker Service (e2e)', () => {
       // Create depot
       const depot = await dataSource.getRepository(DepotEntity).save({
         id: 'dep_test_004',
-        path: 'sftp_test.xml',
+        path: 'depots/dep_test_004/file.xml',
         nomOriginalFichier: 'sftp_test.xml',
         type: 'application/xml',
         tailleFichier: 1024,
@@ -261,7 +261,7 @@ describe('Worker Service (e2e)', () => {
       });
 
       // Seed S3 with file
-      s3Mock.seed('sftp_test.xml', '<data>test</data>');
+      s3Mock.seed(depot.path, '<data>test</data>');
 
       // Reset mocks
       agentVerseauClientMock.reset();
@@ -269,7 +269,7 @@ describe('Worker Service (e2e)', () => {
       // Process SFTP
       await sftpProcessorService.process({
         depotId: depot.id,
-        filePath: 'sftp_test.xml',
+        filePath: depot.path,
       });
 
       // Verify depot status stays EN_COURS_DE_TRAITEMENT (waiting for MASA)
@@ -280,8 +280,8 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.step).toBe(DepotStep.SFTP_COMPLETED);
       // Verify SFTP was called
       expect(agentVerseauClientMock.calls).toHaveLength(2);
-      expect(agentVerseauClientMock.calls[0].fileName).toBe('sftp_test.xml');
-      expect(agentVerseauClientMock.calls[1].fileName).toBe('sftp_test.xml.ack');
+      expect(agentVerseauClientMock.calls[0].fileName).toBe(`${depot.id}_sftp_test.xml`);
+      expect(agentVerseauClientMock.calls[1].fileName).toBe(`${depot.id}_sftp_test.xml.ack`);
     });
 
     it('should handle SFTP failures', async () => {

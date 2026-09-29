@@ -144,14 +144,14 @@ describe('Dossier E2E - Depot Upload', () => {
 
       // The API never receives or uploads the file body.
       expect(s3Mock.uploads).toHaveLength(0);
-      expect(s3Mock.hasFile(`${responseBody.id}_test-upload.xml`)).toBe(true);
+      expect(s3Mock.hasFile(`depots/${responseBody.id}/file.xml`)).toBe(true);
 
       // Verify queue job was sent
       const processFileJobs = queueMock.getJobsByName(QueueName.process_file);
       expect(processFileJobs).toHaveLength(1);
       expect(processFileJobs[0].data).toMatchObject({
         depotId: responseBody.id,
-        filePath: expect.stringContaining('test-upload.xml') as string,
+        filePath: `depots/${responseBody.id}/file.xml`,
         utilisateur: {
           nom: TEST_USER.nom,
           prenom: TEST_USER.prenom,
@@ -167,7 +167,7 @@ describe('Dossier E2E - Depot Upload', () => {
       expect(depot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       // itvCdn may be returned as string from DB, compare as string
       expect(String(depot.itvCdn)).toBe(String(TEST_USER.itvCdn));
-      expect(depot.path).toContain('test-upload.xml');
+      expect(depot.path).toBe(`depots/${responseBody.id}/file.xml`);
     });
 
     it('should return 400 when no metadata is provided', async () => {
