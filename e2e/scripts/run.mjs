@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { createWriteStream, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createConnection, createServer } from 'node:net';
 
@@ -53,15 +54,23 @@ let stopping = false;
 let startedCompose = false;
 
 function start(command, args, cwd, label, extraEnv = {}) {
-  const child = spawn(command, args, { cwd, env: { ...env, ...extraEnv }, stdio: ['inherit', 'pipe', 'pipe'] });
+  const child = spawn(command, args, {
+    cwd,
+    env: { ...env, ...extraEnv },
+    stdio: ['inherit', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+  });
   children.add(child);
   const logPath = resolve(e2e, `artifacts/logs/${label}.log`);
   const log = createWriteStream(logPath, { fd: openSync(logPath, 'w') });
   child.stdout.pipe(log, { end: false });
   child.stderr.pipe(log, { end: false });
-  if (['api', 'worker', 'vite', 'cypress'].includes(label)) {
+  if (['api', 'worker', 'vite', 'cypress', 'compose-down'].includes(label)) {
     child.stdout.on('data', (chunk) => process.stdout.write(`[${label}] ${chunk}`));
     child.stderr.on('data', (chunk) => process.stderr.write(`[${label}] ${chunk}`));
+  }
+  if (label === 'compose-down') {
+    child.on('exit', (code, signal) => console.log(`[e2e] compose-down exited: ${code ?? signal}`));
   }
   child.on('error', (error) => console.error(`${label}: ${error.message}`));
   child.on('close', () => {
@@ -71,14 +80,47 @@ function start(command, args, cwd, label, extraEnv = {}) {
   return child;
 }
 
-async function run(command, args, cwd, label, extraEnv) {
+function killChildGroup(child, signal) {
+  try {
+    if (process.platform === 'win32') {
+      child.kill(signal);
+    } else if (child.pid) {
+      process.kill(-child.pid, signal);
+    }
+  } catch (error) {
+    if (error.code !== 'ESRCH') {
+      throw error;
+    }
+  }
+}
+
+async function run(command, args, cwd, label, extraEnv, timeoutMs) {
   console.log(`[e2e] ${label}`);
   const child = start(command, args, cwd, label, extraEnv);
-  const code = await new Promise((done) => child.once('close', done));
-  if (code !== 0) {
-    const logPath = resolve(e2e, `artifacts/logs/${label}.log`);
-    const output = readFileSync(logPath, 'utf8').trim().split('\n').slice(-30).join('\n');
-    throw new Error(`${label} exited with code ${code}. See ${logPath}\n${output}`);
+  const closed = new Promise((done) => child.once('close', done));
+  let timeout;
+  try {
+    const timedOut = timeoutMs && new Promise((_, reject) => {
+      timeout = setTimeout(() => {
+        try {
+          killChildGroup(child, 'SIGKILL');
+        } catch (error) {
+          console.error(`Failed to stop ${label}:`, error);
+        }
+        child.stdout.destroy();
+        child.stderr.destroy();
+        child.unref();
+        reject(new Error(`${label} did not finish within ${timeoutMs}ms. See e2e/artifacts/logs/${label}.log`));
+      }, timeoutMs);
+    });
+    const code = await (timedOut ? Promise.race([closed, timedOut]) : closed);
+    if (code !== 0) {
+      const logPath = resolve(e2e, `artifacts/logs/${label}.log`);
+      const output = readFileSync(logPath, 'utf8').trim().split('\n').slice(-30).join('\n');
+      throw new Error(`${label} exited with code ${code}. See ${logPath}\n${output}`);
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -136,15 +178,18 @@ async function stop() {
   }
   stopping = true;
   for (const child of children) {
-    child.kill('SIGTERM');
+    killChildGroup(child, 'SIGTERM');
   }
   await delay(1500);
   for (const child of children) {
-    child.kill('SIGKILL');
+    killChildGroup(child, 'SIGKILL');
+    child.stdout.destroy();
+    child.stderr.destroy();
   }
   if (startedCompose) {
     console.log('[e2e] Stopping Docker services');
-    await run('docker', [...compose, 'down', '-v', '--remove-orphans'], e2e, 'compose-down');
+    await run('docker', [...compose, 'down', '-v', '--remove-orphans'], e2e, 'compose-down', {}, 60_000);
+    console.log('[e2e] Docker services stopped');
   }
 }
 
