@@ -2,6 +2,7 @@ import { When, Then } from '@badeball/cypress-cucumber-preprocessor';
 
 const filename = 'depot-valide.xml';
 const failedFilename = 'depot-controle-en-echec.xml';
+const masaReport = 'Retour MASA pour le dépôt';
 let depotId: string;
 
 function uploadFile(file: string) {
@@ -30,24 +31,74 @@ Then('le dépôt apparaît dans mon tableau de bord', () => {
   cy.contains('tr', filename, { timeout: 20000 }).should('be.visible');
 });
 
-Then('son traitement par le worker est terminé', () => {
-  // Deposit status stays "in progress" until the later MASA webhook. Assert
-  // the actual worker job completed instead of waiting for a final depot status.
+function waitForWorkerJob(queue: 'process_file' | 'controle_metier' | 'process_after_masa_webhook') {
   const deadline = Date.now() + 90000;
-  const poll = (queue: 'process_file' | 'controle_metier'): void => {
+  const poll = (): void => {
     cy.task<string | null>('workerJobState', { depotId, queue }).then((state) => {
       if (state === 'completed') {
-        if (queue === 'process_file') {
-          poll('controle_metier');
-        }
         return;
       }
-      expect(state, 'worker job has not failed').to.not.eq('failed');
-      expect(Date.now(), 'worker completion deadline').to.be.lessThan(deadline);
-      cy.wait(500).then(() => poll(queue));
+      expect(state, `${queue} job has not failed`).to.not.eq('failed');
+      expect(Date.now(), `${queue} completion deadline`).to.be.lessThan(deadline);
+      cy.wait(500).then(poll);
     });
   };
-  poll('process_file');
+  poll();
+}
+
+Then('son traitement par le worker est terminé', () => {
+  // The depot stays in progress until MASA calls the webhook.
+  waitForWorkerJob('process_file');
+  waitForWorkerJob('controle_metier');
+});
+
+function sendMasaReturn(statut: 'Intégré' | 'Rejeté') {
+  cy.request({
+    method: 'POST',
+    url: 'http://localhost:3000/api/webhook/masa/agent-verseau',
+    headers: { 'x-api-key': Cypress.env('MASA_API_KEY') as string },
+    body: {
+      verseau2DepotId: depotId,
+      numeroDepotVerseau1: `V1-${depotId}`,
+      statut,
+      rapport: `${masaReport} : ${statut}`,
+    },
+  })
+    .its('status')
+    .should('eq', 200);
+}
+
+When("MASA confirme l'intégration du dépôt", () => sendMasaReturn('Intégré'));
+When('MASA rejette le dépôt', () => sendMasaReturn('Rejeté'));
+
+Then('le retour MASA est traité par le worker', () => {
+  waitForWorkerJob('process_after_masa_webhook');
+});
+
+function checkMasaStatusOnDashboard(status: 'Intégré' | 'Rejeté') {
+  cy.visit('/dashboard');
+  cy.contains('tr', `V1-${depotId}`, { timeout: 20000 }).within(() => {
+    cy.contains(filename).should('be.visible');
+    cy.contains(status).should('be.visible');
+    cy.contains('a', 'Voir').click();
+  });
+  cy.location('pathname').should('eq', `/controle/${depotId}`);
+}
+
+Then('le dépôt est affiché comme intégré dans mon tableau de bord', () => checkMasaStatusOnDashboard('Intégré'));
+Then('le dépôt est affiché comme rejeté dans mon tableau de bord', () => checkMasaStatusOnDashboard('Rejeté'));
+
+Then("le résultat d'intégration MASA est consultable", () => {
+  // Successful MASA results are hidden by the default control filters.
+  cy.get('[data-testid="clickable-stat-card-Succès"] button').click();
+  cy.contains('tr', 'Intégration Verseau 1').contains('Succès').should('be.visible');
+});
+
+Then('le motif de rejet MASA est consultable', () => {
+  cy.contains('tr', 'Intégration Verseau 1').within(() => {
+    cy.contains('Erreur').should('be.visible');
+    cy.contains(`${masaReport} : Rejeté`).should('be.visible');
+  });
 });
 
 Then('ses résultats de contrôle sont consultables', () => {

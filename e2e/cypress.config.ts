@@ -20,7 +20,13 @@ export default defineConfig({
       await addCucumberPreprocessorPlugin(on, config);
       on('file:preprocessor', createBundler({ plugins: [createEsbuildPlugin(config)] }));
       on('task', {
-        async workerJobState({ depotId, queue }: { depotId: string; queue: 'process_file' | 'controle_metier' }): Promise<string | null> {
+        async workerJobState({
+          depotId,
+          queue,
+        }: {
+          depotId: string;
+          queue: 'process_file' | 'controle_metier' | 'process_after_masa_webhook';
+        }): Promise<string | null> {
           const client = new Client({ connectionString: process.env.DATABASE_URL });
           await client.connect();
           try {

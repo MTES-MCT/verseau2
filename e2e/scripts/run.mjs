@@ -14,6 +14,7 @@ const open = process.argv.includes('--open');
 const compose = ['compose', '-p', project, '-f', resolve(e2e, 'infrastructure/docker-compose.yml')];
 const dockerHost = process.env.E2E_DOCKER_HOST || 'localhost';
 const postgresPassword = randomBytes(24).toString('hex');
+const masaApiKey = randomBytes(24).toString('hex');
 const databaseUrl = `postgresql://postgres:${postgresPassword}@${dockerHost}:54329/verseau_e2e`;
 
 mkdirSync(resolve(e2e, 'artifacts/logs'), { recursive: true });
@@ -42,6 +43,9 @@ const env = {
   OIDC_MOCK: 'true',
   OIDC_MOCK_EMAIL: 'e2e@example.com',
   JWT_SECRET: 'e2e-only-secret-with-at-least-32-characters',
+  MASA_API_KEY: masaApiKey,
+  CYPRESS_MASA_API_KEY: masaApiKey,
+  MASA_ALLOWED_IPS: '127.0.0.1,::1,::ffff:127.0.0.1',
   CORS_ORIGIN: 'http://localhost:5173',
   PORT: '3000',
   VITE_API_BASE_URL: 'http://localhost:3000/api',
