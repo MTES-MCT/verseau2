@@ -1,0 +1,10 @@
+{
+  "stepDefinitions": [
+    "features/[filepath].ts",
+    "support/step_definitions/**/*.ts"
+  ],
+  "html": {
+    "enabled": true,
+    "output": "artifacts/reports/cucumber.html"
+  }
+}

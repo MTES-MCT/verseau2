@@ -1,0 +1,26 @@
+{
+  "name": "e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:e2e": "node scripts/run.mjs",
+    "test:e2e:open": "node scripts/run.mjs --open",
+    "cypress:run": "cypress run",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/pg": "^8.15.0",
+    "@badeball/cypress-cucumber-preprocessor": "^23.0.0",
+    "@bahmutov/cypress-esbuild-preprocessor": "^2.2.5",
+    "@types/node": "^24.13.5",
+    "cypress": "^15.0.0",
+    "esbuild": "^0.27.0",
+    "eslint": "^10.10.0",
+    "pg": "^8.23.0",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.0"
+  }
+}

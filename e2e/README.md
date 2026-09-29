@@ -1,0 +1,21 @@
+# Cypress / Gherkin E2E
+
+Run from the repository root with Node 24, pnpm 12, Docker and a Cypress-supported desktop runtime (macOS, Windows or glibc-based Linux):
+
+```sh
+pnpm install
+pnpm test:e2e
+pnpm test:e2e:open  # interactive Cypress, same isolated stack
+```
+
+The runner starts an isolated PostgreSQL 16 database and S3 emulator, builds the backend, seeds the referential and mock-OIDC user, then launches the real API, pg-boss worker and Vite frontend. It generates a fresh PostgreSQL password for each run and passes it to Compose and all test processes; start the stack via the runner rather than calling Compose directly. It stops its own processes and Compose project after Cypress exits. Ports 3000, 5173, 54329 and 9099 must be free. It does not use the developer's database or `.env.local` values for the configured test services. External OIDC, SFTP, email and SANDRE calls use development adapters.
+
+When running from a container with a sibling Docker-in-Docker daemon, published PostgreSQL and S3 ports may be reachable at the daemon hostname rather than `localhost`. Run `E2E_DOCKER_HOST=docker pnpm test:e2e` (substitute your reachable daemon hostname if different). The API and frontend still use `localhost` because the runner starts them in its own container. See `.env.example`; it is documentation, not automatically loaded.
+
+GitHub Actions runs this browser suite in a dedicated Ubuntu job when E2E, frontend, backend, shared dependencies or workflow files change. On failure, the job uploads `artifacts/` (logs, screenshots and videos) for debugging.
+
+`pnpm test:e2e` starts both backend processes. Look for `[e2e] Starting backend API` and `[e2e] Starting backend worker` in the terminal; their startup output is also saved under `artifacts/logs/`. If the runner stops before those messages, the reported Docker, build, or seed step failed first. `pnpm --filter e2e cypress:run` runs only Cypress against a stack that you have already started.
+
+The runner requires ports 3000 and 5173 to be unused before starting. An existing backend on port 3000 could otherwise answer the readiness check while the new backend fails to bind, leaving the isolated E2E database without application tables. If the port check fails, stop the existing app (for example, inspect the listener with `lsof -nP -iTCP:3000 -sTCP:LISTEN`) and rerun.
+
+Tests are written in French Gherkin under `features/`. Feature-local steps live beside each `.feature`; shared steps belong in `support/step_definitions/`. Use `cy.login()` to establish a signed mock-OIDC session. To debug a running stack, use `pnpm --filter e2e cypress:run`; use `pnpm --filter e2e check` to check TypeScript. Failure logs, Cucumber HTML, videos and screenshots are under `artifacts/`.
