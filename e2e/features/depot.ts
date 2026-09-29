@@ -10,7 +10,7 @@ function uploadFile(file: string) {
   cy.get('input[type="file"]').selectFile(`fixtures/files/${file}`);
   cy.contains('button', "Passer à l'étape 2").click();
   cy.contains('button', 'Étape 3 finaliser le dépôt').should('be.enabled');
-  cy.intercept('POST', '**/api/depot/upload').as('upload');
+  cy.intercept('POST', '**/api/depot/*/upload/complete').as('upload');
   cy.contains('button', 'Étape 3 finaliser le dépôt').click();
   cy.wait('@upload').then(({ response }) => {
     expect(response?.statusCode).to.eq(201);
@@ -125,7 +125,7 @@ Then("je consulte l'erreur du fichier sur la page des contrôles", () => {
 
 When("je sélectionne un fichier d'autosurveillance pour un ouvrage non autorisé", () => {
   cy.intercept('GET', '**/api/depot/droits-de-depot*').as('droitsDeDepot');
-  cy.intercept('POST', '**/api/depot/upload').as('uploadRefuse');
+  cy.intercept('POST', '**/api/depot/*/upload/complete').as('uploadRefuse');
   cy.visit('/depot/upload');
   cy.get('input[type="file"]').selectFile('fixtures/files/depot-sans-droits.xml');
   cy.contains('button', "Passer à l'étape 2").click();
