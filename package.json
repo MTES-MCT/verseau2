@@ -12,6 +12,8 @@
     "dev": "concurrently \"pnpm dev:back\" \"pnpm dev:front\"",
     "dev:back": "pnpm --filter back dev",
     "dev:front": "pnpm --filter front dev",
+    "test:e2e": "pnpm --filter e2e test:e2e",
+    "test:e2e:open": "pnpm --filter e2e test:e2e:open",
     "prepare": "husky",
     "clean": "pnpm --filter back run clean && pnpm --filter front run clean && pnpm --filter parser run clean && pnpm --filter dossier run clean && pnpm --filter shared run clean",
     "test": "pnpm -r --if-present test",
