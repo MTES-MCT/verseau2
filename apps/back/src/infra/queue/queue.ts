@@ -20,6 +20,7 @@ export interface QueueJob<TData = object> {
 
 export enum QueueName {
   process_file = 'process_file',
+  cleanup_depot_upload = 'cleanup_depot_upload',
   email = 'email',
   send_to_sftp = 'send_to_sftp',
   controle_metier = 'controle_metier',

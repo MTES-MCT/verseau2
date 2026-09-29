@@ -5,7 +5,9 @@ import { DepotEntity } from './depot/depot.entity';
 import { DepotRepository } from './depot/depot.repository';
 import { DepotService } from './depot/depot.service';
 import { DroitsDepotService } from './depot/droitsDepot.service';
-import { DeposerUnFichier } from './depot/usecase/deposerUnFichier';
+import { DepotUploadService } from './depot/depotUpload.service';
+import { DepotUploadGateway } from './depot/depotUpload.gateway';
+import { DepotUploadRepository } from './depot/depotUpload.repository';
 import { InfraModule } from '@infra/infra.module';
 import { SandreService } from './controle/technique/sandre/sandre.service';
 import { SandreMockService } from './controle/technique/sandre/sandre.mock.service';
@@ -69,7 +71,8 @@ const sandreServiceFactory = {
     DepotService,
     DroitsDepotService,
     DepotCoordinatorService,
-    DeposerUnFichier,
+    DepotUploadService,
+    { provide: DepotUploadGateway, useClass: DepotUploadRepository },
     // Sandre control
     sandreServiceFactory,
     { provide: ReponseSandreGateway, useClass: ReponseSandreRepository },
@@ -90,6 +93,7 @@ const sandreServiceFactory = {
     RapportPdfGeneratorService,
   ],
   exports: [
+    DepotUploadService,
     DepotService,
     DroitsDepotService,
     DepotCoordinatorService,

@@ -64,6 +64,8 @@ import { clearControles } from '../controle.helper';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ControleEntity } from '@dossier/controle/controle.entity';
+import { uploadTestDepot } from '../depotUpload.helper';
+import type { SendOptions } from '@infra/queue/pgboss';
 
 /**
  * Real Queue Service implementation for testing.
@@ -72,11 +74,7 @@ import { ControleEntity } from '@dossier/controle/controle.entity';
 class RealQueueService implements Queue {
   constructor(private readonly pgboss: PgBoss) {}
 
-  async send<TData = object>(
-    name: string,
-    data?: TData,
-    options?: { startAfter?: number | string | Date },
-  ): Promise<string | null> {
+  async send<TData = object>(name: string, data?: TData, options?: SendOptions): Promise<string | null> {
     const result = await this.pgboss.send(name, data as object, options);
     return result;
   }
@@ -181,14 +179,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   };
 
   const uploadXmlDepot = async (xmlContent: string, filename: string): Promise<string> => {
-    const response = await request(app.getHttpServer())
-      .post('/depot/upload')
-      .set('Cookie', ['access_token=test-token'])
-      .attach('file', Buffer.from(xmlContent), {
-        filename,
-        contentType: 'application/xml',
-      })
-      .expect(201);
+    const response = await uploadTestDepot(app, s3Mock, xmlContent, filename);
 
     return (response.body as { id: string }).id;
   };
@@ -345,47 +336,52 @@ describe('Dossier E2E - Real Queue Processing', () => {
   });
 
   describe('Full file processing flow with real queue', () => {
-    it('should not generate or send report when process_file enqueue fails', async () => {
+    it('rolls back the job and confirmation together, then accepts concurrent retries once', async () => {
+      const initialized = await request(app.getHttpServer())
+        .post('/depot/upload/init')
+        .set('Cookie', ['access_token=test-token'])
+        .send({
+          fileName: 'enqueue-error.xml',
+          size: Buffer.byteLength(validXmlWithRights),
+          contentType: 'application/xml',
+        })
+        .expect(201);
+      const { depotId, uploadUrl } = initialized.body as { depotId: string; uploadUrl: string };
+      s3Mock.seed(decodeURIComponent(new URL(uploadUrl).pathname.slice(1)), validXmlWithRights);
       const queueService = app.get<Queue>(QueueGateway);
       const originalSend = queueService.send.bind(queueService);
-      const queueSpy = jest
-        .spyOn(queueService, 'send')
-        .mockImplementation(async (name: string, options, data?: object) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-          if (name === QueueName.process_file) {
-            throw new Error('Queue send failed');
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return await originalSend(name, options, data);
-        });
+      const queueSpy = jest.spyOn(queueService, 'send').mockImplementation(async (name: string, data, options) => {
+        const result = await originalSend(name, data, options);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+        if (name === QueueName.process_file) {
+          throw new Error('Failure after SQL insertion, before transaction commit');
+        }
+        return result as string | null;
+      });
 
       try {
-        const depotId = await uploadXmlDepot(validXmlWithRights, 'enqueue-error.xml');
-        const expectedPath = `${depotId}_enqueue-error.xml`;
-
-        await waitFor(
-          async () => {
-            const depot = await findDepotOrFail(depotId);
-            return depot.error === DepotError.ENQUEUE_FAILED && depot.path === expectedPath;
-          },
-          {
-            timeoutMs: 6000,
-            pollIntervalMs: 200,
-            message: 'Depot should be rejected after queue enqueue failure',
-          },
-        );
-
+        await request(app.getHttpServer())
+          .post(`/depot/${depotId}/upload/complete`)
+          .set('Cookie', ['access_token=test-token'])
+          .expect(500);
         const finalDepot = await findDepotOrFail(depotId);
-        expect(finalDepot.error).toBe(DepotError.ENQUEUE_FAILED);
-        expect(finalDepot.path).toBe(expectedPath);
-        expect(s3Mock.hasFile(expectedPath)).toBe(true);
+        expect(finalDepot.path).toBeNull();
+        expect(finalDepot.step).toBe(DepotStep.UPLOADING_TO_S3);
         expect(notificationMock.sendEmail).not.toHaveBeenCalled();
         const processFileJobs = await getJobsForDepot(dataSource, QueueName.process_file, depotId);
         expect(processFileJobs).toHaveLength(0);
       } finally {
         queueSpy.mockRestore();
       }
+      await Promise.all(
+        [1, 2].map(() =>
+          request(app.getHttpServer())
+            .post(`/depot/${depotId}/upload/complete`)
+            .set('Cookie', ['access_token=test-token'])
+            .expect(201),
+        ),
+      );
+      expect(await getJobsForDepot(dataSource, QueueName.process_file, depotId)).toHaveLength(1);
     }, 12000);
 
     it('should process file and verify control jobs are not dispatched because user lacks rights', async () => {
@@ -399,14 +395,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   </Emetteur>
 </Scenario>`;
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(xmlContent), {
-          filename: 'control-dispatch-test.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const response = await uploadTestDepot(app, s3Mock, xmlContent, 'control-dispatch-test.xml');
 
       const depotId = (response.body as { id: string }).id;
 
@@ -432,14 +421,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       // Seed VSteuSclItv to authorize the user's SIRET for the STEU and SCL codes in the XML
       await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'control-dispatch-test.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const response = await uploadTestDepot(app, s3Mock, validXmlWithRights, 'control-dispatch-test.xml');
 
       const depotId = (response.body as { id: string }).id;
 
@@ -520,14 +502,12 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
       (sandreService as ConfigurableSandreMock).defaultBehavior = 'non-conformant';
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRightsAndMetierSuccess), {
-          filename: 'sandre-failed-rapport.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const response = await uploadTestDepot(
+        app,
+        s3Mock,
+        validXmlWithRightsAndMetierSuccess,
+        'sandre-failed-rapport.xml',
+      );
 
       const depotId = (response.body as { id: string }).id;
 

@@ -11,6 +11,7 @@ import type { ControleSandrePollProcessorService } from './controleSandre/contro
 import type { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import type { DiffusionRapportProcessorService } from './diffusionRapport/diffusionRapportProcessor.service';
 import { WorkerService } from './worker.service';
+import type { DepotUploadService } from '@dossier/depot/depotUpload.service';
 
 describe('WorkerService', () => {
   it('registers every queue worker with batchSize 1', async () => {
@@ -45,6 +46,7 @@ describe('WorkerService', () => {
       { send: jest.fn() },
       cls,
       logger,
+      { cleanup: jest.fn() } as unknown as DepotUploadService,
     );
 
     await service.onModuleInit();

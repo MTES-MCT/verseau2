@@ -121,6 +121,10 @@ describe('DiffusionRapportProcessorService', () => {
     };
 
     s3 = {
+      createUploadUrl: jest.fn(),
+      head: jest.fn(),
+      copy: jest.fn(),
+      delete: jest.fn(),
       upload: jest.fn().mockResolvedValue(undefined),
       download: jest.fn().mockResolvedValue(xmlBuffer),
     };

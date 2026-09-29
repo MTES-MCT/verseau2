@@ -9,12 +9,3 @@ export interface UtilisateurDunEnvoi {
   nom: string;
   prenom: string;
 }
-
-export interface DepotDeFichier {
-  nomOriginalFichier: string;
-  size: number;
-  type: string;
-  buffer: Buffer;
-  itvCdn: number;
-  utilisateur: UtilisateurDunEnvoi;
-}

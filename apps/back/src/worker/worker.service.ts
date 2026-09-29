@@ -13,11 +13,13 @@ import { ControleSandrePollProcessorService } from './controleSandre/controle-sa
 import { DiffusionRapportProcessorService } from './diffusionRapport/diffusionRapportProcessor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import { EmailProvider } from '@notification/email.provider';
+import { DepotUploadService } from '@dossier/depot/depotUpload.service';
 
 @Injectable()
 export class WorkerService implements OnModuleInit {
   private readonly queueConfig: Record<QueueName, QueueOptions> = {
     [QueueName.process_file]: { batchSize: 1 },
+    [QueueName.cleanup_depot_upload]: { batchSize: 1 },
     [QueueName.email]: { batchSize: 1 },
     [QueueName.send_to_sftp]: { batchSize: 1 },
     [QueueName.controle_metier]: { batchSize: 1 },
@@ -39,6 +41,7 @@ export class WorkerService implements OnModuleInit {
     @Inject(EmailProvider) private readonly emailProvider: EmailProvider,
     private readonly cls: ClsService<CustomClsStore>,
     private readonly logger: LoggerService,
+    private readonly depotUploadService: DepotUploadService,
   ) {
     this.logger.setContext(WorkerService.name);
   }
@@ -49,6 +52,11 @@ export class WorkerService implements OnModuleInit {
       const options = config ? config : { batchSize: 1 };
 
       switch (queueName) {
+        case QueueName.cleanup_depot_upload:
+          await this.queueService.work<{ depotId: string }>(queueName, options, async ([job]) => {
+            await this.depotUploadService.cleanup(job.data.depotId);
+          });
+          break;
         case QueueName.process_file:
           await this.queueService.work<FichierDeDepot & { correlationId?: string }>(
             queueName,

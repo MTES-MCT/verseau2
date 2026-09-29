@@ -194,8 +194,11 @@ describe('Controller (e2e) - Access control', () => {
   });
 
   describe('Controller (e2e) - Depot', () => {
-    it('/depot/upload (POST) - Should return 401 Unauthorized when no token is provided', async () => {
-      return request(app.getHttpServer()).post('/depot/upload').expect(401);
+    it('/depot/upload/init (POST) - Should return 401 Unauthorized when no token is provided', async () => {
+      return request(app.getHttpServer()).post('/depot/upload/init').expect(401);
+    });
+    it('/depot/:id/upload/complete (POST) requires authentication', async () => {
+      return request(app.getHttpServer()).post('/depot/unknown/upload/complete').expect(401);
     });
 
     it('/depot (GET) - Should return 401 Unauthorized when no token is provided', async () => {

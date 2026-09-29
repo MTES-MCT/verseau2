@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
 import { DepotDtoSchema } from '../depot/depot.dto';
+import { MAX_DEPOT_FILE_SIZE_BYTES } from '../depot/depotUpload';
 
 // GET /depot - List all depots
 export const listDepots = {
@@ -9,10 +10,26 @@ export const listDepots = {
   response: z.array(DepotDtoSchema),
 } as const satisfies RouteDefinition;
 
-// POST /depot/upload - Upload a depot
-export const uploadDepot = {
+export const initializeDepotUpload = {
   method: 'POST',
-  path: '/depot/upload',
+  path: '/depot/upload/init',
+  body: z.object({
+    fileName: z.string().trim().min(1).max(255),
+    size: z.number().int().positive().max(MAX_DEPOT_FILE_SIZE_BYTES),
+    contentType: z.string().max(255),
+  }),
+  response: z.object({
+    depotId: z.string(),
+    uploadUrl: z.url(),
+    headers: z.object({ 'Content-Type': z.literal('application/xml') }),
+    expiresAt: z.iso.datetime(),
+  }),
+} as const satisfies RouteDefinition;
+
+export const completeDepotUpload = {
+  method: 'POST',
+  path: '/depot/:id/upload/complete',
+  params: z.object({ id: z.string().min(1) }),
   response: DepotDtoSchema,
 } as const satisfies RouteDefinition;
 

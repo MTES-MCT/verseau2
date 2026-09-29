@@ -26,7 +26,8 @@ export const customizeMockS3Client = async (configService: ConfigService, s3Clie
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   s3Client.send = async function (command: any, options?: any) {
     // await delay(3000);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
+    console.log(`MOCK S3 - Sending command: ${command.constructor.name}`, command.input);
     return originalSend(command, options);
   };
 
