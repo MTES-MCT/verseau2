@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { createWriteStream, mkdirSync, readFileSync } from 'node:fs';
+import { createWriteStream, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createConnection, createServer } from 'node:net';
@@ -55,7 +55,8 @@ let startedCompose = false;
 function start(command, args, cwd, label, extraEnv = {}) {
   const child = spawn(command, args, { cwd, env: { ...env, ...extraEnv }, stdio: ['inherit', 'pipe', 'pipe'] });
   children.add(child);
-  const log = createWriteStream(resolve(e2e, `artifacts/logs/${label}.log`));
+  const logPath = resolve(e2e, `artifacts/logs/${label}.log`);
+  const log = createWriteStream(logPath, { fd: openSync(logPath, 'w') });
   child.stdout.pipe(log, { end: false });
   child.stderr.pipe(log, { end: false });
   if (['api', 'worker', 'vite', 'cypress'].includes(label)) {
