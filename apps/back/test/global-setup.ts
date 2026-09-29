@@ -8,17 +8,17 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 /**
- * Echoue vite (5 s) avec un message actionnable si le daemon Docker est injoignable ou wedge
- * (typiquement OrbStack apres une mise en veille), au lieu de laisser les tests tourner
- * en boucle jusqu'au timeout Jest.
+ * Echoue vite avec le diagnostic Docker si le daemon est injoignable ou ne repond pas,
+ * au lieu de laisser les tests tourner en boucle jusqu'au timeout Jest.
  */
 async function assertDockerAvailable(): Promise<void> {
   try {
-    await execAsync('docker info --format "{{.ServerVersion}}"', { timeout: 5_000 });
-  } catch {
+    await execAsync('docker info --format "{{.ServerVersion}}"', { timeout: 15_000 });
+  } catch (error) {
     throw new Error(
-      'Docker (OrbStack) ne repond pas : les tests e2e ne peuvent pas demarrer leur conteneur Postgres. ' +
-        'Redemarrez OrbStack puis relancez les tests (verifiez avec `docker ps` dans un terminal).',
+      'Docker est indisponible : les tests e2e ne peuvent pas demarrer leur conteneur Postgres. ' +
+        `Verifiez que le daemon et la commande docker sont accessibles (docker info). Detail : ${String(error)}`,
+      { cause: error },
     );
   }
 }
