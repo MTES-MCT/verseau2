@@ -8,6 +8,7 @@ import { S3 } from '@infra/s3/s3';
 import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
+import { getDepotReportKey } from '@dossier/depot/depotStorageKeys';
 import { MasaModel } from '@dossier/masa/masa.model';
 import { DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
@@ -67,7 +68,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       const pdfBuffer = await this.pdfGenerator.generateReport(depot, controles, masa ?? undefined, reponsesSandre);
 
       // 2. Upload PDF to S3
-      const pdfPath = `rapports/${depotId}/rapport.pdf`;
+      const pdfPath = getDepotReportKey(depotId);
       await this.s3.upload(pdfPath, pdfBuffer, 'application/pdf');
       this.logger.log(`PDF uploaded to S3`, { pdfPath });
 

@@ -23,6 +23,7 @@ import { DepotUploadGateway } from './depotUpload.gateway';
 import { DepotModel } from './depot.model';
 import { DepotError } from './depotError';
 import { UtilisateurDunEnvoi, FichierDeDepot } from './file/file';
+import { getDepotUploadKey, getDepotFileKey } from './depotStorageKeys';
 
 // Allow uploads already in flight and confirmation retries before cleaning staging objects.
 const CLEANUP_DELAY_MS = 60 * 60 * 1000;
@@ -62,7 +63,7 @@ export class DepotUploadService {
         stepHistory: [DepotStep.UPLOADING_TO_S3],
         uploadExpiresAt: expiresAt,
       });
-      const uploadUrl = await this.s3.createUploadUrl(getUploadKey(depot), expiresIn, input.size);
+      const uploadUrl = await this.s3.createUploadUrl(getDepotUploadKey(depot.id), expiresIn, input.size);
       await transaction.send(
         QueueName.cleanup_depot_upload,
         { depotId: depot.id },
@@ -104,7 +105,7 @@ export class DepotUploadService {
       if (Date.now() >= depot.uploadExpiresAt.getTime() + CLEANUP_DELAY_MS) {
         throw new GoneException('Le délai de confirmation du dépôt a expiré');
       }
-      const uploadKey = getUploadKey(depot);
+      const uploadKey = getDepotUploadKey(depot.id);
       const object = await this.s3.head(uploadKey);
       if (!object) {
         throw new ConflictException("Le fichier n'a pas encore été reçu");
@@ -117,7 +118,7 @@ export class DepotUploadService {
       ) {
         throw new BadRequestException('Les métadonnées du fichier reçu ne correspondent pas au dépôt');
       }
-      const filePath = `${depot.id}_${depot.nomOriginalFichier}`;
+      const filePath = getDepotFileKey(depot.id);
       // Freeze the validated object: a still-valid upload URL can only overwrite the staging key.
       await this.s3.copy(uploadKey, filePath, object.etag);
       depot.path = filePath;
@@ -138,18 +139,14 @@ export class DepotUploadService {
       if (Date.now() < depot.uploadExpiresAt.getTime() + CLEANUP_DELAY_MS) {
         throw new Error('Upload cleanup scheduled before expiration');
       }
-      await this.s3.delete(getUploadKey(depot));
+      await this.s3.delete(getDepotUploadKey(depot.id));
       if (!depot.path) {
         // A confirmation may have copied the object before its DB transaction rolled back.
-        await this.s3.delete(`${depot.id}_${depot.nomOriginalFichier}`);
+        await this.s3.delete(getDepotFileKey(depot.id));
         depot.status = DepotStatus.REJETE;
         depot.error = DepotError.UPLOAD_FAILED;
         await transaction.save(depot);
       }
     });
   }
-}
-
-function getUploadKey(depot: Pick<DepotModel, 'id' | 'nomOriginalFichier'>): string {
-  return `uploads/${depot.id}/${depot.nomOriginalFichier}`;
 }

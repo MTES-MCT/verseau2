@@ -148,7 +148,7 @@ describe('Depot upload (e2e)', () => {
   it('initializes without buffering or processing, then confirms exactly once', async () => {
     const createUploadUrl = jest.spyOn(s3Mock, 'createUploadUrl');
     const session = await initialize();
-    expect(createUploadUrl).toHaveBeenCalledWith(`uploads/${session.depotId}/sample.xml`, 900, 13);
+    expect(createUploadUrl).toHaveBeenCalledWith(`uploads/${session.depotId}/file.xml`, 900, 13);
     expect(s3Mock.uploads).toHaveLength(0);
     expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
     expect(queueMock.getJobsByName(QueueName.cleanup_depot_upload)).toHaveLength(1);
@@ -157,7 +157,7 @@ describe('Depot upload (e2e)', () => {
     await Promise.all([complete(session.depotId).expect(201), complete(session.depotId).expect(201)]);
     await complete(session.depotId).expect(201);
     const depot = await findDepot(session.depotId);
-    expect(depot.path).toBe(`${depot.id}_sample.xml`);
+    expect(depot.path).toBe(`depots/${depot.id}/file.xml`);
     expect(depot.stepHistory).toEqual([DepotStep.UPLOADING_TO_S3, DepotStep.PENDING]);
     expect(s3Mock.getFile(depot.path!)).toEqual(Buffer.from('<root></root>'));
     expect(queueMock.getJobsByName(QueueName.process_file)).toEqual([
@@ -206,6 +206,8 @@ describe('Depot upload (e2e)', () => {
     await complete(session.depotId).expect(201);
     const depot = await findDepot(session.depotId);
     expect(depot.nomOriginalFichier).toBe(filenameWithAccents);
+    expect(new URL(session.uploadUrl).pathname).toBe(`/uploads/${depot.id}/file.xml`);
+    expect(depot.path).toBe(`depots/${depot.id}/file.xml`);
   });
 
   it('rejects confirmation before upload and allows retry once it exists', async () => {
@@ -248,15 +250,15 @@ describe('Depot upload (e2e)', () => {
     expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(1);
   });
 
-  it('rejects confirmation and skips cleanup for a legacy depot with a path', async () => {
+  it('rejects confirmation and skips cleanup for a depot without a direct upload session', async () => {
     const repository = dataSource.getRepository(DepotEntity);
     const depot = await repository.save(
       repository.create({
-        nomOriginalFichier: 'legacy.xml',
+        nomOriginalFichier: 'sample.xml',
         tailleFichier: 13,
         type: 'application/xml',
         userId: 'user_123',
-        path: 'legacy.xml',
+        path: 'depots/other/file.xml',
         step: DepotStep.PENDING,
       }),
     );
@@ -276,7 +278,7 @@ describe('Depot upload (e2e)', () => {
     queueMock.setFailure(true);
     await complete(session.depotId).expect(500);
     const depot = await findDepot(session.depotId);
-    const filePath = `${depot.id}_${depot.nomOriginalFichier}`;
+    const filePath = `depots/${depot.id}/file.xml`;
     expect(depot.path).toBeNull();
     expect(s3Mock.hasFile(filePath)).toBe(true);
 
@@ -284,7 +286,7 @@ describe('Depot upload (e2e)', () => {
     await app.get(DepotUploadService).cleanup(depot.id);
 
     expect(s3Mock.hasFile(filePath)).toBe(false);
-    expect(s3Mock.hasFile(`uploads/${depot.id}/${depot.nomOriginalFichier}`)).toBe(false);
+    expect(s3Mock.hasFile(`uploads/${depot.id}/file.xml`)).toBe(false);
     expect((await findDepot(depot.id)).status).toBe(DepotStatus.REJETE);
   });
 
@@ -298,7 +300,7 @@ describe('Depot upload (e2e)', () => {
     await app.get(DepotUploadService).cleanup(session.depotId);
     const depot = await findDepot(session.depotId);
     expect(depot.status).toBe(DepotStatus.REJETE);
-    expect(s3Mock.hasFile(`uploads/${depot.id}/${depot.nomOriginalFichier}`)).toBe(false);
+    expect(s3Mock.hasFile(`uploads/${depot.id}/file.xml`)).toBe(false);
   });
 
   it('cleans staging but retains a confirmed file', async () => {
@@ -310,7 +312,7 @@ describe('Depot upload (e2e)', () => {
       .update(session.depotId, { uploadExpiresAt: new Date(Date.now() - 7200000) });
     await app.get(DepotUploadService).cleanup(session.depotId);
     const depot = await findDepot(session.depotId);
-    expect(s3Mock.hasFile(`uploads/${depot.id}/${depot.nomOriginalFichier}`)).toBe(false);
+    expect(s3Mock.hasFile(`uploads/${depot.id}/file.xml`)).toBe(false);
     expect(s3Mock.hasFile(depot.path!)).toBe(true);
     await complete(session.depotId).expect(201);
   });

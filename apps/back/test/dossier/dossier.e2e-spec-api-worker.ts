@@ -565,7 +565,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       expect(finalDepot.controleStatus).toBe(ControleStatus.SUCCESS);
       expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.FAILED);
       expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
 
       expect(controles.every((controle) => controle.success)).toBe(true);
 
@@ -642,7 +642,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const finalDepot = await findDepotOrFail(depotId);
       expect(finalDepot.status).toBe(DepotStatus.REJETE);
       expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
 
       const pdfUpload = s3Mock.uploads.find((upload) => upload.key === finalDepot.rapportPath);
       expect(pdfUpload).toBeDefined();

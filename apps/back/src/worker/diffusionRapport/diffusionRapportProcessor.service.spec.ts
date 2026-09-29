@@ -228,7 +228,7 @@ describe('DiffusionRapportProcessorService', () => {
     expect(agenceEauClient.getClient).not.toHaveBeenCalled();
     expect(agencyTransferClient.send).not.toHaveBeenCalled();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
-    expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
+    expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'depots/dep_1/report.pdf' });
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
   });
 
@@ -246,7 +246,7 @@ describe('DiffusionRapportProcessorService', () => {
     expect(agencyTransferClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'DEPOT1234_depot.xml.zip.ack');
     expectFirstSftpCallToContainZipEntries();
     expect(notificationGateway.sendEmail).toHaveBeenCalled();
-    expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'rapports/dep_1/rapport.pdf' });
+    expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { rapportPath: 'depots/dep_1/report.pdf' });
     expect(depotGateway.updateDepot).toHaveBeenCalledWith('dep_1', { step: DepotStep.SEND_EMAIL_TO_DEPOSANT });
   });
 
