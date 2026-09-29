@@ -5,11 +5,22 @@ import cookieParser from 'cookie-parser';
 import { LoggerService } from '@shared/logger/logger.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
+import { createSecurityHeadersMiddleware, parseExtraConnectOrigins } from '@shared/security-headers/security-headers';
 
 async function bootstrapServer() {
   const app = await NestFactory.create<NestExpressApplication>(ApiModule, {
     logger: new LoggerService('Bootstrap'),
   });
+
+  // En-têtes de sécurité (CSP, HSTS, nosniff, frame-ancestors…) sur toutes les
+  // réponses : API, SPA servi par ServeStatic et erreurs. Enregistré avant
+  // listen() pour passer devant les middlewares ServeStatic ajoutés à l'init.
+  app.use(
+    createSecurityHeadersMiddleware({
+      // Ex. hôte d'ingestion Sentry pour le SPA (CSP_EXTRA_CONNECT_SRC).
+      extraConnectOrigins: parseExtraConnectOrigins(process.env.CSP_EXTRA_CONNECT_SRC),
+    }),
+  );
 
   if (process.env.DISABLE_INDEXING === 'true') {
     app.use((_req: Request, res: Response, next: NextFunction) => {
