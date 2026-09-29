@@ -62,7 +62,7 @@ export class DepotUploadService {
         stepHistory: [DepotStep.UPLOADING_TO_S3],
         uploadExpiresAt: expiresAt,
       });
-      const uploadUrl = await this.s3.createUploadUrl(getUploadKey(depot), expiresIn);
+      const uploadUrl = await this.s3.createUploadUrl(getUploadKey(depot), expiresIn, input.size);
       await transaction.send(
         QueueName.cleanup_depot_upload,
         { depotId: depot.id },

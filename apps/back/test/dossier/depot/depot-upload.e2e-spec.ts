@@ -146,7 +146,9 @@ describe('Depot upload (e2e)', () => {
   };
 
   it('initializes without buffering or processing, then confirms exactly once', async () => {
+    const createUploadUrl = jest.spyOn(s3Mock, 'createUploadUrl');
     const session = await initialize();
+    expect(createUploadUrl).toHaveBeenCalledWith(`uploads/${session.depotId}/sample.xml`, 900, 13);
     expect(s3Mock.uploads).toHaveLength(0);
     expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
     expect(queueMock.getJobsByName(QueueName.cleanup_depot_upload)).toHaveLength(1);

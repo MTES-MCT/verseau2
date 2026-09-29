@@ -36,15 +36,16 @@ export class S3Service implements S3 {
     await this.s3Client.send(command);
   }
 
-  async createUploadUrl(key: string, expiresIn: number): Promise<string> {
+  async createUploadUrl(key: string, expiresIn: number, size: number): Promise<string> {
     return getSignedUrl(
       this.uploadClient,
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
         ContentType: 'application/xml',
+        ContentLength: size,
       }),
-      { expiresIn, signableHeaders: new Set(['content-type']) },
+      { expiresIn, signableHeaders: new Set(['content-type', 'content-length']) },
     );
   }
 

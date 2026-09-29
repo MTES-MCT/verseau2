@@ -35,7 +35,7 @@ describe('Direct S3 upload protocol', () => {
 
   it('supports CORS preflight, a raw PUT, HEAD, conditional copy and cleanup', async () => {
     const key = 'uploads/dep_test/données été.xml';
-    const url = await s3.createUploadUrl(key, 900);
+    const url = await s3.createUploadUrl(key, 900, Buffer.byteLength('<root/>'));
     expect(new URL(url).searchParams.get('X-Amz-SignedHeaders')).toContain('content-type');
     expect(new URL(url).searchParams.has('x-amz-checksum-crc32')).toBe(false);
     const preflight = await fetch(url, {
