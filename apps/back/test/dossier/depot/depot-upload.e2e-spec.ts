@@ -12,7 +12,8 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
-import { DepotStep, DepotStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, initializeDepotUpload, type RouteResponse } from '@lib/dossier';
+import { DepotUploadService } from '@dossier/depot/depotUpload.service';
 import { QueueName, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { MAX_DEPOT_FILE_SIZE_BYTES } from '@shared/constants/mimeTypes';
@@ -127,88 +128,192 @@ describe('Depot upload (e2e)', () => {
     await app?.close();
   });
 
-  it('uploads an XML file and enqueues processing', async () => {
-    const xmlContent = '<root></root>';
-
+  const initialize = async (fileName = 'sample.xml', size = 13) => {
     const response = await request(app.getHttpServer())
-      .post('/depot/upload')
+      .post('/depot/upload/init')
       .set('Cookie', ['access_token=test-token'])
-      .attach('file', Buffer.from(xmlContent), { filename: 'sample.xml', contentType: 'application/xml' })
+      .send({ fileName, size, contentType: 'application/xml' })
       .expect(201);
+    return response.body as RouteResponse<typeof initializeDepotUpload>;
+  };
 
-    const responseBody = response.body as { id: string; nomOriginalFichier: string; type: string };
+  const complete = (id: string) =>
+    request(app.getHttpServer()).post(`/depot/${id}/upload/complete`).set('Cookie', ['access_token=test-token']);
 
-    expect(responseBody.nomOriginalFichier).toBe('sample.xml');
-    expect(responseBody.type).toBe('application/xml');
+  const findDepot = (id: string) => dataSource.getRepository(DepotEntity).findOneByOrFail({ id });
+  const seedUpload = (session: RouteResponse<typeof initializeDepotUpload>, content = '<root></root>') => {
+    s3Mock.seed(decodeURIComponent(new URL(session.uploadUrl).pathname.slice(1)), content);
+  };
 
-    // Wait for the async uploadAndEnqueue chain to complete
-    await queueMock.waitForJob();
-
-    const depot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-      where: { id: responseBody.id },
-    });
-
-    const expectedPath = `${depot.id}_${responseBody.nomOriginalFichier}`;
-    expect(depot.path).toBe(expectedPath);
-    expect(depot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
-    expect(depot.step).toBe(DepotStep.PENDING);
-
-    expect(s3Mock.uploads).toHaveLength(1);
-    expect((s3Mock.uploads[0] as { key: string }).key).toBe(expectedPath);
-
-    expect(queueMock.jobs).toHaveLength(1);
-    expect(queueMock.jobs[0]).toMatchObject({
-      name: QueueName.process_file,
-      data: {
-        depotId: depot.id,
-        filePath: expectedPath,
-        utilisateur: { nom: 'Test', prenom: 'User' },
+  it('initializes without buffering or processing, then confirms exactly once', async () => {
+    const createUploadUrl = jest.spyOn(s3Mock, 'createUploadUrl');
+    const session = await initialize();
+    expect(createUploadUrl).toHaveBeenCalledWith(`uploads/${session.depotId}/file.xml`, 900, 13);
+    expect(s3Mock.uploads).toHaveLength(0);
+    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+    expect(queueMock.getJobsByName(QueueName.cleanup_depot_upload)).toHaveLength(1);
+    expect((await findDepot(session.depotId)).step).toBe(DepotStep.UPLOADING_TO_S3);
+    seedUpload(session);
+    await Promise.all([complete(session.depotId).expect(201), complete(session.depotId).expect(201)]);
+    await complete(session.depotId).expect(201);
+    const depot = await findDepot(session.depotId);
+    expect(depot.path).toBe(`depots/${depot.id}/file.xml`);
+    expect(depot.stepHistory).toEqual([DepotStep.UPLOADING_TO_S3, DepotStep.PENDING]);
+    expect(s3Mock.getFile(depot.path!)).toEqual(Buffer.from('<root></root>'));
+    expect(queueMock.getJobsByName(QueueName.process_file)).toEqual([
+      {
+        name: QueueName.process_file,
+        data: { depotId: depot.id, filePath: depot.path, utilisateur: { id: 'user_123', nom: 'Test', prenom: 'User' } },
       },
-    });
+    ]);
+    // Reusing the signed URL cannot alter the frozen file processed by the worker.
+    seedUpload(session, '<changed/>');
+    expect(s3Mock.getFile(depot.path!)).toEqual(Buffer.from('<root></root>'));
+    await dataSource.getRepository(DepotEntity).update(depot.id, { step: DepotStep.CONTROLE_COMPLETED });
+    await complete(depot.id).expect(201);
+    expect((await findDepot(depot.id)).step).toBe(DepotStep.CONTROLE_COMPLETED);
   });
 
   it('rejects non-XML uploads', async () => {
     await request(app.getHttpServer())
-      .post('/depot/upload')
+      .post('/depot/upload/init')
       .set('Cookie', ['access_token=test-token'])
-      .attach('file', Buffer.from('plain text'), { filename: 'sample.txt', contentType: 'text/plain' })
+      .send({ fileName: 'sample.txt', size: 10, contentType: 'text/plain' })
       .expect(400);
 
     expect(s3Mock.uploads).toHaveLength(0);
     expect(queueMock.jobs).toHaveLength(0);
   });
 
-  it('rejects files exceeding the size limit with 413 and stores nothing', async () => {
-    const oversizedContent = Buffer.alloc(MAX_DEPOT_FILE_SIZE_BYTES + 1, 'a');
+  it.each([0, -1, 0.5, MAX_DEPOT_FILE_SIZE_BYTES + 1])(
+    'rejects invalid size %s without receiving a file',
+    async (size) => {
+      await request(app.getHttpServer())
+        .post('/depot/upload/init')
+        .set('Cookie', ['access_token=test-token'])
+        .send({ fileName: 'sample.xml', size, contentType: 'application/xml' })
+        .expect(400);
 
-    await request(app.getHttpServer())
-      .post('/depot/upload')
-      .set('Cookie', ['access_token=test-token'])
-      .attach('file', oversizedContent, { filename: 'sample.xml', contentType: 'application/xml' })
-      .expect(413);
+      expect(s3Mock.uploads).toHaveLength(0);
+      expect(queueMock.jobs).toHaveLength(0);
+    },
+  );
 
-    expect(s3Mock.uploads).toHaveLength(0);
+  it('uploads a file with accents in the name and preserves encoding', async () => {
+    const filenameWithAccents = 'panissières.xml';
+    const session = await initialize(filenameWithAccents);
+    seedUpload(session);
+    await complete(session.depotId).expect(201);
+    const depot = await findDepot(session.depotId);
+    expect(depot.nomOriginalFichier).toBe(filenameWithAccents);
+    expect(new URL(session.uploadUrl).pathname).toBe(`/uploads/${depot.id}/file.xml`);
+    expect(depot.path).toBe(`depots/${depot.id}/file.xml`);
+  });
+
+  it('rejects confirmation before upload and allows retry once it exists', async () => {
+    const session = await initialize();
+    await complete(session.depotId).expect(409);
+    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+    seedUpload(session);
+    await complete(session.depotId).expect(201);
+  });
+
+  it('rejects mismatched actual size and content type', async () => {
+    const session = await initialize();
+    seedUpload(session, '<different/>');
+    await complete(session.depotId).expect(400);
+    seedUpload(session);
+    jest.spyOn(s3Mock, 'head').mockResolvedValue({ size: 13, contentType: 'text/plain', etag: 'etag' });
+    await complete(session.depotId).expect(400);
+    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+  });
+
+  it('only lets the initializing user confirm the depot', async () => {
+    const session = await initialize();
+    seedUpload(session);
+    await dataSource
+      .getRepository(UserEntity)
+      .save({ id: 'user_other', sub: 'other-user', email: 'other@example.com', nom: 'Other', prenom: 'User' });
+    await dataSource.getRepository(DepotEntity).update(session.depotId, { userId: 'user_other' });
+    await complete(session.depotId).expect(403);
+    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+  });
+
+  it('rolls back confirmation on queue failure and can retry', async () => {
+    const session = await initialize();
+    seedUpload(session);
+    queueMock.setFailure(true);
+    await complete(session.depotId).expect(500);
+    expect((await findDepot(session.depotId)).path).toBeNull();
+    queueMock.setFailure(false);
+    await complete(session.depotId).expect(201);
+    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(1);
+  });
+
+  it('rejects confirmation and skips cleanup for a depot without a direct upload session', async () => {
+    const repository = dataSource.getRepository(DepotEntity);
+    const depot = await repository.save(
+      repository.create({
+        nomOriginalFichier: 'sample.xml',
+        tailleFichier: 13,
+        type: 'application/xml',
+        userId: 'user_123',
+        path: 'depots/other/file.xml',
+        step: DepotStep.PENDING,
+      }),
+    );
+    s3Mock.seed(depot.path!, '<root></root>');
+
+    await complete(depot.id).expect(409);
+    await app.get(DepotUploadService).cleanup(depot.id);
+
+    expect(s3Mock.hasFile(depot.path!)).toBe(true);
+    expect((await findDepot(depot.id)).status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
     expect(queueMock.jobs).toHaveLength(0);
   });
 
-  it('uploads a file with accents in the name and preserves encoding', async () => {
-    const xmlContent = '<root></root>';
-    const filenameWithAccents = 'panissières.xml';
+  it('cleans the final object left by a rolled-back confirmation', async () => {
+    const session = await initialize();
+    seedUpload(session);
+    queueMock.setFailure(true);
+    await complete(session.depotId).expect(500);
+    const depot = await findDepot(session.depotId);
+    const filePath = `depots/${depot.id}/file.xml`;
+    expect(depot.path).toBeNull();
+    expect(s3Mock.hasFile(filePath)).toBe(true);
 
-    const response = await request(app.getHttpServer())
-      .post('/depot/upload')
-      .set('Cookie', ['access_token=test-token'])
-      .attach('file', Buffer.from(xmlContent), { filename: filenameWithAccents, contentType: 'application/xml' })
-      .expect(201);
+    await dataSource.getRepository(DepotEntity).update(depot.id, { uploadExpiresAt: new Date(Date.now() - 7200000) });
+    await app.get(DepotUploadService).cleanup(depot.id);
 
-    const responseBody = response.body as { id: string; nomOriginalFichier: string; type: string };
+    expect(s3Mock.hasFile(filePath)).toBe(false);
+    expect(s3Mock.hasFile(`uploads/${depot.id}/file.xml`)).toBe(false);
+    expect((await findDepot(depot.id)).status).toBe(DepotStatus.REJETE);
+  });
 
-    expect(responseBody.nomOriginalFichier).toBe(filenameWithAccents);
+  it('expires abandoned uploads and cleans their objects', async () => {
+    const session = await initialize();
+    seedUpload(session);
+    await dataSource
+      .getRepository(DepotEntity)
+      .update(session.depotId, { uploadExpiresAt: new Date(Date.now() - 7200000) });
+    await complete(session.depotId).expect(410);
+    await app.get(DepotUploadService).cleanup(session.depotId);
+    const depot = await findDepot(session.depotId);
+    expect(depot.status).toBe(DepotStatus.REJETE);
+    expect(s3Mock.hasFile(`uploads/${depot.id}/file.xml`)).toBe(false);
+  });
 
-    const depot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-      where: { id: responseBody.id },
-    });
-
-    expect(depot.nomOriginalFichier).toBe(filenameWithAccents);
+  it('cleans staging but retains a confirmed file', async () => {
+    const session = await initialize();
+    seedUpload(session);
+    await complete(session.depotId).expect(201);
+    await dataSource
+      .getRepository(DepotEntity)
+      .update(session.depotId, { uploadExpiresAt: new Date(Date.now() - 7200000) });
+    await app.get(DepotUploadService).cleanup(session.depotId);
+    const depot = await findDepot(session.depotId);
+    expect(s3Mock.hasFile(`uploads/${depot.id}/file.xml`)).toBe(false);
+    expect(s3Mock.hasFile(depot.path!)).toBe(true);
+    await complete(session.depotId).expect(201);
   });
 });

@@ -53,8 +53,10 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
 
       this.logger.log(`Added NomContact tag to XML for user ${depot.userId} in depot ${depotId}`);
 
-      await this.agentVerseauClient.send(fileToSend, depot.path);
-      await this.agentVerseauClient.send(Buffer.alloc(0), `${depot.path}.ack`);
+      // The external filename is independent of the S3 key.
+      const remotePath = `${depot.id}_${depot.nomOriginalFichier}`;
+      await this.agentVerseauClient.send(fileToSend, remotePath);
+      await this.agentVerseauClient.send(Buffer.alloc(0), `${remotePath}.ack`);
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
       });

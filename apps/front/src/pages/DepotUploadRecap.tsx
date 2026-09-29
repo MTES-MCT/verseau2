@@ -9,6 +9,7 @@ import {
   RecapSummaryCard,
 } from './depot-upload-recap/components';
 import { useDepotRecap } from './depot-upload-recap/useDepotRecap';
+import { Alert } from '@codegouvfr/react-dsfr/Alert';
 
 const steps = ['Sélection du flux et fichier', 'Récapitulatif', 'Envoi du fichier'];
 
@@ -56,6 +57,16 @@ export function DepotUploadRecapPage() {
         <ParamsTags params={parametreNames} />
 
         <ChecksList droitsDeDepotStatus={droitsDeDepotStatus} />
+
+        {uploadMutation.isPending && <p role="status">Envoi et confirmation du fichier en cours…</p>}
+        {uploadMutation.isError && (
+          <Alert
+            className="fr-mb-3w"
+            severity="error"
+            title="Le dépôt n’a pas pu être confirmé"
+            description="Réessayez en cliquant sur « Finaliser le dépôt ». Si le fichier a déjà été envoyé, seule la confirmation sera relancée."
+          />
+        )}
 
         <FooterActions
           onBack={handleReturn}

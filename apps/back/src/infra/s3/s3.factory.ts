@@ -7,7 +7,17 @@ import { customizeMockS3Client } from './s3.provider.mock';
 
 export const createS3Service = (configService: ConfigService, s3Client: S3Client): S3 => {
   const bucket = configService.getOrThrow<string>('S3_BUCKET');
-  return new S3Service(bucket, s3Client);
+  const publicEndpoint = configService.get<string>('S3_PUBLIC_ENDPOINT');
+  const uploadClient = publicEndpoint
+    ? new S3Client({
+        region: s3Client.config.region,
+        credentials: s3Client.config.credentials,
+        forcePathStyle: true,
+        endpoint: publicEndpoint,
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+      })
+    : s3Client;
+  return new S3Service(bucket, s3Client, uploadClient);
 };
 
 export const createS3Providers = () => [
@@ -27,6 +37,7 @@ export const createS3Providers = () => [
         },
         maxAttempts: 3,
         forcePathStyle: true,
+        requestChecksumCalculation: 'WHEN_REQUIRED',
       });
 
       const s3Provider = configService.get<string>('S3_PROVIDER');

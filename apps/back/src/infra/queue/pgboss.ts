@@ -1,6 +1,7 @@
 import { QueueOptions } from 'pg-boss/dist/types';
 
 export type SendOptions = {
+  db?: { executeSql(text: string, values?: unknown[]): Promise<{ rows: object[] }> };
   id?: string;
   priority?: number;
   startAfter?: number | string | Date;

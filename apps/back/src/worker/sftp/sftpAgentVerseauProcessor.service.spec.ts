@@ -34,7 +34,8 @@ describe('SftpAgentVerseauProcessorService', () => {
       update: jest.fn().mockResolvedValue({}),
       findDepotByIdWithUser: jest.fn().mockResolvedValue({
         id: 'depot-1',
-        path: 'remote/path.xml',
+        path: 'depots/depot-1/file.xml',
+        nomOriginalFichier: 'test.xml',
         userId: 'user-1',
         user: { email: 'user@example.com', nom: 'Cerbere', prenom: 'Contact' },
       }),
@@ -88,12 +89,28 @@ describe('SftpAgentVerseauProcessorService', () => {
     expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
 
     const expectedXml = `${originalXml}<!-- added DOE John -->`;
-    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'remote/path.xml');
-    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'remote/path.xml.ack');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'depot-1_test.xml');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot-1_test.xml.ack');
 
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       step: DepotStep.SFTP_COMPLETED,
     });
+  });
+
+  it('keeps the original remote filename when the S3 path uses an opaque deposit key', async () => {
+    (mockDepotService.findDepotByIdWithUser as jest.Mock).mockResolvedValue({
+      id: 'dep_1',
+      path: 'depots/dep_1/file.xml',
+      nomOriginalFichier: 'données été.xml',
+      userId: 'user-1',
+      user: { email: 'user@example.com' },
+    });
+
+    await service.process({ depotId: 'dep_1', filePath: 'depots/dep_1/file.xml' });
+
+    expect(mockS3.download).toHaveBeenCalledWith('depots/dep_1/file.xml');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, expect.any(Buffer), 'dep_1_données été.xml');
+    expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'dep_1_données été.xml.ack');
   });
 
   it('should fail without sending files if no user is found', async () => {

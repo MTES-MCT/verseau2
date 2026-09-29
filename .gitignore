@@ -78,6 +78,8 @@ coverage
 
 script/
 scripts/xml/
+/scripts/upload_xml.js
+/test_charge.sh
 
 .npmrc
 !devops/tools/sync-pg/.npmrc
