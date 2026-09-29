@@ -12,6 +12,8 @@ The runner starts an isolated PostgreSQL 16 database and S3 emulator, builds the
 
 When running from a container with a sibling Docker-in-Docker daemon, published PostgreSQL and S3 ports may be reachable at the daemon hostname rather than `localhost`. Run `E2E_DOCKER_HOST=docker pnpm test:e2e` (substitute your reachable daemon hostname if different). The API and frontend still use `localhost` because the runner starts them in its own container. See `.env.example`; it is documentation, not automatically loaded.
 
+GitHub Actions runs this browser suite in a dedicated Ubuntu job when E2E, frontend, backend, shared dependencies or workflow files change. On failure, the job uploads `artifacts/` (logs, screenshots and videos) for debugging.
+
 `pnpm test:e2e` starts both backend processes. Look for `[e2e] Starting backend API` and `[e2e] Starting backend worker` in the terminal; their startup output is also saved under `artifacts/logs/`. If the runner stops before those messages, the reported Docker, build, or seed step failed first. `pnpm --filter e2e cypress:run` runs only Cypress against a stack that you have already started.
 
 The runner requires ports 3000 and 5173 to be unused before starting. An existing backend on port 3000 could otherwise answer the readiness check while the new backend fails to bind, leaving the isolated E2E database without application tables. If the port check fails, stop the existing app (for example, inspect the listener with `lsof -nP -iTCP:3000 -sTCP:LISTEN`) and rerun.
