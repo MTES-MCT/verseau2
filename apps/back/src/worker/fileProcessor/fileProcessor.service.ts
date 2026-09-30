@@ -9,22 +9,11 @@ import { DepotService } from '@dossier/depot/depot.service';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
 import { S3 } from '@infra/s3/s3';
-import {
-  parseScenarioAssainissementXml,
-  isFluxQualifie,
-  FctAssainissement,
-  XmlParseBudgetError,
-  type XmlParseBudgets,
-} from '@lib/parser';
+import { resolveXmlParseBudgets } from '@infra/config/xmlParseBudgets';
+import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement, XmlParseBudgetError } from '@lib/parser';
 import { DepotStep, DepotStatus, EtapeMetier, ControleSandreStatus, ControleStatus } from '@lib/dossier';
 import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import { AsyncTask } from '@worker/asyncTask';
-
-// Optional environment overrides for the XML parse budgets. When unset or
-// invalid, the parser defaults (DEFAULT_XML_PARSE_BUDGETS) apply.
-const XML_PARSE_MAX_ELEMENTS_ENV = 'XML_PARSE_MAX_ELEMENTS';
-const XML_PARSE_MAX_DEPTH_ENV = 'XML_PARSE_MAX_DEPTH';
-const XML_PARSE_MAX_TEXT_LENGTH_ENV = 'XML_PARSE_MAX_TEXT_LENGTH';
 
 @Injectable()
 export class FileProcessorService implements AsyncTask<FichierDeDepot> {
@@ -55,7 +44,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       const xmlContent = xmlBuffer.toString('utf8');
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Parsing XML`);
-      const parsed = await parseScenarioAssainissementXml(xmlContent, this.resolveXmlParseBudgets());
+      const parsed = await parseScenarioAssainissementXml(xmlContent, resolveXmlParseBudgets(this.config));
       const codes = this.extractAllCodes(parsed);
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Checking deposit rights`);
@@ -122,36 +111,6 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       });
       throw error;
     }
-  }
-
-  private resolveXmlParseBudgets(): Partial<XmlParseBudgets> {
-    const budgets: Partial<XmlParseBudgets> = {};
-
-    const maxElements = this.positiveIntConfig(XML_PARSE_MAX_ELEMENTS_ENV);
-    if (maxElements !== undefined) {
-      budgets.maxElements = maxElements;
-    }
-
-    const maxDepth = this.positiveIntConfig(XML_PARSE_MAX_DEPTH_ENV);
-    if (maxDepth !== undefined) {
-      budgets.maxDepth = maxDepth;
-    }
-
-    const maxTextLength = this.positiveIntConfig(XML_PARSE_MAX_TEXT_LENGTH_ENV);
-    if (maxTextLength !== undefined) {
-      budgets.maxTextLength = maxTextLength;
-    }
-
-    return budgets;
-  }
-
-  private positiveIntConfig(key: string): number | undefined {
-    const raw = this.config.get<string>(key);
-    if (raw === undefined || raw === '') {
-      return undefined;
-    }
-    const value = Number(raw);
-    return Number.isInteger(value) && value > 0 ? value : undefined;
   }
 
   private extractAllCodes(parsed: FctAssainissement): {

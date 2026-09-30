@@ -13,6 +13,7 @@ import { loggerProviderMock } from '@shared/logger/logger.mock';
 import { ControleSandreStatus, ControleStatus, DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import type { FichierDeDepot } from '@dossier/depot/file/file';
+import { DEFAULT_XML_PARSE_BUDGETS } from '@lib/parser';
 
 const fichier: FichierDeDepot = {
   depotId: 'dep_1',
@@ -183,6 +184,29 @@ describe('FileProcessorService', () => {
       depotId: 'dep_1',
       filePath: fichier.filePath,
     });
+  });
+
+  it('accepts a file above the default depth limit but below the configured limit', async () => {
+    const depth = DEFAULT_XML_PARSE_BUDGETS.maxDepth;
+    mockConfigGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_DEPTH' ? String(depth + 1) : undefined));
+    const xml = compliantXml.replace('</FctAssain>', `${'<a>'.repeat(depth)}${'</a>'.repeat(depth)}</FctAssain>`);
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(xml));
+
+    await service.process(fichier);
+
+    expect(mockDepotService.update).toHaveBeenCalledTimes(1);
+    expect(mockQueueService.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('accepts text above the default budget when the effective text budget is raised', async () => {
+    mockConfigGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_TEXT_LENGTH' ? '12000000' : undefined));
+    const xml = compliantXml.replace('</FctAssain>', `${`<a>${'x'.repeat(1000)}</a>`.repeat(10_500)}</FctAssain>`);
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(xml));
+
+    await service.process(fichier);
+
+    expect(mockDepotService.update).toHaveBeenCalledTimes(1);
+    expect(mockQueueService.send).toHaveBeenCalledTimes(2);
   });
 
   it('finalizes the depot as REJETE without retrying when deposit rights are insufficient', async () => {

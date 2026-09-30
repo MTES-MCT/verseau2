@@ -3,22 +3,29 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DepotStatus } from '@lib/dossier';
+import { DEFAULT_XML_PARSE_BUDGETS, parseScenarioAssainissementXml } from '@lib/parser';
 import { DepotUploadRecapPage } from './DepotUploadRecap';
-import { initializeUpload, uploadDepotFile, completeUpload } from '../api/depot';
+import { initializeUpload, uploadDepotFile, completeUpload, fetchXmlParseBudgets } from '../api/depot';
 
-vi.mock('../api/depot', () => ({ initializeUpload: vi.fn(), uploadDepotFile: vi.fn(), completeUpload: vi.fn() }));
+vi.mock('../api/depot', () => ({
+  initializeUpload: vi.fn(),
+  uploadDepotFile: vi.fn(),
+  completeUpload: vi.fn(),
+  fetchXmlParseBudgets: vi.fn(),
+}));
 vi.mock('../api/referentiel', () => ({ fetchParametresFromCodes: vi.fn().mockResolvedValue([]) }));
 vi.mock('../hooks/useCheckDroitsDeDepot', () => ({ useCheckDroitsDeDepot: () => ({ status: 'authorized' }) }));
-vi.mock('@lib/parser', () => ({
+vi.mock('@lib/parser', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@lib/parser')>()),
   parseScenarioAssainissementXml: vi.fn().mockResolvedValue({ scenario: {} }),
   checkScenarioCodeAndVersion: () => true,
   isFluxQualifie: () => false,
 }));
 
-function renderPage() {
+function renderPage(fileContent = '<root/>') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/recap', state: { fileName: 'test.xml', fileContent: '<root/>' } }]}>
+    <MemoryRouter initialEntries={[{ pathname: '/recap', state: { fileName: 'test.xml', fileContent } }]}>
       <QueryClientProvider client={client}>
         <Routes>
           <Route path="/recap" element={<DepotUploadRecapPage />} />
@@ -32,6 +39,12 @@ function renderPage() {
 describe('Dépôt direct', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(parseScenarioAssainissementXml)
+      .mockReset()
+      .mockResolvedValue({ scenario: {} } as never);
+    vi.mocked(fetchXmlParseBudgets)
+      .mockReset()
+      .mockResolvedValue({ ...DEFAULT_XML_PARSE_BUDGETS });
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     vi.mocked(initializeUpload).mockResolvedValue({
       depotId: 'dep_123',
@@ -47,6 +60,53 @@ describe('Dépôt direct', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+  });
+
+  it('loads the effective policy before parsing or offering upload', async () => {
+    vi.mocked(fetchXmlParseBudgets).mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    await waitFor(() => expect(fetchXmlParseBudgets).toHaveBeenCalledTimes(1));
+    expect(parseScenarioAssainissementXml).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /finaliser le dépôt/i })).not.toBeInTheDocument();
+    expect(initializeUpload).not.toHaveBeenCalled();
+  });
+
+  it('uploads a file above defaults but below the effective depth budget', async () => {
+    const parser = await vi.importActual<typeof import('@lib/parser')>('@lib/parser');
+    const depth = DEFAULT_XML_PARSE_BUDGETS.maxDepth + 1;
+    const xml = `${'<a>'.repeat(depth)}${'</a>'.repeat(depth)}`;
+    const budgets = { ...DEFAULT_XML_PARSE_BUDGETS, maxDepth: depth + 1 };
+    vi.mocked(fetchXmlParseBudgets).mockResolvedValue(budgets);
+    vi.mocked(parseScenarioAssainissementXml).mockImplementation(parser.parseScenarioAssainissementXml);
+    renderPage(xml);
+
+    fireEvent.click(await screen.findByRole('button', { name: /finaliser le dépôt/i }));
+    await screen.findByRole('heading', { name: 'Tableau de bord' });
+
+    expect(parseScenarioAssainissementXml).toHaveBeenCalledWith(xml, budgets);
+    expect(completeUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks upload when a file exceeds a lowered effective element limit', async () => {
+    const parser = await vi.importActual<typeof import('@lib/parser')>('@lib/parser');
+    vi.mocked(fetchXmlParseBudgets).mockResolvedValue({ ...DEFAULT_XML_PARSE_BUDGETS, maxElements: 2 });
+    vi.mocked(parseScenarioAssainissementXml).mockImplementation(parser.parseScenarioAssainissementXml);
+    renderPage('<FctAssain><a/><b/></FctAssain>');
+
+    await screen.findByText(/XML parse budget exceeded.*ELEMENTS.*2/);
+    expect(screen.queryByRole('button', { name: /finaliser le dépôt/i })).not.toBeInTheDocument();
+    expect(initializeUpload).not.toHaveBeenCalled();
+  });
+
+  it('fails closed rather than using defaults when policy retrieval fails', async () => {
+    vi.mocked(fetchXmlParseBudgets).mockRejectedValue(new Error('Politique de parsing indisponible'));
+    renderPage();
+
+    await screen.findByText(/Politique de parsing indisponible/);
+    expect(parseScenarioAssainissementXml).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /finaliser le dépôt/i })).not.toBeInTheDocument();
+    expect(initializeUpload).not.toHaveBeenCalled();
   });
 
   it('waits for S3 before confirming and navigating', async () => {

@@ -12,6 +12,8 @@ import { DepotError } from '@dossier/depot/depotError';
 import { ControleName, ControleType, ErrorCode, EvenementType, ControleStatus, DepotStep } from '@lib/dossier';
 import { SharedModule } from '@shared/shared.module';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { ConfigService } from '@nestjs/config';
+import { DEFAULT_XML_PARSE_BUDGETS } from '@lib/parser';
 
 describe('ControleMetierProcessorService - Technical Error Handling', () => {
   let service: ControleMetierProcessorService;
@@ -22,8 +24,10 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
   let mockDepotService: DepotService;
   let mockDepotCoordinatorService: DepotCoordinatorService;
   let mockControleGateway: ControleGateway;
+  const configGet = jest.fn((_key: string): string | undefined => undefined);
 
   beforeEach(async () => {
+    configGet.mockReset();
     mockS3 = {
       download: jest.fn(),
     } as unknown as S3;
@@ -63,11 +67,60 @@ describe('ControleMetierProcessorService - Technical Error Handling', () => {
         { provide: DepotService, useValue: mockDepotService },
         { provide: DepotCoordinatorService, useValue: mockDepotCoordinatorService },
         { provide: ControleGateway, useValue: mockControleGateway },
+        { provide: ConfigService, useValue: { get: configGet } },
         loggerProviderMock,
       ],
     }).compile();
 
     service = module.get<ControleMetierProcessorService>(ControleMetierProcessorService);
+  });
+
+  it('reparses a file above the default element budget but below the configured budget', async () => {
+    // Scenario objects are released as they close, so this exercises the real
+    // element counter without retaining millions of objects in the test heap.
+    const xml = `<FctAssain>${'<Scenario><CodeScenario>FCT_ASSAIN</CodeScenario><VersionScenario>4</VersionScenario><Emetteur/></Scenario>'.repeat(500_001)}</FctAssain>`;
+    configGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_ELEMENTS' ? '2500000' : undefined));
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(xml));
+    (mockDataSource.transaction as jest.Mock).mockResolvedValue({ allSuccess: true, resultsV1: [], resultsV2: [] });
+
+    await service.process({ depotId: 'dep_1', filePath: 'file.xml' });
+
+    expect(mockDataSource.transaction).toHaveBeenCalled();
+    expect(mockControleGateway.createControle).not.toHaveBeenCalled();
+    expect(mockDepotService.update).toHaveBeenLastCalledWith(
+      'dep_1',
+      expect.objectContaining({
+        controleStatus: ControleStatus.SUCCESS,
+      }),
+    );
+  }, 30_000);
+
+  it('keeps a lowered depth budget effective during reparsing', async () => {
+    configGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_DEPTH' ? '2' : undefined));
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from('<FctAssain><a><b/></a></FctAssain>'));
+
+    await service.process({ depotId: 'dep_1', filePath: 'file.xml' });
+
+    expect(mockDataSource.transaction).not.toHaveBeenCalled();
+    expect(mockControleGateway.createControle).not.toHaveBeenCalled();
+    expect(mockDepotService.update).toHaveBeenLastCalledWith(
+      'dep_1',
+      expect.objectContaining({
+        error: DepotError.XML_PARSE_BUDGET_EXCEEDED,
+      }),
+    );
+  });
+
+  it('honors a raised depth budget while preserving the default text and element limits', async () => {
+    const depth = DEFAULT_XML_PARSE_BUDGETS.maxDepth + 1;
+    configGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_DEPTH' ? String(depth + 1) : undefined));
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(`${'<a>'.repeat(depth)}${'</a>'.repeat(depth)}`));
+    (mockDataSource.transaction as jest.Mock).mockResolvedValue({ allSuccess: true, resultsV1: [], resultsV2: [] });
+
+    await service.process({ depotId: 'dep_1', filePath: 'file.xml' });
+
+    expect(mockDataSource.transaction).toHaveBeenCalled();
+    expect(mockControleGateway.createControle).not.toHaveBeenCalled();
   });
 
   it('should create technical error control when transaction throws', async () => {

@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Post, Query, Req, Param, UseGuards, Res, ForbiddenException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  Param,
+  UseGuards,
+  Res,
+  ForbiddenException,
+  Header,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
+import { resolveXmlParseBudgets } from '@infra/config/xmlParseBudgets';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotUploadService } from './depotUpload.service';
 import { DroitsDepotService } from './droitsDepot.service';
@@ -10,6 +24,7 @@ import type { RouteBody, RouteParams, RouteQuery, RouteResponse } from '@lib/dos
 import {
   listDepots,
   initializeDepotUpload,
+  getDepotXmlParseBudgets,
   completeDepotUpload,
   checkDroitsDeDepot as checkDroitsRoute,
   downloadRapport,
@@ -33,8 +48,16 @@ export class DepotController {
     private readonly userService: UserService,
     private readonly droitsUserService: DroitsUserService,
     private readonly logger: LoggerService,
+    private readonly config: ConfigService,
   ) {
     this.logger.setContext(DepotController.name);
+  }
+
+  @Get('upload/xml-parse-budgets')
+  @UseGuards(MeGuard)
+  @Header('Cache-Control', 'private, no-store')
+  getXmlParseBudgets(): RouteResponse<typeof getDepotXmlParseBudgets> {
+    return resolveXmlParseBudgets(this.config);
   }
 
   @Post('upload/init')

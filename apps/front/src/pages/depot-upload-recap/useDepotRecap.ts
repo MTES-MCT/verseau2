@@ -7,7 +7,13 @@ import {
   isFluxQualifie,
   type FctAssainissement,
 } from '@lib/parser';
-import { initializeUpload, uploadDepotFile, completeUpload, type DepotUploadSession } from '../../api/depot';
+import {
+  initializeUpload,
+  uploadDepotFile,
+  completeUpload,
+  fetchXmlParseBudgets,
+  type DepotUploadSession,
+} from '../../api/depot';
 import { fetchParametresFromCodes } from '../../api/referentiel';
 import { AppRoutes } from '../../routes';
 import { useCheckDroitsDeDepot, type DroitsDeDepotStatus } from '../../hooks/useCheckDroitsDeDepot';
@@ -40,7 +46,10 @@ export function useDepotRecap(): UseDepotRecapResult {
   const { fileName, fileContent } = (location.state ?? {}) as LocationState;
   const parseMutation = useMutation({
     mutationFn: async (xml: string) => {
-      const parsed = await parseScenarioAssainissementXml(xml);
+      // Fail closed if the policy cannot be loaded; never silently parse with a
+      // different (potentially weaker) budget than the backend.
+      const budgets = await fetchXmlParseBudgets();
+      const parsed = await parseScenarioAssainissementXml(xml, budgets);
       if (!parsed.scenario || !checkScenarioCodeAndVersion(parsed.scenario)) {
         throw new Error('Le fichier doit être un scénario FCT_ASSAIN version 3 ou 4');
       }

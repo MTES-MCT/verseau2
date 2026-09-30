@@ -1,4 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { resolveXmlParseBudgets } from '@infra/config/xmlParseBudgets';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MasaGateway } from '@dossier/masa/masa.gateway';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
@@ -35,6 +37,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
     private readonly masaProvider: MasaProvider,
     private readonly pdfGenerator: RapportPdfGeneratorService,
     private readonly logger: LoggerService,
+    private readonly config: ConfigService,
   ) {
     this.logger.setContext(DiffusionRapportProcessorService.name);
   }
@@ -144,7 +147,10 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       }
 
       const xmlBuffer = await this.s3.download(depot.path);
-      const parsed = await parseScenarioAssainissementXml(xmlBuffer.toString('utf8'));
+      const parsed = await parseScenarioAssainissementXml(
+        xmlBuffer.toString('utf8'),
+        resolveXmlParseBudgets(this.config),
+      );
       const ouvrageDepollutionCode = parsed.ouvrages
         .map((ouvrage) => ouvrage.cdOuvrageDepollution?.trim())
         .find((code): code is string => Boolean(code));
