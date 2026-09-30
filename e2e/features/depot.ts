@@ -53,6 +53,19 @@ Then('son traitement par le worker est terminé', () => {
 });
 
 function sendMasaReturn(statut: 'Intégré' | 'Rejeté') {
+  // MASA cannot return a result until dispatch, including asynchronous SANDRE polling.
+  const deadline = Date.now() + 90000;
+  const waitForDispatch = (): void => {
+    cy.task<string | null>('depotStep', depotId).then((step) => {
+      if (step === 'SFTP_COMPLETED') {
+        return;
+      }
+      expect(step, 'SFTP dispatch has not failed').to.not.eq('SFTP_FAILED');
+      expect(Date.now(), 'SFTP dispatch deadline').to.be.lessThan(deadline);
+      cy.wait(500).then(waitForDispatch);
+    });
+  };
+  waitForDispatch();
   cy.request({
     method: 'POST',
     url: 'http://localhost:3000/api/webhook/masa/agent-verseau',
@@ -73,6 +86,7 @@ When('MASA rejette le dépôt', () => sendMasaReturn('Rejeté'));
 
 Then('le retour MASA est traité par le worker', () => {
   waitForWorkerJob('process_after_masa_webhook');
+  cy.task('depotStep', depotId).should('eq', 'MASA_CALLED_ENPOINT');
 });
 
 function checkMasaStatusOnDashboard(status: 'Intégré' | 'Rejeté') {

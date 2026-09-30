@@ -12,16 +12,7 @@ export const mapMasaModelToDto = (masa: MasaModel): MasaDto => {
   };
 };
 
-/**
- * Mappe un statut webhook MASA vers la décision à appliquer au dépôt.
- *
- * Les statuts non finaux (en cours de traitement côté MASA : Initialisé, Déposé,
- * Intégrable, A intégrer) ne doivent PAS décider du sort du dépôt : ils mappent
- * vers `null` afin d'être acquittés sans persister de retour ni transitionner le
- * dépôt, ce qui laisse un statut final ultérieur s'appliquer. Seuls les statuts
- * finaux (Intégré, Archivé - Accepté / Accepté partiellement, Rejeté,
- * Archivé - Non accepté / Rejeté, Erreur bloquante) portent une décision.
- */
+// Les statuts non finaux ne décident pas de l'issue du dépôt.
 export const mapWebhookStatusToMasaStatus = (statut: MasaWebhookStatus): MasaStatus | null => {
   switch (statut) {
     case MasaWebhookStatus.INTEGRE:

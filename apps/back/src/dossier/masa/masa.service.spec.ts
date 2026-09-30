@@ -101,10 +101,14 @@ describe('MasaService.processRetourAgentVerseau', () => {
         statutMasa: MasaWebhookStatus.INTEGRE,
         rapport: '<p>rapport</p>',
       });
-      expect(queueService.send).toHaveBeenCalledWith(QueueName.process_after_masa_webhook, {
-        masaId: 'masa_saved',
-        depotId: 'depot_1',
-      });
+      expect(queueService.send).toHaveBeenCalledWith(
+        QueueName.process_after_masa_webhook,
+        {
+          masaId: 'masa_saved',
+          depotId: 'depot_1',
+        },
+        { retryLimit: 12, retryDelay: 5, retryBackoff: false },
+      );
       expect(result).toStrictEqual(savedMasaRetour);
     });
 
@@ -134,16 +138,21 @@ describe('MasaService.processRetourAgentVerseau', () => {
   });
 
   describe('duplicate delivery of an already saved return', () => {
-    it('repairs a failed enqueue by re-enqueueing when the depot still awaits the MASA return', async () => {
+    it.each([DepotStep.SFTP_COMPLETED, DepotStep.SFTP_IN_PROGRESS])('repairs a failed enqueue at %s', async (step) => {
       masaGateway.findByDepotId.mockResolvedValue(existingMasaRetour(MasaStatus.INTEGRE));
+      depotGateway.findDepotById.mockResolvedValue({ ...awaitingMasaDepot, step });
 
       const result = await service.processRetourAgentVerseau(masaPayload(MasaWebhookStatus.INTEGRE));
 
       expect(masaGateway.saveMasaRetour).not.toHaveBeenCalled();
-      expect(queueService.send).toHaveBeenCalledWith(QueueName.process_after_masa_webhook, {
-        masaId: 'masa_existing',
-        depotId: 'depot_1',
-      });
+      expect(queueService.send).toHaveBeenCalledWith(
+        QueueName.process_after_masa_webhook,
+        {
+          masaId: 'masa_existing',
+          depotId: 'depot_1',
+        },
+        { retryLimit: 12, retryDelay: 5, retryBackoff: false },
+      );
       expect(result).toStrictEqual(existingMasaRetour(MasaStatus.INTEGRE));
     });
 
@@ -156,6 +165,26 @@ describe('MasaService.processRetourAgentVerseau', () => {
       expect(queueService.send).not.toHaveBeenCalled();
       expect(result).toStrictEqual(existingMasaRetour(MasaStatus.INTEGRE));
     });
+  });
+
+  it('recovers on webhook redelivery after saving succeeded but enqueue failed', async () => {
+    queueService.send.mockRejectedValueOnce(new Error('queue unavailable'));
+    await expect(service.processRetourAgentVerseau(masaPayload(MasaWebhookStatus.INTEGRE))).rejects.toThrow(
+      'queue unavailable',
+    );
+    masaGateway.findByDepotId.mockResolvedValue(savedMasaRetour);
+
+    await service.processRetourAgentVerseau(masaPayload(MasaWebhookStatus.INTEGRE));
+
+    expect(masaGateway.saveMasaRetour).toHaveBeenCalledTimes(1);
+    expect(queueService.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not acknowledge an enqueue returning no job ID', async () => {
+    queueService.send.mockResolvedValueOnce(null);
+    await expect(service.processRetourAgentVerseau(masaPayload(MasaWebhookStatus.INTEGRE))).rejects.toThrow(
+      'Failed to enqueue MASA return',
+    );
   });
 
   it('throws when the depot does not exist', async () => {
