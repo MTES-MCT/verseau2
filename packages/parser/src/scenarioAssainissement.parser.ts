@@ -191,6 +191,62 @@ function trailingIndent(ws: string): string {
   return ws;
 }
 
+/** Infer one nesting level from adjacent tag lines, without regex backtracking. */
+function inferIndentationUnit(xml: string): string {
+  let previousIndent: string | undefined;
+  let hasTabs = false;
+  let lineStart = 0;
+  while (lineStart < xml.length) {
+    let tagStart = lineStart;
+    while (xml[tagStart] === ' ' || xml[tagStart] === '\t') {
+      tagStart++;
+    }
+    if (xml[tagStart] === '<' && xml[tagStart + 1] !== '?' && xml[tagStart + 1] !== '!') {
+      const indent = xml.slice(lineStart, tagStart);
+      hasTabs ||= indent.includes('\t');
+      if (previousIndent !== undefined && indent.length > previousIndent.length && indent.startsWith(previousIndent)) {
+        return indent.slice(previousIndent.length);
+      }
+      previousIndent = indent;
+    }
+    const newline = xml.indexOf('\n', tagStart);
+    if (newline === -1) {
+      break;
+    }
+    lineStart = newline + 1;
+  }
+  return hasTabs ? '\t' : '  ';
+}
+
+/** Prefer the indentation of an existing child over the document-wide fallback. */
+function inferChildIndent(xml: string, start: number, end: number, parentIndent: string, unit: string): string {
+  let newline = xml.indexOf('\n', start);
+  while (newline !== -1 && newline < end) {
+    const lineStart = newline + 1;
+    let tagStart = lineStart;
+    while (tagStart < end && (xml[tagStart] === ' ' || xml[tagStart] === '\t')) {
+      tagStart++;
+    }
+    if (xml[tagStart] === '<' && xml[tagStart + 1] !== '/' && xml[tagStart + 1] !== '!' && xml[tagStart + 1] !== '?') {
+      const indent = xml.slice(lineStart, tagStart);
+      if (indent.length > parentIndent.length && indent.startsWith(parentIndent)) {
+        return indent;
+      }
+    }
+    newline = xml.indexOf('\n', tagStart);
+  }
+  return parentIndent + unit;
+}
+
+/** Insert before the closing tag's indentation, retaining all existing whitespace. */
+function insertIndentedBlock(xml: string, close: number, block: string, lineEnding: string): string {
+  const indent = trailingIndent(xml.slice(whitespaceRunStart(xml, close), close));
+  const insertionPoint = close - indent.length;
+  const previousCharacter = xml[insertionPoint - 1];
+  const separator = previousCharacter === '\n' || previousCharacter === '\r' ? '' : lineEnding;
+  return xml.slice(0, insertionPoint) + separator + block + lineEnding + xml.slice(insertionPoint);
+}
+
 /**
  * Adds a <NomContact> tag to the emitter block of a SANDRE scenario XML.
  *
@@ -232,8 +288,9 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
       const runStart = whitespaceRunStart(xml, destinataireOpen);
       const leading = xml.slice(runStart, destinataireOpen);
       const indent = trailingIndent(leading);
-      const contactIndent = indent + '  ';
-      const nomContactIndent = contactIndent + '  ';
+      const unit = inferIndentationUnit(xml);
+      const contactIndent = indent + unit;
+      const nomContactIndent = contactIndent + unit;
       const emetteurBlock = `${leading}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${indent}</Emetteur>${leading}`;
       return xml.slice(0, runStart) + emetteurBlock + xml.slice(destinataireOpen);
     }
@@ -247,15 +304,21 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
     if (scenarioClose === -1) {
       return xml;
     }
-    const scenarioIndent = trailingIndent(xml.slice(scenarioOpen + SCENARIO_OPEN_TAG.length, indentRunEnd));
-    const inner = xml.slice(indentRunEnd, scenarioClose);
-    const emetteurIndent = scenarioIndent + '  ';
-    const contactIndent = emetteurIndent + '  ';
-    const nomContactIndent = contactIndent + '  ';
+    const scenarioIndent = trailingIndent(xml.slice(whitespaceRunStart(xml, scenarioClose), scenarioClose));
+    const unit = inferIndentationUnit(xml);
+    const emetteurIndent = inferChildIndent(
+      xml,
+      scenarioOpen + SCENARIO_OPEN_TAG.length,
+      scenarioClose,
+      scenarioIndent,
+      unit,
+    );
+    const contactIndent = emetteurIndent + unit;
+    const nomContactIndent = contactIndent + unit;
     return (
-      xml.slice(0, scenarioOpen) +
-      `${SCENARIO_OPEN_TAG}${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>${inner}${lineEnding}${scenarioIndent}${SCENARIO_CLOSE_TAG}` +
-      xml.slice(scenarioClose + SCENARIO_CLOSE_TAG.length)
+      xml.slice(0, scenarioOpen + SCENARIO_OPEN_TAG.length) +
+      `${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>` +
+      xml.slice(scenarioOpen + SCENARIO_OPEN_TAG.length)
     );
   }
 
@@ -265,29 +328,39 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
     if (contactClose !== -1) {
       const emetteurCloseAfterContact = xml.indexOf(EMETTEUR_CLOSE_TAG, contactClose + CONTACT_CLOSE_TAG.length);
       if (emetteurCloseAfterContact !== -1) {
-        const runStart = whitespaceRunStart(xml, contactClose);
-        const beforeRun = xml.slice(contactOpen + CONTACT_OPEN_TAG.length, runStart);
-        const closingIndent = trailingIndent(xml.slice(runStart, contactClose));
-        const childIndent = closingIndent + '  ';
-        return (
-          xml.slice(0, contactOpen + CONTACT_OPEN_TAG.length) +
-          `${beforeRun}${lineEnding}${childIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${closingIndent}${CONTACT_CLOSE_TAG}` +
-          xml.slice(contactClose + CONTACT_CLOSE_TAG.length)
+        const closingIndent = trailingIndent(xml.slice(whitespaceRunStart(xml, contactClose), contactClose));
+        const childIndent = inferChildIndent(
+          xml,
+          contactOpen + CONTACT_OPEN_TAG.length,
+          contactClose,
+          closingIndent,
+          inferIndentationUnit(xml),
+        );
+        return insertIndentedBlock(
+          xml,
+          contactClose,
+          `${childIndent}<NomContact>${nomContact}</NomContact>`,
+          lineEnding,
         );
       }
     }
   }
 
   const emetteurClose = xml.indexOf(EMETTEUR_CLOSE_TAG, emetteurOpen + EMETTEUR_OPEN_TAG.length);
-  const runStart = whitespaceRunStart(xml, emetteurClose);
-  const inner = xml.slice(emetteurOpen + EMETTEUR_OPEN_TAG.length, runStart);
-  const emetteurIndent = trailingIndent(xml.slice(runStart, emetteurClose));
-  const contactIndent = emetteurIndent + '  ';
-  const nomContactIndent = contactIndent + '  ';
-  return (
-    xml.slice(0, emetteurOpen + EMETTEUR_OPEN_TAG.length) +
-    `${inner}${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}${EMETTEUR_CLOSE_TAG}` +
-    xml.slice(emetteurClose + EMETTEUR_CLOSE_TAG.length)
+  const emetteurIndent = trailingIndent(xml.slice(whitespaceRunStart(xml, emetteurClose), emetteurClose));
+  const contactIndent = inferChildIndent(
+    xml,
+    emetteurOpen + EMETTEUR_OPEN_TAG.length,
+    emetteurClose,
+    emetteurIndent,
+    inferIndentationUnit(xml),
+  );
+  const nomContactIndent = contactIndent + contactIndent.slice(emetteurIndent.length);
+  return insertIndentedBlock(
+    xml,
+    emetteurClose,
+    `${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>`,
+    lineEnding,
   );
 }
 

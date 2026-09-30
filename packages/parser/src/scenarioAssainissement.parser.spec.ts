@@ -186,7 +186,7 @@ describe('Sandre Parser', () => {
     expect(xml).toEqual(expectedXml);
   });
 
-  it('should write the NomContact tag without adding extra blank lines when there are multiple newlines before the closing tag', () => {
+  it('should preserve blank lines and sibling indentation when adding the NomContact tag', () => {
     const nomContact = 'Pierre Dupont';
     const originalXml = `
         <Emetteur>
@@ -199,9 +199,10 @@ describe('Sandre Parser', () => {
         <Emetteur>
             <CdIntervenant schemeAgencyID="SIRET">57202552611737</CdIntervenant>
             <NomIntervenant>Bretagne Ouest</NomIntervenant>
-          <Contact>
-            <NomContact>${nomContact}</NomContact>
-          </Contact>
+
+            <Contact>
+                <NomContact>${nomContact}</NomContact>
+            </Contact>
         </Emetteur>`;
 
     const xml = addNameTagToXml(originalXml, nomContact);
@@ -277,22 +278,21 @@ describe('Sandre Parser', () => {
     expect(xml).toEqual(expectedXml);
   });
 
-  it('should insert the Emetteur block right after the opening Scenario tag and absorb the following whitespace', () => {
-    // All whitespace between <Scenario> and the following content is captured and
-    // dropped: only its last-line part is reused as indent, and a blank line collapses.
+  it('should insert the Emetteur block after Scenario while preserving the following whitespace', () => {
     const nomContact = 'NOM';
     const originalXml = `<Scenario>
 
     <X/>
 </Scenario>`;
     const expectedXml = `<Scenario>
-      <Emetteur>
+    <Emetteur>
         <Contact>
-          <NomContact>NOM</NomContact>
+            <NomContact>NOM</NomContact>
         </Contact>
-      </Emetteur><X/>
+    </Emetteur>
 
-    </Scenario>`;
+    <X/>
+</Scenario>`;
     const xml = addNameTagToXml(originalXml, nomContact);
     expect(xml).toEqual(expectedXml);
   });
@@ -301,7 +301,7 @@ describe('Sandre Parser', () => {
     const nomContact = 'NOM';
     const originalXml = 'header\r\n\t<Destinataire>y</Destinataire>';
     const expectedXml =
-      'header\r\n\t<Emetteur>\r\n\t  <Contact>\r\n\t    <NomContact>NOM</NomContact>\r\n\t  </Contact>\r\n\t</Emetteur>\r\n\t<Destinataire>y</Destinataire>';
+      'header\r\n\t<Emetteur>\r\n\t\t<Contact>\r\n\t\t\t<NomContact>NOM</NomContact>\r\n\t\t</Contact>\r\n\t</Emetteur>\r\n\t<Destinataire>y</Destinataire>';
     const xml = addNameTagToXml(originalXml, nomContact);
     expect(xml).toEqual(expectedXml);
   });
@@ -348,6 +348,77 @@ describe('Sandre Parser', () => {
 </Emetteur>`;
     const xml = addNameTagToXml(originalXml, nomContact);
     expect(xml).toEqual(expectedXml);
+  });
+});
+
+describe('addNameTagToXml indentation', () => {
+  describe.each([
+    { format: 'four spaces and LF', fixture: 'spaces-lf.xml', indent: '    ', lineEnding: '\n' },
+    { format: 'four spaces and CRLF', fixture: 'spaces-crlf.xml', indent: '    ', lineEnding: '\r\n' },
+    { format: 'tabs and LF', fixture: 'tabs-lf.xml', indent: '\t', lineEnding: '\n' },
+    { format: 'tabs and CRLF', fixture: 'tabs-crlf.xml', indent: '\t', lineEnding: '\r\n' },
+  ])('$format', ({ fixture, indent, lineEnding }) => {
+    const expectedXml = fs.readFileSync(
+      path.join(__dirname, '../../../apps/back/test/fixtures/xml/depot-contact', fixture),
+      'utf-8',
+    );
+
+    it('should match the expected XML fixture when Contact is missing', () => {
+      const originalXml = expectedXml.replace(/^[ \t]*<Contact>[\s\S]*?<\/Contact>\r?\n/m, '');
+
+      expect(addNameTagToXml(originalXml, 'TEST User')).toBe(expectedXml);
+    });
+
+    it('should match the expected XML fixture when NomContact is missing', () => {
+      const originalXml = expectedXml.replace(/^[ \t]*<NomContact>[^<]*<\/NomContact>\r?\n/m, '');
+
+      expect(addNameTagToXml(originalXml, 'TEST User')).toBe(expectedXml);
+    });
+
+    it('should leave existing contact values and whitespace unchanged', () => {
+      expect(addNameTagToXml(expectedXml, 'Another name')).toBe(expectedXml);
+    });
+
+    it('should follow sibling indentation when inserting Emetteur before Destinataire', () => {
+      const originalXml = [
+        '<Scenario>',
+        `${indent}<Destinataire/>`,
+        `${indent}<Destinataire></Destinataire>`,
+        '</Scenario>',
+      ].join(lineEnding);
+      const expected = [
+        '<Scenario>',
+        `${indent}<Destinataire/>`,
+        `${indent}<Emetteur>`,
+        `${indent.repeat(2)}<Contact>`,
+        `${indent.repeat(3)}<NomContact>TEST User</NomContact>`,
+        `${indent.repeat(2)}</Contact>`,
+        `${indent}</Emetteur>`,
+        `${indent}<Destinataire></Destinataire>`,
+        '</Scenario>',
+      ].join(lineEnding);
+
+      expect(addNameTagToXml(originalXml, 'TEST User')).toBe(expected);
+    });
+
+    it('should follow sibling indentation when inserting Emetteur into Scenario', () => {
+      const originalXml = ['<Scenario>', '', `${indent}<CodeScenario>FCT_ASSAIN</CodeScenario>`, '</Scenario>'].join(
+        lineEnding,
+      );
+      const expected = [
+        '<Scenario>',
+        `${indent}<Emetteur>`,
+        `${indent.repeat(2)}<Contact>`,
+        `${indent.repeat(3)}<NomContact>TEST User</NomContact>`,
+        `${indent.repeat(2)}</Contact>`,
+        `${indent}</Emetteur>`,
+        '',
+        `${indent}<CodeScenario>FCT_ASSAIN</CodeScenario>`,
+        '</Scenario>',
+      ].join(lineEnding);
+
+      expect(addNameTagToXml(originalXml, 'TEST User')).toBe(expected);
+    });
   });
 });
 
