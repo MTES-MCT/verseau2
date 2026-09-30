@@ -3,21 +3,15 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { S3Service } from './s3.service';
 import { S3_CLIENT } from './s3.service';
 import { S3 } from './s3';
-import { customizeMockS3Client } from './s3.provider.mock';
+import { createMockS3Service, customizeMockS3Client } from './s3.provider.mock';
 
 export const createS3Service = (configService: ConfigService, s3Client: S3Client): S3 => {
+  if (configService.get<string>('S3_PROVIDER') === 'mock') {
+    return createMockS3Service(configService, s3Client);
+  }
+
   const bucket = configService.getOrThrow<string>('S3_BUCKET');
-  const publicEndpoint = configService.get<string>('S3_PUBLIC_ENDPOINT');
-  const uploadClient = publicEndpoint
-    ? new S3Client({
-        region: s3Client.config.region,
-        credentials: s3Client.config.credentials,
-        forcePathStyle: true,
-        endpoint: publicEndpoint,
-        requestChecksumCalculation: 'WHEN_REQUIRED',
-      })
-    : s3Client;
-  return new S3Service(bucket, s3Client, uploadClient);
+  return new S3Service(bucket, s3Client);
 };
 
 export const createS3Providers = () => [
