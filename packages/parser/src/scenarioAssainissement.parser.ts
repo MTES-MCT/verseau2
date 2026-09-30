@@ -185,10 +185,12 @@ function insertXmlChild(
 /**
  * Locate elements with strict SAX, then insert into the original source rather than
  * reserialize it. Existing XML bytes survive unchanged (except expanding an empty
- * parent), and malformed XML throws without regex backtracking over the document.
+ * parent). Parsing stops at the first Scenario's close; errors encountered before
+ * that point throw, while the remaining source is retained without validation.
  */
 export function addNameTagToXml(xml: string, nomContact: string): string {
   const parser = sax.parser(true, { xmlns: true, position: true });
+  const scenarioComplete = new Error('Scenario parsing complete');
   const stack: ContactXmlElement[] = [];
   let scenario: ContactXmlElement | undefined;
   let emetteur: ContactXmlElement | undefined;
@@ -237,11 +239,22 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
     if (element && !element.selfClosing) {
       element.closeStart = parser.startTagPosition - 1;
     }
+    if (element && element === scenario) {
+      // sax has no stop method; unwind write immediately, even inside a large chunk.
+      throw scenarioComplete;
+    }
   };
   parser.onerror = (error) => {
     throw error;
   };
-  parser.write(xml).close();
+  try {
+    parser.write(xml).close();
+  } catch (error) {
+    // Only the intentional stop is caught. Real SAX errors must still propagate.
+    if (error !== scenarioComplete) {
+      throw error;
+    }
+  }
 
   const parent = contact ?? emetteur ?? scenario;
   if (!parent || hasNomContact) {
