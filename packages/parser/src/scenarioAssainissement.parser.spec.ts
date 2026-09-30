@@ -232,38 +232,26 @@ describe('Sandre Parser', () => {
     expect(xml).not.toMatch(/(?<!\r)\n/);
   });
 
-  it('should insert the Emetteur block before Destinataire when the Emetteur tag is unclosed', () => {
-    // An <Emetteur> without a matching </Emetteur> is treated as absent: the old
-    // hasEmetteur regex required the closing tag as well.
+  it('should reject an unclosed Emetteur instead of inserting into malformed XML', () => {
     const nomContact = 'NOM';
     const originalXml = `<Root>
   <Emetteur>
   <Destinataire>x</Destinataire>
 </Root>`;
-    const expectedXml = `<Root>
-  <Emetteur>
-  <Emetteur>
-    <Contact>
-      <NomContact>NOM</NomContact>
-    </Contact>
-  </Emetteur>
-  <Destinataire>x</Destinataire>
-</Root>`;
-    const xml = addNameTagToXml(originalXml, nomContact);
-    expect(xml).toEqual(expectedXml);
+    expect(() => addNameTagToXml(originalXml, nomContact)).toThrow();
   });
 
   it('should only modify the first Emetteur when several Emetteur tags are present', () => {
     const nomContact = 'NOM';
-    const originalXml = `<A>
+    const originalXml = `<Scenario>
   <Emetteur>
     <X/>
   </Emetteur>
   <Emetteur>
     <Y/>
   </Emetteur>
-</A>`;
-    const expectedXml = `<A>
+</Scenario>`;
+    const expectedXml = `<Scenario>
   <Emetteur>
     <X/>
     <Contact>
@@ -273,7 +261,7 @@ describe('Sandre Parser', () => {
   <Emetteur>
     <Y/>
   </Emetteur>
-</A>`;
+</Scenario>`;
     const xml = addNameTagToXml(originalXml, nomContact);
     expect(xml).toEqual(expectedXml);
   });
@@ -299,9 +287,9 @@ describe('Sandre Parser', () => {
 
   it('should reuse the exact indentation and CRLF line endings when inserting before Destinataire', () => {
     const nomContact = 'NOM';
-    const originalXml = 'header\r\n\t<Destinataire>y</Destinataire>';
+    const originalXml = '<Scenario>\r\n\t<Destinataire>y</Destinataire>\r\n</Scenario>';
     const expectedXml =
-      'header\r\n\t<Emetteur>\r\n\t\t<Contact>\r\n\t\t\t<NomContact>NOM</NomContact>\r\n\t\t</Contact>\r\n\t</Emetteur>\r\n\t<Destinataire>y</Destinataire>';
+      '<Scenario>\r\n\t<Emetteur>\r\n\t\t<Contact>\r\n\t\t\t<NomContact>NOM</NomContact>\r\n\t\t</Contact>\r\n\t</Emetteur>\r\n\t<Destinataire>y</Destinataire>\r\n</Scenario>';
     const xml = addNameTagToXml(originalXml, nomContact);
     expect(xml).toEqual(expectedXml);
   });
@@ -315,7 +303,7 @@ describe('Sandre Parser', () => {
     expect(xml).toEqual(expectedXml);
   });
 
-  it('should treat an unclosed Contact inside Emetteur as absent when a Contact pair exists after Emetteur', () => {
+  it('should reject an unclosed Contact even when another Contact follows Emetteur', () => {
     const nomContact = 'NOM';
     const originalXml = `<Emetteur>
   <Contact>
@@ -323,31 +311,14 @@ describe('Sandre Parser', () => {
 <Contact>
   <Z/>
 </Contact>`;
-    const expectedXml = `<Emetteur>
-  <Contact>
-  <Contact>
-    <NomContact>NOM</NomContact>
-  </Contact>
-</Emetteur>
-<Contact>
-  <Z/>
-</Contact>`;
-    const xml = addNameTagToXml(originalXml, nomContact);
-    expect(xml).toEqual(expectedXml);
+    expect(() => addNameTagToXml(originalXml, nomContact)).toThrow();
   });
 
-  it('should not skip the insertion when an existing NomContact tag is unterminated', () => {
+  it('should reject an unterminated NomContact', () => {
     const nomContact = 'NOM';
     const originalXml = `<Emetteur>
   <NomContact>unterminated</Emetteur>`;
-    const expectedXml = `<Emetteur>
-  <NomContact>unterminated
-  <Contact>
-    <NomContact>NOM</NomContact>
-  </Contact>
-</Emetteur>`;
-    const xml = addNameTagToXml(originalXml, nomContact);
-    expect(xml).toEqual(expectedXml);
+    expect(() => addNameTagToXml(originalXml, nomContact)).toThrow();
   });
 });
 
@@ -388,12 +359,12 @@ describe('addNameTagToXml indentation', () => {
       ].join(lineEnding);
       const expected = [
         '<Scenario>',
-        `${indent}<Destinataire/>`,
         `${indent}<Emetteur>`,
         `${indent.repeat(2)}<Contact>`,
         `${indent.repeat(3)}<NomContact>TEST User</NomContact>`,
         `${indent.repeat(2)}</Contact>`,
         `${indent}</Emetteur>`,
+        `${indent}<Destinataire/>`,
         `${indent}<Destinataire></Destinataire>`,
         '</Scenario>',
       ].join(lineEnding);
@@ -422,32 +393,201 @@ describe('addNameTagToXml indentation', () => {
   });
 });
 
+describe('addNameTagToXml SAX insertion', () => {
+  it('should ignore tag-like text in comments and CDATA and retain original source bytes', () => {
+    const originalXml = `<?xml version="1.0"?>
+<Scenario>
+  <!-- <Emetteur><Contact><NomContact>fake</NomContact></Contact></Emetteur> -->
+  <Description><![CDATA[<Emetteur><Contact><NomContact>fake</NomContact></Contact></Emetteur>]]></Description>
+  <Emetteur label='a > b &amp; 😀'>
+    <Contact id='original'>
+      <Tel>&#48;1</Tel>
+
+    </Contact>
+  </Emetteur>
+</Scenario>`;
+    const expectedXml = `<?xml version="1.0"?>
+<Scenario>
+  <!-- <Emetteur><Contact><NomContact>fake</NomContact></Contact></Emetteur> -->
+  <Description><![CDATA[<Emetteur><Contact><NomContact>fake</NomContact></Contact></Emetteur>]]></Description>
+  <Emetteur label='a > b &amp; 😀'>
+    <Contact id='original'>
+      <Tel>&#48;1</Tel>
+
+      <NomContact>A &amp; B &lt;C&gt; ]]&gt;</NomContact>
+    </Contact>
+  </Emetteur>
+</Scenario>`;
+
+    expect(addNameTagToXml(originalXml, 'A & B <C> ]]>')).toBe(expectedXml);
+  });
+
+  it('should ignore Contact and NomContact outside the direct emitter contact path', () => {
+    const originalXml = `<Scenario>
+  <Emetteur>
+    <Other><Contact><NomContact>nested</NomContact></Contact></Other>
+  </Emetteur>
+  <Destinataire><Contact><NomContact>recipient</NomContact></Contact></Destinataire>
+</Scenario>`;
+    const expectedXml = `<Scenario>
+  <Emetteur>
+    <Other><Contact><NomContact>nested</NomContact></Contact></Other>
+    <Contact>
+      <NomContact>Sender</NomContact>
+    </Contact>
+  </Emetteur>
+  <Destinataire><Contact><NomContact>recipient</NomContact></Contact></Destinataire>
+</Scenario>`;
+
+    expect(addNameTagToXml(originalXml, 'Sender')).toBe(expectedXml);
+  });
+
+  it('should use the local sibling indentation when it differs from the rest of the document', () => {
+    const originalXml = `<Scenario>
+  <Emetteur>
+      <CdIntervenant>123</CdIntervenant>
+  </Emetteur>
+</Scenario>`;
+    const expectedXml = `<Scenario>
+  <Emetteur>
+      <CdIntervenant>123</CdIntervenant>
+      <Contact>
+          <NomContact>Sender</NomContact>
+      </Contact>
+  </Emetteur>
+</Scenario>`;
+
+    expect(addNameTagToXml(originalXml, 'Sender')).toBe(expectedXml);
+  });
+
+  it.each([
+    {
+      parent: 'Scenario',
+      originalXml: '<Scenario id="1" />',
+      expectedXml:
+        '<Scenario id="1" >\n  <Emetteur>\n    <Contact>\n      <NomContact>NOM</NomContact>\n    </Contact>\n  </Emetteur>\n</Scenario>',
+    },
+    {
+      parent: 'Emetteur',
+      originalXml: '<Scenario>\n  <Emetteur id="1"/>\n</Scenario>',
+      expectedXml:
+        '<Scenario>\n  <Emetteur id="1">\n    <Contact>\n      <NomContact>NOM</NomContact>\n    </Contact>\n  </Emetteur>\n</Scenario>',
+    },
+    {
+      parent: 'Contact',
+      originalXml: '<Scenario>\r\n\t<Emetteur>\r\n\t\t<Contact id="1" />\r\n\t</Emetteur>\r\n</Scenario>',
+      expectedXml:
+        '<Scenario>\r\n\t<Emetteur>\r\n\t\t<Contact id="1" >\r\n\t\t\t<NomContact>NOM</NomContact>\r\n\t\t</Contact>\r\n\t</Emetteur>\r\n</Scenario>',
+    },
+  ])('should expand a self-closing $parent without rewriting attributes', ({ originalXml, expectedXml }) => {
+    expect(addNameTagToXml(originalXml, 'NOM')).toBe(expectedXml);
+  });
+
+  it.each([
+    {
+      context: 'Scenario',
+      originalXml: '<s:Scenario xmlns:s="urn:sandre"/>',
+      expectedXml:
+        '<s:Scenario xmlns:s="urn:sandre">\n  <s:Emetteur>\n    <s:Contact>\n      <s:NomContact>NOM</s:NomContact>\n    </s:Contact>\n  </s:Emetteur>\n</s:Scenario>',
+    },
+    {
+      context: 'Emetteur',
+      originalXml: '<s:Scenario xmlns:s="urn:sandre">\n  <s:Emetteur/>\n</s:Scenario>',
+      expectedXml:
+        '<s:Scenario xmlns:s="urn:sandre">\n  <s:Emetteur>\n    <s:Contact>\n      <s:NomContact>NOM</s:NomContact>\n    </s:Contact>\n  </s:Emetteur>\n</s:Scenario>',
+    },
+    {
+      context: 'Contact',
+      originalXml:
+        '<s:Scenario xmlns:s="urn:sandre">\n  <s:Emetteur>\n    <c:Contact xmlns:c="urn:sandre"/>\n  </s:Emetteur>\n</s:Scenario>',
+      expectedXml:
+        '<s:Scenario xmlns:s="urn:sandre">\n  <s:Emetteur>\n    <c:Contact xmlns:c="urn:sandre">\n      <c:NomContact>NOM</c:NomContact>\n    </c:Contact>\n  </s:Emetteur>\n</s:Scenario>',
+    },
+  ])('should inherit the namespace prefix of $context', ({ originalXml, expectedXml }) => {
+    const result = addNameTagToXml(originalXml, 'NOM');
+    expect(result).toBe(expectedXml);
+    expect(addNameTagToXml(result, 'Another name')).toBe(result);
+  });
+
+  it('should not treat a foreign-namespace NomContact as the sender name', () => {
+    const originalXml =
+      '<Emetteur xmlns:x="urn:other">\n  <Contact>\n    <x:NomContact>Other</x:NomContact>\n  </Contact>\n</Emetteur>';
+    const expectedXml =
+      '<Emetteur xmlns:x="urn:other">\n  <Contact>\n    <x:NomContact>Other</x:NomContact>\n    <NomContact>NOM</NomContact>\n  </Contact>\n</Emetteur>';
+
+    expect(addNameTagToXml(originalXml, 'NOM')).toBe(expectedXml);
+  });
+
+  it('should leave an existing self-closing NomContact unchanged', () => {
+    const originalXml = '<Emetteur><Contact><NomContact/></Contact></Emetteur>';
+
+    expect(addNameTagToXml(originalXml, 'NOM')).toBe(originalXml);
+  });
+
+  it('should not let a later emitter name prevent insertion into the first emitter', () => {
+    const originalXml =
+      '<Scenario><Emetteur/><Emetteur><Contact><NomContact>Later</NomContact></Contact></Emetteur></Scenario>';
+    const expectedXml =
+      '<Scenario><Emetteur>\n  <Contact>\n    <NomContact>NOM</NomContact>\n  </Contact>\n</Emetteur><Emetteur><Contact><NomContact>Later</NomContact></Contact></Emetteur></Scenario>';
+
+    expect(addNameTagToXml(originalXml, 'NOM')).toBe(expectedXml);
+  });
+
+  it('should insert into compact XML without modifying unrelated content', () => {
+    const originalXml = '<Scenario><Emetteur><Contact><Tel>01</Tel></Contact></Emetteur></Scenario>';
+    const expectedXml =
+      '<Scenario><Emetteur><Contact><Tel>01</Tel>\n  <NomContact>NOM</NomContact>\n</Contact></Emetteur></Scenario>';
+
+    expect(addNameTagToXml(originalXml, 'NOM')).toBe(expectedXml);
+  });
+
+  it('should validate the rest of the document even when NomContact already exists', () => {
+    const originalXml =
+      '<Scenario><Emetteur><Contact><NomContact>NOM</NomContact></Contact></Emetteur><Broken></Scenario>';
+
+    expect(() => addNameTagToXml(originalXml, 'NOM')).toThrow();
+  });
+
+  it('should leave well-formed XML without a Scenario or root Emetteur unchanged', () => {
+    const originalXml = '<Root><!-- <Scenario/> --><Other/></Root>';
+
+    expect(addNameTagToXml(originalXml, 'NOM')).toBe(originalXml);
+  });
+
+  it('should reject custom entities without resolving external resources', () => {
+    const originalXml =
+      '<!DOCTYPE Scenario [<!ENTITY secret SYSTEM "file:///etc/passwd">]><Scenario><Emetteur>&secret;</Emetteur></Scenario>';
+
+    expect(() => addNameTagToXml(originalXml, 'NOM')).toThrow(/Invalid character entity/);
+  });
+});
+
 describe('addNameTagToXml robustness (ReDoS)', () => {
-  const timed = (fn: () => string): { result: string; ms: number } => {
+  const timed = <T>(fn: () => T): { result: T; ms: number } => {
     const start = process.hrtime.bigint();
     const result = fn();
     return { result, ms: Number(process.hrtime.bigint() - start) / 1_000_000 };
   };
 
-  it('should complete quickly on pathological chained Emetteur/NomContact opens', () => {
+  it('should reject pathological chained Emetteur/NomContact opens quickly', () => {
     // 60 000 unclosed <Emetteur> tags, each followed by a <NomContact>…</NomContact>
     // pair: the previous chained lazy [\s\S]*? regexes needed O(n³) backtracks on this
     // shape (a 13.7 KB input already took ~2.7 s), so this 2 MB upload would stall the
     // single-threaded worker for days.
     const pathological = '<Emetteur><NomContact></NomContact>'.repeat(60_000);
-    const { result, ms } = timed(() => addNameTagToXml(pathological, 'DOE John'));
-    // No </Emetteur>, no <Destinataire> and no <Scenario> → must be returned unchanged.
-    expect(result).toBe(pathological);
+    const { ms } = timed(() => {
+      expect(() => addNameTagToXml(pathological, 'DOE John')).toThrow();
+    });
     expect(ms).toBeLessThan(2_000);
   }, 10_000);
 
-  it('should complete quickly on pathological whitespace after Scenario', () => {
+  it('should reject pathological whitespace after Scenario quickly', () => {
     // 2 MB of spaces with no closing </Scenario>: the previous greedy (\s*) followed
     // by a lazy ([\s\S]*?) quantifier backtracked quadratically (~1 min on this input).
     const pathological = '<Scenario>' + ' '.repeat(2_000_000);
-    const { result, ms } = timed(() => addNameTagToXml(pathological, 'DOE John'));
-    // No closing </Scenario> → must be returned unchanged.
-    expect(result).toBe(pathological);
+    const { ms } = timed(() => {
+      expect(() => addNameTagToXml(pathological, 'DOE John')).toThrow();
+    });
     expect(ms).toBeLessThan(2_000);
   }, 10_000);
 
