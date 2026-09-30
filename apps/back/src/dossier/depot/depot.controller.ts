@@ -39,7 +39,6 @@ export class DepotController {
 
   @Post('upload/init')
   @UseGuards(MeGuard)
-  @Throttle({ default: { ttl: 60000, limit: 20 } })
   async initializeUpload(
     @Body(new ZodValidationPipe(initializeDepotUpload.body)) body: RouteBody<typeof initializeDepotUpload>,
     @Req() req: CustomRequest,
@@ -65,7 +64,6 @@ export class DepotController {
 
   @Post(':id/upload/complete')
   @UseGuards(MeGuard)
-  @Throttle({ default: { ttl: 60000, limit: 60 } })
   async completeUpload(
     @Param(new ZodValidationPipe(completeDepotUpload.params)) { id }: RouteParams<typeof completeDepotUpload>,
     @Req() req: CustomRequest,
