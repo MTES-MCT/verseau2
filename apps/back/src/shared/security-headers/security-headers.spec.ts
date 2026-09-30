@@ -7,6 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createSecurityHeadersMiddleware, parseExtraConnectOrigins } from './security-headers';
+import type { SecurityHeadersOptions } from './security-headers';
 
 /**
  * Tests de non-régression des en-têtes de sécurité (M1) : les valeurs attendues sont
@@ -25,7 +26,7 @@ const SPA_CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  "img-src 'self' data: https://assainissement.developpement-durable.gouv.fr",
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
@@ -64,11 +65,11 @@ class VersionController {
 })
 class TestAppModule {}
 
-const createTestApp = async (options: { extraConnectOrigins?: string[] } = {}): Promise<NestExpressApplication> => {
+const createTestApp = async (options: SecurityHeadersOptions = {}): Promise<NestExpressApplication> => {
   const app = await NestFactory.create<NestExpressApplication>(TestAppModule, { logger: false });
   // Même ordre que mainServer.ts : le middleware est enregistré avant init(),
   // donc devant les middlewares ServeStatic ajoutés à l'initialisation des modules.
-  app.use(createSecurityHeadersMiddleware({ extraConnectOrigins: options.extraConnectOrigins }));
+  app.use(createSecurityHeadersMiddleware(options));
   app.setGlobalPrefix('api');
   await app.init();
   return app;
@@ -214,6 +215,102 @@ describe('securityHeadersMiddleware - origines connect-src supplémentaires (CSP
 
   it("laisse la CSP de l'API inchangée", async () => {
     await request(sentryApp.getHttpServer()).get('/api/version').expect(200).expect('Content-Security-Policy', API_CSP);
+  });
+});
+
+describe('securityHeadersMiddleware - uploads directs S3', () => {
+  it.each([
+    {
+      s3Endpoint: 'https://internal-s3.example.fr',
+      s3PublicEndpoint: 'https://public-s3.example.fr:9443/storage?ignored=1#fragment',
+      origin: 'https://public-s3.example.fr:9443',
+    },
+    {
+      s3Endpoint: 'https://s3.example.fr/storage',
+      s3PublicEndpoint: undefined,
+      origin: 'https://s3.example.fr',
+    },
+    {
+      s3Endpoint: 'http://localhost:9000/storage',
+      s3PublicEndpoint: '',
+      origin: 'http://localhost:9000',
+    },
+    {
+      s3Endpoint: 'http://[::1]:9000/storage',
+      s3PublicEndpoint: undefined,
+      origin: 'http://[::1]:9000',
+    },
+    {
+      s3Endpoint: 'https://internal-s3.example.fr',
+      s3PublicEndpoint: 'https://user:secret@PUBLIC-S3.example.fr:443/storage',
+      origin: 'https://public-s3.example.fr',
+    },
+  ])('autorise uniquement $origin et conserve la configuration explicite', async ({ origin, ...options }) => {
+    const app = await createTestApp({ ...options, extraConnectOrigins: ['https://sentry.example.fr'] });
+    try {
+      await request(app.getHttpServer())
+        .get('/tableau-de-bord/depot')
+        .expect(200)
+        .expect(
+          'Content-Security-Policy',
+          SPA_CSP_WITH_SENTRY.replace('https://sentry.example.fr', `https://sentry.example.fr ${origin}`),
+        );
+      await request(app.getHttpServer()).get('/api/version').expect(200).expect('Content-Security-Policy', API_CSP);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('conserve les sources CSP explicites sans les interpréter comme des URLs S3', async () => {
+    const app = await createTestApp({
+      s3Endpoint: 'https://s3.example.fr',
+      extraConnectOrigins: parseExtraConnectOrigins('https://*.sentry.example.fr, wss://events.example.fr'),
+    });
+    try {
+      await request(app.getHttpServer())
+        .get('/')
+        .expect(200)
+        .expect(
+          'Content-Security-Policy',
+          SPA_CSP.replace(
+            "connect-src 'self'",
+            "connect-src 'self' https://*.sentry.example.fr wss://events.example.fr https://s3.example.fr",
+          ),
+        );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('ne duplique pas une origine S3 déjà autorisée explicitement', async () => {
+    const app = await createTestApp({
+      s3Endpoint: 'https://s3.example.fr/storage',
+      extraConnectOrigins: ['https://s3.example.fr'],
+    });
+    try {
+      await request(app.getHttpServer())
+        .get('/')
+        .expect(200)
+        .expect(
+          'Content-Security-Policy',
+          SPA_CSP.replace("connect-src 'self'", "connect-src 'self' https://s3.example.fr"),
+        );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each([
+    'not-a-url',
+    '//s3.example.fr',
+    'ftp://s3.example.fr',
+    'data:text/plain,upload',
+    'https://*.example.fr',
+    'https://s3.example.fr;script-src',
+  ])('refuse un endpoint S3 invalide ou dangereux : %s', (s3PublicEndpoint) => {
+    expect(() => createSecurityHeadersMiddleware({ s3Endpoint: 'https://valid.example.fr', s3PublicEndpoint })).toThrow(
+      'Invalid S3 upload endpoint for Content-Security-Policy',
+    );
   });
 });
 

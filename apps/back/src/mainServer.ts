@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { ApiModule } from './api/api.module';
 import { MigrationService } from './infra/database/migration.service';
 import cookieParser from 'cookie-parser';
@@ -11,6 +12,7 @@ async function bootstrapServer() {
   const app = await NestFactory.create<NestExpressApplication>(ApiModule, {
     logger: new LoggerService('Bootstrap'),
   });
+  const configService = app.get(ConfigService);
 
   // En-têtes de sécurité (CSP, HSTS, nosniff, frame-ancestors…) sur toutes les
   // réponses : API, SPA servi par ServeStatic et erreurs. Enregistré avant
@@ -19,6 +21,9 @@ async function bootstrapServer() {
     createSecurityHeadersMiddleware({
       // Ex. hôte d'ingestion Sentry pour le SPA (CSP_EXTRA_CONNECT_SRC).
       extraConnectOrigins: parseExtraConnectOrigins(process.env.CSP_EXTRA_CONNECT_SRC),
+      // Même configuration que les clients S3, y compris les valeurs chargées depuis .env.
+      s3Endpoint: configService.get<string>('S3_ENDPOINT'),
+      s3PublicEndpoint: configService.get<string>('S3_PUBLIC_ENDPOINT'),
     }),
   );
 

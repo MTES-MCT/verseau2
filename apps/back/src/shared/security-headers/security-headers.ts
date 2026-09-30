@@ -30,6 +30,9 @@ export interface SecurityHeadersOptions {
    * du backend). N'affecte pas la CSP de l'API.
    */
   extraConnectOrigins?: string[];
+  /** Endpoint S3 interne et éventuel endpoint public utilisé pour les PUT présignés. */
+  s3Endpoint?: string;
+  s3PublicEndpoint?: string;
 }
 
 /**
@@ -38,10 +41,11 @@ export interface SecurityHeadersOptions {
  *   script inline dans index.html ni `eval` dans les bundles ;
  * - `style-src 'unsafe-inline'` : le DSFR et l'app posent des styles inline
  *   (ex. TableLoader.tsx contient un élément <style>) ;
- * - `img-src 'self' data:` : les CSS DSFR embarquent des icônes data:image/svg+xml ;
+ * - `img-src` : images locales, icônes DSFR data:image/svg+xml et logos du footer
+ *   hébergés sur https://assainissement.developpement-durable.gouv.fr ;
  * - `font-src 'self'` : polices Marianne/Spectral servies depuis assets/ ;
  * - `connect-src 'self'` (+ origines configurables) : appels API même origine
- *   et éventuel hôte Sentry ;
+ *   uploads directs S3 et éventuel hôte Sentry ;
  * - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'` : aucun plugin,
  *   aucune balise <base>, aucune soumission de formulaire externe (la
  *   redirection OIDC est une navigation JS, pas un POST de formulaire) ;
@@ -54,7 +58,7 @@ export const buildSpaContentSecurityPolicy = (extraConnectOrigins: string[] = []
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://assainissement.developpement-durable.gouv.fr",
     "font-src 'self'",
     `connect-src ${connectSrc}`,
     "object-src 'none'",
@@ -75,6 +79,24 @@ export const parseExtraConnectOrigins = (raw: string | undefined): string[] =>
     .filter(Boolean);
 
 const isApiPath = (path: string): boolean => /^\/api(?:\/|$)/.test(path);
+
+const getS3UploadOrigin = (options: SecurityHeadersOptions): string | undefined => {
+  // Même sélection que s3.factory.ts : un endpoint public vide utilise le client interne.
+  const endpoint = options.s3PublicEndpoint || options.s3Endpoint;
+  if (!endpoint) {
+    return undefined;
+  }
+  if (!URL.canParse(endpoint)) {
+    throw new Error('Invalid S3 upload endpoint for Content-Security-Policy');
+  }
+  const url = new URL(endpoint);
+  // Un endpoint n'est pas une source CSP : ni wildcard, ni directive injectée.
+  if (!['http:', 'https:'].includes(url.protocol) || !/^(?:[a-z\d._-]+|\[[a-f\d:]+\])$/i.test(url.hostname)) {
+    throw new Error('Invalid S3 upload endpoint for Content-Security-Policy');
+  }
+  // Exclut identifiants, chemin, paramètres et fragment de l'en-tête.
+  return url.origin;
+};
 
 /**
  * Requête vue comme https : soit la connexion directe est TLS (req.secure,
@@ -98,7 +120,12 @@ const isHttpsRequest = (req: Request): boolean => {
  * ServeStatic enregistrés à l'initialisation des modules.
  */
 export const createSecurityHeadersMiddleware = (options: SecurityHeadersOptions = {}) => {
-  const spaCsp = buildSpaContentSecurityPolicy(options.extraConnectOrigins);
+  const s3UploadOrigin = getS3UploadOrigin(options);
+  const extraConnectOrigins = [...(options.extraConnectOrigins ?? [])];
+  if (s3UploadOrigin && !extraConnectOrigins.includes(s3UploadOrigin)) {
+    extraConnectOrigins.push(s3UploadOrigin);
+  }
+  const spaCsp = buildSpaContentSecurityPolicy(extraConnectOrigins);
 
   return (req: Request, res: Response, next: NextFunction): void => {
     // Empêche le reniflement de type MIME ; complète les téléchargements forcés
