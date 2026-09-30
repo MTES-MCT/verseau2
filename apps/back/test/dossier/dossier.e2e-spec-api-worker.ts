@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as dotenv from 'dotenv';
+import { readFileSync } from 'node:fs';
 import path from 'path';
 
 dotenv.config({
@@ -336,6 +337,49 @@ describe('Dossier E2E - Real Queue Processing', () => {
   });
 
   describe('Full file processing flow with real queue', () => {
+    it.each([
+      { format: 'spaces and LF', fixture: 'spaces-lf.xml', indent: '    ', lineEnding: '\n', seedId: 1100 },
+      { format: 'spaces and CRLF', fixture: 'spaces-crlf.xml', indent: '    ', lineEnding: '\r\n', seedId: 1101 },
+      { format: 'tabs and LF', fixture: 'tabs-lf.xml', indent: '\t', lineEnding: '\n', seedId: 1102 },
+      { format: 'tabs and CRLF', fixture: 'tabs-crlf.xml', indent: '\t', lineEnding: '\r\n', seedId: 1103 },
+    ])(
+      'should add NomContact to the dispatched XML while preserving $format',
+      async ({ fixture, indent, lineEnding, seedId }) => {
+        const steuCode = `TEST_STEU_CONTACT_${seedId}`;
+        const sclCode = `TEST_SCL_CONTACT_${seedId}`;
+        await seedVSteuSclItv(dataSource, steuCode, sclCode, TEST_USER.itvRfa);
+        await seedSteu(dataSource, seedId, steuCode, { steuEncoursAn: 2024 });
+        await seedScl(dataSource, seedId, sclCode);
+        await seedTlref(dataSource, seedId, 'LREF_01', '4', 'Type ouvrage test');
+
+        // Start without contact tags so the test proves they were added, not just retained.
+        const xmlContent = buildValidXmlWithCodes(steuCode, sclCode)
+          .replace(/ {12}<Contact>[\s\S]*?<\/Contact>\n/, '')
+          .replace(/^( +)/gm, (spaces) => indent.repeat(spaces.length / 4))
+          .replaceAll('\n', lineEnding)
+          .concat(lineEnding);
+        expect(xmlContent).not.toContain('<NomContact>');
+        expect(xmlContent).not.toContain('<MelContact>');
+
+        const filename = `contact-${seedId}.xml`;
+        const depotId = await uploadXmlDepot(xmlContent, filename);
+        const sftpResult = await waitForJobCompletion(dataSource, QueueName.send_to_sftp, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        });
+        expect(sftpResult.status).toBe('completed');
+        expect((await findDepotOrFail(depotId)).step).toBe(DepotStep.SFTP_COMPLETED);
+
+        const sentFile = agentVerseauClientMock.calls.find((call) => call.fileName === `${depotId}_${filename}`);
+        expect(sentFile).toBeDefined();
+        const expectedXml = readFileSync(path.join(__dirname, '../fixtures/xml/depot-contact', fixture), 'utf-8');
+
+        // Compare raw XML, not parsed nodes: every original whitespace character must survive.
+        expect(sentFile?.file.toString('utf-8')).toBe(expectedXml);
+      },
+      15000,
+    );
+
     it('rolls back the job and confirmation together, then accepts concurrent retries once', async () => {
       const initialized = await request(app.getHttpServer())
         .post('/depot/upload/init')

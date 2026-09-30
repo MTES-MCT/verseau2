@@ -93,7 +93,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/verseau2
 S3_PROVIDER=mock # ou outscale
 S3_BUCKET=MY_BUCKET
 S3_ENDPOINT=OUTSCALE_ENDPOINT
-# Optionnel si l'endpoint interne n'est pas accessible depuis le navigateur
+# Mock uniquement : si l'endpoint interne n'est pas accessible depuis le navigateur
 # S3_PUBLIC_ENDPOINT=http://localhost:9090
 S3_UPLOAD_URL_TTL_SECONDS=900
 S3_REGION=OUTSCALE_REGION
@@ -161,7 +161,7 @@ Le bucket Outscale doit autoriser les origines exactes du front (adapter l'exemp
 }
 ```
 
-Le compte S3 de l'API/worker doit pouvoir écrire, lire les métadonnées, copier et supprimer les objets du bucket. Aucune clé d'accès S3 n'est transmise au navigateur. Pour `S3_PROVIDER=mock`, Adobe S3Mock autorise déjà les requêtes CORS vers les objets (origine `*`) et ne prend pas en charge la configuration CORS du bucket par l'API S3. En Docker, conserver `S3_ENDPOINT` pour les échanges internes et définir `S3_PUBLIC_ENDPOINT` avec l'adresse accessible au navigateur ; l'URL est signée avec cette adresse, sans réécriture après signature.
+Le compte S3 de l'API/worker doit pouvoir écrire, lire les métadonnées, copier et supprimer les objets du bucket. Aucune clé d'accès S3 n'est transmise au navigateur. Pour `S3_PROVIDER=mock`, Adobe S3Mock autorise déjà les requêtes CORS vers les objets (origine `*`) et ne prend pas en charge la configuration CORS du bucket par l'API S3. Avec ce fournisseur en Docker, conserver `S3_ENDPOINT` pour les échanges internes et définir `S3_PUBLIC_ENDPOINT` avec l'adresse accessible au navigateur ; l'URL est signée avec cette adresse, sans réécriture après signature. Le fournisseur Outscale ignore cette variable et utilise uniquement `S3_ENDPOINT`, qui doit être accessible à l'API/worker et au navigateur.
 
 #### Pools PostgreSQL
 

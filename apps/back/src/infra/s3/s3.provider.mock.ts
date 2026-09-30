@@ -1,6 +1,24 @@
 import { ConfigService } from '@nestjs/config';
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { LoggerService } from '@shared/logger/logger.service';
+import { S3 } from './s3';
+import { S3Service } from './s3.service';
+
+export const createMockS3Service = (configService: ConfigService, s3Client: S3Client): S3 => {
+  const bucket = configService.getOrThrow<string>('S3_BUCKET');
+  // Docker's internal S3Mock address may not be reachable from the browser.
+  const publicEndpoint = configService.get<string>('S3_PUBLIC_ENDPOINT');
+  const uploadClient = publicEndpoint
+    ? new S3Client({
+        region: s3Client.config.region,
+        credentials: s3Client.config.credentials,
+        forcePathStyle: true,
+        endpoint: publicEndpoint,
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+      })
+    : s3Client;
+  return new S3Service(bucket, s3Client, uploadClient);
+};
 
 export const customizeMockS3Client = async (configService: ConfigService, s3Client: S3Client): Promise<S3Client> => {
   const logger = new LoggerService('createMockS3Client');

@@ -14,6 +14,8 @@ pnpm --filter back test:e2e:api-worker # E2E tests with API + worker
 pnpm --filter front check            # Frontend TypeScript check
 pnpm --filter front test             # Frontend unit tests
 pnpm --filter front exec vitest run <file> # Run a single frontend test file
+pnpm test:e2e                       # Run Cypress/Gherkin against an isolated full stack (Docker)
+pnpm --filter e2e check             # Browser E2E TypeScript check
 pnpm build                           # Production build (front + back)
 pnpm --filter back lint              # Lint backend
 pnpm --filter front lint             # Lint frontend
@@ -48,7 +50,7 @@ _Grows over time but should stay concise and reusable._
 
 ### End of session
 
-1. Add reusable insights to the relevant `.agent-memory/lessons/<topic>.md`, reading it before editing. Prefer existing macro-topics and keep topic files directly in `lessons/`, without subfolders; keep each lesson section to 1–3 sentences and each topic file under roughly 100 lines.
+1. Add reusable insights to the relevant `.agent-memory/lessons/<topic>.md`, reading it before editing. Prefer existing broad macro-topics; keep specific subjects as lesson headings inside topic files directly in `lessons/`, without subfolders. Keep each lesson section to 1–3 sentences and each topic file under roughly 100 lines.
 2. Maintain links and one-line selection cues in `lessons-learned.md` when topics are added, renamed, removed, or change scope. Keep it an index, not a session log or a collection of full lessons.
 3. Update affected Layer 1 references when verified code or configuration changes make them stale.
 

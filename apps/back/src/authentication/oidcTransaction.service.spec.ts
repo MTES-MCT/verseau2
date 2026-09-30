@@ -83,7 +83,11 @@ describe('OidcTransactionService', () => {
   it('should reject a tampered transaction token', async () => {
     const service = await buildService();
     const transaction = await service.createTransaction();
-    const tampered = `${transaction.token.slice(0, -1)}${transaction.token.endsWith('a') ? 'b' : 'a'}`;
+    const [header, payload, signature] = transaction.token.split('.');
+    const signatureBytes = Buffer.from(signature, 'base64url');
+    // Mutate actual signature bits, not unused padding bits in the last encoded character.
+    signatureBytes[0] ^= 1;
+    const tampered = `${header}.${payload}.${signatureBytes.toString('base64url')}`;
 
     await expect(service.verifyTransactionToken(tampered)).rejects.toThrow(UnauthorizedException);
   });
