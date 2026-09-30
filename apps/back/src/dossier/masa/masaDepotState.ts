@@ -9,3 +9,7 @@ import { DepotStatus, DepotStep } from '@lib/dossier';
  */
 export const isDepotAwaitingMasaRetour = (depot: { status?: DepotStatus | null; step?: DepotStep | null }): boolean =>
   depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT && depot.step === DepotStep.SFTP_COMPLETED;
+
+/** L'Agent Verseau peut rappeler dès la publication du .ack, avant la persistance de SFTP_COMPLETED. */
+export const isDepotSendingToMasa = (depot: { status?: DepotStatus | null; step?: DepotStep | null }): boolean =>
+  depot.status === DepotStatus.EN_COURS_DE_TRAITEMENT && depot.step === DepotStep.SFTP_IN_PROGRESS;

@@ -1,10 +1,10 @@
 import type { Queue } from '@queue/queue';
-import type { DepotModel } from './depot.model';
+import type { DepotModel, UpdateDepotModel } from './depot.model';
 
 export interface DepotUploadTransaction {
   create(data: Partial<DepotModel>): Promise<DepotModel>;
   findForUpdate(id: string): Promise<DepotModel | null>;
-  save(depot: DepotModel): Promise<DepotModel>;
+  save(depot: Omit<DepotModel, 'etapeMetier'> & Pick<UpdateDepotModel, 'etapeMetier'>): Promise<DepotModel>;
   send: Queue['send'];
 }
 

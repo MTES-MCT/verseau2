@@ -94,6 +94,7 @@ const sandreServiceFactory = {
   ],
   exports: [
     DepotUploadService,
+    DepotUploadGateway,
     DepotService,
     DroitsDepotService,
     DepotCoordinatorService,
