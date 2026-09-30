@@ -24,9 +24,10 @@ import { DepotModel } from './depot.model';
 import { DepotError } from './depotError';
 import { UtilisateurDunEnvoi, FichierDeDepot } from './file/file';
 import { getDepotUploadKey, getDepotFileKey } from './depotStorageKeys';
+import { LoggerService } from '@shared/logger/logger.service';
 
 // Allow uploads already in flight and confirmation retries before cleaning staging objects.
-const CLEANUP_DELAY_MS = 60 * 60 * 1000;
+const CLEANUP_DELAY_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class DepotUploadService {
@@ -34,7 +35,10 @@ export class DepotUploadService {
     @Inject(DepotUploadGateway) private readonly gateway: DepotUploadGateway,
     @Inject(S3) private readonly s3: S3,
     private readonly config: ConfigService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext(DepotUploadService.name);
+  }
 
   async initialize(
     input: RouteBody<typeof initializeDepotUpload>,
@@ -131,6 +135,7 @@ export class DepotUploadService {
   }
 
   async cleanup(id: string): Promise<void> {
+    this.logger.log(`Depot ${id} - Cleaning up upload`);
     await this.gateway.transaction(async (transaction) => {
       const depot = await transaction.findForUpdate(id);
       if (!depot?.uploadExpiresAt) {
@@ -140,6 +145,7 @@ export class DepotUploadService {
         throw new Error('Upload cleanup scheduled before expiration');
       }
       await this.s3.delete(getDepotUploadKey(depot.id));
+      this.logger.log(`Depot ${id} - Upload cleanup completed`);
       if (!depot.path) {
         // A confirmation may have copied the object before its DB transaction rolled back.
         await this.s3.delete(getDepotFileKey(depot.id));

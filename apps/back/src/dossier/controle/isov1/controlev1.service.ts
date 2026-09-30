@@ -72,15 +72,9 @@ export class ControleV1Service {
     );
     const createdControles = await this.controleGateway.createControles(createControles, manager);
     if (!createdControles.every((controle) => controle.success)) {
-      this.logger.log(`Validation failed for depot: ${depotId}`, {
-        errors: createdControles
-          .filter((controle) => !controle.success)
-          .map((controle) => ({
-            code: controle.error,
-            params: controle.errorParams,
-            evenementType: controle.evenementType,
-          })),
-      });
+      this.logger.log(
+        `Validation failed for depot: ${depotId}, number of failed controls: ${createdControles.filter((c) => !c.success)?.length}`,
+      );
     } else {
       this.logger.log(`Validation succeeded for depot: ${depotId}`);
     }

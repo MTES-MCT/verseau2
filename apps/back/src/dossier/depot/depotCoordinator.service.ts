@@ -70,7 +70,7 @@ export class DepotCoordinatorService {
     } else {
       const failedStep: DepotStep = !v1V2Success ? DepotStep.CONTROLE_FAILED : DepotStep.CONTROLE_SANDRE_FAILED;
 
-      this.logger.error(`Depot ${depotId} - Control failed`, {
+      this.logger.log(`Depot ${depotId} - Control failed`, {
         controleV1Status: depot.controleStatus ?? null,
         controleSandreStatus: depot.controleSandreStatus ?? null,
         failedStep,
@@ -87,7 +87,7 @@ export class DepotCoordinatorService {
           destinataires: [RapportDestinataire.DEPOSANT],
         });
       } else {
-        this.logger.log(`Depot ${depotId} - Technical error detected, skipping diffusion_rapport`, {
+        this.logger.error(`Depot ${depotId} - Technical error detected, skipping diffusion_rapport`, {
           error: depot.error,
         });
       }
