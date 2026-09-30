@@ -16,11 +16,16 @@ import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
 describe('LanceleauRepository', () => {
   let repository: LanceleauRepository;
   let orionCredentialsRepository: jest.Mocked<Repository<OrionCredentialsEntity>>;
+  let vSteuSclItvRepository: jest.Mocked<Repository<VSteuSclItvEntity>>;
   let queryBuilder: {
     select: jest.Mock;
     addSelect: jest.Mock;
     where: jest.Mock;
     getRawOne: jest.Mock;
+  };
+  let vSteuSclItvQueryBuilder: {
+    where: jest.Mock;
+    getMany: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -33,6 +38,13 @@ describe('LanceleauRepository', () => {
     orionCredentialsRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     } as unknown as jest.Mocked<Repository<OrionCredentialsEntity>>;
+    vSteuSclItvQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
+    vSteuSclItvRepository = {
+      createQueryBuilder: jest.fn().mockReturnValue(vSteuSclItvQueryBuilder),
+    } as unknown as jest.Mocked<Repository<VSteuSclItvEntity>>;
 
     const emptyRepository = {};
     const module: TestingModule = await Test.createTestingModule({
@@ -45,7 +57,7 @@ describe('LanceleauRepository', () => {
         { provide: getRepositoryToken(UrfEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(OrionRoleForPrincipalEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(AgEntity), useValue: emptyRepository },
-        { provide: getRepositoryToken(VSteuSclItvEntity), useValue: emptyRepository },
+        { provide: getRepositoryToken(VSteuSclItvEntity), useValue: vSteuSclItvRepository },
         { provide: getRepositoryToken(OrionCredentialsEntity), useValue: orionCredentialsRepository },
       ],
     }).compile();
@@ -69,5 +81,18 @@ describe('LanceleauRepository', () => {
     queryBuilder.getRawOne.mockResolvedValue(null);
 
     await expect(repository.findOrionContactByEmail('unknown@example.com')).resolves.toBeNull();
+  });
+
+  it('should bind XML-derived ouvrage codes instead of adding them to SQL', async () => {
+    const steuCodes = ["STEU001' OR '1'='1' --"];
+    const sclCodes = ["SCL001'); DROP TABLE users; --"];
+
+    await expect(repository.findVSteuSclItvByCodes(steuCodes, sclCodes)).resolves.toEqual([]);
+
+    expect(vSteuSclItvRepository.createQueryBuilder).toHaveBeenCalledWith('v');
+    expect(vSteuSclItvQueryBuilder.where).toHaveBeenCalledWith(
+      'v.steuCda IN (:...steuCodes) OR v.sclCda IN (:...sclCodes)',
+      { steuCodes, sclCodes },
+    );
   });
 });
