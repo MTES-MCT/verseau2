@@ -54,6 +54,42 @@ describe('LoggerService', () => {
     },
   );
 
+  it.each(['log', 'warn', 'error', 'debug', 'verbose', 'fatal'] as const)(
+    'keeps explicit job metadata isolated for concurrent %s logs sharing a correlationId',
+    async (level) => {
+      const cls = app.get<ClsService<CustomClsStore>>(ClsService);
+      const logSpy = jest.spyOn(ConsoleLogger.prototype, level).mockImplementation(() => {});
+      const runJob = (jobId: string, depotId: string) =>
+        cls.runWith(
+          { correlationId: 'shared-cid', jobContext: { queueName: 'process_file', jobId, depotId } },
+          async () => {
+            const logger = await app.resolve<LoggerService>(LoggerService);
+            await new Promise((resolve) => setTimeout(resolve));
+            logger[level]('Processor step', { ...cls.get('jobContext'), step: 'parsing' });
+          },
+        );
+
+      await Promise.all([runJob('job_1', 'dep_1'), runJob('job_2', 'dep_2')]);
+
+      expect(logSpy).toHaveBeenCalledTimes(2);
+      const metadata = logSpy.mock.calls.map(([message]) => {
+        expect(message).toContain('[cid: shared-cid] Processor step');
+        return JSON.parse((message as string).split(' - ')[1]) as Record<string, unknown>;
+      });
+      expect(metadata).toEqual(
+        expect.arrayContaining([
+          { queueName: 'process_file', jobId: 'job_1', depotId: 'dep_1', step: 'parsing' },
+          { queueName: 'process_file', jobId: 'job_2', depotId: 'dep_2', step: 'parsing' },
+        ]),
+      );
+      expect(cls.get('jobContext')).toBeUndefined();
+      const logger = await app.resolve<LoggerService>(LoggerService);
+      logger[level]('Outside job', { step: 'idle' });
+      expect(logSpy).toHaveBeenLastCalledWith('Outside job - {"step":"idle"}');
+      logSpy.mockRestore();
+    },
+  );
+
   afterAll(async () => {
     await app.close();
   });

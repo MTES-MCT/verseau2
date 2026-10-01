@@ -88,7 +88,7 @@ describe('MasaWebhookProcessorService', () => {
     expect(logger.log).toHaveBeenCalledWith('Failed to process MASA report', {
       masaId: 'masa_1',
       depotId: 'depot_1',
-      error,
+      errorMessage: error.message,
     });
     expect(logger.debug).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();

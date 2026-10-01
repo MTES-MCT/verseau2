@@ -62,7 +62,10 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       });
       this.logger.log('Files sent to Agent Verseau', { depotId });
     } catch (error: unknown) {
-      this.logger.log('Failed to process file', { depotId, error });
+      this.logger.log('Failed to process file', {
+        depotId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       await this.depotService.update(depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.SFTP_FAILED,

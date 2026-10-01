@@ -82,7 +82,9 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Business control job dispatched successfully`);
     } catch (error: unknown) {
       // Keep the business processing outcome visible; the worker owns the technical error log.
-      this.logger.log(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, error);
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       await this.depotService.update(fichierDeDepot.depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,

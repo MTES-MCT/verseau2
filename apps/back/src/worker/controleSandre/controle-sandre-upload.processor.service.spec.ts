@@ -74,7 +74,7 @@ describe('ControleSandreUploadProcessorService', () => {
     });
     expect(mockQueueService.send).not.toHaveBeenCalled();
     expect(loggerValueMock.log).toHaveBeenCalledWith('Depot dep_1 - SANDRE upload failed', {
-      error,
+      errorMessage: error.message,
       retryCount: 0,
       retryLimit: 2,
     });
@@ -109,7 +109,7 @@ describe('ControleSandreUploadProcessorService', () => {
     // Technical error: no rapport is sent
     expect(mockQueueService.send).not.toHaveBeenCalled();
     expect(loggerValueMock.log).toHaveBeenCalledWith('Depot dep_1 - SANDRE upload failed', {
-      error,
+      errorMessage: error.message,
       retryCount: 2,
       retryLimit: 2,
     });

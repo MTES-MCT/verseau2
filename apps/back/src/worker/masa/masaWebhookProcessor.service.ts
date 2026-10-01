@@ -60,7 +60,7 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       this.logger.log(`Failed to process MASA report`, {
         masaId,
         depotId,
-        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }

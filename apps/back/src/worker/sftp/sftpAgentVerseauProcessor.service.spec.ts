@@ -165,7 +165,7 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     await expect(service.process({ depotId, filePath })).rejects.toThrow('SFTP Error');
 
-    expect(logger.log).toHaveBeenCalledWith('Failed to process file', { depotId, error });
+    expect(logger.log).toHaveBeenCalledWith('Failed to process file', { depotId, errorMessage: error.message });
     expect(logger.debug).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
 

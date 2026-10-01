@@ -37,7 +37,9 @@ describe('FileProcessorService logging', () => {
       }),
     ).rejects.toBe(error);
 
-    expect(logger.log).toHaveBeenCalledWith('Depot dep_1 - Unexpected error during processing', error);
+    expect(logger.log).toHaveBeenCalledWith('Depot dep_1 - Unexpected error during processing', {
+      errorMessage: error.message,
+    });
     expect(logger.debug).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
     expect(depotService.update).toHaveBeenLastCalledWith('dep_1', {
