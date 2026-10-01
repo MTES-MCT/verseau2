@@ -491,15 +491,6 @@ describe('Dossier E2E - Real Queue Processing', () => {
       // Referential data is not seeded, so V1 controls fail (business failure):
       // the depot is rejected, the deposant receives a rapport, and the SANDRE
       // control is never dispatched.
-      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
-      });
-      expect(finalDepot.status).toBe(DepotStatus.REJETE);
-      expect(finalDepot.step).toBe(DepotStep.CONTROLE_FAILED);
-      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
-      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.PENDING);
-      expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
-
       const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
         timeoutMs: 10000,
         pollIntervalMs: 200,
@@ -509,6 +500,17 @@ describe('Dossier E2E - Real Queue Processing', () => {
         depotId,
         destinataires: [RapportDestinataire.DEPOSANT],
       });
+
+      // Report diffusion advances the current step; inspect the rejection in history
+      // only after the entire business-failure flow has completed.
+      const finalDepot = await findDepotOrFail(depotId);
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+      expect(finalDepot.stepHistory).toContain(DepotStep.CONTROLE_FAILED);
+      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
+      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.PENDING);
+      expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
 
       // SANDRE control is never dispatched after a business failure
       const sandreJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_upload, depotId);
