@@ -1,18 +1,65 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
+import { z } from 'zod';
 import { SandreTokenResponse, SandreUploadParams, SandreValidationResult } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
+
+const sandreTokenSchema = z.object({
+  token: z.object({
+    jeton: z.string().regex(/^[A-Za-z0-9_-]+$/),
+    lienAcquittement: z.string(),
+    lienCertificat: z.string(),
+  }),
+});
+
+const sandreErreurSchema = z.object({
+  CdErreur: z.string(),
+  DescriptifErreur: z.string(),
+  LocationErreur: z.string().optional(),
+  LigneErreur: z.string().optional(),
+  ColonneErreur: z.string().optional(),
+  '@attributes': z.object({ SeveriteErreur: z.string() }).optional(),
+});
+
+const sandreValidationSchema = z.object({
+  ACQ: z.object({
+    AccuseReception: z.object({
+      Acceptation: z.enum(['0', '1', '2', '3']),
+      Jeton: z.string(),
+      CodeScenario: z.string(),
+      VersionScenario: z.string(),
+      'Erreur@attributes': z.object({ SeveriteErreur: z.string() }).optional(),
+      Erreur: z
+        .union([
+          sandreErreurSchema,
+          z.array(
+            z.union([
+              sandreErreurSchema,
+              z.object({
+                Erreur: sandreErreurSchema,
+                'Erreur@attributes': z.object({ SeveriteErreur: z.string() }).optional(),
+              }),
+            ]),
+          ),
+        ])
+        .optional(),
+    }),
+  }),
+});
 
 @Injectable()
 export class SandreService {
   private readonly httpClient: AxiosInstance;
-  private readonly baseUrl = 'http://www.sandre.eaufrance.fr/PS5/api';
+  private readonly baseUrl = process.env.SANDRE_API_URL || 'https://www.sandre.eaufrance.fr/PS5/api';
 
   constructor(private readonly logger: LoggerService) {
     this.logger.setContext(SandreService.name);
     this.httpClient = axios.create({
       timeout: 30000, // 30 seconds timeout
+      maxRedirects: 0, // Never send XML or trust a response from another origin/protocol
+      maxBodyLength: 75 * 1024 * 1024, // 70 MiB upload limit plus multipart overhead
+      maxContentLength: 20 * 1024 * 1024, // Bound decompressed API responses
     });
   }
 
@@ -63,14 +110,14 @@ export class SandreService {
     }
 
     try {
-      const response = await this.httpClient.post<{ token: SandreTokenResponse }>(`${this.baseUrl}/upload`, formData, {
+      const response = await this.httpClient.post<unknown>(`${this.baseUrl}/upload`, formData, {
         headers: {
           ...formData.getHeaders(),
         },
         responseType: 'json',
       });
-      // Ensure response.data is a string
-      const tokenResponse = response.data.token;
+      // Reject malformed responses before using the token to schedule polling.
+      const tokenResponse = sandreTokenSchema.parse(response.data).token;
 
       // Log the raw response for debugging
       this.logger.log('SANDRE upload response received', {
@@ -106,13 +153,19 @@ export class SandreService {
     this.logger.log('Fetching validation result', { token });
 
     try {
-      const response = await this.httpClient.get<SandreValidationResult>(`${this.baseUrl}/acquittement/${token}`, {
+      const response = await this.httpClient.get<unknown>(`${this.baseUrl}/acquittement/${encodeURIComponent(token)}`, {
         headers: {
           Accept: 'application/json',
         },
         responseType: 'json',
       });
-      const validationResult = response.data;
+      // Validate every field consumed by the poller/mapper before it can decide conformity.
+      // Keep the original document (including additional SANDRE metadata) for persistence.
+      sandreValidationSchema.parse(response.data);
+      const validationResult = response.data as SandreValidationResult;
+      if (validationResult.ACQ.AccuseReception.Jeton !== token) {
+        throw new Error('SANDRE acquittement token does not match the requested token');
+      }
 
       return validationResult;
     } catch (error) {

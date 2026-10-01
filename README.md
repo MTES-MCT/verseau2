@@ -100,7 +100,8 @@ S3_REGION=OUTSCALE_REGION
 S3_ACCESS_KEY=MY_ACCESS_KEY
 S3_SECRET_KEY=MY_SECRET_KEY
 
-# SANDRE Mock Configuration (pour les tests)
+# SANDRE Configuration
+SANDRE_API_URL=https://www.sandre.eaufrance.fr/PS5/api
 USE_SANDRE_MOCK=false
 
 # Logs
