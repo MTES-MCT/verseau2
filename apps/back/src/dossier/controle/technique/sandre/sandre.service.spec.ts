@@ -17,17 +17,26 @@ describe('SandreService injection', () => {
 });
 
 describe('SandreService', () => {
+  const originalSandreApiUrl = process.env.SANDRE_API_URL;
   const logger = { setContext: jest.fn(), log: jest.fn(), error: jest.fn() } as unknown as LoggerService;
   const httpClient = { post: jest.fn(), get: jest.fn() };
   let service: SandreService;
 
   beforeEach(() => {
+    delete process.env.SANDRE_API_URL;
     jest.clearAllMocks();
     jest.spyOn(axios, 'create').mockReturnValue(httpClient as unknown as AxiosInstance);
     service = new SandreService(logger);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.restoreAllMocks();
+    if (originalSandreApiUrl === undefined) {
+      delete process.env.SANDRE_API_URL;
+    } else {
+      process.env.SANDRE_API_URL = originalSandreApiUrl;
+    }
+  });
 
   it('disables redirects and bounds multipart uploads and responses', () => {
     expect(axios.create).toHaveBeenCalledWith({
@@ -75,6 +84,28 @@ describe('SandreService', () => {
         ...(error === undefined ? {} : { Erreur: error }),
       },
     },
+  });
+
+  it('uses SANDRE_API_URL for uploads and acquittement requests', async () => {
+    process.env.SANDRE_API_URL = 'https://sandre.example.org/api';
+    service = new SandreService(logger);
+    httpClient.post.mockResolvedValue({
+      data: { token: { jeton: 'abc_123', lienAcquittement: '', lienCertificat: '' } },
+    });
+    httpClient.get.mockResolvedValue({ data: acquittement('1') });
+
+    await service.validateFile({ xml: Buffer.from('<xml/>'), xsd: 'FCT_ASSAIN;4', nomSI: 'Verseau2', versionSI: '1' });
+    await service.getValidationResult('abc_123');
+
+    expect(httpClient.post).toHaveBeenCalledWith(
+      'https://sandre.example.org/api/upload',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(httpClient.get).toHaveBeenCalledWith(
+      'https://sandre.example.org/api/acquittement/abc_123',
+      expect.anything(),
+    );
   });
 
   it('fetches acquittement over HTTPS and preserves validated response metadata', async () => {

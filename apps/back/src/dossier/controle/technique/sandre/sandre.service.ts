@@ -51,7 +51,7 @@ const sandreValidationSchema = z.object({
 @Injectable()
 export class SandreService {
   private readonly httpClient: AxiosInstance;
-  private readonly baseUrl = 'https://www.sandre.eaufrance.fr/PS5/api';
+  private readonly baseUrl = process.env.SANDRE_API_URL || 'https://www.sandre.eaufrance.fr/PS5/api';
 
   constructor(private readonly logger: LoggerService) {
     this.logger.setContext(SandreService.name);
