@@ -4,7 +4,7 @@ import { S3 } from '@s3/s3';
 import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
 import { addNameTagToXml } from '@lib/parser';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
@@ -15,21 +15,14 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
     @Inject(S3) private readonly s3: S3,
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
+    private readonly depotWorkflow: DepotWorkflowService,
     @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
   ) {
     this.logger.setContext(SftpAgentVerseauProcessorService.name);
   }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
-    const started = await this.depotService.transition(
-      depotId,
-      [DepotStep.READY_FOR_SFTP, DepotStep.SFTP_IN_PROGRESS],
-      {
-        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.SFTP_IN_PROGRESS,
-        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
-      },
-    );
+    const started = await this.depotWorkflow.startSftpTransfer(depotId);
     if (!started) {
       return;
     }
@@ -64,18 +57,13 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       const remotePath = `${depot.id}_${depot.nomOriginalFichier}`;
       await this.agentVerseauClient.send(fileToSend, remotePath);
       await this.agentVerseauClient.send(Buffer.alloc(0), `${remotePath}.ack`);
-      await this.depotService.transition(depotId, [DepotStep.SFTP_IN_PROGRESS], {
-        step: DepotStep.SFTP_COMPLETED,
-      });
+      await this.depotWorkflow.completeSftpTransfer(depotId);
     } catch (error) {
       this.logger.error(
         'Failed to process file',
         error instanceof Error ? error.stack || error.message : String(error),
       );
-      await this.depotService.transition(depotId, [DepotStep.SFTP_IN_PROGRESS], {
-        status: DepotStatus.REJETE,
-        step: DepotStep.SFTP_FAILED,
-      });
+      await this.depotWorkflow.failSftpTransfer(depotId);
       throw error;
     }
   }

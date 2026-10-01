@@ -3,8 +3,7 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
-import { DepotService } from '@dossier/depot/depot.service';
-import { ControleSandreStatus, ControleStatus, DepotStep, DepotStatus } from '@lib/dossier';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotError } from '@dossier/depot/depotError';
@@ -23,7 +22,7 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
   constructor(
     @Inject(S3) private readonly s3: S3,
     private readonly sandreService: SandreService,
-    private readonly depotService: DepotService,
+    private readonly depotWorkflow: DepotWorkflowService,
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly logger: LoggerService,
   ) {
@@ -31,22 +30,7 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
   }
 
   async process({ depotId, filePath, retryCount = 0, retryLimit = 0 }: ControleSandreUploadJob): Promise<void> {
-    const depot = await this.depotService.findById(depotId);
-    if (
-      depot.controleStatus !== ControleStatus.SUCCESS ||
-      (depot.controleSandreStatus && depot.controleSandreStatus !== ControleSandreStatus.PENDING)
-    ) {
-      return;
-    }
-    const started = await this.depotService.transition(
-      depotId,
-      [DepotStep.CONTROLE_COMPLETED, DepotStep.PARSER_SANDRE_IN_PROGRESS],
-      {
-        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
-        controleSandreStatus: ControleSandreStatus.PENDING,
-      },
-    );
+    const started = await this.depotWorkflow.startSandreValidation(depotId);
     if (!started) {
       return;
     }
@@ -88,12 +72,7 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
       });
 
       if (retryCount >= retryLimit) {
-        await this.depotService.transition(depotId, [DepotStep.PARSER_SANDRE_IN_PROGRESS], {
-          status: DepotStatus.REJETE,
-          step: DepotStep.CONTROLE_SANDRE_FAILED,
-          controleSandreStatus: ControleSandreStatus.FAILED,
-          error: DepotError.SANDRE_UPLOAD_FAILED,
-        });
+        await this.depotWorkflow.failSandreValidation(depotId, DepotError.SANDRE_UPLOAD_FAILED);
       }
 
       throw error;

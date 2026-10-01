@@ -30,6 +30,11 @@ export enum QueueName {
   diffusion_rapport = 'diffusion_rapport',
 }
 
+/** Required job insertion; failures throw rather than silently returning null. */
+export interface JobScheduler {
+  enqueue<T = object>(name: QueueName, data: T): Promise<string>;
+}
+
 export interface QueueOptions {
   batchSize: number;
   includeMetadata?: boolean;

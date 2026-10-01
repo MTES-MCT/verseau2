@@ -5,11 +5,12 @@ import { FichierDeDepot } from '@dossier/depot/file/file';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotService } from '@dossier/depot/depot.service';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
 import { S3 } from '@infra/s3/s3';
 import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement } from '@lib/parser';
-import { DepotStep, DepotStatus, EtapeMetier, ControleStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus } from '@lib/dossier';
 import { DepotRightsException } from '@dossier/depot/depotError';
 import { AsyncTask } from '@worker/asyncTask';
 
@@ -18,6 +19,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   constructor(
     @Inject(QueueGateway) private readonly queueService: Queue,
     private readonly depotService: DepotService,
+    private readonly depotWorkflow: DepotWorkflowService,
     private readonly droitsDepotService: DroitsDepotService,
     private readonly userService: UserService,
     @Inject(S3) private readonly s3: S3,
@@ -27,16 +29,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   }
 
   async process(fichierDeDepot: FichierDeDepot) {
-    const started = await this.depotService.transition(
-      fichierDeDepot.depotId,
-      [DepotStep.PENDING, DepotStep.UPLOADING_TO_S3],
-      {
-        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.CONTROLE_IN_PROGRESS,
-        etapeMetier: EtapeMetier.CONTROLE_REFERENTIEL,
-        controleStatus: ControleStatus.PENDING,
-      },
-    );
+    const started = await this.depotWorkflow.startProcessing(fichierDeDepot.depotId);
     if (!started) {
       return;
     }

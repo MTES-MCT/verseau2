@@ -5,19 +5,10 @@ import { ControleMetierProcessorService } from './controleMetierProcessor.servic
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { S3 } from '@s3/s3';
-import { DepotError } from '@dossier/depot/depotError';
-import {
-  ControleName,
-  ControleType,
-  ErrorCode,
-  EvenementType,
-  ControleStatus,
-  DepotStep,
-  DepotStatus,
-} from '@lib/dossier';
-import { QueueName, RapportDestinataire } from '@queue/queue';
+import { ControleName, ControleType, ErrorCode, EvenementType, DepotStep, DepotStatus } from '@lib/dossier';
 import { SharedModule } from '@shared/shared.module';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 
@@ -28,6 +19,7 @@ describe('ControleMetierProcessorService', () => {
   let mockControleV1Service: ControleV1Service;
   let mockControleMetierV2Service: ControleMetierV2Service;
   let mockDepotService: DepotService;
+  let workflow: jest.Mocked<Pick<DepotWorkflowService, 'completeBusinessControls' | 'failBusinessControls'>>;
   let mockControleGateway: ControleGateway;
 
   beforeEach(async () => {
@@ -56,8 +48,12 @@ describe('ControleMetierProcessorService', () => {
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.CONTROLE_IN_PROGRESS,
       }),
-      transition: jest.fn().mockResolvedValue(true),
     } as unknown as DepotService;
+
+    workflow = {
+      completeBusinessControls: jest.fn().mockResolvedValue(true),
+      failBusinessControls: jest.fn().mockResolvedValue(true),
+    };
 
     mockControleGateway = {
       createControle: jest.fn(),
@@ -72,6 +68,7 @@ describe('ControleMetierProcessorService', () => {
         { provide: ControleV1Service, useValue: mockControleV1Service },
         { provide: ControleMetierV2Service, useValue: mockControleMetierV2Service },
         { provide: DepotService, useValue: mockDepotService },
+        { provide: DepotWorkflowService, useValue: workflow },
         { provide: ControleGateway, useValue: mockControleGateway },
         loggerProviderMock,
       ],
@@ -105,26 +102,16 @@ describe('ControleMetierProcessorService', () => {
       }),
     );
 
-    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.CONTROLE_IN_PROGRESS], {
-      status: DepotStatus.REJETE,
-      step: DepotStep.CONTROLE_FAILED,
-      controleStatus: ControleStatus.FAILED,
-      error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
-    });
-
-    expect(mockDepotService.transition).toHaveBeenCalledTimes(1);
+    expect(workflow.failBusinessControls).toHaveBeenCalledWith(depotId);
+    expect(workflow.failBusinessControls).toHaveBeenCalledTimes(1);
+    expect(workflow.completeBusinessControls).not.toHaveBeenCalled();
   });
 
   it('dispatches SANDRE only after the business transaction completes', async () => {
     await service.process({ depotId: 'dep_1', filePath: 'test.xml' });
-    expect(mockDepotService.transition).toHaveBeenCalledWith(
-      'dep_1',
-      [DepotStep.CONTROLE_IN_PROGRESS],
-      expect.objectContaining({ controleStatus: ControleStatus.SUCCESS, step: DepotStep.CONTROLE_COMPLETED }),
-      { name: QueueName.controle_sandre_upload, data: { depotId: 'dep_1', filePath: 'test.xml' } },
-    );
+    expect(workflow.completeBusinessControls).toHaveBeenCalledWith('dep_1', { success: true, filePath: 'test.xml' });
     expect((mockControleMetierV2Service.execute as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
-      (mockDepotService.transition as jest.Mock).mock.invocationCallOrder[0],
+      workflow.completeBusinessControls.mock.invocationCallOrder[0],
     );
   });
 
@@ -132,17 +119,8 @@ describe('ControleMetierProcessorService', () => {
     const controles = version === 'V1' ? mockControleV1Service : mockControleMetierV2Service;
     (controles.execute as jest.Mock).mockResolvedValue([{ success: false, evenementType: EvenementType.ERREUR }]);
     await service.process({ depotId: 'dep_1', filePath: 'test.xml' });
-    expect(mockDepotService.transition).toHaveBeenCalledTimes(1);
-    expect(mockDepotService.transition).toHaveBeenCalledWith(
-      'dep_1',
-      [DepotStep.CONTROLE_IN_PROGRESS],
-      expect.objectContaining({
-        status: DepotStatus.REJETE,
-        controleStatus: ControleStatus.FAILED,
-        step: DepotStep.CONTROLE_FAILED,
-      }),
-      { name: QueueName.diffusion_rapport, data: { depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] } },
-    );
+    expect(workflow.completeBusinessControls).toHaveBeenCalledTimes(1);
+    expect(workflow.completeBusinessControls).toHaveBeenCalledWith('dep_1', { success: false, filePath: 'test.xml' });
   });
 
   it('allows non-blocking warnings to continue to SANDRE', async () => {
@@ -150,12 +128,7 @@ describe('ControleMetierProcessorService', () => {
       { success: false, evenementType: EvenementType.AVERTISSEMENT },
     ]);
     await service.process({ depotId: 'dep_1', filePath: 'test.xml' });
-    expect(mockDepotService.transition).toHaveBeenCalledWith(
-      'dep_1',
-      [DepotStep.CONTROLE_IN_PROGRESS],
-      expect.objectContaining({ controleStatus: ControleStatus.SUCCESS }),
-      expect.objectContaining({ name: QueueName.controle_sandre_upload }),
-    );
+    expect(workflow.completeBusinessControls).toHaveBeenCalledWith('dep_1', { success: true, filePath: 'test.xml' });
   });
 
   it.each([
@@ -168,12 +141,14 @@ describe('ControleMetierProcessorService', () => {
     (mockDepotService.findById as jest.Mock).mockResolvedValue(depot);
     await service.process({ depotId: 'dep_1', filePath: 'test.xml' });
     expect(mockS3.download).not.toHaveBeenCalled();
-    expect(mockDepotService.transition).not.toHaveBeenCalled();
+    expect(workflow.completeBusinessControls).not.toHaveBeenCalled();
+    expect(workflow.failBusinessControls).not.toHaveBeenCalled();
   });
 
   it('propagates follow-up enqueue failures without recording a technical control failure', async () => {
-    (mockDepotService.transition as jest.Mock).mockRejectedValue(new Error('Enqueue failed'));
+    workflow.completeBusinessControls.mockRejectedValue(new Error('Enqueue failed'));
     await expect(service.process({ depotId: 'dep_1', filePath: 'test.xml' })).rejects.toThrow('Enqueue failed');
     expect(mockControleGateway.createControle).not.toHaveBeenCalled();
+    expect(workflow.failBusinessControls).not.toHaveBeenCalled();
   });
 });

@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { QueueGateway } from '@queue/queue';
+import { TransactionalQueueService } from '@queue/transactionalQueue.service';
 import { DatabaseMockModule } from './databaseMock.module';
 
 @Module({
   imports: [DatabaseMockModule],
   providers: [
+    TransactionalQueueService,
     {
       provide: QueueGateway,
       useValue: {
@@ -16,6 +18,6 @@ import { DatabaseMockModule } from './databaseMock.module';
       },
     },
   ],
-  exports: [QueueGateway],
+  exports: [QueueGateway, TransactionalQueueService],
 })
 export class QueueMockModule {}

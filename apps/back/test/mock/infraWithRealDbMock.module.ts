@@ -12,6 +12,7 @@ import { ClsModule } from 'nestjs-cls';
 import { AuthenticationModule } from '@authentication/authentication.module';
 import { ConfigurationModule } from '@infra/config/configuration.module';
 import { PGBOSS, QueueGateway } from '@infra/queue/queue';
+import { TransactionalQueueService } from '@queue/transactionalQueue.service';
 import { S3 } from '@infra/s3/s3';
 import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
@@ -58,6 +59,7 @@ const pgBossNullProvider = {
   ],
   providers: [
     minimalQueueProvider,
+    TransactionalQueueService,
     minimalS3Provider,
     minimalAgentVerseauClientProvider,
     minimalAgenceEauClientProvider,
@@ -68,6 +70,7 @@ const pgBossNullProvider = {
     AuthenticationModule,
     ConfigurationModule,
     QueueGateway,
+    TransactionalQueueService,
     S3,
     AgentVerseauClient,
     AgenceEauClient,

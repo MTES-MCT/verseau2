@@ -4,8 +4,8 @@ import { SftpAgentVerseauProcessorService } from './sftpAgentVerseauProcessor.se
 import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { S3 } from '@s3/s3';
 import { DepotService } from '@dossier/depot/depot.service';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
 import { LoggerService } from '@shared/logger/logger.service';
-import { DepotStatus, DepotStep, EtapeMetier } from '@lib/dossier';
 import { addNameTagToXml } from '@lib/parser';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 
@@ -18,6 +18,9 @@ describe('SftpAgentVerseauProcessorService', () => {
   let mockAgentVerseauClient: AgentVerseauClient;
   let mockS3: S3;
   let mockDepotService: DepotService;
+  let workflow: jest.Mocked<
+    Pick<DepotWorkflowService, 'startSftpTransfer' | 'completeSftpTransfer' | 'failSftpTransfer'>
+  >;
   let mockLanceleauGateway: jest.Mocked<LanceleauGateway>;
 
   beforeEach(async () => {
@@ -31,7 +34,6 @@ describe('SftpAgentVerseauProcessorService', () => {
     } as unknown as S3;
 
     mockDepotService = {
-      transition: jest.fn().mockResolvedValue(true),
       findDepotByIdWithUser: jest.fn().mockResolvedValue({
         id: 'depot-1',
         path: 'depots/depot-1/file.xml',
@@ -40,6 +42,12 @@ describe('SftpAgentVerseauProcessorService', () => {
         user: { email: 'user@example.com', nom: 'Cerbere', prenom: 'Contact' },
       }),
     } as unknown as DepotService;
+
+    workflow = {
+      startSftpTransfer: jest.fn().mockResolvedValue(true),
+      completeSftpTransfer: jest.fn().mockResolvedValue(true),
+      failSftpTransfer: jest.fn().mockResolvedValue(true),
+    };
 
     mockLanceleauGateway = {
       findOrionContactByEmail: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' }),
@@ -51,6 +59,7 @@ describe('SftpAgentVerseauProcessorService', () => {
         { provide: AgentVerseauClient, useValue: mockAgentVerseauClient },
         { provide: S3, useValue: mockS3 },
         { provide: DepotService, useValue: mockDepotService },
+        { provide: DepotWorkflowService, useValue: workflow },
         { provide: LanceleauGateway, useValue: mockLanceleauGateway },
         {
           provide: LoggerService,
@@ -78,15 +87,7 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     await service.process({ depotId, filePath });
 
-    expect(mockDepotService.transition).toHaveBeenCalledWith(
-      depotId,
-      [DepotStep.READY_FOR_SFTP, DepotStep.SFTP_IN_PROGRESS],
-      {
-        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.SFTP_IN_PROGRESS,
-        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
-      },
-    );
+    expect(workflow.startSftpTransfer).toHaveBeenCalledWith(depotId);
 
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
     expect(mockLanceleauGateway.findOrionContactByEmail).toHaveBeenCalledWith('user@example.com');
@@ -96,9 +97,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'depot-1_test.xml');
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot-1_test.xml.ack');
 
-    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.SFTP_IN_PROGRESS], {
-      step: DepotStep.SFTP_COMPLETED,
-    });
+    expect(workflow.completeSftpTransfer).toHaveBeenCalledWith(depotId);
   });
 
   it('keeps the original remote filename when the S3 path uses an opaque deposit key', async () => {
@@ -134,10 +133,7 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
-    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.SFTP_IN_PROGRESS], {
-      status: DepotStatus.REJETE,
-      step: DepotStep.SFTP_FAILED,
-    });
+    expect(workflow.failSftpTransfer).toHaveBeenCalledWith(depotId);
   });
 
   it.each([
@@ -153,10 +149,7 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
-    expect(mockDepotService.transition).toHaveBeenCalledWith('depot-1', [DepotStep.SFTP_IN_PROGRESS], {
-      status: DepotStatus.REJETE,
-      step: DepotStep.SFTP_FAILED,
-    });
+    expect(workflow.failSftpTransfer).toHaveBeenCalledWith('depot-1');
   });
 
   it('should handle errors and update depot status to REJETE', async () => {
@@ -167,14 +160,11 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     await expect(service.process({ depotId, filePath })).rejects.toThrow('SFTP Error');
 
-    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.SFTP_IN_PROGRESS], {
-      status: DepotStatus.REJETE,
-      step: DepotStep.SFTP_FAILED,
-    });
+    expect(workflow.failSftpTransfer).toHaveBeenCalledWith(depotId);
   });
 
   it('ignores late or replayed jobs when the depot is no longer awaiting SFTP', async () => {
-    (mockDepotService.transition as jest.Mock).mockResolvedValue(false);
+    workflow.startSftpTransfer.mockResolvedValue(false);
     await service.process({ depotId: 'depot-1', filePath: 's3/path.xml' });
     expect(mockDepotService.findDepotByIdWithUser).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();

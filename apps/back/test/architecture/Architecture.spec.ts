@@ -119,6 +119,44 @@ describe('Architecture test', () => {
         .because('Dossier repositories should implement gateways')
         .check(srcProject.allClasses());
     });
+
+    it('Depot persistence should not depend on the queue', () => {
+      const notDependOnQueue = new (class extends ArchCondition<TypeScriptClass> {
+        constructor() {
+          super('not depend on the queue infrastructure');
+        }
+
+        check(item: TypeScriptClass, events: ConditionEvents): void {
+          const queueDependencies = item.dependencies.filter((dependency) =>
+            dependency.typeScriptClass.getPath().get().includes('infra/queue'),
+          );
+
+          if (queueDependencies.length > 0) {
+            const details = queueDependencies
+              .map((dependency) => dependency.typeScriptClass.getPath().get())
+              .join(', ');
+            events.add(
+              SimpleConditionEvent.violated(
+                `${item.getSimpleName()} depends on the queue infrastructure: [${details}] in ${item.getPath().get()}`,
+              ),
+            );
+          } else {
+            events.add(new SimpleConditionEvent(`${item.getSimpleName()} is free of queue dependencies`, false));
+          }
+        }
+      })();
+
+      classes()
+        .thatWithPredicate(
+          TypeScriptClass.simpleNameStartingWith('depot.repository').or(
+            TypeScriptClass.simpleNameStartingWith('depot.gateway'),
+          ),
+        )
+        .shouldWithConjunction(notDependOnQueue)
+        .allowEmptyShould(false)
+        .because('Depot persistence must stay queue-free; DepotWorkflowService owns job scheduling')
+        .check(srcProject.allClasses());
+    });
   });
 
   describe('User Module', () => {

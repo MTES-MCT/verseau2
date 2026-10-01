@@ -2,23 +2,18 @@ import { Test } from '@nestjs/testing';
 import { ControleSandrePollProcessorService } from './controle-sandre-poll.processor.service';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
-import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
-import {
-  ControleSandreStatus,
-  ControleStatus,
-  DepotStatus,
-  DepotStep,
-  EtapeMetier,
-  SandreAcceptationStatus,
-} from '@lib/dossier';
+import { QueueGateway, QueueName } from '@queue/queue';
+import { ControleSandreStatus, ControleStatus, DepotStatus, DepotStep, SandreAcceptationStatus } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 
 describe('ControleSandrePollProcessorService', () => {
   let service: ControleSandrePollProcessorService;
   const sandre = { getValidationResult: jest.fn() };
-  const depots = { findById: jest.fn(), transition: jest.fn() };
+  const depots = { findById: jest.fn() };
+  const workflow = { completeSandreValidation: jest.fn(), failSandreValidation: jest.fn() };
   const reponses = { createReponseSandre: jest.fn() };
   const queue = { send: jest.fn() };
   const job = { depotId: 'dep_1', jeton: 'token', attemptCount: 0 };
@@ -44,13 +39,15 @@ describe('ControleSandrePollProcessorService', () => {
   beforeEach(async () => {
     jest.resetAllMocks();
     depots.findById.mockResolvedValue(pendingDepot);
-    depots.transition.mockResolvedValue(true);
+    workflow.completeSandreValidation.mockResolvedValue(true);
+    workflow.failSandreValidation.mockResolvedValue(true);
     sandre.getValidationResult.mockResolvedValue(validationResult(SandreAcceptationStatus.CONFORMANT));
     const module = await Test.createTestingModule({
       providers: [
         ControleSandrePollProcessorService,
         { provide: SandreService, useValue: sandre },
         { provide: DepotService, useValue: depots },
+        { provide: DepotWorkflowService, useValue: workflow },
         { provide: ReponseSandreGateway, useValue: reponses },
         { provide: QueueGateway, useValue: queue },
         loggerProviderMock,
@@ -64,19 +61,9 @@ describe('ControleSandrePollProcessorService', () => {
     expect(reponses.createReponseSandre).toHaveBeenCalledWith(
       expect.objectContaining({ depotId: 'dep_1', isConformant: true }),
     );
-    expect(depots.transition).toHaveBeenCalledWith(
-      'dep_1',
-      [DepotStep.PARSER_SANDRE_IN_PROGRESS],
-      {
-        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.READY_FOR_SFTP,
-        controleSandreStatus: ControleSandreStatus.SUCCESS,
-        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
-      },
-      { name: QueueName.send_to_sftp, data: { depotId: 'dep_1', filePath: 'test.xml' } },
-    );
+    expect(workflow.completeSandreValidation).toHaveBeenCalledWith('dep_1', true);
     expect(reponses.createReponseSandre.mock.invocationCallOrder[0]).toBeLessThan(
-      depots.transition.mock.invocationCallOrder[0],
+      workflow.completeSandreValidation.mock.invocationCallOrder[0],
     );
     expect(queue.send).not.toHaveBeenCalled();
   });
@@ -84,17 +71,7 @@ describe('ControleSandrePollProcessorService', () => {
   it('rejects non-conformity and reports only to the deposant', async () => {
     sandre.getValidationResult.mockResolvedValue(validationResult(SandreAcceptationStatus.NON_CONFORMANT));
     await service.process(job);
-    expect(depots.transition).toHaveBeenCalledWith(
-      'dep_1',
-      [DepotStep.PARSER_SANDRE_IN_PROGRESS],
-      {
-        status: DepotStatus.REJETE,
-        step: DepotStep.CONTROLE_SANDRE_FAILED,
-        controleSandreStatus: ControleSandreStatus.FAILED,
-        etapeMetier: EtapeMetier.CONTROLE_METIER,
-      },
-      { name: QueueName.diffusion_rapport, data: { depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] } },
-    );
+    expect(workflow.completeSandreValidation).toHaveBeenCalledWith('dep_1', false);
     expect(queue.send).not.toHaveBeenCalled();
   });
 
@@ -109,19 +86,15 @@ describe('ControleSandrePollProcessorService', () => {
         { startAfter: 30 },
       );
       expect(reponses.createReponseSandre).not.toHaveBeenCalled();
-      expect(depots.transition).not.toHaveBeenCalled();
+      expect(workflow.completeSandreValidation).not.toHaveBeenCalled();
+      expect(workflow.failSandreValidation).not.toHaveBeenCalled();
     },
   );
 
   it('rejects a polling timeout without a report', async () => {
     sandre.getValidationResult.mockResolvedValue(validationResult(SandreAcceptationStatus.WAITING));
     await service.process({ ...job, attemptCount: 240 });
-    expect(depots.transition).toHaveBeenCalledWith('dep_1', [DepotStep.PARSER_SANDRE_IN_PROGRESS], {
-      status: DepotStatus.REJETE,
-      step: DepotStep.CONTROLE_SANDRE_FAILED,
-      controleSandreStatus: ControleSandreStatus.FAILED,
-      error: DepotError.SANDRE_POLL_TIMEOUT,
-    });
+    expect(workflow.failSandreValidation).toHaveBeenCalledWith('dep_1', DepotError.SANDRE_POLL_TIMEOUT);
     expect(queue.send).not.toHaveBeenCalled();
   });
 
@@ -133,18 +106,14 @@ describe('ControleSandrePollProcessorService', () => {
       { ...job, attemptCount: 1 },
       { startAfter: 30 },
     );
-    expect(depots.transition).not.toHaveBeenCalled();
+    expect(workflow.completeSandreValidation).not.toHaveBeenCalled();
+    expect(workflow.failSandreValidation).not.toHaveBeenCalled();
   });
 
   it('rejects a definitive technical error without a report', async () => {
     sandre.getValidationResult.mockRejectedValue(new Error('SANDRE unavailable'));
     await service.process({ ...job, attemptCount: 240 });
-    expect(depots.transition).toHaveBeenCalledWith('dep_1', [DepotStep.PARSER_SANDRE_IN_PROGRESS], {
-      status: DepotStatus.REJETE,
-      step: DepotStep.CONTROLE_SANDRE_FAILED,
-      controleSandreStatus: ControleSandreStatus.FAILED,
-      error: DepotError.SANDRE_POLL_FAILED,
-    });
+    expect(workflow.failSandreValidation).toHaveBeenCalledWith('dep_1', DepotError.SANDRE_POLL_FAILED);
     expect(queue.send).not.toHaveBeenCalled();
   });
 
@@ -164,14 +133,16 @@ describe('ControleSandrePollProcessorService', () => {
     await service.process(job);
     expect(sandre.getValidationResult).not.toHaveBeenCalled();
     expect(reponses.createReponseSandre).not.toHaveBeenCalled();
-    expect(depots.transition).not.toHaveBeenCalled();
+    expect(workflow.completeSandreValidation).not.toHaveBeenCalled();
+    expect(workflow.failSandreValidation).not.toHaveBeenCalled();
     expect(queue.send).not.toHaveBeenCalled();
   });
 
   it('propagates follow-up enqueue errors rather than rejecting a conformant depot', async () => {
-    depots.transition.mockRejectedValue(new Error('Enqueue failed'));
+    workflow.completeSandreValidation.mockRejectedValue(new Error('Enqueue failed'));
     await expect(service.process(job)).rejects.toThrow('Enqueue failed');
-    expect(depots.transition).toHaveBeenCalledTimes(1);
+    expect(workflow.completeSandreValidation).toHaveBeenCalledTimes(1);
+    expect(workflow.failSandreValidation).not.toHaveBeenCalled();
     expect(queue.send).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,9 @@ import { DepotController } from './depot/depot.controller';
 import { DepotEntity } from './depot/depot.entity';
 import { DepotRepository } from './depot/depot.repository';
 import { DepotService } from './depot/depot.service';
+import { DepotWorkflowService } from './depot/depotWorkflow.service';
+import { DepotUnitOfWork } from './depot/depotUnitOfWork.gateway';
+import { DepotUnitOfWorkService } from '@database/depotUnitOfWork.service';
 import { DroitsDepotService } from './depot/droitsDepot.service';
 import { DepotUploadService } from './depot/depotUpload.service';
 import { DepotUploadGateway } from './depot/depotUpload.gateway';
@@ -68,6 +71,8 @@ const sandreServiceFactory = {
     // Depot
     { provide: DepotGateway, useClass: DepotRepository },
     DepotService,
+    DepotWorkflowService,
+    { provide: DepotUnitOfWork, useClass: DepotUnitOfWorkService },
     DroitsDepotService,
     DepotUploadService,
     { provide: DepotUploadGateway, useClass: DepotUploadRepository },
@@ -93,6 +98,7 @@ const sandreServiceFactory = {
   exports: [
     DepotUploadService,
     DepotService,
+    DepotWorkflowService,
     DroitsDepotService,
     SandreService,
     ReponseSandreGateway,

@@ -6,18 +6,8 @@ import { parseScenarioAssainissementXml } from '@lib/parser';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import {
-  DepotStep,
-  DepotStatus,
-  EtapeMetier,
-  ControleStatus,
-  EvenementType,
-  ControleName,
-  ControleType,
-  ErrorCode,
-} from '@lib/dossier';
-import { DepotError } from '@dossier/depot/depotError';
-import { QueueName, RapportDestinataire } from '@queue/queue';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
+import { DepotStep, DepotStatus, EvenementType, ControleName, ControleType, ErrorCode } from '@lib/dossier';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { DataSource } from 'typeorm';
 
@@ -29,6 +19,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     private readonly controleMetierV2Service: ControleMetierV2Service,
     private readonly controleV1Service: ControleV1Service,
     private readonly depotService: DepotService,
+    private readonly depotWorkflow: DepotWorkflowService,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly logger: LoggerService,
   ) {
@@ -83,37 +74,14 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         this.logger.error(`Depot ${depotId} - Failed to persist technical error control`, persistError);
       }
 
-      await this.depotService.transition(depotId, [DepotStep.CONTROLE_IN_PROGRESS], {
-        status: DepotStatus.REJETE,
-        step: DepotStep.CONTROLE_FAILED,
-        controleStatus: ControleStatus.FAILED,
-        error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
-      });
+      await this.depotWorkflow.failBusinessControls(depotId);
 
       return;
     }
 
     // Commit the outcome and follow-up job together. Enqueue failures must be retried,
     // not turned into technical control failures after the results have been persisted.
-    await this.depotService.transition(
-      depotId,
-      [DepotStep.CONTROLE_IN_PROGRESS],
-      {
-        status: allSuccess ? DepotStatus.EN_COURS_DE_TRAITEMENT : DepotStatus.REJETE,
-        controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
-        step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
-        etapeMetier: allSuccess ? EtapeMetier.CONTROLE_METIER : EtapeMetier.CONTROLE_REFERENTIEL,
-      },
-      allSuccess
-        ? {
-            name: QueueName.controle_sandre_upload,
-            data: { depotId, filePath },
-          }
-        : {
-            name: QueueName.diffusion_rapport,
-            data: { depotId, destinataires: [RapportDestinataire.DEPOSANT] },
-          },
-    );
+    await this.depotWorkflow.completeBusinessControls(depotId, { success: allSuccess, filePath });
   }
 
   private async createTechnicalErrorControle(depotId: string): Promise<void> {

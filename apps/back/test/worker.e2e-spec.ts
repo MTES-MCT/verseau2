@@ -6,6 +6,10 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
+import { DepotWorkflowService } from '@dossier/depot/depotWorkflow.service';
+import { DepotUnitOfWork } from '@dossier/depot/depotUnitOfWork.gateway';
+import { DepotUnitOfWorkService } from '@database/depotUnitOfWork.service';
+import { TransactionalQueueService } from '@queue/transactionalQueue.service';
 import { ControleName, ControleType, DepotStep, DepotStatus, ErrorCode, EvenementType } from '@lib/dossier';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
 import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
@@ -102,6 +106,9 @@ describe('Worker Service (e2e)', () => {
         { provide: UserService, useClass: UserServiceTestMock },
         DepotService,
         DepotRepository,
+        DepotWorkflowService,
+        { provide: DepotUnitOfWork, useClass: DepotUnitOfWorkService },
+        TransactionalQueueService,
         ReponseSandreRepository,
         { provide: ReponseSandreGateway, useExisting: ReponseSandreRepository },
         { provide: DepotGateway, useExisting: DepotRepository },
