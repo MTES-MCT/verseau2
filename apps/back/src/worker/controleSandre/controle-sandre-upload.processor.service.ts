@@ -8,7 +8,6 @@ import { ControleSandreStatus, DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotError } from '@dossier/depot/depotError';
-import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 
 const SANDRE_POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
 
@@ -26,7 +25,6 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
     private readonly sandreService: SandreService,
     private readonly depotService: DepotService,
     @Inject(QueueGateway) private readonly queueService: Queue,
-    private readonly depotCoordinatorService: DepotCoordinatorService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(ControleSandreUploadProcessorService.name);
@@ -75,13 +73,13 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
       });
 
       if (retryCount >= retryLimit) {
+        // Technical error: reject the depot without rapport
         await this.depotService.update(depotId, {
+          status: DepotStatus.REJETE,
           step: DepotStep.CONTROLE_SANDRE_FAILED,
           controleSandreStatus: ControleSandreStatus.FAILED,
           error: DepotError.SANDRE_UPLOAD_FAILED,
         });
-
-        await this.depotCoordinatorService.checkControlesCompletion(depotId);
       }
 
       throw error;

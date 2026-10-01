@@ -176,19 +176,13 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
 
-      // Verify jobs enqueued
-      expect(queueMock.jobs).toHaveLength(2);
+      // Verify jobs enqueued (sequential flow: only the business control is dispatched,
+      // the SANDRE control is dispatched by the business control processor on success)
+      expect(queueMock.jobs).toHaveLength(1);
       expect(queueMock.jobs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             name: QueueName.controle_metier,
-            data: {
-              depotId: depot.id,
-              filePath: 'test_file.xml',
-            },
-          }),
-          expect.objectContaining({
-            name: QueueName.controle_sandre_upload,
             data: {
               depotId: depot.id,
               filePath: 'test_file.xml',
