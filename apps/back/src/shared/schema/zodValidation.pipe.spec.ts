@@ -37,6 +37,7 @@ describe('ZodValidationPipe', () => {
       {
         code: 'invalid_type',
         path: ['name'],
+        message: 'Invalid input: expected string, received number',
       },
     ]);
     expect(JSON.stringify(loggedContext)).not.toContain('\\n');

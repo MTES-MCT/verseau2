@@ -26,8 +26,8 @@ Les scripts autonomes de génération de données peuvent conserver leur sortie 
 - Les échecs SQL restent en `error` pour conserver le diagnostic de la requête sans activer `debug`, sans valeurs des paramètres.
 - Passer l'objet `Error` plutôt que seulement son message : le logger préserve nom, message, stack et cause.
 - Sélectionner les métadonnées utiles ; ne pas journaliser corps HTTP, fichiers XML, pièces jointes,
-  utilisateurs complets, paramètres SQL, cookies ou secrets. Le masquage des champs de credentials
-  dans les objets est une protection supplémentaire, pas un assainissement des chaînes de texte libres.
+  utilisateurs complets, paramètres SQL, cookies ou secrets. Aucun masquage automatique n'est effectué :
+  ne jamais passer d'identifiants dans les contextes de log.
 - Le `correlationId` est automatiquement préfixé par le logger, y compris en `verbose` et `fatal`.
 
 Par défaut, `log`, `warn` et `error` sont actifs. `LOGS_LEVEL=debug` ajoute les diagnostics ;

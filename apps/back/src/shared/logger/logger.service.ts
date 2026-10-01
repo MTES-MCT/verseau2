@@ -68,27 +68,6 @@ export class LoggerService extends ConsoleLogger {
     try {
       return (
         JSON.stringify(value, function (this: Record<string, unknown>, key: string, item: unknown): unknown {
-          // Only log explicitly selected metadata; this is an additional safeguard.
-          const normalizedKey = key.replace(/[-_]/g, '').toLowerCase();
-          if (
-            [
-              'authorization',
-              'cookie',
-              'setcookie',
-              'password',
-              'secret',
-              'clientsecret',
-              'token',
-              'accesstoken',
-              'refreshtoken',
-              'idtoken',
-              'apikey',
-              'privatekey',
-              'codeverifier',
-            ].includes(normalizedKey)
-          ) {
-            return '[REDACTED]';
-          }
           if (typeof item === 'bigint') {
             return item.toString();
           }

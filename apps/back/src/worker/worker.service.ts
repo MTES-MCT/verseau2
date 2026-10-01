@@ -53,17 +53,23 @@ export class WorkerService implements OnModuleInit {
 
       switch (queueName) {
         case QueueName.cleanup_depot_upload:
-          await this.queueService.work<{ depotId: string }>(queueName, options, async ([job]) => {
-            const context = { queueName, jobId: job.id, depotId: job.data.depotId };
-            this.logger.log('Job processing started', context);
-            try {
-              await this.depotUploadService.cleanup(job.data.depotId);
-              this.logger.log('Job processing completed', context);
-            } catch (error: unknown) {
-              this.logger.error('Job processing failed', { ...context, error });
-              throw error;
-            }
-          });
+          await this.queueService.work<{ depotId: string; correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
+                try {
+                  await this.depotUploadService.cleanup(job.data.depotId);
+                  this.logger.log('Job processing completed', context);
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
+                  throw error;
+                }
+              });
+            },
+          );
           break;
         case QueueName.process_file:
           await this.queueService.work<FichierDeDepot & { correlationId?: string }>(
@@ -88,7 +94,7 @@ export class WorkerService implements OnModuleInit {
         case QueueName.email:
           await this.queueService.work<EmailJobData & { correlationId?: string }>(queueName, options, async ([job]) => {
             return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-              const context = { queueName, jobId: job.id };
+              const context = { queueName, jobId: job.id, template: job.data.template };
               this.logger.log('Job processing started', context);
               try {
                 const result = await this.emailProvider.send(job.data.template, job.data.params);

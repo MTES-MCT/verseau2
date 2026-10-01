@@ -16,7 +16,7 @@ import type { DepotUploadService } from '@dossier/depot/depotUpload.service';
 describe('WorkerService', () => {
   type TestJob = {
     id: string;
-    data: { depotId: string; correlationId?: string };
+    data: { depotId: string; template?: string; correlationId?: string };
     retryCount: number;
     retryLimit: number;
   };
@@ -92,11 +92,20 @@ describe('WorkerService', () => {
       if (!handler) {
         throw new Error(`Missing worker for ${queueName}`);
       }
-      const job = { id: 'job_1', data: { depotId: 'dep_1', correlationId: 'cid_1' }, retryCount: 1, retryLimit: 2 };
+      const job = {
+        id: 'job_1',
+        data: { depotId: 'dep_1', template: 'template_1', correlationId: 'cid_1' },
+        retryCount: 1,
+        retryLimit: 2,
+      };
 
       await expect(handler([job])).rejects.toBe(error);
 
-      const context = { queueName, jobId: 'job_1', ...(queueName === QueueName.email ? {} : { depotId: 'dep_1' }) };
+      const context = {
+        queueName,
+        jobId: 'job_1',
+        ...(queueName === QueueName.email ? { template: 'template_1' } : { depotId: 'dep_1' }),
+      };
       expect(logger.error).toHaveBeenCalledTimes(1);
       expect(logger.error).toHaveBeenCalledWith('Job processing failed', {
         ...context,
@@ -105,11 +114,7 @@ describe('WorkerService', () => {
       const level = queueName === QueueName.controle_sandre_poll ? 'debug' : 'log';
       expect(logger[level]).toHaveBeenCalledTimes(1);
       expect(logger[level]).toHaveBeenCalledWith('Job processing started', context);
-      if (queueName === QueueName.cleanup_depot_upload) {
-        expect(runWith).not.toHaveBeenCalled();
-      } else {
-        expect(runWith).toHaveBeenCalledWith({ correlationId: 'cid_1' }, expect.any(Function));
-      }
+      expect(runWith).toHaveBeenCalledWith({ correlationId: 'cid_1' }, expect.any(Function));
       if (queueName === QueueName.controle_sandre_upload) {
         expect(process).toHaveBeenCalledWith({ ...job.data, retryCount: 1, retryLimit: 2 });
       }
@@ -122,10 +127,14 @@ describe('WorkerService', () => {
     if (!handler) {
       throw new Error(`Missing worker for ${queueName}`);
     }
-    await handler([{ id: 'job_1', data: { depotId: 'dep_1' }, retryCount: 0, retryLimit: 2 }]);
+    await handler([{ id: 'job_1', data: { depotId: 'dep_1', template: 'template_1' }, retryCount: 0, retryLimit: 2 }]);
 
     const level = queueName === QueueName.controle_sandre_poll ? 'debug' : 'log';
-    const context = { queueName, jobId: 'job_1', ...(queueName === QueueName.email ? {} : { depotId: 'dep_1' }) };
+    const context = {
+      queueName,
+      jobId: 'job_1',
+      ...(queueName === QueueName.email ? { template: 'template_1' } : { depotId: 'dep_1' }),
+    };
     expect(logger[level]).toHaveBeenCalledTimes(2);
     expect(logger[level]).toHaveBeenNthCalledWith(1, 'Job processing started', context);
     expect(logger[level]).toHaveBeenNthCalledWith(2, 'Job processing completed', context);

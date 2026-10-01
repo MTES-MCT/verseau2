@@ -13,7 +13,7 @@ export class ZodValidationPipe implements PipeTransform {
     } catch (error: unknown) {
       if (error instanceof ZodError) {
         this.logger.warn('Validation failed', {
-          issues: error.issues.map(({ code, path }) => ({ code, path })),
+          issues: error.issues.map(({ code, path, message }) => ({ code, path, message })),
         });
       } else {
         this.logger.error('Unexpected validation failure', error);

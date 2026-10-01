@@ -110,19 +110,6 @@ describe('LoggerService', () => {
     expect(formatted).toContain('"self":"[Circular]"');
   });
 
-  it('masks credentials in nested context objects', () => {
-    const formatted = service.formatArgs('Failed', {
-      headers: { Authorization: 'bearer secret', cookie: 'session=secret' },
-      access_token: 'access-secret',
-      refreshToken: 'refresh-secret',
-      privateKey: 'private-secret',
-      password: 'password-secret',
-    });
-
-    expect(formatted).not.toContain('secret');
-    expect(formatted).toContain('[REDACTED]');
-  });
-
   it('does not throw when a context object cannot be serialized', () => {
     expect(
       service.formatArgs('Failed', {
