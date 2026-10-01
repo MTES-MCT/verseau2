@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { resolveXmlParseBudgets } from '@infra/config/xmlParseBudgets';
 import { LoggerService } from '@shared/logger/logger.service';
 import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
-import { parseScenarioAssainissementXml } from '@lib/parser';
+import { parseScenarioAssainissementXml, XmlParseBudgetError } from '@lib/parser';
 import { ControleMetierV2Service } from '@dossier/controle/metierv2/controleMetierV2.service';
 import { ControleV1Service } from '@dossier/controle/isov1/controlev1.service';
 import { DepotService } from '@dossier/depot/depot.service';
@@ -32,6 +34,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     private readonly depotCoordinatorService: DepotCoordinatorService,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly logger: LoggerService,
+    private readonly config: ConfigService,
   ) {
     this.logger.setContext(ControleMetierProcessorService.name);
   }
@@ -49,7 +52,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         fileSize: `${Math.round((file.length / 1024 / 1024) * 100) / 100} MB`,
       });
 
-      const xmlObj = await parseScenarioAssainissementXml(file.toString());
+      const xmlObj = await parseScenarioAssainissementXml(file.toString('utf8'), resolveXmlParseBudgets(this.config));
 
       this.logger.log(`Depot ${depotId} - Controles Métier (V1 & V2) en cours (Transactional)`);
 
@@ -80,6 +83,17 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
       await this.depotCoordinatorService.checkControlesCompletion(depotId);
     } catch (error) {
+      if (error instanceof XmlParseBudgetError) {
+        this.logger.warn(`Depot ${depotId} - XML parse budget exceeded (${error.kind} limit: ${error.limit})`);
+        await this.depotService.update(depotId, {
+          status: DepotStatus.REJETE,
+          step: DepotStep.CONTROLE_FAILED,
+          controleStatus: ControleStatus.FAILED,
+          error: DepotError.XML_PARSE_BUDGET_EXCEEDED,
+        });
+        return;
+      }
+
       this.logger.error(`Depot ${depotId} - Controles Métier failed`, error);
 
       try {

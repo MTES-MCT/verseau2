@@ -26,6 +26,17 @@ export const initializeDepotUpload = {
   }),
 } as const satisfies RouteDefinition;
 
+// Fetch before parsing the recap: deployment overrides are not known at build time.
+export const getDepotXmlParseBudgets = {
+  method: 'GET',
+  path: '/depot/upload/xml-parse-budgets',
+  response: z.object({
+    maxElements: z.number().int().positive(),
+    maxDepth: z.number().int().positive(),
+    maxTextLength: z.number().int().positive(),
+  }),
+} as const satisfies RouteDefinition;
+
 export const completeDepotUpload = {
   method: 'POST',
   path: '/depot/:id/upload/complete',

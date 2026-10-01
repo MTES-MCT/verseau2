@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -94,6 +95,9 @@ describe('Worker Service (e2e)', () => {
       ],
       providers: [
         LoggerService,
+        // FileProcessorService resolves optional XML parse budget overrides from
+        // ConfigService; undefined values fall back to the parser defaults.
+        { provide: ConfigService, useValue: { get: () => undefined } },
         FileProcessorService,
         SftpAgentVerseauProcessorService,
         DiffusionRapportProcessorService,

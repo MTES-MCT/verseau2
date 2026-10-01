@@ -11,6 +11,7 @@ import {
   getMasa,
   type RouteResponse,
   initializeDepotUpload,
+  getDepotXmlParseBudgets,
   completeDepotUpload,
 } from '@lib/dossier';
 import { apiDownload, apiCall, buildRoutePath } from './apiClient';
@@ -34,6 +35,12 @@ export async function fetchMasa(depotId: string) {
 }
 
 export type DepotUploadSession = RouteResponse<typeof initializeDepotUpload>;
+
+export async function fetchXmlParseBudgets() {
+  // Unlike a typing-only API response, missing/invalid limits must not cause
+  // the parser to silently fall back to a different policy.
+  return getDepotXmlParseBudgets.response.parse(await apiCall(getDepotXmlParseBudgets));
+}
 
 export async function initializeUpload(file: File): Promise<DepotUploadSession> {
   return apiCall(initializeDepotUpload, {

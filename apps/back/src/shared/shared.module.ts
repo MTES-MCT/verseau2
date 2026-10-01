@@ -4,6 +4,7 @@ import { LoggerService } from './logger/logger.service';
 import { ZodValidationPipe } from './schema/zodValidation.pipe';
 import { CsvGeneratorService } from './csv/csvGenerator.service';
 import { PaginatedExportService } from './csv/paginatedExport.service';
+import { MemoryMonitorService } from './memory-monitor/memoryMonitor.service';
 import { Zip } from './zip/zip';
 import { ZipService } from './zip/zip.service';
 
@@ -14,6 +15,7 @@ import { ZipService } from './zip/zip.service';
     ZodValidationPipe,
     CsvGeneratorService,
     PaginatedExportService,
+    MemoryMonitorService,
     ZipService,
     {
       provide: CsvGenerator,
@@ -30,6 +32,7 @@ import { ZipService } from './zip/zip.service';
     CsvGenerator,
     CsvGeneratorService,
     PaginatedExportService,
+    MemoryMonitorService,
     Zip,
     ZipService,
   ],

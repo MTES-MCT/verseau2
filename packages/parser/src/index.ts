@@ -1,4 +1,5 @@
 export * from './scenarioAssainissement.parser';
+export * from './xmlParseBudgets';
 export * from './fluxQualifie';
 export { LocGlobalePointMesure } from './sandreConstants';
 export type {

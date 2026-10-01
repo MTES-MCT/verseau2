@@ -1,4 +1,5 @@
 import { addNameTagToXml, parseScenarioAssainissementXml } from './scenarioAssainissement.parser';
+import { XmlParseBudgetError, XmlParseBudgetKind, DEFAULT_XML_PARSE_BUDGETS } from './xmlParseBudgets';
 import { compliantXml } from './xml/compliant';
 import { compliantXmlWithNomContact } from './xml/compliantWithNomContact';
 import { nonCompliantXml } from './xml/nonCompliantBadStructure';
@@ -599,4 +600,80 @@ ${emetteurHead}${sections}
       expect(ms).toBeLessThan(5_000);
     }, 60_000);
   });
+});
+
+describe('Sandre Parser - parse budgets', () => {
+  /**
+   * Budget calibration reference: the largest known legitimate SANDRE file
+   * (packages/parser/src/xml/18.6_MO_anonymized.xml) holds 403,492 elements,
+   * a maximum nesting depth of 7 and ~900 KB of text for 18.6 MB of input.
+   * A 70 MB file (MAX_DEPOT_FILE_SIZE_BYTES) at the same density would hold
+   * ~1.5M elements and ~3.4 MB of text.
+   */
+
+  const elementBomb = (count: number) => `<root>${'<a/>'.repeat(count)}</root>`;
+  const depthBomb = (depth: number) => `<root>${'<a>'.repeat(depth)}${'</a>'.repeat(depth)}</root>`;
+  const textBomb = (length: number) => `<root><t>${'x'.repeat(length)}</t></root>`;
+
+  const legitBlock = (index: number) => `<OuvrageDepollution><CdOuvrageDepollution>CODE_${index}</CdOuvrageDepollution><TypeOuvrageDepollution>4</TypeOuvrageDepollution><PointMesure><NumeroPointMesure>${index}</NumeroPointMesure><LocGlobalePointMesure>S7</LocGlobalePointMesure><Prlvt><DatePrlvt>2024-12-31</DatePrlvt><Support><CdSupport>3</CdSupport></Support><Analyse><RsAnalyse>12.5</RsAnalyse><StatutRsAnalyse>A</StatutRsAnalyse><QualRsAnalyse>4</QualRsAnalyse><Parametre><CdParametre>1552</CdParametre></Parametre></Analyse></Prlvt></PointMesure></OuvrageDepollution>`;
+
+  it('rejects an element-count bomb with a dedicated budget error instead of building the full graph', async () => {
+    // ~2.5M elements: an adversarial 70 MB tag bomb holds ~18M, well above any
+    // legitimate file. The default budget must abort early with a rejection,
+    // never resolve.
+    const bomb = elementBomb(2_500_000);
+
+    const start = Date.now();
+    await expect(parseScenarioAssainissementXml(bomb)).rejects.toThrow(XmlParseBudgetError);
+    // Early abort: the budget must be hit long before the whole input is parsed.
+    expect(Date.now() - start).toBeLessThan(10_000);
+  }, 30_000);
+
+  it('exposes the exceeded budget kind, limit and a distinguishable code', async () => {
+    const bomb = elementBomb(10);
+
+    const error = await parseScenarioAssainissementXml(bomb, { maxElements: 5 }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(XmlParseBudgetError);
+    const budgetError = error as XmlParseBudgetError;
+    expect(budgetError.kind).toBe(XmlParseBudgetKind.ELEMENTS);
+    expect(budgetError.limit).toBe(5);
+    expect(budgetError.code).toBe('XML_PARSE_BUDGET_EXCEEDED');
+    expect(budgetError.message).toContain('ELEMENTS');
+  });
+
+  it('rejects a depth bomb at the depth budget', async () => {
+    const bomb = depthBomb(100);
+
+    const start = Date.now();
+    const error = await parseScenarioAssainissementXml(bomb).catch((e: unknown) => e);
+    expect(Date.now() - start).toBeLessThan(10_000);
+
+    expect(error).toBeInstanceOf(XmlParseBudgetError);
+    expect((error as XmlParseBudgetError).kind).toBe(XmlParseBudgetKind.DEPTH);
+    expect((error as XmlParseBudgetError).limit).toBe(DEFAULT_XML_PARSE_BUDGETS.maxDepth);
+  });
+
+  it('rejects a text bomb at the text budget', async () => {
+    const bomb = textBomb(500);
+
+    const error = await parseScenarioAssainissementXml(bomb, { maxTextLength: 100 }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(XmlParseBudgetError);
+    expect((error as XmlParseBudgetError).kind).toBe(XmlParseBudgetKind.TEXT);
+    expect((error as XmlParseBudgetError).limit).toBe(100);
+  });
+
+  it('still parses a large legitimate file comfortably under the default budgets', async () => {
+    // ~720k elements, ~21 MB: roughly twice the element count of the largest
+    // known real file, at a higher element density. Must pass under defaults.
+    const blockCount = 72_000;
+    const xml = `<root>${Array.from({ length: blockCount }, (_, i) => legitBlock(i)).join('')}</root>`;
+
+    const result = await parseScenarioAssainissementXml(xml);
+
+    expect(result.ouvrages).toHaveLength(blockCount);
+    expect(result.ouvrages[0].cdOuvrageDepollution).toBe('CODE_0');
+    expect(result.ouvrages[blockCount - 1].pointMesure[0].prelevement[0].analyse[0].cdParametre).toBe('1552');
+  }, 60_000);
 });

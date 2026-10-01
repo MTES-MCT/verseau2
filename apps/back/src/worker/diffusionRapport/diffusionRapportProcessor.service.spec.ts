@@ -20,9 +20,11 @@ import type { FctAssainissement } from '@lib/parser';
 import { RapportDestinataire } from '@queue/queue';
 import { unzipSync } from 'fflate';
 import { MasaStatus } from '@dossier/masa/masa.model';
+import { ConfigService } from '@nestjs/config';
 import type { MasaModel } from '@dossier/masa/masa.model';
 
 jest.mock('@lib/parser', () => ({
+  ...jest.requireActual<typeof import('@lib/parser')>('@lib/parser'),
   parseScenarioAssainissementXml: jest.fn(),
 }));
 
@@ -38,6 +40,7 @@ describe('DiffusionRapportProcessorService', () => {
   let agencyTransferClient: jest.Mocked<TransferClient>;
   let pdfGenerator: jest.Mocked<RapportPdfGeneratorService>;
   let masaProvider: jest.Mocked<MasaProvider>;
+  const configGet = jest.fn((_key: string): string | undefined => undefined);
   let logger: {
     log: jest.Mock;
     error: jest.Mock;
@@ -87,6 +90,7 @@ describe('DiffusionRapportProcessorService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    configGet.mockReset();
 
     masaGateway = {
       findById: jest.fn().mockResolvedValue(masa),
@@ -171,6 +175,7 @@ describe('DiffusionRapportProcessorService', () => {
         { provide: RapportPdfGeneratorService, useValue: pdfGenerator },
         { provide: MasaProvider, useValue: masaProvider },
         { provide: LoggerService, useValue: logger },
+        { provide: ConfigService, useValue: { get: configGet } },
       ],
     }).compile();
 
@@ -178,6 +183,46 @@ describe('DiffusionRapportProcessorService', () => {
     service = module.get(DiffusionRapportProcessorService);
 
     jest.mocked(parseScenarioAssainissementXml).mockResolvedValue(createParsedXml('STEU001'));
+  });
+
+  it('uses the effective policy to diffuse XML above the default depth limit', async () => {
+    const parser = jest.requireActual<typeof import('@lib/parser')>('@lib/parser');
+    const depth = parser.DEFAULT_XML_PARSE_BUDGETS.maxDepth + 1;
+    const xml = `<FctAssain><OuvrageDepollution><CdOuvrageDepollution>STEU001</CdOuvrageDepollution></OuvrageDepollution>${'<a>'.repeat(depth)}${'</a>'.repeat(depth)}</FctAssain>`;
+    configGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_DEPTH' ? String(depth + 1) : undefined));
+    s3.download.mockResolvedValue(Buffer.from(xml));
+    jest.mocked(parseScenarioAssainissementXml).mockImplementation(parser.parseScenarioAssainissementXml);
+
+    await service.process({ depotId: 'dep_1', masaId: 'masa_1', destinataires: [RapportDestinataire.AGENCE_EAU] });
+
+    expect(parseScenarioAssainissementXml).toHaveBeenCalledWith(xml, {
+      ...parser.DEFAULT_XML_PARSE_BUDGETS,
+      maxDepth: depth + 1,
+    });
+    expect(masaProvider.findAgenceEauNomBySteuCode).toHaveBeenCalledWith('STEU001');
+    expect(agencyTransferClient.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not send XML exceeding a lowered text budget', async () => {
+    const parser = jest.requireActual<typeof import('@lib/parser')>('@lib/parser');
+    configGet.mockImplementation((key) => (key === 'XML_PARSE_MAX_TEXT_LENGTH' ? '3' : undefined));
+    s3.download.mockResolvedValue(
+      Buffer.from(
+        '<FctAssain><OuvrageDepollution><CdOuvrageDepollution>STEU001</CdOuvrageDepollution></OuvrageDepollution></FctAssain>',
+      ),
+    );
+    jest.mocked(parseScenarioAssainissementXml).mockImplementation(parser.parseScenarioAssainissementXml);
+
+    await service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.AGENCE_EAU] });
+
+    expect(agencyTransferClient.send).not.toHaveBeenCalled();
+    expect(masaProvider.findAgenceEauNomBySteuCode).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      "Failed to send files to Agence de l'eau SFTP",
+      expect.objectContaining({
+        error: 'XML parse budget exceeded (kind: TEXT, limit: 3)',
+      }),
+    );
   });
 
   function expectFirstSftpCallToContainZipEntries(): void {

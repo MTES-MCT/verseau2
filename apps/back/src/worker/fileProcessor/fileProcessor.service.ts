@@ -1,4 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { LoggerService } from '@shared/logger/logger.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
@@ -8,9 +9,10 @@ import { DepotService } from '@dossier/depot/depot.service';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
 import { S3 } from '@infra/s3/s3';
-import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement } from '@lib/parser';
+import { resolveXmlParseBudgets } from '@infra/config/xmlParseBudgets';
+import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement, XmlParseBudgetError } from '@lib/parser';
 import { DepotStep, DepotStatus, EtapeMetier, ControleSandreStatus, ControleStatus } from '@lib/dossier';
-import { DepotRightsException } from '@dossier/depot/depotError';
+import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import { AsyncTask } from '@worker/asyncTask';
 
 @Injectable()
@@ -21,6 +23,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
     private readonly droitsDepotService: DroitsDepotService,
     private readonly userService: UserService,
     @Inject(S3) private readonly s3: S3,
+    private readonly config: ConfigService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(FileProcessorService.name);
@@ -41,7 +44,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
       const xmlContent = xmlBuffer.toString('utf8');
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Parsing XML`);
-      const parsed = await parseScenarioAssainissementXml(xmlContent);
+      const parsed = await parseScenarioAssainissementXml(xmlContent, resolveXmlParseBudgets(this.config));
       const codes = this.extractAllCodes(parsed);
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Checking deposit rights`);
@@ -86,6 +89,21 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Controls dispatched successfully`);
     } catch (error: unknown) {
+      if (error instanceof XmlParseBudgetError) {
+        // A budget exceeded is deterministic: the same file would fail again on
+        // every attempt. Finalize the depot as REJETE and complete the job so
+        // pg-boss does not burn its retries re-downloading and re-parsing it.
+        this.logger.warn(
+          `Depot ${fichierDeDepot.depotId} - XML parse budget exceeded (${error.kind} limit: ${error.limit}), rejecting depot`,
+        );
+        await this.depotService.update(fichierDeDepot.depotId, {
+          status: DepotStatus.REJETE,
+          error: DepotError.XML_PARSE_BUDGET_EXCEEDED,
+          step: DepotStep.CONTROLE_FAILED,
+        });
+        return;
+      }
+
       this.logger.error(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, error);
       await this.depotService.update(fichierDeDepot.depotId, {
         status: DepotStatus.REJETE,
