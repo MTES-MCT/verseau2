@@ -19,9 +19,18 @@ describe('SftpAgentVerseauProcessorService', () => {
   let mockS3: S3;
   let mockDepotService: DepotService;
   let mockLanceleauGateway: jest.Mocked<LanceleauGateway>;
+  let logger: LoggerService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    logger = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      verbose: jest.fn(),
+      setContext: jest.fn(),
+    } as unknown as LoggerService;
     mockAgentVerseauClient = {
       send: jest.fn().mockResolvedValue(undefined),
     };
@@ -54,14 +63,7 @@ describe('SftpAgentVerseauProcessorService', () => {
         { provide: LanceleauGateway, useValue: mockLanceleauGateway },
         {
           provide: LoggerService,
-          useValue: {
-            log: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-            verbose: jest.fn(),
-            setContext: jest.fn(),
-          },
+          useValue: logger,
         },
       ],
     }).compile();
@@ -162,6 +164,10 @@ describe('SftpAgentVerseauProcessorService', () => {
     (mockAgentVerseauClient.send as jest.Mock).mockRejectedValue(error);
 
     await expect(service.process({ depotId, filePath })).rejects.toThrow('SFTP Error');
+
+    expect(logger.log).toHaveBeenCalledWith('Failed to process file', { depotId, error });
+    expect(logger.debug).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
 
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       status: DepotStatus.REJETE,

@@ -24,6 +24,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SignJWT, jwtVerify } from 'jose';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { logAuthenticationFailure } from './logAuthenticationFailure';
 
 @Injectable()
 export class AuthenticationService implements Authentication {
@@ -104,7 +105,7 @@ export class AuthenticationService implements Authentication {
 
       return this.mapInternalClaimsToUser(payload);
     } catch (error) {
-      this.logger.error(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logAuthenticationFailure(this.logger, 'Token validation failed', error);
       throw new UnauthorizedException();
     }
   }
@@ -131,9 +132,7 @@ export class AuthenticationService implements Authentication {
 
       return payload.sub;
     } catch (error) {
-      this.logger.error(
-        `Failed to extract subject from expired token: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      logAuthenticationFailure(this.logger, 'Failed to extract subject from expired token', error);
       throw new UnauthorizedException();
     }
   }
@@ -246,7 +245,7 @@ export class AuthenticationService implements Authentication {
     try {
       configuration = await this.getConfiguration();
     } catch (error) {
-      this.logger.error(
+      this.logger.debug(
         `Failed to get OIDC configuration during token refresh: ${error instanceof Error ? error.message : String(error)}`,
       );
       throw error;
@@ -257,10 +256,7 @@ export class AuthenticationService implements Authentication {
       tokens = await refreshTokenGrant(configuration, refreshToken);
       this.logger.log('OIDC refresh token grant succeeded');
     } catch (error) {
-      this.logger.error(
-        `OIDC refresh token grant failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error,
-      );
+      logAuthenticationFailure(this.logger, 'OIDC refresh token grant failed', error);
       throw new UnauthorizedException();
     }
 
@@ -271,11 +267,9 @@ export class AuthenticationService implements Authentication {
       // car le spec OIDC n'impose pas le retour d'un id_token lors d'un refresh grant.
       const userInfo = await this.fetchUserInfoClaims(tokens.access_token, expectedSubject);
       user = this.mapOpenIdUserToUser(userInfo);
-      this.logger.log(`User info retrieved for cerbereId=${user.cerbereId}`);
+      this.logger.log('User info retrieved after token refresh');
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch user info after token refresh: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      logAuthenticationFailure(this.logger, 'Failed to fetch user info after token refresh', error);
       throw new UnauthorizedException();
     }
 
@@ -291,7 +285,7 @@ export class AuthenticationService implements Authentication {
     );
 
     if (!tokens.refresh_token) {
-      this.logger.warn('AS did not return a new refresh token');
+      this.logger.debug('AS did not return a new refresh token; keeping the existing token');
     }
 
     this.logger.log('Token refresh completed successfully');

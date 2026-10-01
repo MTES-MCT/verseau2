@@ -54,7 +54,15 @@ export class WorkerService implements OnModuleInit {
       switch (queueName) {
         case QueueName.cleanup_depot_upload:
           await this.queueService.work<{ depotId: string }>(queueName, options, async ([job]) => {
-            await this.depotUploadService.cleanup(job.data.depotId);
+            const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+            this.logger.log('Job processing started', context);
+            try {
+              await this.depotUploadService.cleanup(job.data.depotId);
+              this.logger.log('Job processing completed', context);
+            } catch (error: unknown) {
+              this.logger.error('Job processing failed', { ...context, error });
+              throw error;
+            }
           });
           break;
         case QueueName.process_file:
@@ -63,15 +71,14 @@ export class WorkerService implements OnModuleInit {
             options,
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing jobId', job.id);
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
                 try {
-                  return await this.fileProcessorService.process(job.data);
-                } catch (error) {
-                  this.logger.error('Job processing failed', {
-                    jobId: job.id,
-                    error: error instanceof Error ? error.message : (error as string),
-                    stack: error instanceof Error ? error.stack : undefined,
-                  });
+                  const result = await this.fileProcessorService.process(job.data);
+                  this.logger.log('Job processing completed', context);
+                  return result;
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
                   throw error; // Re-throw so pg-boss still marks it as failed for retry
                 }
               });
@@ -81,14 +88,14 @@ export class WorkerService implements OnModuleInit {
         case QueueName.email:
           await this.queueService.work<EmailJobData & { correlationId?: string }>(queueName, options, async ([job]) => {
             return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-              this.logger.log('Processing email jobId', job.id);
+              const context = { queueName, jobId: job.id };
+              this.logger.log('Job processing started', context);
               try {
-                return await this.emailProvider.send(job.data.template, job.data.params);
-              } catch (error) {
-                this.logger.error('Email job processing failed', {
-                  jobId: job.id,
-                  error: error instanceof Error ? error.message : (error as string),
-                });
+                const result = await this.emailProvider.send(job.data.template, job.data.params);
+                this.logger.log('Job processing completed', context);
+                return result;
+              } catch (error: unknown) {
+                this.logger.error('Job processing failed', { ...context, error });
                 throw error;
               }
             });
@@ -100,15 +107,14 @@ export class WorkerService implements OnModuleInit {
             options,
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing jobId', job.id);
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
                 try {
-                  return await this.sftpProcessorService.process(job.data);
-                } catch (error) {
-                  this.logger.error('Job processing failed', {
-                    jobId: job.id,
-                    error: error instanceof Error ? error.message : (error as string),
-                    stack: error instanceof Error ? error.stack : undefined,
-                  });
+                  const result = await this.sftpProcessorService.process(job.data);
+                  this.logger.log('Job processing completed', context);
+                  return result;
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
                   throw error; // Re-throw so pg-boss still marks it as failed for retry
                 }
               });
@@ -121,15 +127,14 @@ export class WorkerService implements OnModuleInit {
             options,
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing jobId', job.id);
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
                 try {
-                  return await this.controleMetierProcessorService.process(job.data);
-                } catch (error) {
-                  this.logger.error('Job processing failed', {
-                    jobId: job.id,
-                    error: error instanceof Error ? error.message : (error as string),
-                    stack: error instanceof Error ? error.stack : undefined,
-                  });
+                  const result = await this.controleMetierProcessorService.process(job.data);
+                  this.logger.log('Job processing completed', context);
+                  return result;
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
                   throw error; // Re-throw so pg-boss still marks it as failed for retry
                 }
               });
@@ -142,19 +147,18 @@ export class WorkerService implements OnModuleInit {
             { ...options, includeMetadata: true },
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing SANDRE upload jobId', job.id);
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
                 try {
-                  return await this.controleSandreUploadProcessorService.process({
+                  const result = await this.controleSandreUploadProcessorService.process({
                     ...job.data,
                     retryCount: job.retryCount,
                     retryLimit: job.retryLimit,
                   });
-                } catch (error) {
-                  this.logger.error('SANDRE upload job processing failed', {
-                    jobId: job.id,
-                    error: error instanceof Error ? error.message : (error as string),
-                    stack: error instanceof Error ? error.stack : undefined,
-                  });
+                  this.logger.log('Job processing completed', context);
+                  return result;
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
                   throw error; // Re-throw so pg-boss still marks it as failed for retry
                 }
               });
@@ -169,15 +173,14 @@ export class WorkerService implements OnModuleInit {
             correlationId?: string;
           }>(queueName, options, async ([job]) => {
             return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-              this.logger.log('Processing SANDRE poll jobId', job.id);
+              const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+              this.logger.debug('Job processing started', context);
               try {
-                return await this.controleSandrePollProcessorService.process(job.data);
-              } catch (error) {
-                this.logger.error('SANDRE poll job processing failed', {
-                  jobId: job.id,
-                  error: error instanceof Error ? error.message : (error as string),
-                  stack: error instanceof Error ? error.stack : undefined,
-                });
+                const result = await this.controleSandrePollProcessorService.process(job.data);
+                this.logger.debug('Job processing completed', context);
+                return result;
+              } catch (error: unknown) {
+                this.logger.error('Job processing failed', { ...context, error });
                 throw error; // Re-throw so pg-boss still marks it as failed for retry
               }
             });
@@ -189,15 +192,14 @@ export class WorkerService implements OnModuleInit {
             options,
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing after MASA webhook jobId', job.id);
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
                 try {
-                  return await this.masaProcessorService.process(job.data);
-                } catch (error) {
-                  this.logger.error('After MASA webhook processing failed', {
-                    jobId: job.id,
-                    error: error instanceof Error ? error.message : (error as string),
-                    stack: error instanceof Error ? error.stack : undefined,
-                  });
+                  const result = await this.masaProcessorService.process(job.data);
+                  this.logger.log('Job processing completed', context);
+                  return result;
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
                   throw error;
                 }
               });
@@ -210,15 +212,14 @@ export class WorkerService implements OnModuleInit {
             options,
             async ([job]) => {
               return await this.cls.runWith({ correlationId: job.data.correlationId }, async () => {
-                this.logger.log('Processing diffusion rapport jobId', job.id);
+                const context = { queueName, jobId: job.id, depotId: job.data.depotId };
+                this.logger.log('Job processing started', context);
                 try {
-                  return await this.diffusionRapportProcessorService.process(job.data);
-                } catch (error) {
-                  this.logger.error('Diffusion rapport processing failed', {
-                    jobId: job.id,
-                    error: error instanceof Error ? error.message : (error as string),
-                    stack: error instanceof Error ? error.stack : undefined,
-                  });
+                  const result = await this.diffusionRapportProcessorService.process(job.data);
+                  this.logger.log('Job processing completed', context);
+                  return result;
+                } catch (error: unknown) {
+                  this.logger.error('Job processing failed', { ...context, error });
                   throw error;
                 }
               });

@@ -71,10 +71,7 @@ export class DepotService {
     try {
       return await this.s3.download(depot.rapportPath);
     } catch (error) {
-      this.logger.error(
-        `Failed to download rapport for depot ${depotId} from path ${depot.rapportPath}`,
-        (error as Error).message,
-      );
+      this.logger.error(`Failed to download rapport for depot ${depotId} from path ${depot.rapportPath}`, error);
       throw new NotFoundException(`Rapport not found in storage for depot: ${depotId}`);
     }
   }
@@ -89,10 +86,7 @@ export class DepotService {
     try {
       return await this.s3.download(depot.path);
     } catch (error) {
-      this.logger.error(
-        `Failed to download XML for depot ${depotId} from path ${depot.path}`,
-        (error as Error).message,
-      );
+      this.logger.error(`Failed to download XML for depot ${depotId} from path ${depot.path}`, error);
       throw new NotFoundException(`XML file not found in storage for depot: ${depotId}`);
     }
   }

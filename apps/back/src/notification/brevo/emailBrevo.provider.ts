@@ -45,10 +45,10 @@ export class EmailBrevoProvider implements EmailProvider {
       const { data, rawResponse } = await this.brevo.transactionalEmails
         .sendTransacEmail(sendSmtpEmail)
         .withRawResponse();
-      this.logger.log(`Email sent successfully to ${emailParams.to.map((t) => t.email).join(', ')}`);
+      this.logger.log('Email sent successfully via Brevo', { template, recipientCount: emailParams.to.length });
       return { response: rawResponse, body: data };
     } catch (error) {
-      this.logger.error('Error sending email via Brevo', error);
+      this.logger.debug('Error sending email via Brevo', error);
       throw error;
     }
   }

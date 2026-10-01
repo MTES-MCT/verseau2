@@ -44,7 +44,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
         throw new Error(`Orion contact is missing or incomplete for depot ${depotId}`);
       }
 
-      this.logger.log('Downloading file', filePath);
+      this.logger.log('Downloading file', { depotId, filePath });
       const file = await this.s3.download(filePath);
       const xmlContent = file.toString('utf-8');
       const fullName = `${contact.nom.toUpperCase()} ${contact.prenom}`;
@@ -60,11 +60,9 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
       });
-    } catch (error) {
-      this.logger.error(
-        'Failed to process file',
-        error instanceof Error ? error.stack || error.message : String(error),
-      );
+      this.logger.log('Files sent to Agent Verseau', { depotId });
+    } catch (error: unknown) {
+      this.logger.log('Failed to process file', { depotId, error });
       await this.depotService.update(depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.SFTP_FAILED,

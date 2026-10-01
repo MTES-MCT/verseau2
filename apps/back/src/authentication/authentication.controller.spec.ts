@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { AuthenticationController } from './authentication.controller';
 import { Authentication, OIDCTokens } from './authentication';
 import { OidcTransactionService } from './oidcTransaction.service';
@@ -8,7 +13,7 @@ import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
-import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { loggerProviderMock, loggerValueMock } from '@shared/logger/logger.mock';
 
 const makeResponse = (): jest.Mocked<Response> =>
   ({
@@ -108,6 +113,30 @@ describe('AuthenticationController', () => {
   });
 
   describe('refresh', () => {
+    it.each([
+      [new UnauthorizedException(), 'warn'],
+      [new ForbiddenException(), 'warn'],
+      [new ServiceUnavailableException(), 'error'],
+      [new Error('Unexpected infrastructure failure'), 'error'],
+    ] as const)('classifies refresh failure %s at %s level without changing the response', async (error, level) => {
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(error);
+
+      await expect(
+        controller.refresh(
+          makeRequest({
+            refresh_token: 'secret-refresh',
+            access_token: 'secret-access',
+          }),
+          makeResponse(),
+        ),
+      ).rejects.toThrow();
+
+      expect(loggerValueMock[level]).toHaveBeenCalledTimes(1);
+      expect(loggerValueMock.warn.mock.calls.length + loggerValueMock.error.mock.calls.length).toBe(1);
+      expect(JSON.stringify(loggerValueMock[level].mock.calls)).not.toContain('secret-');
+    });
+
     it('should throw BadRequestException when refresh token cookie is missing', async () => {
       const req = makeRequest({});
       const res = makeResponse();
