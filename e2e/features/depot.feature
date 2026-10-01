@@ -12,6 +12,7 @@ Fonctionnalité: Dépôt d'un fichier d'autosurveillance
     Étant donné que je suis connecté comme déposant autorisé
     Quand je dépose un fichier d'autosurveillance valide
     Et son traitement par le worker est terminé
+    Et le dépôt est envoyé au SFTP de l'Agent Verseau
     Et MASA confirme l'intégration du dépôt
     Alors le retour MASA est traité par le worker
     Et le dépôt est affiché comme intégré dans mon tableau de bord
@@ -21,6 +22,7 @@ Fonctionnalité: Dépôt d'un fichier d'autosurveillance
     Étant donné que je suis connecté comme déposant autorisé
     Quand je dépose un fichier d'autosurveillance valide
     Et son traitement par le worker est terminé
+    Et le dépôt est envoyé au SFTP de l'Agent Verseau
     Et MASA rejette le dépôt
     Alors le retour MASA est traité par le worker
     Et le dépôt est affiché comme rejeté dans mon tableau de bord

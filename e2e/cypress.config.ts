@@ -25,7 +25,13 @@ export default defineConfig({
           queue,
         }: {
           depotId: string;
-          queue: 'process_file' | 'controle_metier' | 'process_after_masa_webhook';
+          queue:
+            | 'process_file'
+            | 'controle_metier'
+            | 'controle_sandre_upload'
+            | 'controle_sandre_poll'
+            | 'send_to_sftp'
+            | 'process_after_masa_webhook';
         }): Promise<string | null> {
           const client = new Client({ connectionString: process.env.DATABASE_URL });
           await client.connect();

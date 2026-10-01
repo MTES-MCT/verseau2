@@ -31,7 +31,9 @@ Then('le dépôt apparaît dans mon tableau de bord', () => {
   cy.contains('tr', filename, { timeout: 20000 }).should('be.visible');
 });
 
-function waitForWorkerJob(queue: 'process_file' | 'controle_metier' | 'process_after_masa_webhook') {
+function waitForWorkerJob(
+  queue: 'process_file' | 'controle_metier' | 'controle_sandre_upload' | 'controle_sandre_poll' | 'send_to_sftp' | 'process_after_masa_webhook',
+) {
   const deadline = Date.now() + 90000;
   const poll = (): void => {
     cy.task<string | null>('workerJobState', { depotId, queue }).then((state) => {
@@ -50,6 +52,15 @@ Then('son traitement par le worker est terminé', () => {
   // The depot stays in progress until MASA calls the webhook.
   waitForWorkerJob('process_file');
   waitForWorkerJob('controle_metier');
+});
+
+Then("le dépôt est envoyé au SFTP de l'Agent Verseau", () => {
+  // En production, le webhook MASA ne peut survenir qu'après l'envoi du fichier
+  // au SFTP de l'Agent Verseau, lui-même conditionné par la fin du contrôle
+  // SANDRE : attendre la fin de l'envoi SFTP avant de simuler le retour MASA.
+  waitForWorkerJob('controle_sandre_upload');
+  waitForWorkerJob('controle_sandre_poll');
+  waitForWorkerJob('send_to_sftp');
 });
 
 function sendMasaReturn(statut: 'Intégré' | 'Rejeté') {

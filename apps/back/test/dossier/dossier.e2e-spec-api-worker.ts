@@ -461,7 +461,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       expect(finalDepot.error).toEqual(DepotError.DROITS_INSUFFISANTS);
     }, 12000);
 
-    it('should process file and verify control jobs are dispatched', async () => {
+    it('should process file and dispatch the business control job', async () => {
       // Seed VSteuSclItv to authorize the user's SIRET for the STEU and SCL codes in the XML
       await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
 
@@ -475,51 +475,46 @@ describe('Dossier E2E - Real Queue Processing', () => {
         pollIntervalMs: 200,
       });
 
-      // Check that control jobs were created in the pgboss.job table
-      // FileProcessor dispatches to controle_metier and controle_sandre_upload queues
-      const controlJobs = await dataSource.query(
-        `SELECT name, data, state FROM pgboss.job 
-         WHERE (name = $1 OR name = $2) AND data->>'depotId' = $3`,
-        [QueueName.controle_metier, QueueName.controle_sandre_upload, depotId],
-      );
+      // Sequential flow: FileProcessor dispatches only the business control job
+      const metierJobs = await getJobsForDepot(dataSource, QueueName.controle_metier, depotId);
+      expect(metierJobs.length).toBe(1);
+      const sandreUploadJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_upload, depotId);
+      expect(sandreUploadJobs.length).toBe(0);
 
-      // Control jobs should exist when rights check passes
-      expect(controlJobs.length).toBeGreaterThan(0);
+      // Wait for the business control job to complete
+      const metierResult = await waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(metierResult.status).toBe('completed');
 
-      // Wait for mandatory control jobs to complete
-      const [metierResult, sandreUploadResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
-      // Wait for poll job only if it has been dispatched
-      let sandrePollResult: { status: string } = { status: 'timeout' };
-      const sandrePollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
-      if (sandrePollJobs.length > 0) {
-        sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        });
-      }
-
-      // Check that controls were processed
-      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
+      // Referential data is not seeded, so V1 controls fail (business failure):
+      // the depot is rejected, the deposant receives a rapport, and the SANDRE
+      // control is never dispatched.
+      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(diffusionRapportResult.status).toBe('completed');
+      expect(diffusionRapportResult.job?.data).toMatchObject({
+        depotId,
+        destinataires: [RapportDestinataire.DEPOSANT],
       });
 
-      // After controls complete, depot should have control statuses set
-      const sandreCompleted = sandreUploadResult.status !== 'timeout' || sandrePollResult.status !== 'timeout';
-      if (metierResult.status !== 'timeout' && sandreCompleted) {
-        expect(finalDepot.controleStatus).toContain(ControleStatus.FAILED);
-        expect(finalDepot.controleSandreStatus).toContain(ControleSandreStatus.SUCCESS);
-      }
+      // Report diffusion advances the current step; inspect the rejection in history
+      // only after the entire business-failure flow has completed.
+      const finalDepot = await findDepotOrFail(depotId);
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+      expect(finalDepot.stepHistory).toContain(DepotStep.CONTROLE_FAILED);
+      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
+      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.PENDING);
       expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
+
+      // SANDRE control is never dispatched after a business failure
+      const sandreJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_upload, depotId);
+      expect(sandreJobs.length).toBe(0);
 
       const controles = await dataSource.getRepository(ControleEntity).find({
         where: { depotId: depotId },
@@ -536,7 +531,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       // No technical error should occur since the system processes controles correctly
       const technicalErrors = controles.filter((c) => c.error === ErrorCode.E2_999);
       expect(technicalErrors.length).toBe(0);
-    }, 12000);
+    }, 15000);
 
     it('should generate and send rapport when controle v1 and v2 pass but sandre fails', async () => {
       await seedVSteuSclItv(dataSource, SANDRE_FAILED_STEU_CODE, SANDRE_FAILED_SCL_CODE, TEST_USER.itvRfa);
@@ -560,23 +555,23 @@ describe('Dossier E2E - Real Queue Processing', () => {
         pollIntervalMs: 200,
       });
 
-      const [metierResult, sandreUploadResult, sandrePollResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
+      // Sequential flow: business control completes first, then dispatches the SANDRE control
+      const metierResult = await waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
       expect(metierResult.status).toBe('completed');
+
+      const sandreUploadResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
       expect(sandreUploadResult.status).toBe('completed');
+
+      const sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
       expect(sandrePollResult.status).toBe('completed');
 
       const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
