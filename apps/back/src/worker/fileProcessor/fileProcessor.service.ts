@@ -61,7 +61,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
         if (!(rightsError instanceof DepotRightsException)) {
           throw rightsError;
         }
-        this.logger.warn(`Depot ${fichierDeDepot.depotId} - Rights check failed: ${rightsError.code}`);
+        this.logger.log(`Depot ${fichierDeDepot.depotId} - Deposit rejected: ${rightsError.code}`);
         await this.depotService.update(fichierDeDepot.depotId, {
           status: DepotStatus.REJETE,
           error: rightsError.code,
@@ -81,7 +81,10 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Business control job dispatched successfully`);
     } catch (error: unknown) {
-      this.logger.error(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, error);
+      // Keep the business processing outcome visible; the worker owns the technical error log.
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       await this.depotService.update(fichierDeDepot.depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,

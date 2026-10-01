@@ -14,6 +14,7 @@ describe('MasaWebhookProcessorService', () => {
   let masaGateway: jest.Mocked<MasaGateway>;
   let depotGateway: jest.Mocked<DepotGateway>;
   let queueService: jest.Mocked<Queue>;
+  let logger: LoggerService;
 
   beforeEach(async () => {
     masaGateway = {
@@ -41,7 +42,7 @@ describe('MasaWebhookProcessorService', () => {
       work: jest.fn(),
     };
 
-    const logger = {
+    logger = {
       setContext: jest.fn(),
       log: jest.fn(),
       error: jest.fn(),
@@ -76,6 +77,22 @@ describe('MasaWebhookProcessorService', () => {
       masaId: 'masa_1',
       destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
     });
+  });
+
+  it('logs failed MASA processing at log level and preserves the error for the worker', async () => {
+    const error = new Error('MASA lookup failed');
+    masaGateway.findById.mockRejectedValue(error);
+
+    await expect(service.process({ masaId: 'masa_1', depotId: 'depot_1' })).rejects.toBe(error);
+
+    expect(logger.log).toHaveBeenCalledWith('Failed to process MASA report', {
+      masaId: 'masa_1',
+      depotId: 'depot_1',
+      errorMessage: error.message,
+    });
+    expect(logger.debug).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(queueService.send).not.toHaveBeenCalled();
   });
 
   it('should enqueue rapport diffusion to deposant only when MASA refuses the depot', async () => {

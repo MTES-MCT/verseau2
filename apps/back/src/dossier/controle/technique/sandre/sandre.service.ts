@@ -120,7 +120,7 @@ export class SandreService {
       const tokenResponse = sandreTokenSchema.parse(response.data).token;
 
       // Log the raw response for debugging
-      this.logger.log('SANDRE upload response received', {
+      this.logger.debug('SANDRE upload response received', {
         jeton: tokenResponse.jeton,
         lienAcquittement: tokenResponse.lienAcquittement,
         lienCertificat: tokenResponse.lienCertificat,
@@ -133,7 +133,7 @@ export class SandreService {
 
       return tokenResponse;
     } catch (error) {
-      this.logger.error('Failed to upload file to SANDRE', error);
+      this.logger.debug('Failed to upload file to SANDRE', error);
       if (axios.isAxiosError(error)) {
         throw new Error(
           `SANDRE upload failed: ${error.message}${error.response ? ` - Status: ${error.response.status}` : ''}`,
@@ -150,7 +150,7 @@ export class SandreService {
    * @returns Validation result with status and errors
    */
   async getValidationResult(token: string): Promise<SandreValidationResult> {
-    this.logger.log('Fetching validation result', { token });
+    this.logger.debug('Fetching validation result', { jeton: token });
 
     try {
       const response = await this.httpClient.get<unknown>(`${this.baseUrl}/acquittement/${encodeURIComponent(token)}`, {
@@ -169,7 +169,7 @@ export class SandreService {
 
       return validationResult;
     } catch (error) {
-      this.logger.error('Failed to fetch validation result', error);
+      this.logger.debug('Failed to fetch validation result', error);
       if (axios.isAxiosError(error)) {
         throw new Error(
           `SANDRE validation fetch failed: ${error.message}${

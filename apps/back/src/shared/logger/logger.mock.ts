@@ -8,6 +8,7 @@ export const loggerValueMock = {
   warn: jest.fn(),
   debug: jest.fn(),
   verbose: jest.fn(),
+  fatal: jest.fn(),
   setContext: jest.fn(),
 };
 
@@ -31,6 +32,18 @@ export class LoggerServiceMock extends LoggerService {
   }
 
   debug(message: any, ...optionalParams: [...any, string?]): void {
+    // Mock implementation
+  }
+
+  warn(message: any, ...optionalParams: [...any, string?]): void {
+    // Mock implementation
+  }
+
+  verbose(message: any, ...optionalParams: [...any, string?]): void {
+    // Mock implementation
+  }
+
+  fatal(message: any, ...optionalParams: [...any, string?]): void {
     // Mock implementation
   }
 

@@ -56,12 +56,11 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
       });
 
       this.logger.log(`MASA report processing completed, delegated to diffusion_rapport`, { masaId, depotId });
-    } catch (error) {
-      this.logger.error(`Failed to process MASA report`, {
+    } catch (error: unknown) {
+      this.logger.log(`Failed to process MASA report`, {
         masaId,
         depotId,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        errorMessage: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }

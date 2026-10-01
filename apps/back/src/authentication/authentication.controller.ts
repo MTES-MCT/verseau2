@@ -23,6 +23,7 @@ import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { OidcTransactionService } from './oidcTransaction.service';
+import { logAuthenticationFailure } from './logAuthenticationFailure';
 
 const MAX_CODE_LENGTH = 8192;
 const MAX_STATE_LENGTH = 512;
@@ -128,10 +129,7 @@ export class AuthenticationController {
         expiresIn: result.expiresIn,
       };
     } catch (error: unknown) {
-      this.logger.error(
-        `Authentication callback failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error : undefined,
-      );
+      logAuthenticationFailure(this.logger, 'Authentication callback failed', error);
 
       if (error instanceof HttpException) {
         throw error;
@@ -172,10 +170,7 @@ export class AuthenticationController {
         expiresIn: tokens.expiresIn,
       };
     } catch (error: unknown) {
-      this.logger.error(
-        `Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error : undefined,
-      );
+      logAuthenticationFailure(this.logger, 'Token refresh failed', error);
 
       if (error instanceof HttpException) {
         throw error;

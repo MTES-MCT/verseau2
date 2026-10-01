@@ -45,7 +45,7 @@ export const customizeMockS3Client = async (configService: ConfigService, s3Clie
   s3Client.send = async function (command: any, options?: any) {
     // await delay(3000);
 
-    console.log(`MOCK S3 - Sending command: ${command.constructor.name}`, command.input);
+    logger.warn(`MOCK S3 - Sending command: ${command.constructor.name}`);
     return originalSend(command, options);
   };
 
