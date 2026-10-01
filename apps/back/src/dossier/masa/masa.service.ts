@@ -1,11 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MasaGateway } from './masa.gateway';
 import { type MasaWebhookPayloadDto } from './masa.schema';
+import { type MasaWebhookResult } from './masa.model';
 import { DepotGateway } from '../depot/depot.gateway';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { LoggerService } from '@shared/logger/logger.service';
 import { mapWebhookStatusToMasaStatus } from './masa.mapper';
+import { DepotStatus, DepotStep } from '@lib/dossier';
 
 @Injectable()
 export class MasaService {
@@ -18,30 +20,50 @@ export class MasaService {
     this.logger.setContext(MasaService.name);
   }
 
-  async processRetourAgentVerseau(payload: MasaWebhookPayloadDto) {
+  async processRetourAgentVerseau(payload: MasaWebhookPayloadDto): Promise<MasaWebhookResult> {
     const depot = await this.depotGateway.findDepotById(payload.verseau2DepotId);
     if (!depot) {
       throw new Error('Depot not found');
     }
 
+    const statut = mapWebhookStatusToMasaStatus(payload.statut);
+    if (statut === null) {
+      this.logger.log('MASA webhook received with a non-final status, acknowledged without processing', {
+        depotId: payload.verseau2DepotId,
+        statutMasa: payload.statut,
+      });
+      return { processed: false, statutMasa: payload.statut };
+    }
+
     const existingMasa = await this.masaGateway.findByDepotId(payload.verseau2DepotId);
-    if (existingMasa) {
+    if (
+      existingMasa &&
+      (depot.status !== DepotStatus.EN_COURS_DE_TRAITEMENT ||
+        (depot.step !== DepotStep.SFTP_COMPLETED && depot.step !== DepotStep.SFTP_IN_PROGRESS))
+    ) {
       this.logger.warn('MASA return already processed', { depotId: payload.verseau2DepotId });
       return existingMasa;
     }
 
-    const masaData = await this.masaGateway.saveMasaRetour({
-      depotId: payload.verseau2DepotId,
-      numeroDepotVerseau1: payload.numeroDepotVerseau1,
-      statut: mapWebhookStatusToMasaStatus(payload.statut),
-      statutMasa: payload.statut,
-      rapport: payload.rapport,
-    });
+    // Ré-enfiler un retour déjà sauvegardé répare un précédent échec d'enqueue.
+    const masaData =
+      existingMasa ??
+      (await this.masaGateway.saveMasaRetour({
+        depotId: payload.verseau2DepotId,
+        numeroDepotVerseau1: payload.numeroDepotVerseau1,
+        statut,
+        statutMasa: payload.statut,
+        rapport: payload.rapport,
+      }));
 
-    await this.queueService.send(QueueName.process_after_masa_webhook, {
-      masaId: masaData.id,
-      depotId: payload.verseau2DepotId,
-    });
+    const jobId = await this.queueService.send(
+      QueueName.process_after_masa_webhook,
+      { masaId: masaData.id, depotId: payload.verseau2DepotId },
+      { retryLimit: 12, retryDelay: 5, retryBackoff: false },
+    );
+    if (!jobId) {
+      throw new Error('Failed to enqueue MASA return');
+    }
 
     this.logger.log('MASA return saved and job enqueued', {
       masaId: masaData.id,

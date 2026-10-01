@@ -1,12 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MasaGateway } from '@dossier/masa/masa.gateway';
-import { DepotGateway } from '@dossier/depot/depot.gateway';
+import { DepotUploadGateway } from '@dossier/depot/depotUpload.gateway';
 import { MasaStatus } from '@dossier/masa/masa.model';
 import { DepotStatus, DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
-import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
-import type { DiffusionRapportJobData, Queue } from '@queue/queue';
+import { QueueName, RapportDestinataire } from '@queue/queue';
+import type { DiffusionRapportJobData } from '@queue/queue';
 
 interface MasaProcessorData {
   masaId: string;
@@ -17,8 +17,7 @@ interface MasaProcessorData {
 export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData> {
   constructor(
     @Inject(MasaGateway) private readonly masaGateway: MasaGateway,
-    @Inject(DepotGateway) private readonly depotGateway: DepotGateway,
-    @Inject(QueueGateway) private readonly queueService: Queue,
+    @Inject(DepotUploadGateway) private readonly depotUploadGateway: DepotUploadGateway,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(MasaWebhookProcessorService.name);
@@ -35,25 +34,43 @@ export class MasaWebhookProcessorService implements AsyncTask<MasaProcessorData>
         throw new Error(`MASA not found: ${masaId}`);
       }
 
-      const depot = await this.depotGateway.findDepotByIdWithUser(depotId);
-      if (!depot) {
-        throw new Error(`Depot not found: ${depotId}`);
+      // Le verrou sérialise les retours concurrents. La transition et le job de
+      // diffusion doivent être commités ensemble pour permettre une reprise.
+      const transitioned = await this.depotUploadGateway.transaction(async (transaction) => {
+        const lockedDepot = await transaction.findForUpdate(depotId);
+        if (!lockedDepot) {
+          throw new Error(`Depot not found: ${depotId}`);
+        }
+        if (lockedDepot.status !== DepotStatus.EN_COURS_DE_TRAITEMENT) {
+          return false;
+        }
+        // Le .ack peut déclencher le webhook avant la persistance de SFTP_COMPLETED.
+        // Lever l'erreur laisse pg-boss réessayer le même job, sans perdre le retour.
+        if (lockedDepot.step === DepotStep.SFTP_IN_PROGRESS) {
+          throw new Error(`SFTP still in progress for depot: ${depotId}`);
+        }
+        if (lockedDepot.step !== DepotStep.SFTP_COMPLETED) {
+          this.logger.warn('Depot is not awaiting a MASA return, skipping transition', { masaId, depotId });
+          return false;
+        }
+
+        await transaction.save({
+          ...lockedDepot,
+          status: this.mapMasaStatusToDepotStatus(masa.statut),
+          step: DepotStep.MASA_CALLED_ENPOINT,
+          stepHistory: [...(lockedDepot.stepHistory ?? []), DepotStep.MASA_CALLED_ENPOINT],
+          etapeMetier: null,
+        });
+        await transaction.send<DiffusionRapportJobData>(QueueName.diffusion_rapport, {
+          depotId,
+          masaId,
+          destinataires: this.getRapportDestinataires(masa.statut),
+        });
+        return true;
+      });
+      if (!transitioned) {
+        return;
       }
-
-      // 2. Mettre à jour le statut du dépôt selon le retour MASA
-      const newStatus = this.mapMasaStatusToDepotStatus(masa.statut);
-      await this.depotGateway.updateDepot(depotId, {
-        status: newStatus,
-        step: DepotStep.MASA_CALLED_ENPOINT,
-        etapeMetier: null,
-      });
-
-      // 3. Déléguer la diffusion du rapport selon le statut MASA.
-      await this.queueService.send<DiffusionRapportJobData>(QueueName.diffusion_rapport, {
-        depotId,
-        masaId,
-        destinataires: this.getRapportDestinataires(masa.statut),
-      });
 
       this.logger.log(`MASA report processing completed, delegated to diffusion_rapport`, { masaId, depotId });
     } catch (error) {

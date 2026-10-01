@@ -20,6 +20,16 @@ export default defineConfig({
       await addCucumberPreprocessorPlugin(on, config);
       on('file:preprocessor', createBundler({ plugins: [createEsbuildPlugin(config)] }));
       on('task', {
+        async depotStep(depotId: string): Promise<string | null> {
+          const client = new Client({ connectionString: process.env.DATABASE_URL });
+          await client.connect();
+          try {
+            const result = await client.query<{ step: string }>('SELECT step FROM depot WHERE id = $1', [depotId]);
+            return result.rows[0]?.step ?? null;
+          } finally {
+            await client.end();
+          }
+        },
         async workerJobState({
           depotId,
           queue,

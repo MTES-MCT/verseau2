@@ -12,21 +12,23 @@ export const mapMasaModelToDto = (masa: MasaModel): MasaDto => {
   };
 };
 
-export const mapWebhookStatusToMasaStatus = (statut: MasaWebhookStatus): MasaStatus => {
+// Les statuts non finaux ne décident pas de l'issue du dépôt.
+export const mapWebhookStatusToMasaStatus = (statut: MasaWebhookStatus): MasaStatus | null => {
   switch (statut) {
     case MasaWebhookStatus.INTEGRE:
     case MasaWebhookStatus.ARCHIVE_ACCEPTE:
       return MasaStatus.INTEGRE;
     case MasaWebhookStatus.ARCHIVE_ACCEPTE_PARTIELLEMENT:
       return MasaStatus.INTEGRATION_PARTIELLE;
-    case MasaWebhookStatus.INITIALISE:
-    case MasaWebhookStatus.ARCHIVE_NON_ACCEPTE:
-    case MasaWebhookStatus.DEPOSE:
     case MasaWebhookStatus.REJETE:
-    case MasaWebhookStatus.INTEGRABLE:
-    case MasaWebhookStatus.A_INTEGRER:
+    case MasaWebhookStatus.ARCHIVE_NON_ACCEPTE:
     case MasaWebhookStatus.ARCHIVE_REJETE:
     case MasaWebhookStatus.ERREUR_BLOQUANTE:
       return MasaStatus.REFUSE;
+    case MasaWebhookStatus.INITIALISE:
+    case MasaWebhookStatus.DEPOSE:
+    case MasaWebhookStatus.INTEGRABLE:
+    case MasaWebhookStatus.A_INTEGRER:
+      return null;
   }
 };

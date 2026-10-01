@@ -28,3 +28,10 @@ export type MasaModel = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type MasaWebhookResult =
+  | MasaModel
+  | {
+      processed: false;
+      statutMasa: MasaWebhookStatus;
+    };
