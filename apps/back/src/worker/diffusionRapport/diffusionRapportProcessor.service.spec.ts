@@ -100,6 +100,7 @@ describe('DiffusionRapportProcessorService', () => {
       findDepotByIdWithUser: jest.fn().mockResolvedValue(depot),
       findAllDepotsByAdmin: jest.fn(),
       updateDepot: jest.fn().mockResolvedValue(depot),
+      transitionDepot: jest.fn(),
       findByUserId: jest.fn(),
       findByItvCdn: jest.fn(),
     };

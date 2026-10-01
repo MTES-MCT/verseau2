@@ -17,7 +17,7 @@ import {
   ErrorCode,
 } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
-import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
+import { QueueName, RapportDestinataire } from '@queue/queue';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { DataSource } from 'typeorm';
 
@@ -29,7 +29,6 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     private readonly controleMetierV2Service: ControleMetierV2Service,
     private readonly controleV1Service: ControleV1Service,
     private readonly depotService: DepotService,
-    private readonly depotCoordinatorService: DepotCoordinatorService,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly logger: LoggerService,
   ) {
@@ -37,10 +36,12 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
   }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
-    await this.depotService.update(depotId, {
-      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-      step: DepotStep.CONTROLE_IN_PROGRESS,
-    });
+    const depot = await this.depotService.findById(depotId);
+    if (depot.status !== DepotStatus.EN_COURS_DE_TRAITEMENT || depot.step !== DepotStep.CONTROLE_IN_PROGRESS) {
+      return;
+    }
+
+    let allSuccess: boolean;
 
     try {
       this.logger.log(`Depot ${depotId} - Downloading file for Business controls (V1 & V2)`, filePath);
@@ -55,7 +56,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
       // No stable transactional decorator library found
       // For the moment, we use the DataSource transaction method
-      const { allSuccess, resultsV1, resultsV2 } = await this.dataSource.transaction(async (manager) => {
+      const results = await this.dataSource.transaction(async (manager) => {
         const resultsV1 = await this.controleV1Service.execute(depotId, xmlObj, manager);
         const resultsV2 = await this.controleMetierV2Service.execute(depotId, xmlObj, manager);
 
@@ -65,20 +66,13 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
 
         return { allSuccess, resultsV1, resultsV2 };
       });
+      allSuccess = results.allSuccess;
 
       this.logger.log(`Depot ${depotId} - Controles Métier result`, {
         success: allSuccess,
-        v1Count: resultsV1.length,
-        v2Count: resultsV2.length,
+        v1Count: results.resultsV1.length,
+        v2Count: results.resultsV2.length,
       });
-
-      await this.depotService.update(depotId, {
-        controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
-        step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
-        etapeMetier: allSuccess ? EtapeMetier.CONTROLE_METIER : EtapeMetier.CONTROLE_REFERENTIEL,
-      });
-
-      await this.depotCoordinatorService.checkControlesCompletion(depotId);
     } catch (error) {
       this.logger.error(`Depot ${depotId} - Controles Métier failed`, error);
 
@@ -89,14 +83,37 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         this.logger.error(`Depot ${depotId} - Failed to persist technical error control`, persistError);
       }
 
-      await this.depotService.update(depotId, {
+      await this.depotService.transition(depotId, [DepotStep.CONTROLE_IN_PROGRESS], {
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
         controleStatus: ControleStatus.FAILED,
         error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
       });
 
-      await this.depotCoordinatorService.checkControlesCompletion(depotId);
+      return;
     }
+
+    // Commit the outcome and follow-up job together. Enqueue failures must be retried,
+    // not turned into technical control failures after the results have been persisted.
+    await this.depotService.transition(
+      depotId,
+      [DepotStep.CONTROLE_IN_PROGRESS],
+      {
+        status: allSuccess ? DepotStatus.EN_COURS_DE_TRAITEMENT : DepotStatus.REJETE,
+        controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
+        step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
+        etapeMetier: allSuccess ? EtapeMetier.CONTROLE_METIER : EtapeMetier.CONTROLE_REFERENTIEL,
+      },
+      allSuccess
+        ? {
+            name: QueueName.controle_sandre_upload,
+            data: { depotId, filePath },
+          }
+        : {
+            name: QueueName.diffusion_rapport,
+            data: { depotId, destinataires: [RapportDestinataire.DEPOSANT] },
+          },
+    );
   }
 
   private async createTechnicalErrorControle(depotId: string): Promise<void> {

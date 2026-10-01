@@ -44,6 +44,8 @@ import { WorkerModule } from '@worker/worker.module';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
 import { ControleMetierProcessorService } from '@worker/controleMetier/controleMetierProcessor.service';
 import { ControleSandrePollProcessorService } from '@worker/controleSandre/controle-sandre-poll.processor.service';
+import { ControleSandreUploadProcessorService } from '@worker/controleSandre/controle-sandre-upload.processor.service';
+import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
 
 import { startPostgresContainer, getPostgresConnectionUri } from '../testcontainer.config';
 import { initTestContainerImports } from '../init/initTestContainer';
@@ -370,6 +372,33 @@ describe('Dossier E2E - Real Queue Processing', () => {
         expect(sftpResult.status).toBe('completed');
         expect((await findDepotOrFail(depotId)).step).toBe(DepotStep.SFTP_COMPLETED);
 
+        const finalDepot = await findDepotOrFail(depotId);
+        expect(finalDepot.controleStatus).toBe(ControleStatus.SUCCESS);
+        expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.SUCCESS);
+        const history = finalDepot.stepHistory ?? [];
+        const sequentialSteps = [
+          DepotStep.CONTROLE_IN_PROGRESS,
+          DepotStep.CONTROLE_COMPLETED,
+          DepotStep.PARSER_SANDRE_IN_PROGRESS,
+          DepotStep.READY_FOR_SFTP,
+          DepotStep.SFTP_IN_PROGRESS,
+          DepotStep.SFTP_COMPLETED,
+        ];
+        for (const [index, step] of sequentialSteps.entries()) {
+          expect(history).toContain(step);
+          if (index > 0) {
+            expect(history.indexOf(sequentialSteps[index - 1])).toBeLessThan(history.indexOf(step));
+          }
+        }
+        for (const name of [
+          QueueName.controle_metier,
+          QueueName.controle_sandre_upload,
+          QueueName.controle_sandre_poll,
+          QueueName.send_to_sftp,
+        ]) {
+          expect(await getJobsForDepot(dataSource, name, depotId)).toHaveLength(1);
+        }
+
         const sentFile = agentVerseauClientMock.calls.find((call) => call.fileName === `${depotId}_${filename}`);
         expect(sentFile).toBeDefined();
         const expectedXml = readFileSync(path.join(__dirname, '../fixtures/xml/depot-contact', fixture), 'utf-8');
@@ -461,7 +490,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       expect(finalDepot.error).toEqual(DepotError.DROITS_INSUFFISANTS);
     }, 12000);
 
-    it('should process file and verify control jobs are dispatched', async () => {
+    it('rejects business errors without starting SANDRE and ignores late/replayed jobs', async () => {
       // Seed VSteuSclItv to authorize the user's SIRET for the STEU and SCL codes in the XML
       await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
 
@@ -475,51 +504,51 @@ describe('Dossier E2E - Real Queue Processing', () => {
         pollIntervalMs: 200,
       });
 
-      // Check that control jobs were created in the pgboss.job table
-      // FileProcessor dispatches to controle_metier and controle_sandre_upload queues
-      const controlJobs = await dataSource.query(
-        `SELECT name, data, state FROM pgboss.job 
-         WHERE (name = $1 OR name = $2) AND data->>'depotId' = $3`,
-        [QueueName.controle_metier, QueueName.controle_sandre_upload, depotId],
-      );
-
-      // Control jobs should exist when rights check passes
-      expect(controlJobs.length).toBeGreaterThan(0);
-
-      // Wait for mandatory control jobs to complete
-      const [metierResult, sandreUploadResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
-      // Wait for poll job only if it has been dispatched
-      let sandrePollResult: { status: string } = { status: 'timeout' };
-      const sandrePollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
-      if (sandrePollJobs.length > 0) {
-        sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        });
-      }
+      const metierResult = await waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(metierResult.status).toBe('completed');
+      expect(
+        (
+          await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
+            timeoutMs: 10000,
+            pollIntervalMs: 200,
+          })
+        ).status,
+      ).toBe('completed');
 
       // Check that controls were processed
       const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
         where: { id: depotId },
       });
 
-      // After controls complete, depot should have control statuses set
-      const sandreCompleted = sandreUploadResult.status !== 'timeout' || sandrePollResult.status !== 'timeout';
-      if (metierResult.status !== 'timeout' && sandreCompleted) {
-        expect(finalDepot.controleStatus).toContain(ControleStatus.FAILED);
-        expect(finalDepot.controleSandreStatus).toContain(ControleSandreStatus.SUCCESS);
-      }
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
+      expect(finalDepot.controleSandreStatus).toBeNull();
+      expect(finalDepot.stepHistory).not.toContain(DepotStep.PARSER_SANDRE_IN_PROGRESS);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
       expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
+      expect(notificationMock.sendEmail).toHaveBeenCalledTimes(1);
+
+      const filePath = finalDepot.path!;
+      await app
+        .get(FileProcessorService)
+        .process({ depotId, filePath, utilisateur: { id: testUserId, nom: TEST_USER.nom, prenom: TEST_USER.prenom } });
+      await app.get(ControleMetierProcessorService).process({ depotId, filePath });
+      await app.get(ControleSandreUploadProcessorService).process({ depotId, filePath });
+      await app.get(ControleSandrePollProcessorService).process({ depotId, jeton: 'late-token', attemptCount: 0 });
+      await app.get(SftpAgentVerseauProcessorService).process({ depotId, filePath });
+      const afterReplay = await findDepotOrFail(depotId);
+      expect(afterReplay.status).toBe(finalDepot.status);
+      expect(afterReplay.step).toBe(finalDepot.step);
+      expect(afterReplay.etapeMetier).toBe(finalDepot.etapeMetier);
+      expect(afterReplay.stepHistory).toEqual(finalDepot.stepHistory);
+      expect(agentVerseauClientMock.calls).toHaveLength(0);
+      for (const name of [QueueName.controle_sandre_upload, QueueName.controle_sandre_poll, QueueName.send_to_sftp]) {
+        expect(await getJobsForDepot(dataSource, name, depotId)).toHaveLength(0);
+      }
+      expect(await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId)).toHaveLength(1);
 
       const controles = await dataSource.getRepository(ControleEntity).find({
         where: { depotId: depotId },
@@ -740,12 +769,17 @@ describe('Dossier E2E - Real Queue Processing', () => {
     }, 15000);
 
     it('should not enqueue diffusion_rapport when controleMetier has a technical error', async () => {
-      const controleMetierService = app.get(ControleMetierProcessorService);
-      const spy = jest
-        .spyOn(controleMetierService, 'process')
-        .mockRejectedValue(new Error('Technical error in controleMetier'));
-
       const depotId = createTestDepotId('controle_metier_error');
+      await seedDepotFull(dataSource, {
+        id: depotId,
+        nomOriginalFichier: 'tech-error-metier.xml',
+        tailleFichier: 100,
+        type: 'application/xml',
+        path: 'missing.xml',
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.CONTROLE_IN_PROGRESS,
+        userId: testUserId,
+      });
       const jobId = await enqueueJob(QueueName.controle_metier, {
         depotId,
         filePath: 'tech-error-metier.xml',
@@ -757,10 +791,16 @@ describe('Dossier E2E - Real Queue Processing', () => {
       });
 
       expect(jobId).toBeTruthy();
-      expect(controleMetierResult.status).toBe('failed');
+      expect(controleMetierResult.status).toBe('completed');
+      const finalDepot = await findDepotOrFail(depotId);
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.error).toBe(DepotError.CONTROLE_METIER_TECHNICAL_FAILURE);
+      expect(finalDepot.controleSandreStatus).toBeNull();
       const diffusionRapportJobs = await getJobsForDepot(dataSource, QueueName.diffusion_rapport, depotId);
       expect(diffusionRapportJobs).toHaveLength(0);
-      spy.mockRestore();
+      for (const name of [QueueName.controle_sandre_upload, QueueName.controle_sandre_poll, QueueName.send_to_sftp]) {
+        expect(await getJobsForDepot(dataSource, name, depotId)).toHaveLength(0);
+      }
     }, 15000);
 
     it('should not enqueue diffusion_rapport when sandre polling has a technical error', async () => {

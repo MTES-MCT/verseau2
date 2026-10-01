@@ -136,7 +136,7 @@ describe('Worker Service (e2e)', () => {
   });
 
   describe('FileProcessorService', () => {
-    it('should process file successfully and enqueue SFTP job', async () => {
+    it('should process file successfully and enqueue only the business control job', async () => {
       // Create depot
       const depot = await dataSource.getRepository(DepotEntity).save({
         id: 'dep_test_001',
@@ -175,20 +175,14 @@ describe('Worker Service (e2e)', () => {
       });
       expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
+      expect(updatedDepot.controleSandreStatus).toBeNull();
 
       // Verify jobs enqueued
-      expect(queueMock.jobs).toHaveLength(2);
+      expect(queueMock.jobs).toHaveLength(1);
       expect(queueMock.jobs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             name: QueueName.controle_metier,
-            data: {
-              depotId: depot.id,
-              filePath: 'test_file.xml',
-            },
-          }),
-          expect.objectContaining({
-            name: QueueName.controle_sandre_upload,
             data: {
               depotId: depot.id,
               filePath: 'test_file.xml',

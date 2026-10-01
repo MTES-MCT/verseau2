@@ -31,7 +31,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     } as unknown as S3;
 
     mockDepotService = {
-      update: jest.fn().mockResolvedValue({}),
+      transition: jest.fn().mockResolvedValue(true),
       findDepotByIdWithUser: jest.fn().mockResolvedValue({
         id: 'depot-1',
         path: 'depots/depot-1/file.xml',
@@ -78,11 +78,15 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     await service.process({ depotId, filePath });
 
-    expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
-      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-      step: DepotStep.SFTP_IN_PROGRESS,
-      etapeMetier: EtapeMetier.FINALISATION_IMPORT,
-    });
+    expect(mockDepotService.transition).toHaveBeenCalledWith(
+      depotId,
+      [DepotStep.READY_FOR_SFTP, DepotStep.SFTP_IN_PROGRESS],
+      {
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.SFTP_IN_PROGRESS,
+        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
+      },
+    );
 
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
     expect(mockLanceleauGateway.findOrionContactByEmail).toHaveBeenCalledWith('user@example.com');
@@ -92,7 +96,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'depot-1_test.xml');
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot-1_test.xml.ack');
 
-    expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
+    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.SFTP_IN_PROGRESS], {
       step: DepotStep.SFTP_COMPLETED,
     });
   });
@@ -130,7 +134,7 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
-    expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
+    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.SFTP_IN_PROGRESS], {
       status: DepotStatus.REJETE,
       step: DepotStep.SFTP_FAILED,
     });
@@ -149,7 +153,7 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
-    expect(mockDepotService.update).toHaveBeenCalledWith('depot-1', {
+    expect(mockDepotService.transition).toHaveBeenCalledWith('depot-1', [DepotStep.SFTP_IN_PROGRESS], {
       status: DepotStatus.REJETE,
       step: DepotStep.SFTP_FAILED,
     });
@@ -163,9 +167,16 @@ describe('SftpAgentVerseauProcessorService', () => {
 
     await expect(service.process({ depotId, filePath })).rejects.toThrow('SFTP Error');
 
-    expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
+    expect(mockDepotService.transition).toHaveBeenCalledWith(depotId, [DepotStep.SFTP_IN_PROGRESS], {
       status: DepotStatus.REJETE,
       step: DepotStep.SFTP_FAILED,
     });
+  });
+
+  it('ignores late or replayed jobs when the depot is no longer awaiting SFTP', async () => {
+    (mockDepotService.transition as jest.Mock).mockResolvedValue(false);
+    await service.process({ depotId: 'depot-1', filePath: 's3/path.xml' });
+    expect(mockDepotService.findDepotByIdWithUser).not.toHaveBeenCalled();
+    expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
   });
 });

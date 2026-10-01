@@ -3,12 +3,18 @@ import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { DepotStep, ControleSandreStatus, EtapeMetier, SandreAcceptationStatus } from '@lib/dossier';
+import {
+  DepotStep,
+  DepotStatus,
+  ControleStatus,
+  ControleSandreStatus,
+  EtapeMetier,
+  SandreAcceptationStatus,
+} from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
-import { QueueGateway, QueueName } from '@queue/queue';
+import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
 import type { Queue } from '@queue/queue';
-import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { mapSandreErrors } from '@dossier/controle/technique/sandre/sandre.mapper';
 
 const POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
@@ -25,7 +31,6 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
     private readonly depotService: DepotService,
     @Inject(ReponseSandreGateway) private readonly reponseSandreGateway: ReponseSandreGateway,
     @Inject(QueueGateway) private readonly queueService: Queue,
-    private readonly depotCoordinatorService: DepotCoordinatorService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(ControleSandrePollProcessorService.name);
@@ -40,12 +45,23 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
     jeton: string;
     attemptCount: number;
   }): Promise<void> {
+    const depot = await this.depotService.findById(depotId);
+    if (
+      depot.status !== DepotStatus.EN_COURS_DE_TRAITEMENT ||
+      depot.step !== DepotStep.PARSER_SANDRE_IN_PROGRESS ||
+      depot.controleStatus !== ControleStatus.SUCCESS ||
+      depot.controleSandreStatus !== ControleSandreStatus.PENDING
+    ) {
+      return;
+    }
+
     this.logger.log(`Depot ${depotId} - Polling SANDRE validation result`, {
       jeton,
       attemptCount,
       maxAttempts: MAX_ATTEMPTS,
     });
 
+    let isConformant: boolean;
     try {
       // Poll the validation result from SANDRE
       const validationResult = await this.sandreService.getValidationResult(jeton);
@@ -69,13 +85,13 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
           });
 
           // Mark as failed due to timeout
-          await this.depotService.update(depotId, {
+          await this.depotService.transition(depotId, [DepotStep.PARSER_SANDRE_IN_PROGRESS], {
+            status: DepotStatus.REJETE,
             step: DepotStep.CONTROLE_SANDRE_FAILED,
             controleSandreStatus: ControleSandreStatus.FAILED,
             error: DepotError.SANDRE_POLL_TIMEOUT,
           });
 
-          await this.depotCoordinatorService.checkControlesCompletion(depotId);
           return;
         }
 
@@ -96,7 +112,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
       }
 
       // Result is final (CONFORMANT or NON_CONFORMANT) - process and finalize
-      const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
+      isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
       const errors = mapSandreErrors(validationResult.ACQ.AccuseReception);
 
       this.logger.log(`Depot ${depotId} - SANDRE validation result`, {
@@ -119,21 +135,6 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         errors,
         raw: validationResult,
       });
-
-      // Update depot with SANDRE control result
-      await this.depotService.update(depotId, {
-        controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
-        step: isConformant ? DepotStep.CONTROLE_SANDRE_COMPLETED : DepotStep.CONTROLE_SANDRE_FAILED,
-        etapeMetier: isConformant ? EtapeMetier.SCENARIO_SANDRE : EtapeMetier.CONTROLE_METIER,
-      });
-
-      // Check if both controls are complete and coordinate next step
-      await this.depotCoordinatorService.checkControlesCompletion(depotId);
-
-      this.logger.log(`Depot ${depotId} - Poll job completed`, {
-        isConformant,
-        controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
-      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(`Depot ${depotId} - SANDRE poll failed`, errorMessage);
@@ -155,13 +156,34 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
       }
 
       // Max attempts reached, mark as failed
-      await this.depotService.update(depotId, {
+      await this.depotService.transition(depotId, [DepotStep.PARSER_SANDRE_IN_PROGRESS], {
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_SANDRE_FAILED,
         controleSandreStatus: ControleSandreStatus.FAILED,
         error: DepotError.SANDRE_POLL_FAILED,
       });
 
-      await this.depotCoordinatorService.checkControlesCompletion(depotId);
+      return;
     }
+
+    await this.depotService.transition(
+      depotId,
+      [DepotStep.PARSER_SANDRE_IN_PROGRESS],
+      {
+        status: isConformant ? DepotStatus.EN_COURS_DE_TRAITEMENT : DepotStatus.REJETE,
+        controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
+        step: isConformant ? DepotStep.READY_FOR_SFTP : DepotStep.CONTROLE_SANDRE_FAILED,
+        etapeMetier: isConformant ? EtapeMetier.FINALISATION_IMPORT : EtapeMetier.CONTROLE_METIER,
+      },
+      isConformant
+        ? {
+            name: QueueName.send_to_sftp,
+            data: { depotId, filePath: depot.path ?? '' },
+          }
+        : {
+            name: QueueName.diffusion_rapport,
+            data: { depotId, destinataires: [RapportDestinataire.DEPOSANT] },
+          },
+    );
   }
 }

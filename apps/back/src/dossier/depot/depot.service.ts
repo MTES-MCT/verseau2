@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateDepotModel, DepotModel } from './depot.model';
-import { DepotGateway } from './depot.gateway';
+import { CreateDepotModel, DepotModel, UpdateDepotModel } from './depot.model';
+import { DepotGateway, DepotTransitionJob } from './depot.gateway';
+import { DepotStep } from '@lib/dossier';
 import { S3 } from '@infra/s3/s3';
 import { LoggerService } from '@shared/logger/logger.service';
 
@@ -77,6 +78,15 @@ export class DepotService {
       );
       throw new NotFoundException(`Rapport not found in storage for depot: ${depotId}`);
     }
+  }
+
+  async transition(
+    id: string,
+    fromSteps: DepotStep[],
+    updateData: UpdateDepotModel,
+    job?: DepotTransitionJob,
+  ): Promise<boolean> {
+    return this.depotGateway.transitionDepot(id, fromSteps, updateData, job);
   }
 
   async downloadXml(depotId: string): Promise<Buffer> {

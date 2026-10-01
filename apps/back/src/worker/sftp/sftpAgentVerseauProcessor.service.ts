@@ -21,11 +21,18 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
   }
 
   async process({ depotId, filePath }: { depotId: string; filePath: string }): Promise<void> {
-    await this.depotService.update(depotId, {
-      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-      step: DepotStep.SFTP_IN_PROGRESS,
-      etapeMetier: EtapeMetier.FINALISATION_IMPORT,
-    });
+    const started = await this.depotService.transition(
+      depotId,
+      [DepotStep.READY_FOR_SFTP, DepotStep.SFTP_IN_PROGRESS],
+      {
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.SFTP_IN_PROGRESS,
+        etapeMetier: EtapeMetier.FINALISATION_IMPORT,
+      },
+    );
+    if (!started) {
+      return;
+    }
 
     try {
       const depot = await this.depotService.findDepotByIdWithUser(depotId);
@@ -57,7 +64,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       const remotePath = `${depot.id}_${depot.nomOriginalFichier}`;
       await this.agentVerseauClient.send(fileToSend, remotePath);
       await this.agentVerseauClient.send(Buffer.alloc(0), `${remotePath}.ack`);
-      await this.depotService.update(depotId, {
+      await this.depotService.transition(depotId, [DepotStep.SFTP_IN_PROGRESS], {
         step: DepotStep.SFTP_COMPLETED,
       });
     } catch (error) {
@@ -65,7 +72,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
         'Failed to process file',
         error instanceof Error ? error.stack || error.message : String(error),
       );
-      await this.depotService.update(depotId, {
+      await this.depotService.transition(depotId, [DepotStep.SFTP_IN_PROGRESS], {
         status: DepotStatus.REJETE,
         step: DepotStep.SFTP_FAILED,
       });

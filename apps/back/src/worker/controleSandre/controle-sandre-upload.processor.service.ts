@@ -4,11 +4,10 @@ import { S3 } from '@s3/s3';
 import { AsyncTask } from '@worker/asyncTask';
 import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
-import { ControleSandreStatus, DepotStep, DepotStatus } from '@lib/dossier';
+import { ControleSandreStatus, ControleStatus, DepotStep, DepotStatus } from '@lib/dossier';
 import { QueueGateway, QueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { DepotError } from '@dossier/depot/depotError';
-import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 
 const SANDRE_POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
 
@@ -26,17 +25,31 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
     private readonly sandreService: SandreService,
     private readonly depotService: DepotService,
     @Inject(QueueGateway) private readonly queueService: Queue,
-    private readonly depotCoordinatorService: DepotCoordinatorService,
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(ControleSandreUploadProcessorService.name);
   }
 
   async process({ depotId, filePath, retryCount = 0, retryLimit = 0 }: ControleSandreUploadJob): Promise<void> {
-    await this.depotService.update(depotId, {
-      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-      step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
-    });
+    const depot = await this.depotService.findById(depotId);
+    if (
+      depot.controleStatus !== ControleStatus.SUCCESS ||
+      (depot.controleSandreStatus && depot.controleSandreStatus !== ControleSandreStatus.PENDING)
+    ) {
+      return;
+    }
+    const started = await this.depotService.transition(
+      depotId,
+      [DepotStep.CONTROLE_COMPLETED, DepotStep.PARSER_SANDRE_IN_PROGRESS],
+      {
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
+        controleSandreStatus: ControleSandreStatus.PENDING,
+      },
+    );
+    if (!started) {
+      return;
+    }
 
     try {
       this.logger.log(`Depot ${depotId} - Downloading file for SANDRE upload`, filePath);
@@ -75,13 +88,12 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
       });
 
       if (retryCount >= retryLimit) {
-        await this.depotService.update(depotId, {
+        await this.depotService.transition(depotId, [DepotStep.PARSER_SANDRE_IN_PROGRESS], {
+          status: DepotStatus.REJETE,
           step: DepotStep.CONTROLE_SANDRE_FAILED,
           controleSandreStatus: ControleSandreStatus.FAILED,
           error: DepotError.SANDRE_UPLOAD_FAILED,
         });
-
-        await this.depotCoordinatorService.checkControlesCompletion(depotId);
       }
 
       throw error;

@@ -1,14 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { DepotEntity } from './depot.entity';
 import { DepotModel, UpdateDepotModel } from './depot.model';
-import { DepotGateway } from './depot.gateway';
-import { DepotStep } from '@lib/dossier';
+import { DepotGateway, DepotTransitionJob } from './depot.gateway';
+import { DepotStep, DepotStatus } from '@lib/dossier';
+import { QueueGateway, type Queue } from '@queue/queue';
 import { mapDepotEntityToModel } from './depot.mapper';
 
 @Injectable()
 export class DepotRepository extends Repository<DepotEntity> implements DepotGateway {
-  constructor(private dataSource: DataSource) {
+  constructor(
+    private dataSource: DataSource,
+    @Inject(QueueGateway) private readonly queue: Queue,
+  ) {
     super(DepotEntity, dataSource.createEntityManager());
   }
 
@@ -66,6 +70,42 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
       },
     });
     return entities.map(mapDepotEntityToModel);
+  }
+
+  async transitionDepot(
+    id: string,
+    fromSteps: DepotStep[],
+    updateData: UpdateDepotModel,
+    job?: DepotTransitionJob,
+  ): Promise<boolean> {
+    return this.manager.transaction(async (manager) => {
+      const entity = await manager.findOne(DepotEntity, {
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (
+        !entity ||
+        entity.status !== DepotStatus.EN_COURS_DE_TRAITEMENT ||
+        !entity.step ||
+        !fromSteps.includes(entity.step)
+      ) {
+        return false;
+      }
+      if (updateData.step !== undefined) {
+        entity.updateStep(updateData.step);
+      }
+      Object.assign(entity, updateData);
+      await manager.save(entity);
+      if (job) {
+        const jobId = await this.queue.send(job.name, job.data, {
+          db: { executeSql: async (sql, values) => ({ rows: await manager.query<object[]>(sql, values) }) },
+        });
+        if (!jobId) {
+          throw new Error(`Failed to enqueue ${job.name}`);
+        }
+      }
+      return true;
+    });
   }
 
   async findByItvCdn(itvCdn: number): Promise<DepotModel[]> {

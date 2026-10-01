@@ -26,7 +26,6 @@ import { ControleMapper } from './controle/isov1/controle.mapper';
 import { DepotAdminController } from './depot/depotAdmin.controller';
 import { DepotGateway } from './depot/depot.gateway';
 import { ControleController } from './controle/controle.controller';
-import { DepotCoordinatorService } from './depot/depotCoordinator.service';
 import { MasaEntity } from './masa/masa.entity';
 import { MasaController } from './masa/masa.controller';
 import { MasaService } from './masa/masa.service';
@@ -70,7 +69,6 @@ const sandreServiceFactory = {
     { provide: DepotGateway, useClass: DepotRepository },
     DepotService,
     DroitsDepotService,
-    DepotCoordinatorService,
     DepotUploadService,
     { provide: DepotUploadGateway, useClass: DepotUploadRepository },
     // Sandre control
@@ -96,7 +94,6 @@ const sandreServiceFactory = {
     DepotUploadService,
     DepotService,
     DroitsDepotService,
-    DepotCoordinatorService,
     SandreService,
     ReponseSandreGateway,
     ControleV1Service,

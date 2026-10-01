@@ -9,7 +9,7 @@ import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { UserService } from '@user/user.service';
 import { S3 } from '@infra/s3/s3';
 import { parseScenarioAssainissementXml, isFluxQualifie, FctAssainissement } from '@lib/parser';
-import { DepotStep, DepotStatus, EtapeMetier, ControleSandreStatus, ControleStatus } from '@lib/dossier';
+import { DepotStep, DepotStatus, EtapeMetier, ControleStatus } from '@lib/dossier';
 import { DepotRightsException } from '@dossier/depot/depotError';
 import { AsyncTask } from '@worker/asyncTask';
 
@@ -27,13 +27,19 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
   }
 
   async process(fichierDeDepot: FichierDeDepot) {
-    await this.depotService.update(fichierDeDepot.depotId, {
-      status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-      step: DepotStep.CONTROLE_IN_PROGRESS,
-      etapeMetier: EtapeMetier.CONTROLE_REFERENTIEL,
-      controleStatus: ControleStatus.PENDING,
-      controleSandreStatus: ControleSandreStatus.PENDING,
-    });
+    const started = await this.depotService.transition(
+      fichierDeDepot.depotId,
+      [DepotStep.PENDING, DepotStep.UPLOADING_TO_S3],
+      {
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.CONTROLE_IN_PROGRESS,
+        etapeMetier: EtapeMetier.CONTROLE_REFERENTIEL,
+        controleStatus: ControleStatus.PENDING,
+      },
+    );
+    if (!started) {
+      return;
+    }
 
     try {
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Downloading file from S3`);
@@ -70,19 +76,11 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
         return;
       }
 
-      this.logger.log(`Depot ${fichierDeDepot.depotId} - Dispatching controls to queues`);
-
-      // Dispatch to both control queues
-      await Promise.all([
-        this.queueService.send(QueueName.controle_metier, {
-          depotId: fichierDeDepot.depotId,
-          filePath: fichierDeDepot.filePath,
-        }),
-        this.queueService.send(QueueName.controle_sandre_upload, {
-          depotId: fichierDeDepot.depotId,
-          filePath: fichierDeDepot.filePath,
-        }),
-      ]);
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Dispatching business controls`);
+      await this.queueService.send(QueueName.controle_metier, {
+        depotId: fichierDeDepot.depotId,
+        filePath: fichierDeDepot.filePath,
+      });
 
       this.logger.log(`Depot ${fichierDeDepot.depotId} - Controls dispatched successfully`);
     } catch (error: unknown) {

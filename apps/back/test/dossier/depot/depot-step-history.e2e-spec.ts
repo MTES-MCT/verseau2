@@ -7,6 +7,7 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 import { UserEntity } from '@user/user.entity';
+import { QueueGateway, QueueName } from '@queue/queue';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { startPostgresContainer, stopPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
@@ -15,6 +16,7 @@ describe('DepotRepository - Step History Integration Tests', () => {
   let depotGateway: DepotGateway;
   let dataSource: DataSource;
   let postgresUri: string;
+  const queue = { send: jest.fn() };
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -36,11 +38,15 @@ describe('DepotRepository - Step History Integration Tests', () => {
         }),
         TypeOrmModule.forFeature([DepotEntity]),
       ],
-      providers: [{ provide: DepotGateway, useClass: DepotRepository }],
+      providers: [
+        { provide: DepotGateway, useClass: DepotRepository },
+        { provide: QueueGateway, useValue: queue },
+      ],
     }).compile();
 
     depotGateway = module.get<DepotGateway>(DepotGateway);
     dataSource = module.get<DataSource>(DataSource);
+    queue.send.mockReset().mockResolvedValue('job_1');
   });
 
   afterEach(async () => {
@@ -329,6 +335,76 @@ describe('DepotRepository - Step History Integration Tests', () => {
 
       const updated = await depotGateway.findDepotById(depot.id);
       expect(updated?.etapeMetier).toBeUndefined();
+    });
+  });
+
+  describe('guarded transitions', () => {
+    it('serializes concurrent finalizations and enqueues only once', async () => {
+      const depot = await depotGateway.createDepot({
+        nomOriginalFichier: 'test.xml',
+        tailleFichier: 1024,
+        type: 'application/xml',
+      });
+      const finalize = () =>
+        depotGateway.transitionDepot(
+          depot.id,
+          [DepotStep.PENDING],
+          { step: DepotStep.CONTROLE_COMPLETED },
+          { name: QueueName.controle_sandre_upload, data: { depotId: depot.id } },
+        );
+      expect((await Promise.all([finalize(), finalize()])).sort()).toEqual([false, true]);
+      expect(queue.send).toHaveBeenCalledTimes(1);
+      expect((await depotGateway.findDepotById(depot.id))?.stepHistory).toEqual([
+        DepotStep.PENDING,
+        DepotStep.CONTROLE_COMPLETED,
+      ]);
+    });
+
+    it.each([DepotStatus.REJETE, DepotStatus.INTEGRE, DepotStatus.INTEGRE_PARTIELLEMENT])(
+      'does not reopen a %s depot or alter its history',
+      async (status) => {
+        const depot = await depotGateway.createDepot({
+          nomOriginalFichier: 'test.xml',
+          tailleFichier: 1024,
+          type: 'application/xml',
+        });
+        await depotGateway.updateDepot(depot.id, { status });
+        expect(
+          await depotGateway.transitionDepot(
+            depot.id,
+            [DepotStep.PENDING],
+            { step: DepotStep.PARSER_SANDRE_IN_PROGRESS },
+            { name: QueueName.controle_sandre_upload, data: { depotId: depot.id } },
+          ),
+        ).toBe(false);
+        expect((await depotGateway.findDepotById(depot.id))?.stepHistory).toEqual([DepotStep.PENDING]);
+        expect(queue.send).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['throws', 'returns null'])('rolls back state and history when enqueue %s', async (failure) => {
+      const depot = await depotGateway.createDepot({
+        nomOriginalFichier: 'test.xml',
+        tailleFichier: 1024,
+        type: 'application/xml',
+      });
+      if (failure === 'throws') {
+        queue.send.mockRejectedValueOnce(new Error('Enqueue failed'));
+      } else {
+        queue.send.mockResolvedValueOnce(null);
+      }
+      const finalize = () =>
+        depotGateway.transitionDepot(
+          depot.id,
+          [DepotStep.PENDING],
+          { status: DepotStatus.REJETE, step: DepotStep.CONTROLE_FAILED },
+          { name: QueueName.diffusion_rapport, data: { depotId: depot.id } },
+        );
+      await expect(finalize()).rejects.toThrow();
+      const unchanged = await depotGateway.findDepotById(depot.id);
+      expect(unchanged?.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
+      expect(unchanged?.stepHistory).toEqual([DepotStep.PENDING]);
+      expect(await finalize()).toBe(true);
     });
   });
 });

@@ -15,6 +15,7 @@ import { SandreAcceptationStatus } from '@lib/dossier';
 import { startPostgresContainer, getPostgresConnectionUri } from '../../testcontainer.config';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 import type { App } from 'supertest/types';
+import { QueueGateway } from '@queue/queue';
 
 describe('ReponseSandreRepository (e2e)', () => {
   let app: INestApplication<App>;
@@ -40,6 +41,7 @@ describe('ReponseSandreRepository (e2e)', () => {
       providers: [
         ReponseSandreRepository,
         DepotRepository,
+        { provide: QueueGateway, useValue: { send: jest.fn() } },
         { provide: DepotGateway, useExisting: DepotRepository },
         { provide: ReponseSandreGateway, useExisting: ReponseSandreRepository },
         loggerProviderMock,
