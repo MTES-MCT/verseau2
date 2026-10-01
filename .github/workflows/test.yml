@@ -7,9 +7,13 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: '0 0 * * *' # Midnight UTC, on the default branch.
 
 jobs:
   changes:
+    if: github.event_name != 'schedule' && github.event.action != 'labeled'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,7 +21,6 @@ jobs:
     outputs:
       has_changes: ${{ steps.matrix.outputs.has_changes }}
       workspaces: ${{ steps.matrix.outputs.workspaces }}
-      run_e2e: ${{ steps.filter.outputs.all == 'true' || steps.filter.outputs.front == 'true' || steps.filter.outputs.back == 'true' || steps.filter.outputs.e2e == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,8 +42,6 @@ jobs:
               - 'apps/front/**'
             back:
               - 'apps/back/**'
-            e2e:
-              - 'e2e/**'
 
       - name: Select workspaces to test
         id: matrix
@@ -125,8 +126,11 @@ jobs:
         run: pnpm --filter ${{ matrix.workspace }} run --if-present test
 
   browser-e2e:
-    needs: changes
-    if: needs.changes.outputs.run_e2e == 'true'
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'e2e') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'e2e'))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
