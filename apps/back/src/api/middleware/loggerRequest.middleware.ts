@@ -15,9 +15,22 @@ export class LoggerRequestMiddleware implements NestMiddleware {
     res.on('finish', () => {
       const { statusCode } = res;
       const responseTime = Date.now() - now;
-      this.logger.log(
-        `userId: ${req.user?.cerbereId} - ip: ${ip} - ${method} ${originalUrl} - ${statusCode} - ${responseTime}ms`,
-      );
+      // Query strings may contain credentials or user-entered data.
+      const context = {
+        userId: req.user?.cerbereId,
+        ip,
+        method,
+        path: originalUrl.split('?')[0],
+        statusCode,
+        responseTime,
+      };
+      if (statusCode >= 500) {
+        this.logger.error('HTTP request failed', context);
+      } else if (statusCode >= 400) {
+        this.logger.warn('HTTP request rejected', context);
+      } else {
+        this.logger.log('HTTP request completed', context);
+      }
     });
     next();
   }

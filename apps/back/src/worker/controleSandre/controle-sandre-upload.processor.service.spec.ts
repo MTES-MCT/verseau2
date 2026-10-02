@@ -7,7 +7,7 @@ import { DepotService } from '@dossier/depot/depot.service';
 import { QueueGateway } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { SharedModule } from '@shared/shared.module';
-import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { loggerProviderMock, loggerValueMock } from '@shared/logger/logger.mock';
 import { ControleSandreStatus, DepotStep, DepotStatus } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 
@@ -73,6 +73,13 @@ describe('ControleSandreUploadProcessorService', () => {
       step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
     });
     expect(mockQueueService.send).not.toHaveBeenCalled();
+    expect(loggerValueMock.log).toHaveBeenCalledWith('Depot dep_1 - SANDRE upload failed', {
+      errorMessage: error.message,
+      retryCount: 0,
+      retryLimit: 2,
+    });
+    expect(loggerValueMock.debug).not.toHaveBeenCalled();
+    expect(loggerValueMock.error).not.toHaveBeenCalled();
   });
 
   it('should finalize depot state on the last failed attempt', async () => {
@@ -101,5 +108,12 @@ describe('ControleSandreUploadProcessorService', () => {
     });
     // Technical error: no rapport is sent
     expect(mockQueueService.send).not.toHaveBeenCalled();
+    expect(loggerValueMock.log).toHaveBeenCalledWith('Depot dep_1 - SANDRE upload failed', {
+      errorMessage: error.message,
+      retryCount: 2,
+      retryLimit: 2,
+    });
+    expect(loggerValueMock.debug).not.toHaveBeenCalled();
+    expect(loggerValueMock.error).not.toHaveBeenCalled();
   });
 });

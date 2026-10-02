@@ -180,6 +180,52 @@ describe('DiffusionRapportProcessorService', () => {
     jest.mocked(parseScenarioAssainissementXml).mockResolvedValue(createParsedXml('STEU001'));
   });
 
+  it('logs report progress at log level without requiring debug', async () => {
+    await service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] });
+
+    expect(logger.log).toHaveBeenCalledWith(
+      'Processing diffusion rapport',
+      expect.objectContaining({ depotId: 'dep_1' }),
+    );
+    expect(logger.log).toHaveBeenCalledWith('Generating PDF report', expect.objectContaining({ depotId: 'dep_1' }));
+    expect(logger.log).toHaveBeenCalledWith('PDF uploaded to S3', expect.objectContaining({ depotId: 'dep_1' }));
+    expect(logger.log).toHaveBeenCalledWith(
+      'Diffusion rapport processing completed',
+      expect.objectContaining({ depotId: 'dep_1' }),
+    );
+  });
+
+  it('logs the failed report processing at log level and leaves the technical error to the worker', async () => {
+    const error = new Error('PDF generation failed');
+    pdfGenerator.generateReport.mockRejectedValue(error);
+
+    await expect(service.process({ depotId: 'dep_1', destinataires: [RapportDestinataire.DEPOSANT] })).rejects.toBe(
+      error,
+    );
+
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.debug).not.toHaveBeenCalled();
+    expect(logger.log).toHaveBeenCalledWith('Failed to process diffusion rapport', expect.objectContaining({ error }));
+  });
+
+  it('warns about degraded agency delivery and continues deposant notification', async () => {
+    const error = new Error('Agency SFTP unavailable');
+    agencyTransferClient.send.mockRejectedValue(error);
+
+    await service.process({
+      depotId: 'dep_1',
+      masaId: 'masa_1',
+      destinataires: [RapportDestinataire.DEPOSANT, RapportDestinataire.AGENCE_EAU],
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Failed to send files to Agence de l'eau SFTP, continuing report diffusion",
+      expect.objectContaining({ error }),
+    );
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(notificationGateway.sendEmail).toHaveBeenCalled();
+  });
+
   function expectFirstSftpCallToContainZipEntries(): void {
     const zipBufferSent = agencyTransferClient.send.mock.calls[0]?.[0];
     const zipEntries = unzipSync(zipBufferSent);

@@ -7,7 +7,7 @@ import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponse
 import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { SharedModule } from '@shared/shared.module';
-import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { loggerProviderMock, loggerValueMock } from '@shared/logger/logger.mock';
 import { ControleSandreStatus, DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 
@@ -98,6 +98,14 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
       depotId,
       filePath: 'depots/dep_poll_001/file.xml',
     });
+    expect(loggerValueMock.log).toHaveBeenCalledWith(`Depot ${depotId} - SANDRE polling started`, {
+      jeton,
+      maxAttempts: 240,
+    });
+    expect(loggerValueMock.log).toHaveBeenCalledWith(
+      `Depot ${depotId} - Poll job completed`,
+      expect.objectContaining({ isConformant: true }),
+    );
   });
 
   it('rejects the depot and notifies the deposant when the SANDRE result is non-conformant', async () => {
@@ -122,14 +130,34 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
       destinataires: [RapportDestinataire.DEPOSANT],
     });
     expect(mockQueueService.send).not.toHaveBeenCalledWith(QueueName.send_to_sftp, expect.anything());
+    expect(loggerValueMock.error).not.toHaveBeenCalled();
   });
 
-  it('re-enqueues the poll job while the SANDRE result is still pending', async () => {
+  it('logs the first pending poll at log level so waiting is visible without debug', async () => {
+    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
+
+    await service.process({ depotId, jeton, attemptCount: 0 });
+
+    expect(loggerValueMock.log).toHaveBeenCalledTimes(1);
+    expect(loggerValueMock.log).toHaveBeenCalledWith(`Depot ${depotId} - SANDRE polling started`, {
+      jeton,
+      maxAttempts: 240,
+    });
+    expect(mockQueueService.send).toHaveBeenCalledWith(
+      QueueName.controle_sandre_poll,
+      { depotId, jeton, attemptCount: 1 },
+      expect.any(Object),
+    );
+  });
+
+  it('re-enqueues subsequent pending polls without repetitive log-level output', async () => {
     (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
 
     await service.process({ depotId, jeton, attemptCount: 3 });
 
     expect(mockDepotService.update).not.toHaveBeenCalled();
+    expect(loggerValueMock.log).not.toHaveBeenCalled();
+    expect(loggerValueMock.error).not.toHaveBeenCalled();
     expect(mockQueueService.send).toHaveBeenCalledWith(
       QueueName.controle_sandre_poll,
       { depotId, jeton, attemptCount: 4 },
@@ -150,5 +178,60 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
     });
     // Technical error: no rapport, no SFTP dispatch
     expect(mockQueueService.send).not.toHaveBeenCalled();
+    expect(loggerValueMock.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs the polling error and retry without changing the retry behavior', async () => {
+    const error = new Error('SANDRE temporarily unavailable');
+    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(error);
+
+    await service.process({ depotId, jeton, attemptCount: 3 });
+
+    expect(loggerValueMock.error).toHaveBeenCalledTimes(1);
+    expect(loggerValueMock.error).toHaveBeenCalledWith(`Depot ${depotId} - SANDRE poll failed`, {
+      error,
+      jeton,
+      attemptCount: 3,
+    });
+    expect(loggerValueMock.log).toHaveBeenCalledWith(`Depot ${depotId} - Error during poll, re-enqueuing`, {
+      jeton,
+      attemptCount: 4,
+    });
+    expect(loggerValueMock.warn).not.toHaveBeenCalled();
+    expect(mockQueueService.send).toHaveBeenCalledWith(
+      QueueName.controle_sandre_poll,
+      { depotId, jeton, attemptCount: 4 },
+      expect.any(Object),
+    );
+    expect(mockDepotService.update).not.toHaveBeenCalled();
+  });
+
+  it('logs an exhausted polling failure as an error and rejects without rapport', async () => {
+    const error = new Error('SANDRE unavailable');
+    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(error);
+
+    await service.process({ depotId, jeton, attemptCount: 240 });
+
+    expect(loggerValueMock.error).toHaveBeenCalledTimes(1);
+    expect(loggerValueMock.warn).not.toHaveBeenCalled();
+    expect(mockDepotService.update).toHaveBeenCalledWith(
+      depotId,
+      expect.objectContaining({
+        status: DepotStatus.REJETE,
+        error: DepotError.SANDRE_POLL_FAILED,
+      }),
+    );
+    expect(mockQueueService.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps unexpected polling errors at error level even when another attempt is scheduled', async () => {
+    const error = new Error('Unexpected persistence failure');
+    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(error);
+
+    await service.process({ depotId, jeton, attemptCount: 3 });
+
+    expect(loggerValueMock.error).toHaveBeenCalledTimes(1);
+    expect(loggerValueMock.warn).not.toHaveBeenCalled();
+    expect(mockQueueService.send).toHaveBeenCalledTimes(1);
   });
 });

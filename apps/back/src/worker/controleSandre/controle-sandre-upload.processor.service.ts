@@ -64,10 +64,9 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
       );
 
       this.logger.log(`Depot ${depotId} - Upload job completed`);
-    } catch (error) {
-      this.logger.error(`Depot ${depotId} - SANDRE upload failed`, {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+    } catch (error: unknown) {
+      this.logger.log(`Depot ${depotId} - SANDRE upload failed`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
         retryCount,
         retryLimit,
       });

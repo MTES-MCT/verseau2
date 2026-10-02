@@ -10,22 +10,27 @@ export class TypeOrmLogger implements Logger {
   }
 
   logQuery(query: string, parameters?: any[]) {
-    this.logger.debug(
-      `Query: ${this.formatQuery(query.substring(0, 600))}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters)?.substring(0, 100) + '...' : ''}`,
-    );
-    // this.logger.debug(`Query: ${this.formatQuery(query).substring(0, 120)}`);
+    this.logger.debug('Query', {
+      query: this.formatQuery(query.substring(0, 600)),
+      parameterCount: parameters?.length ?? 0,
+    });
   }
 
   logQueryError(error: string, query: string, parameters?: any[]) {
-    this.logger.error(
-      `Query Error: ${error} -- Query: ${this.formatQuery(query)}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
-    );
+    // Preserve SQL failure diagnostics even when debug logging is disabled.
+    this.logger.error('Query failed', {
+      error,
+      query: this.formatQuery(query.substring(0, 600)),
+      parameterCount: parameters?.length ?? 0,
+    });
   }
 
   logQuerySlow(time: number, query: string, parameters?: any[]) {
-    this.logger.warn(
-      `Query Slow (${time}ms): ${this.formatQuery(query)}${parameters && parameters.length ? ' -- Parameters: ' + JSON.stringify(parameters) : ''}`,
-    );
+    this.logger.warn('Slow query', {
+      time,
+      query: this.formatQuery(query.substring(0, 600)),
+      parameterCount: parameters?.length ?? 0,
+    });
   }
 
   logSchemaBuild(message: string) {

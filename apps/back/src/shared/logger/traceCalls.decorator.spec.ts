@@ -93,6 +93,17 @@ describe('TraceCalls Decorator', () => {
     async errorMethod() {
       return Promise.reject(new Error('Failure'));
     }
+
+    @TraceCalls()
+    syncErrorMethod() {
+      throw new Error('Sync failure');
+    }
+
+    @TraceCalls()
+    async unknownErrorMethod() {
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- Exercise non-Error rejections from external code.
+      return Promise.reject('Non-Error failure');
+    }
   }
 
   it('should buffer all log lines and flush them sequentially at the end', async () => {
@@ -131,17 +142,33 @@ describe('TraceCalls Decorator', () => {
     );
   });
 
-  it('should buffer and flush error logs sequentially at the end', async () => {
+  it('keeps trace lines at their configured level without duplicating the boundary error', async () => {
     const example = new Example();
 
     await expect(example.errorMethod()).rejects.toThrow('Failure');
 
-    expect(mockLogger.error).toHaveBeenCalledTimes(2);
-
-    expect(mockLogger.error.mock.calls[0][0]).toMatch(/\[callId: [a-z0-9]+\]>>> \[START\] errorMethod/);
-    expect(mockLogger.error.mock.calls[1][0]).toMatch(
+    expect(mockLogger.error).not.toHaveBeenCalled();
+    expect(mockLogger.log).toHaveBeenCalledTimes(1);
+    expect(mockLogger.debug).toHaveBeenCalledTimes(1);
+    expect(mockLogger.log.mock.calls[0][0]).toMatch(/\[callId: [a-z0-9]+\]>>> \[START\] errorMethod/);
+    expect(mockLogger.debug.mock.calls[0][0]).toMatch(
       /\[callId: [a-z0-9]+\] !!! \[ERROR\] errorMethod \| Duration: \d+\.\d+ms \| Failure/,
     );
+  });
+
+  it('preserves a synchronous failure without promoting diagnostics to error', () => {
+    expect(() => new Example().syncErrorMethod()).toThrow('Sync failure');
+
+    expect(mockLogger.error).not.toHaveBeenCalled();
+    expect(mockLogger.debug).toHaveBeenCalledTimes(2);
+    expect(mockLogger.debug).toHaveBeenLastCalledWith(expect.stringContaining('Sync failure'));
+  });
+
+  it('preserves non-Error promise rejections', async () => {
+    await expect(new Example().unknownErrorMethod()).rejects.toBe('Non-Error failure');
+
+    expect(mockLogger.error).not.toHaveBeenCalled();
+    expect(mockLogger.debug).toHaveBeenLastCalledWith(expect.stringContaining('Non-Error failure'));
   });
 
   it('should preserve proxied this when an internal method uses an injected-like dependency', async () => {

@@ -253,7 +253,6 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!findConformiteScl called with filters:', filters);
     const { systemeCollecteIds, year, systemeCollecteCode, trancheObligationRfa, impact, page, pageSize } = filters;
 
     if (systemeCollecteIds.length === 0) {

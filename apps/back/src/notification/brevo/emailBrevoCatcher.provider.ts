@@ -48,13 +48,13 @@ export class EmailBrevoCatcherProvider implements EmailProvider {
 
     try {
       const info = (await this.transporter.sendMail(mailOptions)) as { messageId: string };
-      this.logger.log(`Email sent via MailCatcher to ${emailParams.to.map((t) => t.email).join(', ')}`);
+      this.logger.log('Email sent via MailCatcher', { template, recipientCount: emailParams.to.length });
       return {
         response: info,
         body: { messageId: info.messageId },
       };
     } catch (error) {
-      this.logger.error('Error sending email via MailCatcher', error);
+      this.logger.debug('Error sending email via MailCatcher', error);
       throw error;
     }
   }

@@ -38,7 +38,10 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
     jeton: string;
     attemptCount: number;
   }): Promise<void> {
-    this.logger.log(`Depot ${depotId} - Polling SANDRE validation result`, {
+    if (attemptCount === 0) {
+      this.logger.log(`Depot ${depotId} - SANDRE polling started`, { jeton, maxAttempts: MAX_ATTEMPTS });
+    }
+    this.logger.debug(`Depot ${depotId} - Polling SANDRE validation result`, {
       jeton,
       attemptCount,
       maxAttempts: MAX_ATTEMPTS,
@@ -49,7 +52,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
       const validationResult = await this.sandreService.getValidationResult(jeton);
       const acceptationStatus: SandreAcceptationStatus = Number(validationResult.ACQ.AccuseReception.Acceptation);
 
-      this.logger.log(`Depot ${depotId} - SANDRE validation status`, {
+      this.logger.debug(`Depot ${depotId} - SANDRE validation status`, {
         jeton,
         acceptationStatus,
         attemptCount,
@@ -78,7 +81,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         }
 
         // Re-enqueue poll job with incremented attemptCount
-        this.logger.log(`Depot ${depotId} - Re-enqueuing poll job`, {
+        this.logger.debug(`Depot ${depotId} - Re-enqueuing poll job`, {
           jeton,
           nextAttempt: attemptCount + 1,
           startAfter: POLL_INTERVAL_SECONDS,
@@ -159,9 +162,8 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
         isConformant,
         controleSandreStatus: isConformant ? ControleSandreStatus.SUCCESS : ControleSandreStatus.FAILED,
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Depot ${depotId} - SANDRE poll failed`, errorMessage);
+    } catch (error: unknown) {
+      this.logger.error(`Depot ${depotId} - SANDRE poll failed`, { error, jeton, attemptCount });
 
       // If we haven't exhausted attempts, re-enqueue
       if (attemptCount < MAX_ATTEMPTS) {

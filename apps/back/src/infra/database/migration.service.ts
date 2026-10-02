@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { LoggerService } from '@shared/logger/logger.service';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 
@@ -8,7 +9,7 @@ import { DataSource } from 'typeorm';
  */
 @Injectable()
 export class MigrationService {
-  private readonly logger = new Logger(MigrationService.name);
+  private readonly logger = new LoggerService(MigrationService.name);
   private readonly ADVISORY_LOCK_ID = 123456; // Arbitrary stable ID for the lock
 
   constructor(
@@ -48,7 +49,7 @@ export class MigrationService {
 
       // Lock is automatically released when connection closes
     } catch (error) {
-      this.logger.error('Failed to run migrations', error);
+      this.logger.debug('Failed to run migrations', error);
       throw new Error(`Migration execution failed: ${error instanceof Error ? error.message : String(error)}`, {
         cause: error,
       });

@@ -18,7 +18,12 @@ describe('SandreService injection', () => {
 
 describe('SandreService', () => {
   const originalSandreApiUrl = process.env.SANDRE_API_URL;
-  const logger = { setContext: jest.fn(), log: jest.fn(), error: jest.fn() } as unknown as LoggerService;
+  const logger = {
+    setContext: jest.fn(),
+    log: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  } as unknown as LoggerService;
   const httpClient = { post: jest.fn(), get: jest.fn() };
   let service: SandreService;
 
