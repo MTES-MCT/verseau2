@@ -1,4 +1,5 @@
 const { loadTchapConfig, loadEnvironment, loadLogsUrl } = require('./tchap-config');
+const { getErrorDiagnostics } = require('./tchap-diagnostics');
 
 function escapeHtml(value) {
   return value
@@ -61,15 +62,19 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
 }
 
 async function sendReport(report) {
+  let stage = 'report-preparation';
   try {
     const tchapConfig = loadTchapConfig();
     if (!tchapConfig.enabled) return;
 
     const { text, html } = await createReport(report);
+    stage = 'client-setup';
     const { TchapService } = require('./tchap-service');
-    await new TchapService(tchapConfig).sendText(text, html);
+    const service = new TchapService(tchapConfig);
+    stage = 'identity-check';
+    await service.sendText(text, html);
   } catch (error) {
-    console.error('Échec de l’envoi du bilan Tchap :', error);
+    console.error('Échec de l’envoi du bilan Tchap :', JSON.stringify({ stage, ...getErrorDiagnostics(error) }));
   }
 }
 
