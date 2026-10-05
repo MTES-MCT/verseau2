@@ -4,6 +4,7 @@ const { readFileSync } = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { loadTchapConfig, loadEnvironment, loadLogsUrl } = require('./tchap-config');
+const { TchapDeliveryError } = require('./tchap-diagnostics');
 
 const env = {
   TCHAP_HOMESERVER_URL: 'https://matrix.example.org',
@@ -38,6 +39,7 @@ function loadReport({ environment = env, collectFreshness = async () => freshnes
     require(name) {
       switch (name) {
         case './config': return config;
+        case './tchap-diagnostics': return require('./tchap-diagnostics');
         case './tchap-config': return {
           loadTchapConfig: () => loadTchapConfig(environment, log),
           loadEnvironment: () => loadEnvironment(environment, log),
@@ -171,14 +173,45 @@ test('freshness failure and invalid logs links do not prevent sending the final 
   }
 });
 
-test('SDK loading and sending failures are logged without propagating', async () => {
-  const fail = () => { throw new Error('SDK request details'); };
+test('SDK loading and sending failures are logged safely without propagating', async () => {
+  const fail = () => {
+    throw Object.assign(new Error('SDK request details and secrets'), {
+      code: 'MODULE_NOT_FOUND', request: { headers: { Authorization: 'Bearer secret' } },
+    });
+  };
   for (const failure of [{ sendText: fail }, { loadService: fail }]) {
     const errors = [];
     const { sendReport } = loadReport({ ...failure, log: { error: (...args) => errors.push(args) } });
     await sendReport(report);
     assert.equal(errors.length, 1);
-    assert.equal(errors[0][1].message, 'SDK request details');
+    const diagnostics = JSON.parse(errors[0][1]);
+    assert.equal(diagnostics.code, 'MODULE_NOT_FOUND');
+    assert.equal(diagnostics.stage, failure.loadService ? 'client-setup' : 'identity-check');
+    assert.doesNotMatch(JSON.stringify(errors), /SDK request details|secret|Authorization|Bearer/);
+  }
+});
+
+test('logs exhausted delivery diagnostics without changing the restoration outcome', async () => {
+  const errors = [];
+  const metadata = {
+    stage: 'identity-check', homeserverHostname: 'matrix.example.org', attempt: 3,
+    elapsedMs: 48_000, outcome: 'exhausted',
+  };
+  const failure = new TchapDeliveryError(Object.assign(new Error('secret'), {
+    code: 'ETIMEDOUT', connect: true, headers: { Authorization: 'Bearer secret' },
+  }), metadata);
+  const { sendReport } = loadReport({
+    sendText: async () => { throw failure; },
+    log: { error: (...args) => errors.push(args) },
+  });
+
+  await sendReport(report);
+  await sendReport({ ...report, error: 'Restore failed' });
+
+  assert.equal(errors.length, 2);
+  for (const [, diagnostics] of errors) {
+    assert.deepEqual(JSON.parse(diagnostics), { ...metadata, code: 'ETIMEDOUT', connect: true });
+    assert.doesNotMatch(diagnostics, /secret|Authorization|Bearer/);
   }
 });
 
