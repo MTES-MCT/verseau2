@@ -5,7 +5,7 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { App } from 'supertest/types';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
-import { DepotRightsException } from '@dossier/depot/depotError';
+import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
@@ -33,6 +33,7 @@ import { createReferentielDataset } from '../../createReferentielDataset';
 import {
   seedUserWithDroits,
   seedUserExpertBassin,
+  seedUserRole308,
   seedVSteuSclItv,
   seedUserWithoutDroits,
   clearUserWithDroits,
@@ -53,6 +54,14 @@ const EXPERT_BASSIN_USER = {
   itvCdn: 200,
   prCdn: 2000,
   itvRfa: '99887766554433',
+};
+
+const ROLE_308_USER = {
+  sub: 'role-308-sub',
+  email: 'role-308@example.com',
+  itvCdn: 300,
+  prCdn: 3000,
+  itvRfa: '11223344556677',
 };
 
 describe('DroitsDepotService (e2e)', () => {
@@ -274,6 +283,49 @@ describe('DroitsDepotService (e2e)', () => {
 
       await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).rejects.toThrow(
         DepotRightsException,
+      );
+    });
+  });
+
+  describe('role 308 — droits par ouvrage', () => {
+    it('valide les droits pour un STEU si le SIRET correspond', async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, ['STEU01'], [])).resolves.toBeUndefined();
+    });
+
+    it('valide les droits pour un SCL si le SIRET correspond', async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, '', 'SCL01', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, [], ['SCL01'])).resolves.toBeUndefined();
+    });
+
+    it("refuse si le SIRET ne correspond pas à l'ouvrage", async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_SIRET');
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, ['STEU01'], [])).rejects.toThrow(
+        DepotRightsException,
+      );
+    });
+
+    it("refuse si le role 308 n'a pas de SIRET exploitable", async () => {
+      await seedUserRole308(dataSource, { ...ROLE_308_USER, sub: 'role-308-no-siret-sub', itvRfa: undefined });
+      await seedVSteuSclItv(dataSource, 'STEU01', '', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits('role-308-no-siret-sub', ['STEU01'], [])).rejects.toThrow(
+        DepotRightsException,
+      );
+    });
+
+    it('refuse les flux qualifies meme si le SIRET correspond', async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, ['STEU01'], [], true)).rejects.toThrow(
+        new DepotRightsException(DepotError.FLUX_QUALIFIE_INTERDIT),
       );
     });
   });
