@@ -11,7 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
+import { AgByLogin, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 import { OrionContact } from './lanceleau.model';
 
 @Injectable()
@@ -93,11 +93,11 @@ export class LanceleauRepository implements LanceleauGateway {
     }));
   }
 
-  async findAgByEmail(email: string): Promise<AgByEmail | null> {
+  async findAgByLogin(login: string): Promise<AgByLogin | null> {
     const ag = await this.agRepository
       .createQueryBuilder('ag')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
-      .where('TRIM(oc.mail) = :email', { email: email.trim() })
+      .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
       .getOne();
 
     if (!ag) {
@@ -146,23 +146,23 @@ export class LanceleauRepository implements LanceleauGateway {
     return entities.map((e) => this.mapVSteuSclItvEntityToResult(e));
   }
 
-  async findSiretByEmail(email: string): Promise<string | null> {
+  async findSiretByLogin(login: string): Promise<string | null> {
     const row = await this.itvRepository
       .createQueryBuilder('itv')
       .select('itv.itv_rfa', 'itvRfa')
       .innerJoin(AgEntity, 'ag', 'ag.itv_cdn = itv.itv_cdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
-      .where('TRIM(oc.mail) = :email', { email: email.trim() })
+      .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
       .getRawOne<{ itvRfa: string | null }>();
     return row?.itvRfa ?? null;
   }
 
-  async findOrionContactByEmail(mail: string): Promise<OrionContact | null> {
+  async findOrionContactByLogin(login: string): Promise<OrionContact | null> {
     const row = await this.orionCredentialsRepository
       .createQueryBuilder('oc')
       .select('oc.lastName', 'nom')
       .addSelect('oc.firstName', 'prenom')
-      .where('TRIM(oc.mail) = :mail', { mail: mail.trim() })
+      .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
       .getRawOne<OrionContact>();
 
     if (!row) {

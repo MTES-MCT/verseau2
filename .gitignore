@@ -78,6 +78,7 @@ coverage
 
 script/
 scripts/
+!e2e/scripts/
 /test_charge.sh
 
 .npmrc

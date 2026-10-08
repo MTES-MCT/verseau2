@@ -39,7 +39,7 @@ esmJest.unstable_mockModule('jose', () => ({
 
 import { AuthenticationService } from './authentication.service';
 import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo, ResponseBodyError } from 'openid-client';
-import { jwtVerify, errors } from 'jose';
+import { jwtVerify, errors, SignJWT } from 'jose';
 
 const mockServerMetadata = {
   issuer: 'https://auth.example.com',
@@ -58,6 +58,7 @@ const JWT_SECRET = 'unsupersecret';
 const createAuthenticatedUser = (user: Partial<AuthenticatedUser> = {}): AuthenticatedUser => {
   return {
     cerbereId: '',
+    uid: '',
     mel: '',
     itvCdn: null,
     isExpertNational: false,
@@ -157,6 +158,7 @@ describe('AuthenticationService', () => {
       (jwtVerify as jest.Mock).mockResolvedValue({
         payload: {
           sub: 'user-123',
+          uid: 'cerbere-john',
           email: 'john.doe@example.com',
           itvCdn: 42,
           isExpertNational: true,
@@ -173,6 +175,7 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-123',
+          uid: 'cerbere-john',
           mel: 'john.doe@example.com',
           itvCdn: 42,
           isExpertNational: true,
@@ -201,6 +204,7 @@ describe('AuthenticationService', () => {
     it('should handle missing optional fields in handleCallback', async () => {
       const minimalUserInfo = {
         sub: 'user-minimal',
+        uid: 'cerbere-minimal',
         preferred_username: 'minimal.user',
         usual_name: 'User',
         given_name: 'Minimal',
@@ -233,7 +237,35 @@ describe('AuthenticationService', () => {
           mel: 'minimal@example.com',
         }),
       );
-      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('minimal@example.com');
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('cerbere-minimal');
+      expect(SignJWT).toHaveBeenCalledWith({
+        sub: 'user-minimal',
+        uid: 'cerbere-minimal',
+        email: 'minimal@example.com',
+        itvCdn: null,
+        isExpertNational: false,
+      });
+    });
+
+    it.each([undefined, null, '', '   ', 123, ['cerbere-user']])(
+      'rejects a missing or invalid userinfo UID (%p) without using the email',
+      async (uid) => {
+        (authorizationCodeGrant as jest.Mock).mockResolvedValue({
+          access_token: 'cerbere-access-token',
+          claims: () => ({ sub: 'user-sub' }),
+        });
+        (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'user-sub', uid, email: 'valid@example.com' });
+
+        await expect(service.handleCallback('code', 'nonce', 'verifier')).rejects.toThrow(UnauthorizedException);
+        expect(mockDroitsUserService.resolveVerseauAccess).not.toHaveBeenCalled();
+        expect(mockSign).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([undefined, null, '', '   ', 123])('rejects an internal token with invalid UID (%p)', async (uid) => {
+      (jwtVerify as jest.Mock).mockResolvedValue({ payload: { sub: 'user-sub', uid, email: 'valid@example.com' } });
+
+      await expect(service.validateToken('signed-token')).rejects.toThrow(UnauthorizedException);
     });
 
     it('refuse une première connexion avant la création du compte local', async () => {
@@ -244,7 +276,11 @@ describe('AuthenticationService', () => {
         claims: () => ({ sub: 'new-user' }),
       };
       (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
-      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'new-user', email: 'new.user@example.com' });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({
+        sub: 'new-user',
+        uid: 'cerbere-new',
+        email: 'new.user@example.com',
+      });
       mockDroitsUserService.resolveVerseauAccess.mockRejectedValue(
         new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
       );
@@ -252,7 +288,7 @@ describe('AuthenticationService', () => {
       await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toBeInstanceOf(
         ForbiddenException,
       );
-      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('new.user@example.com');
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('cerbere-new');
       expect(mockSign).not.toHaveBeenCalled();
     });
   });
@@ -309,6 +345,7 @@ describe('AuthenticationService', () => {
       };
       const mockUserInfo = {
         sub: 'user-123',
+        uid: 'cerbere-john',
         preferred_username: 'john.doe',
         usual_name: 'Doe',
         given_name: 'John',
@@ -324,13 +361,44 @@ describe('AuthenticationService', () => {
 
       expect(refreshTokenGrant).toHaveBeenCalledWith(mockConfiguration, mockRefreshToken);
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-cerbere-access-token', 'user-123');
-      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('john.doe@example.com');
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('cerbere-john');
 
       // Le token retourné est un JWT interne (pas le token Cerbere)
       expect(result.accessToken).toBe('mock-internal-jwt');
       expect(result.cerbereAccessToken).toBe('new-cerbere-access-token');
       expect(result.refreshToken).toBe('new-refresh-token');
       expect(result.expiresIn).toBe(3600);
+      expect(result.user).toMatchObject({ cerbereId: 'user-123', uid: 'cerbere-john', mel: 'john.doe@example.com' });
+      expect(SignJWT).toHaveBeenCalledWith({
+        sub: 'user-123',
+        uid: 'cerbere-john',
+        email: 'john.doe@example.com',
+        itvCdn: 42,
+        isExpertNational: true,
+      });
+    });
+
+    it('keeps the same UID when the email changes on refresh', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({ access_token: 'new-access-token' });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({
+        sub: 'user-123',
+        uid: 'cerbere-john',
+        email: 'changed@example.com',
+      });
+
+      const result = await service.refreshTokens(mockRefreshToken, 'user-123');
+
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('cerbere-john');
+      expect(result.user).toMatchObject({ uid: 'cerbere-john', mel: 'changed@example.com' });
+    });
+
+    it('rejects a refreshed userinfo without UID even when the email is present', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({ access_token: 'new-access-token' });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'user-123', email: 'valid@example.com' });
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
+      expect(mockDroitsUserService.resolveVerseauAccess).not.toHaveBeenCalled();
+      expect(mockSign).not.toHaveBeenCalled();
     });
 
     it('should succeed even when no ID token is returned (sub comes from expectedSubject parameter)', async () => {
@@ -340,7 +408,7 @@ describe('AuthenticationService', () => {
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
       };
-      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
+      const mockUserInfo = { sub: 'user-123', uid: 'cerbere-john', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
@@ -390,7 +458,11 @@ describe('AuthenticationService', () => {
 
     it('refuse le renouvellement lorsque les droits ont été retirés', async () => {
       (refreshTokenGrant as jest.Mock).mockResolvedValue({ access_token: 'new-access-token', expires_in: 3600 });
-      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'user-123', email: 'user@example.com' });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({
+        sub: 'user-123',
+        uid: 'cerbere-john',
+        email: 'user@example.com',
+      });
       mockDroitsUserService.resolveVerseauAccess.mockRejectedValue(
         new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
       );
@@ -410,7 +482,7 @@ describe('AuthenticationService', () => {
 
     it('should call discovery() only once and reuse the configuration', async () => {
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensResponse);
-      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1', uid: 'cerbere-u1' });
 
       await service.refreshTokens('rt1', 'u1');
       await service.refreshTokens('rt2', 'u1');
@@ -431,7 +503,7 @@ describe('AuthenticationService', () => {
         .mockRejectedValueOnce(new Error('Transient error'))
         .mockResolvedValueOnce(mockConfiguration);
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshTokensResponse);
-      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1' });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'u1', uid: 'cerbere-u1' });
 
       // First call fails
       await expect(service.refreshTokens('rt', 'u1')).rejects.toThrow();
@@ -532,7 +604,7 @@ describe('AuthenticationService', () => {
         refresh_token: undefined,
         expires_in: 3600,
       };
-      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
+      const mockUserInfo = { sub: 'user-123', uid: 'cerbere-john', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
@@ -552,7 +624,7 @@ describe('AuthenticationService', () => {
         refresh_token: 'new-refresh-token',
         expires_in: 3600,
       };
-      const mockUserInfo = { sub: 'user-123', email: 'test@example.com' };
+      const mockUserInfo = { sub: 'user-123', uid: 'cerbere-john', email: 'test@example.com' };
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);

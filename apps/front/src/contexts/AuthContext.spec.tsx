@@ -36,6 +36,7 @@ vi.mock('../monitoring/sentry', () => ({
 const authenticatedUser = {
   user: {
     cerbereId: 'cerbere-123',
+    uid: 'cerbere-alice',
     nom: 'Dupont',
     prenom: 'Alice',
     mel: 'alice.dupont@example.test',

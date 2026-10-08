@@ -6,6 +6,7 @@ export interface OIDCTokens {
   refreshToken?: string;
   expiresIn?: number;
   cerbereAccessToken?: string; // token Cerbere original, utilisé en interne pour fetchUserInfo
+  user?: AuthenticatedUserAndNomPrenom;
 }
 
 export interface OIDCConfiguration {
@@ -35,6 +36,7 @@ export interface Authentication {
 
 export interface AuthenticatedUser {
   cerbereId: string; // Identifiant Cerbere interne (sub)
+  uid: string; // Identifiant métier Cerbere (login_lb dans Lanceleau)
   mel: string; // email
   itvCdn: number | null; // code intervenant Lanceleau, embarqué dans le token interne
   isExpertNational: boolean; // rôle 305 Lanceleau, embarqué dans le token interne
