@@ -1,6 +1,7 @@
 // TODO : déplacer vers lib "user" (à créer) ou "dossier"
 export interface AuthenticatedUser {
   cerbereId: string; // Identifiant Cerbere interne (sub)
+  uid: string; // Identifiant métier Cerbere
   nom: string; // usual_name
   prenom: string; // given_name
   mel: string; // email

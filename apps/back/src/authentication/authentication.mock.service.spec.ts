@@ -3,7 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SignJWT } from 'jose';
 import { AuthenticationMockService } from './authentication.mock.service';
-import { INTERNAL_TOKEN_ISSUER } from './authentication';
+import { INTERNAL_TOKEN_AUDIENCE, INTERNAL_TOKEN_ISSUER } from './authentication';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
@@ -22,8 +22,8 @@ describe('AuthenticationMockService', () => {
 
     mockConfigService = {
       get: jest.fn((key: string) => {
-        if (key === 'OIDC_MOCK_EMAIL') {
-          return 'real.user@example.com';
+        if (key === 'OIDC_MOCK_UID') {
+          return 'cerbere-real-user';
         }
         return null;
       }),
@@ -38,6 +38,7 @@ describe('AuthenticationMockService', () => {
     mockFindOne = jest.fn().mockResolvedValue({
       id: 'user-id',
       sub: 'real-sub',
+      uid: 'cerbere-real-user',
       email: 'real.user@example.com',
       nom: 'Real',
       prenom: 'User',
@@ -67,15 +68,16 @@ describe('AuthenticationMockService', () => {
     service = module.get(AuthenticationMockService);
   });
 
-  it('returns the configured real user from OIDC_MOCK_EMAIL', async () => {
+  it('returns the configured real user from OIDC_MOCK_UID', async () => {
     const result = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
     expect(mockDataSource.getRepository).toHaveBeenCalledWith(UserEntity);
-    expect(mockFindOne).toHaveBeenCalledWith({ where: { email: 'real.user@example.com' } });
+    expect(mockFindOne).toHaveBeenCalledWith({ where: { uid: 'cerbere-real-user' } });
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('real.user@example.com');
+    expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('cerbere-real-user');
     expect(result.user).toEqual({
       cerbereId: 'real-sub',
+      uid: 'cerbere-real-user',
       mel: 'real.user@example.com',
       itvCdn: 917072,
       isExpertNational: false,
@@ -85,6 +87,7 @@ describe('AuthenticationMockService', () => {
     expect(result.accessToken).toBeTruthy();
     await expect(service.validateToken(result.accessToken)).resolves.toMatchObject({
       cerbereId: 'real-sub',
+      uid: 'cerbere-real-user',
       mel: 'real.user@example.com',
       itvCdn: 917072,
       isExpertNational: false,
@@ -104,13 +107,14 @@ describe('AuthenticationMockService', () => {
     expect(refreshed.accessToken).toBeTruthy();
     await expect(service.validateToken(refreshed.accessToken)).resolves.toMatchObject({
       cerbereId: 'real-sub',
+      uid: 'cerbere-real-user',
       mel: 'real.user@example.com',
       itvCdn: 917072,
       isExpertNational: false,
     });
   });
 
-  it('fails when OIDC_MOCK_EMAIL is missing', async () => {
+  it('fails when OIDC_MOCK_UID is missing', async () => {
     mockConfigService.get.mockReturnValue(undefined);
 
     await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toThrow(
@@ -134,6 +138,27 @@ describe('AuthenticationMockService', () => {
     await expect(service.validateToken('')).rejects.toThrow(UnauthorizedException);
   });
 
+  it('authenticates by UID even when the report email is absent', async () => {
+    mockFindOne.mockResolvedValueOnce({ sub: 'real-sub', uid: 'cerbere-real-user', email: null });
+
+    const result = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
+
+    expect(result.user).toMatchObject({ uid: 'cerbere-real-user', mel: '' });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('cerbere-real-user');
+  });
+
+  it('rejects a correctly signed internal token without UID, without falling back to email', async () => {
+    const token = await new SignJWT({ sub: 'real-sub', email: 'real.user@example.com' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience(INTERNAL_TOKEN_AUDIENCE)
+      .setExpirationTime('1h')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    await expect(service.validateToken(token)).rejects.toThrow(UnauthorizedException);
+  });
+
   it('fails when extractSubjectFromExpiredToken receives an empty token', async () => {
     await expect(service.extractSubjectFromExpiredToken('')).rejects.toThrow(UnauthorizedException);
   });
@@ -141,6 +166,7 @@ describe('AuthenticationMockService', () => {
   it('rejects a token signed with the secret but without iss/aud claims (token-type confusion)', async () => {
     const forged = await new SignJWT({
       sub: 'real-sub',
+      uid: 'cerbere-real-user',
       email: 'attacker@example.com',
       itvCdn: 42,
       isExpertNational: true,

@@ -46,12 +46,12 @@ describe('SftpAgentVerseauProcessorService', () => {
         path: 'depots/depot-1/file.xml',
         nomOriginalFichier: 'test.xml',
         userId: 'user-1',
-        user: { email: 'user@example.com', nom: 'Cerbere', prenom: 'Contact' },
+        user: { uid: 'cerbere-user', email: 'user@example.com', nom: 'Cerbere', prenom: 'Contact' },
       }),
     } as unknown as DepotService;
 
     mockLanceleauGateway = {
-      findOrionContactByEmail: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' }),
+      findOrionContactByLogin: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' }),
     } as unknown as jest.Mocked<LanceleauGateway>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -87,7 +87,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
 
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
-    expect(mockLanceleauGateway.findOrionContactByEmail).toHaveBeenCalledWith('user@example.com');
+    expect(mockLanceleauGateway.findOrionContactByLogin).toHaveBeenCalledWith('cerbere-user');
     expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
 
     const expectedXml = `${originalXml}<!-- added DOE John -->`;
@@ -105,7 +105,7 @@ describe('SftpAgentVerseauProcessorService', () => {
       path: 'depots/dep_1/file.xml',
       nomOriginalFichier: 'données été.xml',
       userId: 'user-1',
-      user: { email: 'user@example.com' },
+      user: { uid: 'cerbere-user', email: 'user@example.com' },
     });
 
     await service.process({ depotId: 'dep_1', filePath: 'depots/dep_1/file.xml' });
@@ -127,7 +127,7 @@ describe('SftpAgentVerseauProcessorService', () => {
     (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from(originalXml));
 
     await expect(service.process({ depotId, filePath })).rejects.toThrow(
-      'Depot with id depot-1 has no associated user email',
+      'Depot with id depot-1 has no associated user UID',
     );
 
     expect(addNameTagToXml).not.toHaveBeenCalled();
@@ -138,12 +138,40 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
   });
 
+  it('does not use the report email as fallback when UID is missing', async () => {
+    (mockDepotService.findDepotByIdWithUser as jest.Mock).mockResolvedValue({
+      id: 'depot-1',
+      path: 'remote/path.xml',
+      user: { email: 'valid@example.com' },
+    });
+
+    await expect(service.process({ depotId: 'depot-1', filePath: 's3/path.xml' })).rejects.toThrow(
+      'Depot with id depot-1 has no associated user UID',
+    );
+
+    expect(mockLanceleauGateway.findOrionContactByLogin).not.toHaveBeenCalled();
+    expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
+  });
+
+  it('resolves the XML contact by UID even when the report email is absent', async () => {
+    (mockDepotService.findDepotByIdWithUser as jest.Mock).mockResolvedValue({
+      id: 'depot-1',
+      path: 'remote/path.xml',
+      user: { uid: 'cerbere-user' },
+    });
+
+    await service.process({ depotId: 'depot-1', filePath: 's3/path.xml' });
+
+    expect(mockLanceleauGateway.findOrionContactByLogin).toHaveBeenCalledWith('cerbere-user');
+    expect(mockAgentVerseauClient.send).toHaveBeenCalled();
+  });
+
   it.each([
     ['missing', null],
     ['without last name', { nom: null, prenom: 'John' }],
     ['without first name', { nom: 'Doe', prenom: null }],
   ])('should fail without sending files when Orion contact is %s', async (_label, contact) => {
-    mockLanceleauGateway.findOrionContactByEmail.mockResolvedValue(contact);
+    mockLanceleauGateway.findOrionContactByLogin.mockResolvedValue(contact);
 
     await expect(service.process({ depotId: 'depot-1', filePath: 's3/path.xml' })).rejects.toThrow(
       'Orion contact is missing or incomplete for depot depot-1',

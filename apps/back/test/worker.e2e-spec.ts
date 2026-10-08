@@ -235,6 +235,7 @@ describe('Worker Service (e2e)', () => {
       sftpUser = await dataSource.getRepository(UserEntity).save({
         id: 'user_sftp_processor',
         sub: 'sftp-user-sub',
+        uid: 'cerbere-sftp-user',
         email: 'sftp-user@example.com',
         nom: 'Cerbere',
         prenom: 'Contact',
@@ -321,6 +322,7 @@ describe('Worker Service (e2e)', () => {
       const user = await dataSource.getRepository(UserEntity).save({
         id: 'user_diff_001',
         sub: 'sub_diff_001',
+        uid: 'cerbere-diff-001',
         email: 'test.deposant@example.com',
         nom: 'Deposant',
         prenom: 'Test',
@@ -394,6 +396,7 @@ describe('Worker Service (e2e)', () => {
       const user = await dataSource.getRepository(UserEntity).save({
         id: 'user_diff_002',
         sub: 'sub_diff_002',
+        uid: 'cerbere-diff-002',
         email: 'test.deposant2@example.com',
         nom: 'Deposant2',
         prenom: 'Test2',

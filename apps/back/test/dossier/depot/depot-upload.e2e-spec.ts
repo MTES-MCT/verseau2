@@ -108,6 +108,7 @@ describe('Depot upload (e2e)', () => {
 
     jest.spyOn(authentication, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,
@@ -118,6 +119,7 @@ describe('Depot upload (e2e)', () => {
     await userRepository.save({
       id: 'user_123',
       sub: 'test-user-id',
+      uid: 'cerbere-test-user',
       email: 'dev@example.com',
       nom: 'Test',
       prenom: 'User',
@@ -231,9 +233,14 @@ describe('Depot upload (e2e)', () => {
   it('only lets the initializing user confirm the depot', async () => {
     const session = await initialize();
     seedUpload(session);
-    await dataSource
-      .getRepository(UserEntity)
-      .save({ id: 'user_other', sub: 'other-user', email: 'other@example.com', nom: 'Other', prenom: 'User' });
+    await dataSource.getRepository(UserEntity).save({
+      id: 'user_other',
+      sub: 'other-user',
+      uid: 'cerbere-other-user',
+      email: 'other@example.com',
+      nom: 'Other',
+      prenom: 'User',
+    });
     await dataSource.getRepository(DepotEntity).update(session.depotId, { userId: 'user_other' });
     await complete(session.depotId).expect(403);
     expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);

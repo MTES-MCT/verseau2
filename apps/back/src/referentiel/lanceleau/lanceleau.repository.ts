@@ -11,7 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
+import { AgByLogin, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 import { OrionContact } from './lanceleau.model';
 
 @Injectable()
@@ -38,7 +38,19 @@ export class LanceleauRepository implements LanceleauGateway {
   ) {}
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
-    const itv = await this.itvRepository.findOne({ where: { itvCdn } });
+    const rows = await this.itvRepository
+      .createQueryBuilder('itv')
+      .select('itv.itvCdn', 'itvCdn')
+      .addSelect('itv.itvNomLb', 'itvNomLb')
+      .addSelect('itv.itvRfa', 'itvRfa')
+      .where('itv.itvCdn = :itvCdn', { itvCdn })
+      .getRawMany<Pick<ItvEntity, 'itvCdn' | 'itvNomLb' | 'itvRfa'>>();
+
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_INTERVENANT_ID');
+    }
+
+    const [itv] = rows;
     if (!itv) {
       return null;
     }
@@ -93,13 +105,20 @@ export class LanceleauRepository implements LanceleauGateway {
     }));
   }
 
-  async findAgByEmail(email: string): Promise<AgByEmail | null> {
-    const ag = await this.agRepository
+  async findAgByLogin(login: string): Promise<AgByLogin | null> {
+    const rows = await this.agRepository
       .createQueryBuilder('ag')
+      .select('ag.itvCdn', 'itvCdn')
+      .addSelect('ag.prCdn', 'prCdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
-      .where('TRIM(oc.mail) = :email', { email: email.trim() })
-      .getOne();
+      .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
+      .getRawMany<Pick<AgEntity, 'itvCdn' | 'prCdn'>>();
 
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_LOGIN');
+    }
+
+    const [ag] = rows;
     if (!ag) {
       return null;
     }
@@ -146,25 +165,36 @@ export class LanceleauRepository implements LanceleauGateway {
     return entities.map((e) => this.mapVSteuSclItvEntityToResult(e));
   }
 
-  async findSiretByEmail(email: string): Promise<string | null> {
-    const row = await this.itvRepository
+  async findSiretByLogin(login: string): Promise<string | null> {
+    const rows = await this.itvRepository
       .createQueryBuilder('itv')
       .select('itv.itv_rfa', 'itvRfa')
       .innerJoin(AgEntity, 'ag', 'ag.itv_cdn = itv.itv_cdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
-      .where('TRIM(oc.mail) = :email', { email: email.trim() })
-      .getRawOne<{ itvRfa: string | null }>();
+      .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
+      .getRawMany<{ itvRfa: string | null }>();
+
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_LOGIN');
+    }
+
+    const [row] = rows;
     return row?.itvRfa ?? null;
   }
 
-  async findOrionContactByEmail(mail: string): Promise<OrionContact | null> {
-    const row = await this.orionCredentialsRepository
+  async findOrionContactByLogin(login: string): Promise<OrionContact | null> {
+    const rows = await this.orionCredentialsRepository
       .createQueryBuilder('oc')
       .select('oc.lastName', 'nom')
       .addSelect('oc.firstName', 'prenom')
-      .where('TRIM(oc.mail) = :mail', { mail: mail.trim() })
-      .getRawOne<OrionContact>();
+      .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
+      .getRawMany<OrionContact>();
 
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_LOGIN');
+    }
+
+    const [row] = rows;
     if (!row) {
       return null;
     }

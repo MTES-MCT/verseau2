@@ -67,16 +67,17 @@ export class AuthenticationService implements Authentication {
 
   /**
    * Forge un JWT interne Verseau2 signé avec JWT_SECRET (HMAC-SHA256).
-   * Contient les claims métier (sub, email, itvCdn, isExpertNational).
+   * Contient les claims métier (sub, uid, email, itvCdn, isExpertNational).
    */
   private async signInternalToken(
     sub: string,
+    uid: string,
     email: string,
     itvCdn: number | null,
     isExpertNational: boolean,
     expiresIn?: number,
   ): Promise<string> {
-    const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
+    const jwt = new SignJWT({ sub, uid, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setIssuer(INTERNAL_TOKEN_ISSUER)
@@ -178,11 +179,12 @@ export class AuthenticationService implements Authentication {
     const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
     const user = this.mapOpenIdUserToUser(userInfo);
 
-    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.uid);
 
     // Forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(
       user.cerbereId,
+      user.uid,
       user.mel,
       itvCdn,
       isExpertNational,
@@ -215,8 +217,12 @@ export class AuthenticationService implements Authentication {
   }
 
   private mapOpenIdUserToUser(claims: UserInfoResponse): AuthenticatedUser {
+    if (typeof claims.uid !== 'string' || !claims.uid.trim()) {
+      throw new UnauthorizedException('Missing or invalid Cerbere UID');
+    }
     return {
       cerbereId: claims.sub,
+      uid: claims.uid.trim(),
       mel: (claims.email as string) || '',
       itvCdn: null,
       isExpertNational: false,
@@ -225,13 +231,17 @@ export class AuthenticationService implements Authentication {
 
   /**
    * Mappe les claims du JWT interne Verseau2 vers AuthenticatedUser.
-   * Le JWT interne ne contient que sub, email, itvCdn, isExpertNational.
+   * Le JWT interne contient sub, uid, email, itvCdn, isExpertNational.
    * Les autres champs (nom, prenom, etc.) ne sont pas dans le token
    * et seront résolus depuis la DB locale si nécessaire (ex: /me).
    */
   private mapInternalClaimsToUser(claims: Record<string, unknown>): AuthenticatedUser {
+    if (typeof claims.uid !== 'string' || !claims.uid.trim()) {
+      throw new UnauthorizedException('Missing or invalid Cerbere UID');
+    }
     return {
       cerbereId: (claims.sub as string) || '',
+      uid: claims.uid.trim(),
       mel: (claims.email as string) || '',
       itvCdn: (claims.itvCdn as number) ?? null,
       isExpertNational: (claims.isExpertNational as boolean) ?? false,
@@ -260,24 +270,29 @@ export class AuthenticationService implements Authentication {
       throw new UnauthorizedException();
     }
 
-    let user: AuthenticatedUser;
+    let user: AuthenticatedUserAndNomPrenom;
     try {
       // Récupérer les infos utilisateur depuis le nouveau token Cerbere
       // expectedSubject provient du JWT interne Verseau2 (cookie access_token) et non du id_token OIDC,
       // car le spec OIDC n'impose pas le retour d'un id_token lors d'un refresh grant.
       const userInfo = await this.fetchUserInfoClaims(tokens.access_token, expectedSubject);
-      user = this.mapOpenIdUserToUser(userInfo);
+      user = {
+        ...this.mapOpenIdUserToUser(userInfo),
+        nom: userInfo.family_name || undefined,
+        prenom: userInfo.given_name || undefined,
+      };
       this.logger.log('User info retrieved after token refresh');
     } catch (error) {
       logAuthenticationFailure(this.logger, 'Failed to fetch user info after token refresh', error);
       throw new UnauthorizedException();
     }
 
-    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.uid);
 
     // Re-forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(
       user.cerbereId,
+      user.uid,
       user.mel,
       itvCdn,
       isExpertNational,
@@ -295,6 +310,7 @@ export class AuthenticationService implements Authentication {
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
       cerbereAccessToken: tokens.access_token,
+      user: { ...user, itvCdn, isExpertNational },
     };
   }
 

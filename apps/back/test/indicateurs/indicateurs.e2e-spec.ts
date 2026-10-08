@@ -79,6 +79,7 @@ describe('IndicateursController (e2e) - Caching', () => {
     const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue(emptyPaginatedResponse);
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'user-1',
+      uid: 'cerbere-user-1',
       mel: 'dev@example.com',
       itvCdn: null,
       isExpertNational: false,
@@ -115,6 +116,7 @@ describe('IndicateursController (e2e) - Caching', () => {
     jest.spyOn(authService, 'validateToken').mockImplementation(async (token) => {
       const baseUser = {
         cerbereId: 'default',
+        uid: 'cerbere-default',
         nom: 'Test',
         prenom: 'User',
         mel: 'dev@example.com',
@@ -122,10 +124,10 @@ describe('IndicateursController (e2e) - Caching', () => {
         isExpertNational: false,
       };
       if (token === 'token-user-1') {
-        return { ...baseUser, cerbereId: 'user-1' };
+        return { ...baseUser, cerbereId: 'user-1', uid: 'cerbere-user-1' };
       }
       if (token === 'token-user-2') {
-        return { ...baseUser, cerbereId: 'user-2' };
+        return { ...baseUser, cerbereId: 'user-2', uid: 'cerbere-user-2' };
       }
       return baseUser;
     });
@@ -161,6 +163,7 @@ describe('IndicateursController (e2e) - Caching', () => {
     const spy = jest.spyOn(indicateursService, 'getIndicateursSteu').mockResolvedValue(emptyPaginatedResponse);
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'user-1',
+      uid: 'cerbere-user-1',
       mel: 'dev@example.com',
       itvCdn: null,
       isExpertNational: false,

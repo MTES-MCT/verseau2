@@ -7,9 +7,9 @@ import { DroitsUserService } from '@user/droitsUser.service';
 import { DataSource } from 'typeorm';
 
 const assertMockAuthenticationConfig = (configService: ConfigService) => {
-  const mockEmail = configService.get<string>('OIDC_MOCK_EMAIL')?.trim();
-  if (!mockEmail) {
-    throw new Error('OIDC_MOCK_EMAIL is required when OIDC_MOCK=true');
+  const mockUid = configService.get<string>('OIDC_MOCK_UID')?.trim();
+  if (!mockUid) {
+    throw new Error('OIDC_MOCK_UID is required when OIDC_MOCK=true');
   }
   if (configService.get<string>('NODE_ENV') !== 'development') {
     throw new Error('Mock authentication cannot be used in production environment');
