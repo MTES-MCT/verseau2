@@ -1,16 +1,32 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { ApiModule } from './api/api.module';
 import { MigrationService } from './infra/database/migration.service';
 import cookieParser from 'cookie-parser';
 import { LoggerService } from '@shared/logger/logger.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
+import { createSecurityHeadersMiddleware, parseExtraConnectOrigins } from '@shared/security-headers/security-headers';
 
 async function bootstrapServer() {
   const logger = new LoggerService('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(ApiModule, {
     logger,
   });
+  const configService = app.get(ConfigService);
+
+  // En-têtes de sécurité (CSP, HSTS, nosniff, frame-ancestors…) sur toutes les
+  // réponses : API, SPA servi par ServeStatic et erreurs. Enregistré avant
+  // listen() pour passer devant les middlewares ServeStatic ajoutés à l'init.
+  app.use(
+    createSecurityHeadersMiddleware({
+      // Ex. hôte d'ingestion Sentry pour le SPA (CSP_EXTRA_CONNECT_SRC).
+      extraConnectOrigins: parseExtraConnectOrigins(process.env.CSP_EXTRA_CONNECT_SRC),
+      // Même configuration que les clients S3, y compris les valeurs chargées depuis .env.
+      s3Endpoint: configService.get<string>('S3_ENDPOINT'),
+      s3PublicEndpoint: configService.get<string>('S3_PUBLIC_ENDPOINT'),
+    }),
+  );
 
   if (process.env.DISABLE_INDEXING === 'true') {
     app.use((_req: Request, res: Response, next: NextFunction) => {
