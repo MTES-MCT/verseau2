@@ -94,12 +94,19 @@ export class LanceleauRepository implements LanceleauGateway {
   }
 
   async findAgByLogin(login: string): Promise<AgByLogin | null> {
-    const ag = await this.agRepository
+    const rows = await this.agRepository
       .createQueryBuilder('ag')
+      .select('ag.itvCdn', 'itvCdn')
+      .addSelect('ag.prCdn', 'prCdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
       .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
-      .getOne();
+      .getRawMany<Pick<AgEntity, 'itvCdn' | 'prCdn'>>();
 
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_LOGIN');
+    }
+
+    const [ag] = rows;
     if (!ag) {
       return null;
     }
@@ -147,24 +154,35 @@ export class LanceleauRepository implements LanceleauGateway {
   }
 
   async findSiretByLogin(login: string): Promise<string | null> {
-    const row = await this.itvRepository
+    const rows = await this.itvRepository
       .createQueryBuilder('itv')
       .select('itv.itv_rfa', 'itvRfa')
       .innerJoin(AgEntity, 'ag', 'ag.itv_cdn = itv.itv_cdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
       .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
-      .getRawOne<{ itvRfa: string | null }>();
+      .getRawMany<{ itvRfa: string | null }>();
+
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_LOGIN');
+    }
+
+    const [row] = rows;
     return row?.itvRfa ?? null;
   }
 
   async findOrionContactByLogin(login: string): Promise<OrionContact | null> {
-    const row = await this.orionCredentialsRepository
+    const rows = await this.orionCredentialsRepository
       .createQueryBuilder('oc')
       .select('oc.lastName', 'nom')
       .addSelect('oc.firstName', 'prenom')
       .where('TRIM(oc.login_lb) = :login', { login: login.trim() })
-      .getRawOne<OrionContact>();
+      .getRawMany<OrionContact>();
 
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_LOGIN');
+    }
+
+    const [row] = rows;
     if (!row) {
       return null;
     }
