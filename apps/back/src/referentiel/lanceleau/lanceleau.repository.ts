@@ -38,7 +38,19 @@ export class LanceleauRepository implements LanceleauGateway {
   ) {}
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
-    const itv = await this.itvRepository.findOne({ where: { itvCdn } });
+    const rows = await this.itvRepository
+      .createQueryBuilder('itv')
+      .select('itv.itvCdn', 'itvCdn')
+      .addSelect('itv.itvNomLb', 'itvNomLb')
+      .addSelect('itv.itvRfa', 'itvRfa')
+      .where('itv.itvCdn = :itvCdn', { itvCdn })
+      .getRawMany<Pick<ItvEntity, 'itvCdn' | 'itvNomLb' | 'itvRfa'>>();
+
+    if (rows.length > 1) {
+      throw new Error('DUPLICATE_INTERVENANT_ID');
+    }
+
+    const [itv] = rows;
     if (!itv) {
       return null;
     }

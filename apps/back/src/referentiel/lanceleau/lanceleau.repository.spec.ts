@@ -61,6 +61,35 @@ describe('LanceleauRepository', () => {
     repository = module.get(LanceleauRepository);
   });
 
+  describe('findIntervenantById', () => {
+    it('returns the matching intervenant with its name and SIRET', async () => {
+      queryBuilder.getRawMany.mockResolvedValue([{ itvCdn: 42, itvNomLb: 'Intervenant', itvRfa: '12345678901234' }]);
+
+      await expect(repository.findIntervenantById(42)).resolves.toEqual({
+        intervenantId: 42,
+        intervenantNom: 'Intervenant',
+        intervenantSiret: '12345678901234',
+      });
+
+      expect(queryBuilder.select).toHaveBeenCalledWith('itv.itvCdn', 'itvCdn');
+      expect(queryBuilder.addSelect).toHaveBeenCalledWith('itv.itvNomLb', 'itvNomLb');
+      expect(queryBuilder.addSelect).toHaveBeenCalledWith('itv.itvRfa', 'itvRfa');
+      expect(queryBuilder.where).toHaveBeenCalledWith('itv.itvCdn = :itvCdn', { itvCdn: 42 });
+    });
+
+    it('returns null when no intervenant matches the ID', async () => {
+      await expect(repository.findIntervenantById(42)).resolves.toBeNull();
+    });
+
+    it.each([false, true])('throws for multiple rows (identical values: %s)', async (identical) => {
+      const row = { itvCdn: 42, itvNomLb: 'Intervenant', itvRfa: '12345678901234' };
+      const otherRow = identical ? { ...row } : { ...row, itvNomLb: 'Other intervenant', itvRfa: '12345678901235' };
+      queryBuilder.getRawMany.mockResolvedValue([row, otherRow]);
+
+      await expect(repository.findIntervenantById(42)).rejects.toThrow('DUPLICATE_INTERVENANT_ID');
+    });
+  });
+
   it('should find and normalize an Orion contact by login', async () => {
     queryBuilder.getRawMany.mockResolvedValue([{ nom: '  Doe  ', prenom: '  John  ' }]);
 
