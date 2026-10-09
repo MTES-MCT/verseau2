@@ -74,10 +74,15 @@ export class AuthenticationMockService implements Authentication {
   }
 
   getOIDCConfiguration(): Promise<OIDCConfiguration> {
+    const frontendOrigin = (this.configService.get<string>('CORS_ORIGIN') || 'http://localhost:5180').replace(
+      /\/+$/,
+      '',
+    );
+
     return Promise.resolve({
-      authorizationEndpoint: 'http://localhost:5173/mock_authorization',
+      authorizationEndpoint: `${frontendOrigin}/mock_authorization`,
       clientId: 'mock-client-id',
-      redirectUri: 'http://localhost:5173/dashboard',
+      redirectUri: `${frontendOrigin}/dashboard`,
       scope: 'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations',
     });
   }
