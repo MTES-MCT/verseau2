@@ -21,6 +21,20 @@ pnpm --filter back lint              # Lint backend
 pnpm --filter front lint             # Lint frontend
 ```
 
+## Container Development
+
+Run from the repository root (frontend: **5180**, backend: **3010**):
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/verseau2 \
+S3_ENDPOINT=http://s3mock.verseau2-local.orb.local \
+OIDC_REDIRECT_URI=http://localhost:5180/callback \
+PORT=3010 \
+CORS_ORIGIN=http://localhost:5180 \
+VITE_API_BASE_URL=http://localhost:3010/api \
+pnpm exec concurrently "pnpm dev:back" "pnpm --filter front dev --port 5180 --strictPort"
+```
+
 ## Memory System
 
 This project uses a 2-layer memory structure in `.agent-memory/`.
