@@ -22,9 +22,9 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
     lines.push(`Environnement : ${environment.isProduction ? 'PRODUCTION' : environment.label}`);
   }
   if (error !== undefined) {
-    lines.push(`Erreur : ${error}`);
+    lines.push(`❌ Erreur : ${error}`);
   } else if (skipped) {
-    lines.push('Aucun nouveau dump : ce fichier a déjà été restauré.');
+    lines.push('⏭️ Aucun nouveau dump : ce fichier a déjà été restauré.');
   }
 
   const seconds = Math.floor(durationMs / 1000);
@@ -41,7 +41,7 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
       lines.push(`- ${item.latestParis?.slice(0, 10) ?? 'valeur nulle'} : ${item.source}`);
     }
   } catch {
-    lines.push('- fraîcheur indisponible');
+    lines.push('- ⚠️ fraîcheur indisponible');
   }
 
   const logsUrl = loadLogsUrl();
@@ -56,7 +56,7 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
 
   const environmentLineIndex = 1;
   const html = lines
-    .map((line, index) => (index === environmentLineIndex ? 'Environnement : <strong>PRODUCTION</strong>' : escapeHtml(line)))
+    .map((line, index) => (index === environmentLineIndex ? 'Environnement : <strong>! PRODUCTION !</strong>' : escapeHtml(line)))
     .join('<br>');
   return { text, html };
 }

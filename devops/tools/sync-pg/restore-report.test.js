@@ -108,7 +108,7 @@ test('highlights the production environment in bold HTML while keeping a plain-t
   const { createReport } = loadReport({ environment: { ...env, SYNC_PG_ENV: 'production' } });
   const { text, html } = await createReport({ ...report, error: '<script> & "quotes"' });
   assert.ok(text.startsWith('Bilan de restauration PostgreSQL : ERREUR\nEnvironnement : PRODUCTION\n'));
-  assert.ok(html.startsWith('Bilan de restauration PostgreSQL : ERREUR<br>Environnement : <strong>PRODUCTION</strong><br>Erreur : &lt;script&gt; &amp; &quot;quotes&quot;'));
+  assert.ok(html.startsWith('Bilan de restauration PostgreSQL : ERREUR<br>Environnement : <strong>! PRODUCTION !</strong><br>❌ Erreur : &lt;script&gt; &amp; &quot;quotes&quot;'));
 });
 
 for (const [environmentValue, expected] of [[undefined, undefined], ['Recette', 'Recette']]) {
@@ -148,7 +148,7 @@ test('reports an already restored dump as skipped rather than successful', async
     ...report,
     skipped: true,
   });
-  assert.ok(html.includes('Environnement : <strong>PRODUCTION</strong>'));
+  assert.ok(html.includes('Environnement : <strong>! PRODUCTION !</strong>'));
   assert.ok(html.includes('Aucun nouveau dump : ce fichier a déjà été restauré.'));
 });
 
