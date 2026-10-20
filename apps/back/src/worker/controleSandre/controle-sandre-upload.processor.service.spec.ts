@@ -53,6 +53,20 @@ describe('ControleSandreUploadProcessorService', () => {
     service = module.get<ControleSandreUploadProcessorService>(ControleSandreUploadProcessorService);
   });
 
+  it('uploads the XML and enqueues polling with native identifiers', async () => {
+    const reference = { sessionId: 'session-1', taskId: 'task-1' };
+    (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from('<xml/>'));
+    (mockSandreService.validateFile as jest.Mock).mockResolvedValue(reference);
+    (mockQueueService.send as jest.Mock).mockResolvedValue('job-1');
+    await service.process({ depotId: 'dep_1', filePath: 'file.xml' });
+    expect(mockSandreService.validateFile).toHaveBeenCalledWith({ xml: Buffer.from('<xml/>') });
+    expect(mockQueueService.send).toHaveBeenCalledWith(
+      'controle_sandre_poll',
+      { depotId: 'dep_1', ...reference, attemptCount: 0 },
+      expect.anything(),
+    );
+  });
+
   it('should keep retry behavior before the last attempt', async () => {
     const error = new Error('SANDRE unavailable');
     (mockS3.download as jest.Mock).mockResolvedValue(Buffer.from('<xml />'));

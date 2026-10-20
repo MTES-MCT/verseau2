@@ -44,22 +44,15 @@ export class ControleSandreUploadProcessorService implements AsyncTask<ControleS
       });
 
       this.logger.log(`Depot ${depotId} - Uploading file to SANDRE`);
-      const tokenResponse = await this.sandreService.validateFile({
-        xml: file,
-        xsd: process.env.SANDRE_XSD || 'FCT_ASSAIN;4',
-        nomSI: process.env.SANDRE_NOM_SI || 'Verseau2',
-        versionSI: process.env.SANDRE_VERSION_SI || '1.0',
-      });
+      const reference = await this.sandreService.validateFile({ xml: file });
 
-      this.logger.log(`Depot ${depotId} - File uploaded to SANDRE`, {
-        jeton: tokenResponse.jeton,
-      });
+      this.logger.log(`Depot ${depotId} - File uploaded to SANDRE`, reference);
 
       // Keep the production delay by default, but allow faster polling in tests.
-      this.logger.log(`Depot ${depotId} - Enqueuing poll job`, { jeton: tokenResponse.jeton });
+      this.logger.log(`Depot ${depotId} - Enqueuing poll job`, reference);
       await this.queueService.send(
         QueueName.controle_sandre_poll,
-        { depotId, jeton: tokenResponse.jeton, attemptCount: 0 },
+        { depotId, ...reference, attemptCount: 0 },
         { startAfter: SANDRE_POLL_INTERVAL_SECONDS },
       );
 

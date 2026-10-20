@@ -2,17 +2,21 @@ import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
 import { z } from 'zod';
-import { SandreTokenResponse, SandreUploadParams, SandreValidationResult } from './sandre';
+import type { SandreTaskReference, SandreUploadParams, SandreValidationResult } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
-const sandreTokenSchema = z.object({
-  token: z.object({
-    jeton: z.string().regex(/^[A-Za-z0-9_-]+$/),
-    lienAcquittement: z.string(),
-    lienCertificat: z.string(),
-  }),
-});
+export class SandreTaskFailedError extends Error {}
 
+const identifier = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[A-Za-z0-9_-]+$/);
+const uploadSchema = z.object({ sessionId: identifier, taskId: identifier });
+const taskSchema = z.object({
+  taskId: identifier,
+  status: z.enum(['PENDING', 'RUNNING', 'DONE', 'FAILED']),
+});
 const sandreErreurSchema = z.object({
   CdErreur: z.string(),
   DescriptifErreur: z.string(),
@@ -21,12 +25,11 @@ const sandreErreurSchema = z.object({
   ColonneErreur: z.string().optional(),
   '@attributes': z.object({ SeveriteErreur: z.string() }).optional(),
 });
-
 const sandreValidationSchema = z.object({
   ACQ: z.object({
     AccuseReception: z.object({
       Acceptation: z.enum(['0', '1', '2', '3']),
-      Jeton: z.string(),
+      Jeton: z.string().min(1),
       CodeScenario: z.string(),
       VersionScenario: z.string(),
       'Erreur@attributes': z.object({ SeveriteErreur: z.string() }).optional(),
@@ -51,10 +54,18 @@ const sandreValidationSchema = z.object({
 @Injectable()
 export class SandreService {
   private readonly httpClient: AxiosInstance;
-  private readonly baseUrl = process.env.SANDRE_API_URL || 'https://www.sandre.eaufrance.fr/PS5/api';
+  private readonly baseUrl: string;
 
   constructor(private readonly logger: LoggerService) {
     this.logger.setContext(SandreService.name);
+    const url = new URL(process.env.SANDRE_API_URL || 'https://www.sandre.eaufrance.fr/parseur');
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+      throw new Error('SANDRE_API_URL must be an HTTPS base URL without credentials/query/fragment');
+    }
+    if (url.hostname === 'sandre.eaufrance.fr') {
+      url.hostname = 'www.sandre.eaufrance.fr';
+    }
+    this.baseUrl = url.toString().replace(/\/$/, '');
     this.httpClient = axios.create({
       timeout: 30000, // 30 seconds timeout
       maxRedirects: 0, // Never send XML or trust a response from another origin/protocol
@@ -63,122 +74,95 @@ export class SandreService {
     });
   }
 
-  /**
-   * Upload a file to SANDRE for validation
-   * @param params Upload parameters including file and scenario information
-   * @returns Token response with links to check validation status
-   */
-  async validateFile(params: SandreUploadParams): Promise<SandreTokenResponse> {
-    this.logger.log('Validating file with SANDRE', {
-      xsd: params.xsd,
-      nomSI: params.nomSI,
-      versionSI: params.versionSI,
-    });
-
-    const formData = new FormData();
-    formData.append('XML', params.xml, {
-      filename: 'file.xml',
-      contentType: 'application/xml',
-    });
-
-    // Required fields
-    formData.append('XSD', params.xsd);
-    formData.append('NomSI', params.nomSI);
-    formData.append('VersionSI', params.versionSI);
-
-    // Optional fields
-    if (params.nomIntervenant) {
-      formData.append('NomIntervenant', params.nomIntervenant);
-    }
-    if (params.cdIntervenant) {
-      formData.append('CdIntervenant', params.cdIntervenant);
-    }
-    if (params.schemeAgencyID) {
-      formData.append('schemeAgencyID', params.schemeAgencyID);
-    }
-    if (params.email) {
-      formData.append('email', params.email);
-    }
-    if (params.nom) {
-      formData.append('nom', params.nom);
-    }
-    if (params.prenom) {
-      formData.append('prenom', params.prenom);
-    }
-    if (params.nomService) {
-      formData.append('NomService', params.nomService);
-    }
-
-    try {
-      const response = await this.httpClient.post<unknown>(`${this.baseUrl}/upload`, formData, {
-        headers: {
-          ...formData.getHeaders(),
-        },
+  async validateFile(params: SandreUploadParams): Promise<SandreTaskReference> {
+    const form = new FormData();
+    form.append('file', params.xml, { filename: 'file.xml', contentType: 'application/xml' });
+    const response = await this.httpClient
+      .post<unknown>(`${this.baseUrl}/api/v1/upload-and-validate`, form, {
+        headers: { ...form.getHeaders(), Accept: 'application/json' },
+        params: { rgpdConsent: true },
         responseType: 'json',
+      })
+      .catch((error: unknown) => {
+        if (axios.isAxiosError<unknown>(error) && error.response) {
+          const data = error.response.data;
+          const body = typeof data === 'string' ? data : (JSON.stringify(data) ?? '');
+          this.logger.error('SANDRE upload rejected', {
+            statusCode: error.response.status,
+            responseBody: body.slice(0, 4096),
+            responseBodyTruncated: body.length > 4096,
+          });
+        }
+        throw error;
       });
-      // Reject malformed responses before using the token to schedule polling.
-      const tokenResponse = sandreTokenSchema.parse(response.data).token;
-
-      // Log the raw response for debugging
-      this.logger.debug('SANDRE upload response received', {
-        jeton: tokenResponse.jeton,
-        lienAcquittement: tokenResponse.lienAcquittement,
-        lienCertificat: tokenResponse.lienCertificat,
-        statusCode: response.status,
-      });
-
-      this.logger.log('File uploaded successfully', {
-        jeton: tokenResponse.jeton,
-      });
-
-      return tokenResponse;
-    } catch (error) {
-      this.logger.debug('Failed to upload file to SANDRE', error);
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          `SANDRE upload failed: ${error.message}${error.response ? ` - Status: ${error.response.status}` : ''}`,
-          { cause: error },
-        );
-      }
-      throw error;
+    const body = typeof response.data === 'string' ? response.data : (JSON.stringify(response.data) ?? '');
+    this.logger.log('SANDRE upload response', {
+      statusCode: response.status,
+      responseBody: body.slice(0, 4096),
+      responseBodyTruncated: body.length > 4096,
+    });
+    // The prose specifies 202; the generated OpenAPI response table specifies 200.
+    if (response.status !== 202 && response.status !== 200) {
+      throw new Error('Unexpected SANDRE upload HTTP status');
     }
+    const upload = uploadSchema.parse(response.data);
+    this.logger.log('File uploaded to SANDRE', { sessionId: upload.sessionId, taskId: upload.taskId });
+    return { sessionId: upload.sessionId, taskId: upload.taskId };
   }
 
-  /**
-   * Get validation result for a given token
-   * @param token The jeton token from validateFile response
-   * @returns Validation result with status and errors
-   */
-  async getValidationResult(token: string): Promise<SandreValidationResult> {
-    this.logger.debug('Fetching validation result', { jeton: token });
-
-    try {
-      const response = await this.httpClient.get<unknown>(`${this.baseUrl}/acquittement/${encodeURIComponent(token)}`, {
-        headers: {
-          Accept: 'application/json',
-        },
-        responseType: 'json',
-      });
-      // Validate every field consumed by the poller/mapper before it can decide conformity.
-      // Keep the original document (including additional SANDRE metadata) for persistence.
-      sandreValidationSchema.parse(response.data);
-      const validationResult = response.data as SandreValidationResult;
-      if (validationResult.ACQ.AccuseReception.Jeton !== token) {
-        throw new Error('SANDRE acquittement token does not match the requested token');
-      }
-
-      return validationResult;
-    } catch (error) {
-      this.logger.debug('Failed to fetch validation result', error);
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          `SANDRE validation fetch failed: ${error.message}${
-            error.response ? ` - Status: ${error.response.status}` : ''
-          }`,
-          { cause: error },
-        );
-      }
-      throw error;
+  /** null means still running, not non-conformant. Only DONE permits reading the ACQ. */
+  async getValidationResult(reference: SandreTaskReference): Promise<SandreValidationResult | null> {
+    identifier.parse(reference.sessionId);
+    identifier.parse(reference.taskId);
+    const response = await this.httpClient.get<unknown>(`${this.baseUrl}/api/v1/validation/tasks/${reference.taskId}`, {
+      ...this.jsonOptions(),
+      validateStatus: (status) => [200, 202, 422].includes(status),
+    });
+    const task = taskSchema.parse(response.data);
+    if (task.taskId !== reference.taskId) {
+      throw new Error('SANDRE task identifier mismatch');
     }
+    if (response.status === 422 && task.status === 'FAILED') {
+      throw new SandreTaskFailedError('SANDRE task failed technically');
+    }
+    if (response.status === 202 && (task.status === 'PENDING' || task.status === 'RUNNING')) {
+      return null;
+    }
+    if (response.status !== 200 || task.status !== 'DONE') {
+      throw new Error('Inconsistent SANDRE task status');
+    }
+    const acq = await this.httpClient.get<unknown>(
+      `${this.baseUrl}/api/v1/acquittement/${reference.taskId}/json`,
+      this.jsonOptions(),
+    );
+    if (acq.status !== 200) {
+      throw new Error('Unexpected SANDRE acquittement HTTP status');
+    }
+    sandreValidationSchema.parse(acq.data);
+    const result = acq.data as SandreValidationResult;
+    const receipt = result.ACQ.AccuseReception;
+    if (!['1', '2'].includes(receipt.Acceptation)) {
+      throw new Error('SANDRE DONE task returned a non-final ACQ');
+    }
+    return result;
+  }
+
+  /** Finish polling jobs queued before the native API migration. */
+  async getLegacyValidationResult(jeton: string): Promise<SandreValidationResult> {
+    identifier.parse(jeton);
+    const response = await this.httpClient.get<unknown>(
+      `https://www.sandre.eaufrance.fr/PS5/api/acquittement/${jeton}`,
+      this.jsonOptions(),
+    );
+    sandreValidationSchema.parse(response.data);
+    const result = response.data as SandreValidationResult;
+    if (result.ACQ.AccuseReception.Jeton !== jeton) {
+      throw new Error('Legacy SANDRE token mismatch');
+    }
+    return result;
+  }
+
+  private jsonOptions() {
+    return { headers: { Accept: 'application/json' }, responseType: 'json' as const };
   }
 }

@@ -45,18 +45,13 @@ export function filterControlesByActiveFilters(
 }
 
 export function matchesSandreFilters(
-  controle: Pick<ControleSandreView, 'success'>,
+  controle: Pick<ControleSandreView, 'success' | 'evenementType'>,
   activeFilters: ControleFilterSet,
 ): boolean {
-  if (activeFilters.size === 0) {
-    return true;
-  }
-
-  if (controle.success) {
-    return activeFilters.has('success');
-  }
-
-  return activeFilters.has('error');
+  return matchesControleFilters(
+    { ...controle, evenementType: controle.evenementType ?? EvenementType.ERREUR },
+    activeFilters,
+  );
 }
 
 export function filterSandreControlesByActiveFilters(
@@ -71,6 +66,8 @@ export function getSandreStatistics(controles: ControleSandreView[]): ControleSt
     (statistics, controle) => {
       if (controle.success) {
         statistics.successCount++;
+      } else if (controle.evenementType === EvenementType.AVERTISSEMENT) {
+        statistics.warningCount++;
       } else {
         statistics.errorCount++;
       }

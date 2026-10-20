@@ -1,38 +1,16 @@
 import { SandreAcceptationStatus } from '@lib/dossier';
 
 export interface SandreUploadParams {
-  /** File to validate (ZIP or XML) - can be Buffer or file path */
+  /** One XML document; ZIP/multiple tasks are deliberately unsupported. */
   xml: Buffer;
-  /** Scenario code and version in format "SCENARIO;VERSION" (e.g., "LABO_DEST;1") */
-  xsd: string;
-  /** Name of the client system */
-  nomSI: string;
-  /** Version of the client system */
-  versionSI: string;
-  /** Optional: Name of sender */
-  nomIntervenant?: string;
-  /** Optional: Identifier (e.g., SIRET) */
-  cdIntervenant?: string;
-  /** Optional: Code origin (e.g., SIRET) */
-  schemeAgencyID?: string;
-  /** Optional: Email of sender */
-  email?: string;
-  /** Optional: Contact last name */
-  nom?: string;
-  /** Optional: Contact first name */
-  prenom?: string;
-  /** Optional: Name of service */
-  nomService?: string;
 }
 
-export interface SandreTokenResponse {
-  /** Alphanumeric token identifying the request */
-  jeton: string;
-  /** URL to retrieve XML result */
-  lienAcquittement: string;
-  /** URL to retrieve HTML certificate */
-  lienCertificat: string;
+export interface SandreTaskReference {
+  sessionId: string;
+  taskId: string;
 }
+
+export type SandrePollJob = { depotId: string; attemptCount: number } & (SandreTaskReference | { jeton: string });
 
 export interface SandreError {
   /** Error code */

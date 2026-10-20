@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ControleSandrePollProcessorService } from './controle-sandre-poll.processor.service';
-import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
+import { SandreService, SandreTaskFailedError } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponseSandre.gateway';
 import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
@@ -37,6 +37,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
 
     mockSandreService = {
       getValidationResult: jest.fn(),
+      getLegacyValidationResult: jest.fn(),
     } as unknown as SandreService;
 
     mockDepotService = {
@@ -74,7 +75,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
   });
 
   it('dispatches the SFTP job when the SANDRE result is conformant', async () => {
-    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(1));
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockResolvedValue(aValidationResult(1));
 
     await service.process({ depotId, jeton, attemptCount: 0 });
 
@@ -109,7 +110,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
   });
 
   it('rejects the depot and notifies the deposant when the SANDRE result is non-conformant', async () => {
-    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(2));
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockResolvedValue(aValidationResult(2));
 
     await service.process({ depotId, jeton, attemptCount: 0 });
 
@@ -134,7 +135,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
   });
 
   it('logs the first pending poll at log level so waiting is visible without debug', async () => {
-    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
 
     await service.process({ depotId, jeton, attemptCount: 0 });
 
@@ -151,7 +152,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
   });
 
   it('re-enqueues subsequent pending polls without repetitive log-level output', async () => {
-    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
 
     await service.process({ depotId, jeton, attemptCount: 3 });
 
@@ -166,7 +167,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
   });
 
   it('rejects the depot without rapport when polling times out', async () => {
-    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockResolvedValue(aValidationResult(3));
 
     await service.process({ depotId, jeton, attemptCount: 240 });
 
@@ -183,7 +184,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
 
   it('logs the polling error and retry without changing the retry behavior', async () => {
     const error = new Error('SANDRE temporarily unavailable');
-    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(error);
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockRejectedValue(error);
 
     await service.process({ depotId, jeton, attemptCount: 3 });
 
@@ -208,7 +209,7 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
 
   it('logs an exhausted polling failure as an error and rejects without rapport', async () => {
     const error = new Error('SANDRE unavailable');
-    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(error);
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockRejectedValue(error);
 
     await service.process({ depotId, jeton, attemptCount: 240 });
 
@@ -226,12 +227,65 @@ describe('ControleSandrePollProcessorService - final decision point', () => {
 
   it('keeps unexpected polling errors at error level even when another attempt is scheduled', async () => {
     const error = new Error('Unexpected persistence failure');
-    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(error);
+    (mockSandreService.getLegacyValidationResult as jest.Mock).mockRejectedValue(error);
 
     await service.process({ depotId, jeton, attemptCount: 3 });
 
     expect(loggerValueMock.error).toHaveBeenCalledTimes(1);
     expect(loggerValueMock.warn).not.toHaveBeenCalled();
     expect(mockQueueService.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains native session/task identifiers across pending polls', async () => {
+    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(null);
+    const job = { depotId, sessionId: 'session-1', taskId: 'task-1', attemptCount: 0 };
+    await service.process(job);
+    expect(mockSandreService.getValidationResult).toHaveBeenCalledWith(job);
+    expect(mockSandreService.getLegacyValidationResult).not.toHaveBeenCalled();
+    expect(mockQueueService.send).toHaveBeenCalledWith(
+      QueueName.controle_sandre_poll,
+      { ...job, attemptCount: 1 },
+      expect.anything(),
+    );
+    expect(mockReponseSandreGateway.createReponseSandre).not.toHaveBeenCalled();
+  });
+
+  it.each([1, 2])('persists final native ACQ %s with its original jeton and existing mapping', async (acceptation) => {
+    (mockSandreService.getValidationResult as jest.Mock).mockResolvedValue(aValidationResult(acceptation));
+    await service.process({ depotId, sessionId: 'session-1', taskId: 'task-1', attemptCount: 0 });
+    expect(mockReponseSandreGateway.createReponseSandre).toHaveBeenCalledWith(
+      expect.objectContaining({
+        depotId,
+        jeton,
+        isConformant: acceptation === 1,
+        raw: aValidationResult(acceptation),
+      }),
+    );
+    expect(mockQueueService.send).toHaveBeenCalledWith(
+      acceptation === 1 ? QueueName.send_to_sftp : QueueName.diffusion_rapport,
+      expect.anything(),
+    );
+  });
+
+  it('rejects FAILED tasks technically without producing a non-conformance report or polling forever', async () => {
+    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(new SandreTaskFailedError('FAILED'));
+    await service.process({ depotId, sessionId: 'session-1', taskId: 'task-1', attemptCount: 0 });
+    expect(mockDepotService.update).toHaveBeenCalledWith(
+      depotId,
+      expect.objectContaining({ error: DepotError.SANDRE_POLL_FAILED }),
+    );
+    expect(mockReponseSandreGateway.createReponseSandre).not.toHaveBeenCalled();
+    expect(mockQueueService.send).not.toHaveBeenCalled();
+  });
+
+  it('retains native identifiers on transient HTTP/ACQ errors', async () => {
+    (mockSandreService.getValidationResult as jest.Mock).mockRejectedValue(new Error('503'));
+    const job = { depotId, sessionId: 'session-1', taskId: 'task-1', attemptCount: 3 };
+    await service.process(job);
+    expect(mockQueueService.send).toHaveBeenCalledWith(
+      QueueName.controle_sandre_poll,
+      { ...job, attemptCount: 4 },
+      expect.anything(),
+    );
   });
 });

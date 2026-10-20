@@ -15,11 +15,18 @@ type ControleGroupSandreProps = {
   activeFilters: ControleFilterSet;
 };
 
-function getResultBadge(success: boolean) {
+function getResultBadge(success: boolean, evenementType?: EvenementType) {
   if (success) {
     return (
       <Badge severity="success" small>
         Succès
+      </Badge>
+    );
+  }
+  if (evenementType === EvenementType.AVERTISSEMENT) {
+    return (
+      <Badge severity="warning" small>
+        Avertissement
       </Badge>
     );
   }
@@ -55,14 +62,18 @@ export function ControleSandreGroup({ title, controles, activeFilters }: Control
 
       if (group.length === 1) {
         const c = group[0];
-        return [displayName, getResultBadge(c.success), c.message || '-'];
+        return [displayName, getResultBadge(c.success, c.evenementType), c.message || '-'];
       }
 
-      const groupErrorCount = group.filter((c) => !c.success).length;
-      const groupMessage =
-        groupErrorCount > 0
-          ? `Voir les ${groupErrorCount} erreur${groupErrorCount > 1 ? 's' : ''}`
-          : `Détails (${group.length})`;
+      const groupErrorCount = group.filter((c) => !c.success && c.evenementType !== EvenementType.AVERTISSEMENT).length;
+      const groupWarningCount = group.filter(
+        (c) => !c.success && c.evenementType === EvenementType.AVERTISSEMENT,
+      ).length;
+      const counts = [
+        groupErrorCount > 0 ? `${groupErrorCount} erreur${groupErrorCount > 1 ? 's' : ''}` : null,
+        groupWarningCount > 0 ? `${groupWarningCount} avertissement${groupWarningCount > 1 ? 's' : ''}` : null,
+      ].filter(Boolean);
+      const groupMessage = counts.length > 0 ? `Voir les ${counts.join(' et ')}` : `Détails (${group.length})`;
 
       const label = (
         <div className="fr-flex fr-align-items-center">
@@ -82,12 +93,15 @@ export function ControleSandreGroup({ title, controles, activeFilters }: Control
 
       return [
         displayName,
-        getResultBadge(groupErrorCount === 0),
+        getResultBadge(
+          groupErrorCount === 0 && groupWarningCount === 0,
+          groupErrorCount === 0 && groupWarningCount > 0 ? EvenementType.AVERTISSEMENT : EvenementType.ERREUR,
+        ),
         <Accordion label={label} key={name} className={`${fr.cx('fr-m-0')} accordion-no-border`} defaultExpanded={true}>
           <ul className="zebra-list fr-p-0 fr-m-0">
             {Object.entries(messageCounts).map(([msg, count], index) => {
-              const success = group.find((c) => (c.message || '-') === msg)?.success ?? true;
-              const { icon, color } = getIconInfo(success, EvenementType.ERREUR);
+              const controle = group.find((c) => (c.message || '-') === msg);
+              const { icon, color } = getIconInfo(controle?.success ?? true, controle?.evenementType);
 
               return (
                 <li key={index} className="fr-flex fr-align-items-start fr-p-1w">
