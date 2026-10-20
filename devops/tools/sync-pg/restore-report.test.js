@@ -250,6 +250,7 @@ for (const { error, missingConfig } of [
       async validateStagingSchemas() { return {}; }
       async swapStagingToLive() {}
       async createVSteuSclItvMaterializedView() {}
+      async grantReadWriteAccess() {}
     }
     const modules = {
       fs: {
@@ -309,6 +310,7 @@ for (const [lastRestoredDump, shouldRestore] of [
       async validateStagingSchemas() { calls.push('validate'); return {}; }
       async swapStagingToLive(source) { assert.equal(source, 'dump.backup'); calls.push('swap'); }
       async createVSteuSclItvMaterializedView() { calls.push('materialized view'); }
+      async grantReadWriteAccess() { calls.push('read/write grants'); }
     }
     const modules = {
       fs: { unlinkSync() { calls.push('delete temporary dump'); } },
@@ -335,7 +337,7 @@ for (const [lastRestoredDump, shouldRestore] of [
       process: { exit: assert.fail },
     });
     assert.deepEqual(calls, shouldRestore
-      ? ['list', 'last restored', 'download', 'verify', 'clean staging', 'restore', 'validate', 'swap', 'materialized view', 'delete temporary dump', 'report']
-      : ['list', 'last restored', 'report']);
+      ? ['list', 'last restored', 'download', 'verify', 'clean staging', 'restore', 'validate', 'swap', 'materialized view', 'read/write grants', 'delete temporary dump', 'report']
+      : ['list', 'last restored', 'read/write grants', 'report']);
   });
 }
