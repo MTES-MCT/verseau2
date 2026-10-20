@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { LoggerService } from '@shared/logger/logger.service';
 import { AsyncTask } from '@worker/asyncTask';
-import { SandreService } from '@dossier/controle/technique/sandre/sandre.service';
+import { SandreService, SandreTaskFailedError } from '@dossier/controle/technique/sandre/sandre.service';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, ControleSandreStatus, EtapeMetier, SandreAcceptationStatus } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
@@ -9,16 +9,13 @@ import { ReponseSandreGateway } from '@dossier/controle/technique/sandre/reponse
 import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
 import type { DiffusionRapportJobData, Queue } from '@queue/queue';
 import { mapSandreErrors } from '@dossier/controle/technique/sandre/sandre.mapper';
+import type { SandrePollJob } from '@dossier/controle/technique/sandre/sandre';
 
 const POLL_INTERVAL_SECONDS = Number(process.env.SANDRE_POLL_INTERVAL_SECONDS ?? '30');
 const MAX_ATTEMPTS = 240; // 240 * 30s = 2 hours
 
 @Injectable()
-export class ControleSandrePollProcessorService implements AsyncTask<{
-  depotId: string;
-  jeton: string;
-  attemptCount: number;
-}> {
+export class ControleSandrePollProcessorService implements AsyncTask<SandrePollJob> {
   constructor(
     private readonly sandreService: SandreService,
     private readonly depotService: DepotService,
@@ -29,15 +26,9 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
     this.logger.setContext(ControleSandrePollProcessorService.name);
   }
 
-  async process({
-    depotId,
-    jeton,
-    attemptCount,
-  }: {
-    depotId: string;
-    jeton: string;
-    attemptCount: number;
-  }): Promise<void> {
+  async process(job: SandrePollJob): Promise<void> {
+    const { depotId, attemptCount } = job;
+    const jeton = 'taskId' in job ? job.taskId : job.jeton;
     if (attemptCount === 0) {
       this.logger.log(`Depot ${depotId} - SANDRE polling started`, { jeton, maxAttempts: MAX_ATTEMPTS });
     }
@@ -49,8 +40,13 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
     try {
       // Poll the validation result from SANDRE
-      const validationResult = await this.sandreService.getValidationResult(jeton);
-      const acceptationStatus: SandreAcceptationStatus = Number(validationResult.ACQ.AccuseReception.Acceptation);
+      const validationResult =
+        'taskId' in job
+          ? await this.sandreService.getValidationResult(job)
+          : await this.sandreService.getLegacyValidationResult(job.jeton);
+      const acceptationStatus: SandreAcceptationStatus = validationResult
+        ? Number(validationResult.ACQ.AccuseReception.Acceptation)
+        : SandreAcceptationStatus.PROCESSING;
 
       this.logger.debug(`Depot ${depotId} - SANDRE validation status`, {
         jeton,
@@ -89,13 +85,16 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
         await this.queueService.send(
           QueueName.controle_sandre_poll,
-          { depotId, jeton, attemptCount: attemptCount + 1 },
+          { ...job, attemptCount: attemptCount + 1 },
           { startAfter: POLL_INTERVAL_SECONDS },
         );
 
         return; // Job terminates here, will be re-executed later
       }
 
+      if (!validationResult) {
+        throw new Error('Missing completed SANDRE result');
+      }
       // Result is final (CONFORMANT or NON_CONFORMANT) - process and finalize
       const isConformant = acceptationStatus === SandreAcceptationStatus.CONFORMANT;
       const errors = mapSandreErrors(validationResult.ACQ.AccuseReception);
@@ -112,7 +111,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
       // Create reponse_sandre with final result
       await this.reponseSandreGateway.createReponseSandre({
         depotId,
-        jeton,
+        jeton: validationResult.ACQ.AccuseReception.Jeton,
         acceptationStatus,
         isConformant,
         codeScenario: validationResult.ACQ.AccuseReception.CodeScenario,
@@ -166,7 +165,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
       this.logger.error(`Depot ${depotId} - SANDRE poll failed`, { error, jeton, attemptCount });
 
       // If we haven't exhausted attempts, re-enqueue
-      if (attemptCount < MAX_ATTEMPTS) {
+      if (!(error instanceof SandreTaskFailedError) && attemptCount < MAX_ATTEMPTS) {
         this.logger.log(`Depot ${depotId} - Error during poll, re-enqueuing`, {
           jeton,
           attemptCount: attemptCount + 1,
@@ -174,7 +173,7 @@ export class ControleSandrePollProcessorService implements AsyncTask<{
 
         await this.queueService.send(
           QueueName.controle_sandre_poll,
-          { depotId, jeton, attemptCount: attemptCount + 1 },
+          { ...job, attemptCount: attemptCount + 1 },
           { startAfter: POLL_INTERVAL_SECONDS },
         );
 
