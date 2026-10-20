@@ -110,6 +110,41 @@ describe('SandreService native contract', () => {
     expect(http.post).toHaveBeenCalledTimes(1);
   });
 
+  it('logs a successful upload response without request data or headers', async () => {
+    const data = { sessionId: reference.sessionId, taskId: reference.taskId };
+    http.post.mockResolvedValue({
+      status: 202,
+      data,
+      headers: { 'set-cookie': 'private-cookie' },
+      config: { data: '<private-xml/>', headers: { Authorization: 'private-token' } },
+    });
+
+    await expect(service.validateFile({ xml: Buffer.from('<private-xml/>') })).resolves.toEqual(reference);
+
+    expect(logger.log).toHaveBeenCalledWith('SANDRE upload response', {
+      statusCode: 202,
+      responseBody: JSON.stringify(data),
+      responseBodyTruncated: false,
+    });
+  });
+
+  it.each([{ sessionId: 's', taskIds: ['t'] }, '<html>Unexpected response</html>', 'x'.repeat(5000)])(
+    'logs bounded upload responses before schema validation (case %#)',
+    async (data) => {
+      http.post.mockResolvedValue({ status: 202, data });
+
+      await expect(service.validateFile({ xml: Buffer.from('<xml/>') })).rejects.toThrow();
+
+      const body = typeof data === 'string' ? data : JSON.stringify(data);
+      expect(logger.log).toHaveBeenCalledTimes(1);
+      expect(logger.log).toHaveBeenCalledWith('SANDRE upload response', {
+        statusCode: 202,
+        responseBody: body.slice(0, 4096),
+        responseBodyTruncated: body.length > 4096,
+      });
+    },
+  );
+
   it.each([400, 413, 429, 500, 'timeout'])('propagates upload failure %s to the worker', async (status) => {
     http.post.mockRejectedValue(new Error(String(status)));
     await expect(service.validateFile({ xml: Buffer.from('<xml/>') })).rejects.toThrow(String(status));

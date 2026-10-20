@@ -95,6 +95,12 @@ export class SandreService {
         }
         throw error;
       });
+    const body = typeof response.data === 'string' ? response.data : (JSON.stringify(response.data) ?? '');
+    this.logger.log('SANDRE upload response', {
+      statusCode: response.status,
+      responseBody: body.slice(0, 4096),
+      responseBodyTruncated: body.length > 4096,
+    });
     // The prose specifies 202; the generated OpenAPI response table specifies 200.
     if (response.status !== 202 && response.status !== 200) {
       throw new Error('Unexpected SANDRE upload HTTP status');
