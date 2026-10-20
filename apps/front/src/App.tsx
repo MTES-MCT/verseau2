@@ -15,8 +15,9 @@ import { EvenementDashboard } from './pages/suivi-regulier/evenement/EvenementDa
 import { BilanDashboard } from './pages/suivi-regulier/bilan/BilanDashboard';
 import { TransmissionASRetardDashboard } from './pages/suivi-regulier/transmissionASRetard/TransmissionASRetardDashboard';
 import { AccessibilityPage } from './pages/AccessibilityPage';
-import { APP_BASE_PATH } from './appConfig';
+import { APP_BASE_PATH, APP_ENV } from './appConfig';
 import { AppHeader } from './components/Header';
+import { EnvironmentWatermark } from './components/EnvironmentWatermark';
 import { AppFooter } from './components/Footer';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -30,7 +31,7 @@ function App() {
   const { authenticatedUser } = useAuth();
   const isExpertNational = authenticatedUser?.isExpertNational ?? false;
 
-  return (
+  const content = (
     <BrowserRouter basename={APP_BASE_PATH === '/' ? undefined : APP_BASE_PATH}>
       <AppHeader />
       <div className={`${fr.cx('fr-container')} app-container`}>
@@ -153,6 +154,12 @@ function App() {
       <AppFooter />
     </BrowserRouter>
   );
+
+  if (!APP_ENV?.trim()) {
+    return content;
+  }
+
+  return <EnvironmentWatermark>{content}</EnvironmentWatermark>;
 }
 
 export default App;

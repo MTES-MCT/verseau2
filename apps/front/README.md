@@ -1,3 +1,8 @@
+## Environment identifier
+
+Set `VITE_APP_ENV` at build time (for example, `staging`, `Recette`, or `development`). Non-production environments display their name as a small, faint, diagonal watermark repeated across the whole app, including the header and footer. It is painted as a background behind all content, not as an overlay; opaque controls and cards naturally cover it. The pattern stays fixed while scrolling, adapts to light/dark themes, and the environment is announced once to screen readers.
+
+When `VITE_APP_ENV` is unset or blank, `App` bypasses `EnvironmentWatermark` entirely, including in local development. Set `VITE_APP_ENV=development` explicitly to display `Développement`. Values `production` / `prod` (case-insensitive) also display no watermark. The existing browser-tab environment suffix is unchanged.
 
 ## Sentry
 
