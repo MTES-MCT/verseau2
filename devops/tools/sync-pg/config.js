@@ -19,5 +19,7 @@ module.exports = {
   },
   pg: {
     connectionString: process.env.DATABASE_URL,
+    readUsers: [...new Set((process.env.SYNC_PG_READ_USERS || '').split(',').map((user) => user.trim()).filter(Boolean))],
+    writeUsers: [...new Set((process.env.SYNC_PG_WRITE_USERS || '').split(',').map((user) => user.trim()).filter(Boolean))],
   },
 };
