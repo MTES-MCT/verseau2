@@ -8,6 +8,7 @@ import type { S3 } from '@infra/s3/s3';
 import type { TransferClient } from '@infra/transferClient/transferClient';
 import type { Queue, QueueJob, QueueOptions } from '@infra/queue/queue';
 import type { UserEntity } from '@user/user.entity';
+import { createHash } from 'node:crypto';
 // ============= Infrastructure Mocks =============
 
 /**
@@ -17,6 +18,35 @@ import type { UserEntity } from '@user/user.entity';
 export class S3TestMock implements S3 {
   private files: Map<string, Buffer> = new Map();
   uploads: Array<{ key: string; body: Buffer | Uint8Array | string; contentType?: string }> = [];
+
+  async createUploadUrl(key: string): Promise<string> {
+    return Promise.resolve(`https://s3.test/${key.split('/').map(encodeURIComponent).join('/')}`);
+  }
+
+  async head(key: string): Promise<{ size: number; contentType: string; etag: string } | null> {
+    const content = this.files.get(key);
+    return Promise.resolve(
+      content
+        ? {
+            size: content.length,
+            contentType: 'application/xml',
+            etag: createHash('sha256').update(content).digest('hex'),
+          }
+        : null,
+    );
+  }
+
+  async copy(source: string, destination: string, etag: string): Promise<void> {
+    if ((await this.head(source))?.etag !== etag) {
+      throw new Error('Source object changed');
+    }
+    this.files.set(destination, Buffer.from(this.files.get(source)!));
+  }
+
+  async delete(key: string): Promise<void> {
+    this.files.delete(key);
+    await Promise.resolve();
+  }
 
   async upload(key: string, body: Buffer | Uint8Array | string, contentType?: string): Promise<void> {
     const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body);
@@ -214,9 +244,11 @@ export class RoseauGatewayTestMock {
  */
 export class LanceleauGatewayTestMock {
   findIntervenantById = jest.fn().mockResolvedValue(null);
+  findOrionContactByEmail = jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
 
   reset(): void {
     this.findIntervenantById.mockClear().mockResolvedValue(null);
+    this.findOrionContactByEmail.mockClear().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
   }
 }
 
@@ -420,10 +452,10 @@ export class MasaGatewayTestMock {
  * Mock for ControleGateway.
  */
 export class ControleGatewayTestMock {
-  findControlesV2ByDepotId = jest.fn().mockResolvedValue([]);
+  findByDepotId = jest.fn().mockResolvedValue([]);
 
   reset(): void {
-    this.findControlesV2ByDepotId.mockClear().mockResolvedValue([]);
+    this.findByDepotId.mockClear().mockResolvedValue([]);
   }
 }
 

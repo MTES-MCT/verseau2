@@ -78,7 +78,7 @@ export class ConformiteController {
     @Query(new ZodValidationPipe(listConformiteSclRoute['query'])) query: RouteQuery<typeof listConformiteSclRoute>,
   ): Promise<RouteResponse<typeof listConformiteSclRoute>> {
     const response = await this.conformiteService.listConformiteScl({
-      authorizedSteuCdas: req.authorizedSteuCdas!,
+      authorizedSclCdas: req.authorizedSclCdas!,
       year: query.year,
       systemeCollecteCode: query.systemeCollecteCode,
       trancheObligationRfa: query.trancheObligationRfa, // TODO : remove trancheObligationRfa ?
@@ -101,7 +101,7 @@ export class ConformiteController {
     @Res() res: Response,
   ): Promise<void> {
     const csv = await this.conformiteService.exportConformiteSclCsv({
-      authorizedSteuCdas: req.authorizedSteuCdas!,
+      authorizedSclCdas: req.authorizedSclCdas!,
       year: query.year,
       systemeCollecteCode: query.systemeCollecteCode,
       trancheObligationRfa: query.trancheObligationRfa,

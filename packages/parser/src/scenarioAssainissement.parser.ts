@@ -128,53 +128,171 @@ export function parseScenarioAssainissementXml(xmlInput: string): Promise<FctAss
   });
 }
 
-export function addNameTagToXml(xml: string, nomContact: string): string {
-  const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
-  const hasNomContactInEmetteur = /<Emetteur>[\s\S]*?<NomContact>[\s\S]*?<\/NomContact>[\s\S]*?<\/Emetteur>/.test(xml);
+interface ContactXmlElement {
+  name: string;
+  prefix: string;
+  uri: string;
+  start: number;
+  openEnd: number;
+  closeStart: number;
+  selfClosing: boolean;
+  indent?: string;
+  childIndent?: string;
+}
 
-  if (hasNomContactInEmetteur) {
-    return xml;
+/** Only whitespace at the start of a tag's line counts as indentation. */
+function xmlIndentAt(xml: string, position: number): string | undefined {
+  let start = position;
+  while (start > 0 && (xml[start - 1] === ' ' || xml[start - 1] === '\t')) {
+    start--;
   }
+  if (start === 0 || xml[start - 1] === '\n' || xml[start - 1] === '\r') {
+    return xml.slice(start, position);
+  }
+  return undefined;
+}
 
-  const hasEmetteur = /<Emetteur>[\s\S]*?<\/Emetteur>/.test(xml);
+function insertXmlBlockBefore(xml: string, position: number, block: string, lineEnding: string): string {
+  const insertionPoint = position - (xmlIndentAt(xml, position)?.length ?? 0);
+  const previous = xml[insertionPoint - 1];
+  const separator = insertionPoint === 0 || previous === '\n' || previous === '\r' ? '' : lineEnding;
+  return xml.slice(0, insertionPoint) + separator + block + lineEnding + xml.slice(insertionPoint);
+}
 
-  if (!hasEmetteur) {
-    const hasDestinataire = /<Destinataire>/.test(xml);
+function insertXmlChild(
+  xml: string,
+  parent: ContactXmlElement,
+  block: string,
+  lineEnding: string,
+  prepend = false,
+): string {
+  if (parent.selfClosing) {
+    // Expand only the empty element; retain its original attributes and quoting.
+    return (
+      xml.slice(0, parent.openEnd - 2) +
+      `>${lineEnding}${block}${lineEnding}${parent.indent ?? ''}</${parent.name}>` +
+      xml.slice(parent.openEnd)
+    );
+  }
+  if (prepend) {
+    const next = xml[parent.openEnd];
+    const separator = next === '\n' || next === '\r' ? '' : lineEnding;
+    return xml.slice(0, parent.openEnd) + lineEnding + block + separator + xml.slice(parent.openEnd);
+  }
+  return insertXmlBlockBefore(xml, parent.closeStart, block, lineEnding);
+}
 
-    if (hasDestinataire) {
-      return xml.replace(/(\s*)(<Destinataire>)/, (match, p1, p2) => {
-        const indent = p1.match(/[^\r\n]*$/)?.[0] || '';
-        const contactIndent = indent + '  ';
-        const nomContactIndent = contactIndent + '  ';
-        return `${p1}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${indent}</Emetteur>${p1}${p2}`;
-      });
-    } else {
-      return xml.replace(/(<Scenario>)(\s*)([\s\S]*?)(<\/Scenario>)/, (match, p1, p2, p3, p4) => {
-        const scenarioIndent = p2.match(/[^\r\n]*$/)?.[0] || '';
-        const emetteurIndent = scenarioIndent + '  ';
-        const contactIndent = emetteurIndent + '  ';
-        const nomContactIndent = contactIndent + '  ';
-        return `${p1}${lineEnding}${emetteurIndent}<Emetteur>${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}</Emetteur>${p3}${lineEnding}${scenarioIndent}${p4}`;
-      });
+/**
+ * Locate elements with strict SAX, then insert into the original source rather than
+ * reserialize it. Existing XML bytes survive unchanged (except expanding an empty
+ * parent). Parsing stops at the first Scenario's close; errors encountered before
+ * that point throw, while the remaining source is retained without validation.
+ */
+export function addNameTagToXml(xml: string, nomContact: string): string {
+  const parser = sax.parser(true, { xmlns: true, position: true });
+  const scenarioComplete = new Error('Scenario parsing complete');
+  const stack: ContactXmlElement[] = [];
+  let scenario: ContactXmlElement | undefined;
+  let emetteur: ContactXmlElement | undefined;
+  let contact: ContactXmlElement | undefined;
+  let destinataire: ContactXmlElement | undefined;
+  let hasNomContact = false;
+  let indentationUnit: string | undefined;
+
+  parser.onopentag = (tag: sax.QualifiedTag) => {
+    const parent = stack[stack.length - 1];
+    const element: ContactXmlElement = {
+      name: tag.name,
+      prefix: tag.prefix,
+      uri: tag.uri,
+      // sax offsets are UTF-16 string positions; startTagPosition is one-based.
+      start: parser.startTagPosition - 1,
+      openEnd: parser.position,
+      closeStart: parser.position,
+      selfClosing: tag.isSelfClosing,
+      indent: xmlIndentAt(xml, parser.startTagPosition - 1),
+    };
+    if (
+      parent?.indent !== undefined &&
+      element.indent !== undefined &&
+      element.indent.length > parent.indent.length &&
+      element.indent.startsWith(parent.indent)
+    ) {
+      parent.childIndent ??= element.indent;
+      indentationUnit ??= element.indent.slice(parent.indent.length);
+    }
+    if (tag.local === 'Scenario' && !scenario) {
+      scenario = element;
+    } else if (tag.local === 'Emetteur' && !emetteur && (!parent || (parent === scenario && tag.uri === parent.uri))) {
+      emetteur = element;
+    } else if (tag.local === 'Destinataire' && !destinataire && parent === scenario && tag.uri === parent?.uri) {
+      destinataire = element;
+    } else if (tag.local === 'Contact' && !contact && parent === emetteur && tag.uri === parent?.uri) {
+      contact = element;
+    } else if (tag.local === 'NomContact' && parent === contact && tag.uri === parent?.uri) {
+      hasNomContact = true;
+    }
+    stack.push(element);
+  };
+  parser.onclosetag = () => {
+    const element = stack.pop();
+    if (element && !element.selfClosing) {
+      element.closeStart = parser.startTagPosition - 1;
+    }
+    if (element && element === scenario) {
+      // sax has no stop method; unwind write immediately, even inside a large chunk.
+      throw scenarioComplete;
+    }
+  };
+  parser.onerror = (error) => {
+    throw error;
+  };
+  try {
+    parser.write(xml).close();
+  } catch (error) {
+    // Only the intentional stop is caught. Real SAX errors must still propagate.
+    if (error !== scenarioComplete) {
+      throw error;
     }
   }
 
-  const hasContact = /<Emetteur>[\s\S]*?<Contact>[\s\S]*?<\/Contact>[\s\S]*?<\/Emetteur>/.test(xml);
-
-  if (hasContact) {
-    return xml.replace(/(<Emetteur>[\s\S]*?<Contact>)([\s\S]*?)(\s*)(<\/Contact>)/, (match, p1, p2, p3, p4) => {
-      const closingIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
-      const childIndent = closingIndent + '  ';
-      return `${p1}${p2}${lineEnding}${childIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${closingIndent}${p4}`;
-    });
+  const parent = contact ?? emetteur ?? scenario;
+  if (!parent || hasNomContact) {
+    return xml;
   }
-
-  return xml.replace(/(<Emetteur>)([\s\S]*?)(\s*)(<\/Emetteur>)/, (match, p1, p2, p3, p4) => {
-    const emetteurIndent = p3.match(/[^\r\n]*$/)?.[0] || '';
-    const contactIndent = emetteurIndent + '  ';
-    const nomContactIndent = contactIndent + '  ';
-    return `${p1}${p2}${lineEnding}${contactIndent}<Contact>${lineEnding}${nomContactIndent}<NomContact>${nomContact}</NomContact>${lineEnding}${contactIndent}</Contact>${lineEnding}${emetteurIndent}${p4}`;
+  const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
+  const unit =
+    parent.childIndent?.slice(parent.indent?.length ?? 0) ??
+    indentationUnit ??
+    (parent.indent?.includes('\t') ? '\t' : '  ');
+  let indent = parent.childIndent ?? (parent.indent ?? '') + unit;
+  if (!emetteur && destinataire) {
+    indent = destinataire.indent ?? indent;
+  }
+  const prefix = parent.prefix ? `${parent.prefix}:` : '';
+  const name = nomContact.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const tags = ['NomContact'];
+  if (!contact) {
+    tags.unshift('Contact');
+  }
+  if (!emetteur) {
+    tags.unshift('Emetteur');
+  }
+  const lines = tags.map((tag, depth) => {
+    const leading = indent + unit.repeat(depth);
+    if (tag === 'NomContact') {
+      return `${leading}<${prefix}${tag}>${name}</${prefix}${tag}>`;
+    }
+    return `${leading}<${prefix}${tag}>`;
   });
+  for (let depth = tags.length - 2; depth >= 0; depth--) {
+    lines.push(`${indent}${unit.repeat(depth)}</${prefix}${tags[depth]}>`);
+  }
+  const block = lines.join(lineEnding);
+  if (!emetteur && destinataire) {
+    return insertXmlBlockBefore(xml, destinataire.start, block, lineEnding);
+  }
+  return insertXmlChild(xml, parent, block, lineEnding, !emetteur);
 }
 
 export function checkScenarioCodeAndVersion(scenario: Scenario): boolean {

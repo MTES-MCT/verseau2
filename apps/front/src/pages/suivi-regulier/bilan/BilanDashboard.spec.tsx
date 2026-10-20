@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { ALLOWED_BILAN_STEU_PARAMETRE_CODES, CURRENT_BILAN_YEAR } from '@lib/dossier';
 import type { BilanSclDto, BilanSteuDto } from '@lib/dossier';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { renderWithQueryClient } from '../../../test.helper';
 import {
   useBilanScl,
@@ -131,6 +132,31 @@ function defaultFilters(overrides = {}) {
 
 function renderPage() {
   return renderWithQueryClient(<BilanDashboard />);
+}
+
+function RouterControls() {
+  const { search } = useLocation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <output aria-label="URL">{search}</output>
+      <button onClick={() => navigate(-1)}>Retour navigateur</button>
+      <button onClick={() => navigate(1)}>Suivant navigateur</button>
+    </>
+  );
+}
+
+function renderPageWithUrl(search = '') {
+  return renderWithQueryClient(
+    <MemoryRouter initialEntries={[`/suivi-regulier/bilan${search}`]}>
+      <RouterControls />
+      <BilanDashboard />
+    </MemoryRouter>,
+  );
+}
+
+function currentSearchParams() {
+  return new URLSearchParams(screen.getByLabelText('URL').textContent ?? '');
 }
 
 describe('BilanDashboard', () => {
@@ -471,6 +497,262 @@ describe('BilanDashboard', () => {
       expect(mockDownloadBilanSteuExport).toHaveBeenCalledWith(
         expect.objectContaining({ year: CURRENT_BILAN_YEAR, ouvrageDepollutionCode: 'STEU001', page: 1 }),
       );
+    });
+  });
+
+  describe('filtres dans l’URL', () => {
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import('../../../hooks/useBilanFilters')>(
+        '../../../hooks/useBilanFilters',
+      );
+      mockUseBilanFilters.mockImplementation(actual.useBilanFilters);
+    });
+
+    it('restaure un lien STEU et lance directement la requête sur la page demandée', () => {
+      renderPageWithUrl(`?year=${CURRENT_BILAN_YEAR - 1}&ouvrageDepollutionCode=060969152001&page=5`);
+
+      expect(screen.getByRole('combobox', { name: /année/i })).toHaveValue(String(CURRENT_BILAN_YEAR - 1));
+      expect(screen.getByRole('combobox', { name: /station/i })).toHaveValue('060969152001');
+      expect(mockUseBilanSteu).toHaveBeenCalledWith(
+        { year: CURRENT_BILAN_YEAR - 1, ouvrageDepollutionCode: '060969152001', page: 5, pageSize: 20 },
+        true,
+      );
+      expect(mockUseBilanSteu.mock.calls.every(([query]) => query.page === 5)).toBe(true);
+      expect(currentSearchParams().get('page')).toBe('5');
+    });
+
+    it('retrouve le nom de la station du lien et le restaure malgré une autre recherche locale', () => {
+      const alpha = { ouvrageDepollutionCode: '060969152001', ouvrageDepollutionNom: 'Station Alpha' };
+      const beta = { ouvrageDepollutionCode: '060969152002', ouvrageDepollutionNom: 'Station Beta' };
+      mockUseAsyncOuvragesSearch.mockImplementation(
+        (search) =>
+          ({
+            data: search === alpha.ouvrageDepollutionCode ? [beta, alpha] : search ? [beta] : [],
+          }) as ReturnType<typeof useAsyncOuvragesSearch>,
+      );
+
+      renderPageWithUrl('?ouvrageDepollutionCode=060969152001&page=5');
+
+      const station = screen.getByRole('combobox', { name: /station/i });
+      expect(station).toHaveValue('Station Alpha');
+      expect(currentSearchParams().get('ouvrageDepollutionCode')).toBe(alpha.ouvrageDepollutionCode);
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCode: alpha.ouvrageDepollutionCode, page: 5 }),
+        true,
+      );
+
+      fireEvent.change(station, { target: { value: 'Beta' } });
+      fireEvent.click(screen.getByRole('option', { name: 'Station Beta' }));
+      expect(station).toHaveValue('Station Beta');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retour navigateur' }));
+      expect(station).toHaveValue('Station Alpha');
+      expect(currentSearchParams().get('ouvrageDepollutionCode')).toBe(alpha.ouvrageDepollutionCode);
+      expect(currentSearchParams().get('page')).toBe('5');
+    });
+
+    it('retrouve le nom du SCL sélectionné même s’il est absent des options de recherche', () => {
+      mockUseAsyncSystemesCollecteSearch.mockImplementation(
+        (search) =>
+          ({
+            data:
+              search === 'SCL001'
+                ? [
+                    { systemeCollecteCode: 'SCL002', systemeCollecteNom: 'Collecteur Beta' },
+                    { systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Collecteur Alpha' },
+                  ]
+                : [],
+          }) as ReturnType<typeof useAsyncSystemesCollecteSearch>,
+      );
+
+      renderPageWithUrl('?mode=scl&systemeCollecteCode=SCL001');
+
+      expect(screen.getByRole('combobox', { name: /système de collecte/i })).toHaveValue('Collecteur Alpha');
+      expect(currentSearchParams().get('systemeCollecteCode')).toBe('SCL001');
+      expect(mockUseBilanScl).toHaveBeenLastCalledWith(
+        expect.objectContaining({ systemeCollecteCode: 'SCL001' }),
+        true,
+      );
+    });
+
+    it('restaure les filtres SCL, le point de mesure et le tri', () => {
+      mockUsePointsMesure.mockReturnValue({
+        data: [
+          {
+            pointMesureId: 120,
+            pointMesureNumero: '120',
+            pointMesureLibelle: 'Entrée',
+            pointMesureLocalisationGlobale: 'A3',
+          },
+        ],
+      } as ReturnType<typeof usePointsMesure>);
+
+      renderPageWithUrl(
+        '?mode=scl&systemeCollecteCode=SCL001&pointMesureId=120&statut=TP&sortBy=date&sortOrder=DESC&page=3',
+      );
+
+      expect(screen.getByRole('radio', { name: 'SCL' })).toBeChecked();
+      expect(screen.getByRole('combobox', { name: /système de collecte/i })).toHaveValue('SCL001');
+      expect(screen.getByRole('combobox', { name: /point de mesures/i })).toHaveValue('A3 - 120 - Entrée');
+      expect(screen.getByRole('combobox', { name: /statut/i })).toHaveValue('TP');
+      expect(mockUseBilanScl).toHaveBeenCalledWith(
+        {
+          year: CURRENT_BILAN_YEAR,
+          systemeCollecteCode: 'SCL001',
+          pointMesureId: 120,
+          statut: 'TP',
+          sortBy: 'date',
+          sortOrder: 'DESC',
+          page: 3,
+          pageSize: 20,
+        },
+        true,
+      );
+      expect(mockUseBilanSteu).toHaveBeenCalledWith(expect.anything(), false);
+    });
+
+    it('utilise les valeurs par défaut sans lancer de recherche bilan en l’absence d’ouvrage', () => {
+      renderPageWithUrl();
+
+      expect(screen.getByRole('radio', { name: 'STEU' })).toBeChecked();
+      expect(screen.getByRole('combobox', { name: /année/i })).toHaveValue(String(CURRENT_BILAN_YEAR));
+      expect(mockUseBilanSteu).toHaveBeenCalledWith({ year: CURRENT_BILAN_YEAR, page: 1, pageSize: 20 }, false);
+      expect(currentSearchParams().size).toBe(0);
+    });
+
+    it('écrit la sélection et sa suppression, en conservant les paramètres étrangers', () => {
+      mockUseAsyncOuvragesSearch.mockReturnValue({
+        data: [{ ouvrageDepollutionCode: '060969152002', ouvrageDepollutionNom: 'Station Beta' }],
+      } as ReturnType<typeof useAsyncOuvragesSearch>);
+      renderPageWithUrl('?ouvrageDepollutionCode=060969152001&parametreCode=1313&page=5&source=partage');
+
+      const station = screen.getByRole('combobox', { name: /station/i });
+      fireEvent.change(station, { target: { value: 'Beta' } });
+      expect(currentSearchParams().get('ouvrageDepollutionCode')).toBe('060969152001');
+
+      fireEvent.click(screen.getByRole('option', { name: 'Station Beta' }));
+      expect(station).toHaveValue('Station Beta');
+      expect(Object.fromEntries(currentSearchParams())).toEqual({
+        year: String(CURRENT_BILAN_YEAR),
+        ouvrageDepollutionCode: '060969152002',
+        source: 'partage',
+      });
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(
+        { year: CURRENT_BILAN_YEAR, ouvrageDepollutionCode: '060969152002', page: 1, pageSize: 20 },
+        true,
+      );
+
+      fireEvent.mouseDown(screen.getByRole('button', { name: 'Effacer la sélection' }));
+      expect(station).toHaveValue('');
+      expect(Object.fromEntries(currentSearchParams())).toEqual({
+        year: String(CURRENT_BILAN_YEAR),
+        source: 'partage',
+      });
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith({ year: CURRENT_BILAN_YEAR, page: 1, pageSize: 20 }, false);
+    });
+
+    it('restaure la pagination et les filtres avec Précédent / Suivant', () => {
+      mockUseBilanSteu.mockReturnValue({
+        ...emptySteuResult,
+        data: { data: [makeSteuRow()], total: 120, page: 5, pageSize: 20 },
+      } as ReturnType<typeof useBilanSteu>);
+      renderPageWithUrl(`?year=${CURRENT_BILAN_YEAR - 1}&ouvrageDepollutionCode=060969152001&page=5`);
+
+      fireEvent.click(screen.getByRole('link', { name: '6' }));
+      expect(currentSearchParams().get('page')).toBe('6');
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(expect.objectContaining({ page: 6 }), true);
+
+      fireEvent.change(screen.getByRole('combobox', { name: /année/i }), {
+        target: { value: String(CURRENT_BILAN_YEAR) },
+      });
+      expect(currentSearchParams().has('page')).toBe(false);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retour navigateur' }));
+      expect(screen.getByRole('combobox', { name: /année/i })).toHaveValue(String(CURRENT_BILAN_YEAR - 1));
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 6, year: CURRENT_BILAN_YEAR - 1 }),
+        true,
+      );
+      expect(screen.getByRole('link', { current: true })).toHaveAccessibleName('6');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retour navigateur' }));
+      expect(currentSearchParams().get('page')).toBe('5');
+      expect(screen.getByRole('link', { current: true })).toHaveAccessibleName('5');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Suivant navigateur' }));
+      expect(currentSearchParams().get('page')).toBe('6');
+      expect(screen.getByRole('link', { current: true })).toHaveAccessibleName('6');
+    });
+
+    it('réinitialise les filtres dépendants, le tri et la page au changement de mode', () => {
+      renderPageWithUrl('?ouvrageDepollutionCode=060969152001&parametreCode=1313&sortBy=date&sortOrder=DESC&page=5');
+
+      fireEvent.click(screen.getByRole('radio', { name: 'SCL' }));
+      expect(Object.fromEntries(currentSearchParams())).toEqual({ mode: 'scl', year: String(CURRENT_BILAN_YEAR) });
+      expect(mockUseBilanScl).toHaveBeenLastCalledWith({ year: CURRENT_BILAN_YEAR, page: 1, pageSize: 20 }, false);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retour navigateur' }));
+      expect(screen.getByRole('radio', { name: 'STEU' })).toBeChecked();
+      expect(screen.getByRole('combobox', { name: /station/i })).toHaveValue('060969152001');
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(
+        expect.objectContaining({ parametreCode: '1313', page: 5, sortOrder: 'DESC' }),
+        true,
+      );
+    });
+
+    it('retire le paramètre lors du changement d’année et écrit le tri en revenant à la page 1', () => {
+      mockUseBilanSteu.mockReturnValue({
+        ...emptySteuResult,
+        data: { data: [makeSteuRow()], total: 120, page: 5, pageSize: 20 },
+      } as ReturnType<typeof useBilanSteu>);
+      renderPageWithUrl(
+        `?year=${CURRENT_BILAN_YEAR - 1}&ouvrageDepollutionCode=060969152001&parametreCode=1313&page=5`,
+      );
+
+      fireEvent.change(screen.getByRole('combobox', { name: /année/i }), {
+        target: { value: String(CURRENT_BILAN_YEAR) },
+      });
+      expect(currentSearchParams().has('parametreCode')).toBe(false);
+      expect(currentSearchParams().has('page')).toBe(false);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Date' }));
+      expect(currentSearchParams().get('sortBy')).toBe('date');
+      expect(currentSearchParams().get('sortOrder')).toBe('ASC');
+      expect(mockUseBilanSteu).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: 'date', sortOrder: 'ASC', page: 1 }),
+        true,
+      );
+    });
+
+    it.each(['abc', '0', '-1', '1.5'])('ignore les valeurs invalides et la page %s', (page) => {
+      renderPageWithUrl(
+        `?mode=inconnu&year=2000&page=${page}&sortBy=statut&sortOrder=invalide&ouvrageDepollutionCode=060969152001`,
+      );
+
+      expect(screen.getByRole('radio', { name: 'STEU' })).toBeChecked();
+      expect(screen.getByRole('combobox', { name: /année/i })).toHaveValue(String(CURRENT_BILAN_YEAR));
+      expect(mockUseBilanSteu).toHaveBeenCalledWith(
+        { year: CURRENT_BILAN_YEAR, ouvrageDepollutionCode: '060969152001', page: 1, pageSize: 20 },
+        true,
+      );
+    });
+
+    it('ignore un point de mesure et un statut invalides ainsi que les filtres STEU en mode SCL', () => {
+      renderPageWithUrl(
+        '?mode=scl&systemeCollecteCode=SCL001&pointMesureId=abc&statut=invalide&parametreCode=1313&ouvrageDepollutionCode=060969152001',
+      );
+
+      expect(mockUseBilanScl).toHaveBeenCalledWith(
+        { year: CURRENT_BILAN_YEAR, systemeCollecteCode: 'SCL001', page: 1, pageSize: 20 },
+        true,
+      );
+      fireEvent.change(screen.getByRole('combobox', { name: /statut/i }), { target: { value: 'TS' } });
+      expect(Object.fromEntries(currentSearchParams())).toEqual({
+        mode: 'scl',
+        year: String(CURRENT_BILAN_YEAR),
+        systemeCollecteCode: 'SCL001',
+        statut: 'TS',
+      });
     });
   });
 });

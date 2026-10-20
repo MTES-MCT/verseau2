@@ -56,8 +56,8 @@ Le projet est organisé en monorepo avec les composants suivants :
 
 ## Prérequis
 
-- Node.js (version 24+)
-- pnpm (version 10+)
+- Node.js (version 24.15 minimum)
+- pnpm (version 12+)
 - Docker et Docker Compose (pour l'environnement local)
 - PostgreSQL (via Docker)
 - Stockage S3 compatible (AWS S3, Outscale, ou mock local)
@@ -93,11 +93,15 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/verseau2
 S3_PROVIDER=mock # ou outscale
 S3_BUCKET=MY_BUCKET
 S3_ENDPOINT=OUTSCALE_ENDPOINT
+# Mock uniquement : si l'endpoint interne n'est pas accessible depuis le navigateur
+# S3_PUBLIC_ENDPOINT=http://localhost:9090
+S3_UPLOAD_URL_TTL_SECONDS=900
 S3_REGION=OUTSCALE_REGION
 S3_ACCESS_KEY=MY_ACCESS_KEY
 S3_SECRET_KEY=MY_SECRET_KEY
 
-# SANDRE Mock Configuration (pour les tests)
+# SANDRE Configuration
+SANDRE_API_URL=https://www.sandre.eaufrance.fr/PS5/api
 USE_SANDRE_MOCK=false
 
 # Logs
@@ -130,6 +134,39 @@ OIDC_FAKE_TOKEN=change-me
  SFTP_AGENCY_PRIVATE_KEY_11111111111111=base64
  SFTP_AGENCY_PASSWORD_22222222222222=mot-de-passe
 ```
+
+#### Dépôts directs vers S3
+
+Le fichier est envoyé par le navigateur directement à S3. L'API reçoit uniquement les métadonnées :
+
+1. `POST /api/depot/upload/init` avec `{ fileName, size, contentType }` crée le dépôt et renvoie `{ depotId, uploadUrl, headers, expiresAt }`.
+2. Le navigateur fait un `PUT` du fichier brut vers `uploadUrl`, avec les `headers` renvoyés, sans cookie API.
+3. `POST /api/depot/:id/upload/complete` vérifie l'objet avec `HEAD`, le copie côté S3 vers sa clé définitive et publie `process_file`. La confirmation et le job pg-boss sont enregistrés dans la même transaction PostgreSQL. Les confirmations répétées sont idempotentes.
+
+La taille maximale reste **70 Mio** : les métadonnées sont validées à l'initialisation et la taille exacte déclarée est liée à l'URL présignée via l'en-tête signé `Content-Length`. S3 refuse ainsi un PUT de taille différente. Le navigateur génère automatiquement cet en-tête à partir du fichier brut ; le front ne doit pas le définir manuellement. La taille réelle est également vérifiée à la confirmation. Le XML et les droits métier sont vérifiés par le worker.
+
+Les URL expirent après 900 secondes (configurable entre 60 et 3600 via `S3_UPLOAD_URL_TTL_SECONDS`). La confirmation reste possible pendant une heure après cette échéance pour reprendre un upload déjà terminé. Un job différé `cleanup_depot_upload` supprime ensuite l'objet temporaire et marque les dépôts non confirmés en échec. Il conserve les fichiers définitifs des dépôts confirmés. Une règle de cycle de vie S3 supprimant le préfixe `uploads/` après un jour complète ce nettoyage, notamment pour les transferts terminant très tardivement.
+
+**Déploiement :** appliquer la migration `DirectDepotUpload1790294400000`, configurer les CORS du bucket, puis déployer l'API, le worker et le front. L'ancien endpoint multipart `/api/depot/upload` est remplacé ; `scripts/upload_xml.js` utilise le nouveau protocole.
+
+Le bucket Outscale doit autoriser les origines exactes du front (adapter l'exemple) :
+
+```json
+{
+  "CORSRules": [{
+    "AllowedOrigins": ["https://saineau.beta.gouv.fr"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["content-type"],
+    "MaxAgeSeconds": 3600
+  }]
+}
+```
+
+Le compte S3 de l'API/worker doit pouvoir écrire, lire les métadonnées, copier et supprimer les objets du bucket. Aucune clé d'accès S3 n'est transmise au navigateur. Pour `S3_PROVIDER=mock`, Adobe S3Mock autorise déjà les requêtes CORS vers les objets (origine `*`) et ne prend pas en charge la configuration CORS du bucket par l'API S3. Avec ce fournisseur en Docker, conserver `S3_ENDPOINT` pour les échanges internes et définir `S3_PUBLIC_ENDPOINT` avec l'adresse accessible au navigateur ; l'URL est signée avec cette adresse, sans réécriture après signature. Le fournisseur Outscale ignore cette variable et utilise uniquement `S3_ENDPOINT`, qui doit être accessible à l'API/worker et au navigateur.
+
+#### Pools PostgreSQL
+
+Sur le PaaS, le `Procfile` définit `PROCESS_TYPE=api|worker`. TypeORM sélectionne ainsi `DATABASE_POOL_API` ou `DATABASE_POOL_WORKER`; les lancements locaux conservent le pool par défaut. Un rôle ou un pool invalide bloque le démarrage, et la configuration retenue est journalisée.
 
 ### Frontend
 

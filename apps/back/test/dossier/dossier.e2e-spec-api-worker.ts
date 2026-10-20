@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import * as dotenv from 'dotenv';
+import { readFileSync } from 'node:fs';
 import path from 'path';
 
 dotenv.config({
@@ -64,6 +65,8 @@ import { clearControles } from '../controle.helper';
 import { LoggerService } from '@shared/logger/logger.service';
 import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ControleEntity } from '@dossier/controle/controle.entity';
+import { uploadTestDepot } from '../depotUpload.helper';
+import type { SendOptions } from '@infra/queue/pgboss';
 
 /**
  * Real Queue Service implementation for testing.
@@ -72,11 +75,7 @@ import { ControleEntity } from '@dossier/controle/controle.entity';
 class RealQueueService implements Queue {
   constructor(private readonly pgboss: PgBoss) {}
 
-  async send<TData = object>(
-    name: string,
-    data?: TData,
-    options?: { startAfter?: number | string | Date },
-  ): Promise<string | null> {
+  async send<TData = object>(name: string, data?: TData, options?: SendOptions): Promise<string | null> {
     const result = await this.pgboss.send(name, data as object, options);
     return result;
   }
@@ -181,14 +180,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   };
 
   const uploadXmlDepot = async (xmlContent: string, filename: string): Promise<string> => {
-    const response = await request(app.getHttpServer())
-      .post('/depot/upload')
-      .set('Cookie', ['access_token=test-token'])
-      .attach('file', Buffer.from(xmlContent), {
-        filename,
-        contentType: 'application/xml',
-      })
-      .expect(201);
+    const response = await uploadTestDepot(app, s3Mock, xmlContent, filename);
 
     return (response.body as { id: string }).id;
   };
@@ -345,47 +337,95 @@ describe('Dossier E2E - Real Queue Processing', () => {
   });
 
   describe('Full file processing flow with real queue', () => {
-    it('should not generate or send report when process_file enqueue fails', async () => {
+    it.each([
+      { format: 'spaces and LF', fixture: 'spaces-lf.xml', indent: '    ', lineEnding: '\n', seedId: 1100 },
+      { format: 'spaces and CRLF', fixture: 'spaces-crlf.xml', indent: '    ', lineEnding: '\r\n', seedId: 1101 },
+      { format: 'tabs and LF', fixture: 'tabs-lf.xml', indent: '\t', lineEnding: '\n', seedId: 1102 },
+      { format: 'tabs and CRLF', fixture: 'tabs-crlf.xml', indent: '\t', lineEnding: '\r\n', seedId: 1103 },
+    ])(
+      'should add NomContact to the dispatched XML while preserving $format',
+      async ({ fixture, indent, lineEnding, seedId }) => {
+        const steuCode = `TEST_STEU_CONTACT_${seedId}`;
+        const sclCode = `TEST_SCL_CONTACT_${seedId}`;
+        await seedVSteuSclItv(dataSource, steuCode, sclCode, TEST_USER.itvRfa);
+        await seedSteu(dataSource, seedId, steuCode, { steuEncoursAn: 2024 });
+        await seedScl(dataSource, seedId, sclCode);
+        await seedTlref(dataSource, seedId, 'LREF_01', '4', 'Type ouvrage test');
+
+        // Start without contact tags so the test proves they were added, not just retained.
+        const xmlContent = buildValidXmlWithCodes(steuCode, sclCode)
+          .replace(/ {12}<Contact>[\s\S]*?<\/Contact>\n/, '')
+          .replace(/^( +)/gm, (spaces) => indent.repeat(spaces.length / 4))
+          .replaceAll('\n', lineEnding)
+          .concat(lineEnding);
+        expect(xmlContent).not.toContain('<NomContact>');
+        expect(xmlContent).not.toContain('<MelContact>');
+
+        const filename = `contact-${seedId}.xml`;
+        const depotId = await uploadXmlDepot(xmlContent, filename);
+        const sftpResult = await waitForJobCompletion(dataSource, QueueName.send_to_sftp, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        });
+        expect(sftpResult.status).toBe('completed');
+        expect((await findDepotOrFail(depotId)).step).toBe(DepotStep.SFTP_COMPLETED);
+
+        const sentFile = agentVerseauClientMock.calls.find((call) => call.fileName === `${depotId}_${filename}`);
+        expect(sentFile).toBeDefined();
+        const expectedXml = readFileSync(path.join(__dirname, '../fixtures/xml/depot-contact', fixture), 'utf-8');
+
+        // Compare raw XML, not parsed nodes: every original whitespace character must survive.
+        expect(sentFile?.file.toString('utf-8')).toBe(expectedXml);
+      },
+      15000,
+    );
+
+    it('rolls back the job and confirmation together, then accepts concurrent retries once', async () => {
+      const initialized = await request(app.getHttpServer())
+        .post('/depot/upload/init')
+        .set('Cookie', ['access_token=test-token'])
+        .send({
+          fileName: 'enqueue-error.xml',
+          size: Buffer.byteLength(validXmlWithRights),
+          contentType: 'application/xml',
+        })
+        .expect(201);
+      const { depotId, uploadUrl } = initialized.body as { depotId: string; uploadUrl: string };
+      s3Mock.seed(decodeURIComponent(new URL(uploadUrl).pathname.slice(1)), validXmlWithRights);
       const queueService = app.get<Queue>(QueueGateway);
       const originalSend = queueService.send.bind(queueService);
-      const queueSpy = jest
-        .spyOn(queueService, 'send')
-        .mockImplementation(async (name: string, options, data?: object) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-          if (name === QueueName.process_file) {
-            throw new Error('Queue send failed');
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return await originalSend(name, options, data);
-        });
+      const queueSpy = jest.spyOn(queueService, 'send').mockImplementation(async (name: string, data, options) => {
+        const result = await originalSend(name, data, options);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+        if (name === QueueName.process_file) {
+          throw new Error('Failure after SQL insertion, before transaction commit');
+        }
+        return result as string | null;
+      });
 
       try {
-        const depotId = await uploadXmlDepot(validXmlWithRights, 'enqueue-error.xml');
-        const expectedPath = `${depotId}_enqueue-error.xml`;
-
-        await waitFor(
-          async () => {
-            const depot = await findDepotOrFail(depotId);
-            return depot.error === DepotError.ENQUEUE_FAILED && depot.path === expectedPath;
-          },
-          {
-            timeoutMs: 6000,
-            pollIntervalMs: 200,
-            message: 'Depot should be rejected after queue enqueue failure',
-          },
-        );
-
+        await request(app.getHttpServer())
+          .post(`/depot/${depotId}/upload/complete`)
+          .set('Cookie', ['access_token=test-token'])
+          .expect(500);
         const finalDepot = await findDepotOrFail(depotId);
-        expect(finalDepot.error).toBe(DepotError.ENQUEUE_FAILED);
-        expect(finalDepot.path).toBe(expectedPath);
-        expect(s3Mock.hasFile(expectedPath)).toBe(true);
+        expect(finalDepot.path).toBeNull();
+        expect(finalDepot.step).toBe(DepotStep.UPLOADING_TO_S3);
         expect(notificationMock.sendEmail).not.toHaveBeenCalled();
         const processFileJobs = await getJobsForDepot(dataSource, QueueName.process_file, depotId);
         expect(processFileJobs).toHaveLength(0);
       } finally {
         queueSpy.mockRestore();
       }
+      await Promise.all(
+        [1, 2].map(() =>
+          request(app.getHttpServer())
+            .post(`/depot/${depotId}/upload/complete`)
+            .set('Cookie', ['access_token=test-token'])
+            .expect(201),
+        ),
+      );
+      expect(await getJobsForDepot(dataSource, QueueName.process_file, depotId)).toHaveLength(1);
     }, 12000);
 
     it('should process file and verify control jobs are not dispatched because user lacks rights', async () => {
@@ -399,14 +439,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
   </Emetteur>
 </Scenario>`;
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(xmlContent), {
-          filename: 'control-dispatch-test.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const response = await uploadTestDepot(app, s3Mock, xmlContent, 'control-dispatch-test.xml');
 
       const depotId = (response.body as { id: string }).id;
 
@@ -428,18 +461,11 @@ describe('Dossier E2E - Real Queue Processing', () => {
       expect(finalDepot.error).toEqual(DepotError.DROITS_INSUFFISANTS);
     }, 12000);
 
-    it('should process file and verify control jobs are dispatched', async () => {
+    it('should process file and dispatch the business control job', async () => {
       // Seed VSteuSclItv to authorize the user's SIRET for the STEU and SCL codes in the XML
       await seedVSteuSclItv(dataSource, TEST_STEU_CODE, TEST_SCL_CODE, TEST_USER.itvRfa);
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRights), {
-          filename: 'control-dispatch-test.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const response = await uploadTestDepot(app, s3Mock, validXmlWithRights, 'control-dispatch-test.xml');
 
       const depotId = (response.body as { id: string }).id;
 
@@ -449,51 +475,46 @@ describe('Dossier E2E - Real Queue Processing', () => {
         pollIntervalMs: 200,
       });
 
-      // Check that control jobs were created in the pgboss.job table
-      // FileProcessor dispatches to controle_metier and controle_sandre_upload queues
-      const controlJobs = await dataSource.query(
-        `SELECT name, data, state FROM pgboss.job 
-         WHERE (name = $1 OR name = $2) AND data->>'depotId' = $3`,
-        [QueueName.controle_metier, QueueName.controle_sandre_upload, depotId],
-      );
+      // Sequential flow: FileProcessor dispatches only the business control job
+      const metierJobs = await getJobsForDepot(dataSource, QueueName.controle_metier, depotId);
+      expect(metierJobs.length).toBe(1);
+      const sandreUploadJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_upload, depotId);
+      expect(sandreUploadJobs.length).toBe(0);
 
-      // Control jobs should exist when rights check passes
-      expect(controlJobs.length).toBeGreaterThan(0);
+      // Wait for the business control job to complete
+      const metierResult = await waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(metierResult.status).toBe('completed');
 
-      // Wait for mandatory control jobs to complete
-      const [metierResult, sandreUploadResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
-      // Wait for poll job only if it has been dispatched
-      let sandrePollResult: { status: string } = { status: 'timeout' };
-      const sandrePollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
-      if (sandrePollJobs.length > 0) {
-        sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        });
-      }
-
-      // Check that controls were processed
-      const finalDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
-        where: { id: depotId },
+      // Referential data is not seeded, so V1 controls fail (business failure):
+      // the depot is rejected, the deposant receives a rapport, and the SANDRE
+      // control is never dispatched.
+      const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
+      expect(diffusionRapportResult.status).toBe('completed');
+      expect(diffusionRapportResult.job?.data).toMatchObject({
+        depotId,
+        destinataires: [RapportDestinataire.DEPOSANT],
       });
 
-      // After controls complete, depot should have control statuses set
-      const sandreCompleted = sandreUploadResult.status !== 'timeout' || sandrePollResult.status !== 'timeout';
-      if (metierResult.status !== 'timeout' && sandreCompleted) {
-        expect(finalDepot.controleStatus).toContain(ControleStatus.FAILED);
-        expect(finalDepot.controleSandreStatus).toContain(ControleSandreStatus.SUCCESS);
-      }
+      // Report diffusion advances the current step; inspect the rejection in history
+      // only after the entire business-failure flow has completed.
+      const finalDepot = await findDepotOrFail(depotId);
+      expect(finalDepot.status).toBe(DepotStatus.REJETE);
+      expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
+      expect(finalDepot.stepHistory).toContain(DepotStep.CONTROLE_FAILED);
+      expect(finalDepot.controleStatus).toBe(ControleStatus.FAILED);
+      expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.PENDING);
       expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
+
+      // SANDRE control is never dispatched after a business failure
+      const sandreJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_upload, depotId);
+      expect(sandreJobs.length).toBe(0);
 
       const controles = await dataSource.getRepository(ControleEntity).find({
         where: { depotId: depotId },
@@ -510,7 +531,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       // No technical error should occur since the system processes controles correctly
       const technicalErrors = controles.filter((c) => c.error === ErrorCode.E2_999);
       expect(technicalErrors.length).toBe(0);
-    }, 12000);
+    }, 15000);
 
     it('should generate and send rapport when controle v1 and v2 pass but sandre fails', async () => {
       await seedVSteuSclItv(dataSource, SANDRE_FAILED_STEU_CODE, SANDRE_FAILED_SCL_CODE, TEST_USER.itvRfa);
@@ -520,14 +541,12 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
       (sandreService as ConfigurableSandreMock).defaultBehavior = 'non-conformant';
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(validXmlWithRightsAndMetierSuccess), {
-          filename: 'sandre-failed-rapport.xml',
-          contentType: 'application/xml',
-        })
-        .expect(201);
+      const response = await uploadTestDepot(
+        app,
+        s3Mock,
+        validXmlWithRightsAndMetierSuccess,
+        'sandre-failed-rapport.xml',
+      );
 
       const depotId = (response.body as { id: string }).id;
 
@@ -536,23 +555,23 @@ describe('Dossier E2E - Real Queue Processing', () => {
         pollIntervalMs: 200,
       });
 
-      const [metierResult, sandreUploadResult, sandrePollResult] = await Promise.all([
-        waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-        waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
-          timeoutMs: 10000,
-          pollIntervalMs: 200,
-        }),
-      ]);
-
+      // Sequential flow: business control completes first, then dispatches the SANDRE control
+      const metierResult = await waitForJobCompletion(dataSource, QueueName.controle_metier, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
       expect(metierResult.status).toBe('completed');
+
+      const sandreUploadResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_upload, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
       expect(sandreUploadResult.status).toBe('completed');
+
+      const sandrePollResult = await waitForJobCompletion(dataSource, QueueName.controle_sandre_poll, depotId, {
+        timeoutMs: 10000,
+        pollIntervalMs: 200,
+      });
       expect(sandrePollResult.status).toBe('completed');
 
       const diffusionRapportResult = await waitForJobCompletion(dataSource, QueueName.diffusion_rapport, depotId, {
@@ -585,7 +604,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       expect(finalDepot.controleStatus).toBe(ControleStatus.SUCCESS);
       expect(finalDepot.controleSandreStatus).toBe(ControleSandreStatus.FAILED);
       expect(finalDepot.error).not.toEqual(DepotError.DROITS_INSUFFISANTS);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
 
       expect(controles.every((controle) => controle.success)).toBe(true);
 
@@ -662,7 +681,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const finalDepot = await findDepotOrFail(depotId);
       expect(finalDepot.status).toBe(DepotStatus.REJETE);
       expect(finalDepot.step).toBe(DepotStep.SEND_EMAIL_TO_DEPOSANT);
-      expect(finalDepot.rapportPath).toBe(`rapports/${depotId}/rapport.pdf`);
+      expect(finalDepot.rapportPath).toBe(`depots/${depotId}/report.pdf`);
 
       const pdfUpload = s3Mock.uploads.find((upload) => upload.key === finalDepot.rapportPath);
       expect(pdfUpload).toBeDefined();

@@ -30,6 +30,19 @@ class SchemaManager {
     return client;
   }
 
+  async getLastRestoredDumpSource() {
+    const client = await this._getClient();
+    try {
+      const table = await client.query("SELECT to_regclass('public.sync_tracking') AS name;");
+      if (table.rows[0].name === null) return null;
+
+      const result = await client.query('SELECT dump_source FROM public.sync_tracking ORDER BY id DESC LIMIT 1;');
+      return result.rows[0]?.dump_source ?? null;
+    } finally {
+      await client.end();
+    }
+  }
+
   /**
    * Drop leftover work schemas from a failed previous run:
    * - _staging schemas (renamed from dump schemas, not yet swapped)

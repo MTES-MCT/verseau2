@@ -1,0 +1,183 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { UnauthorizedException } from '@nestjs/common';
+import { SignJWT } from 'jose';
+import { createHash, createHmac } from 'node:crypto';
+import type { Response } from 'express';
+import { OidcTransactionService } from './oidcTransaction.service';
+
+const JWT_SECRET = 'test-secret-key-that-is-at-least-32-characters-long!!';
+
+function buildConfigService(nodeEnv?: string): jest.Mocked<ConfigService> {
+  return {
+    get: jest.fn((key: string) => {
+      if (key === 'NODE_ENV') {
+        return nodeEnv;
+      }
+      return undefined;
+    }),
+    getOrThrow: jest.fn((key: string) => {
+      if (key === 'JWT_SECRET') {
+        return JWT_SECRET;
+      }
+      throw new Error(`Missing config: ${key}`);
+    }),
+  } as unknown as jest.Mocked<ConfigService>;
+}
+
+async function buildService(nodeEnv?: string): Promise<OidcTransactionService> {
+  const module: TestingModule = await Test.createTestingModule({
+    providers: [{ provide: ConfigService, useValue: buildConfigService(nodeEnv) }, OidcTransactionService],
+  }).compile();
+  return module.get(OidcTransactionService);
+}
+
+describe('OidcTransactionService', () => {
+  it('should create a transaction that verifies on the same instance', async () => {
+    const service = await buildService();
+
+    const transaction = await service.createTransaction();
+
+    await expect(service.verifyTransactionToken(transaction.token)).resolves.toEqual({
+      state: transaction.state,
+      nonce: transaction.nonce,
+      codeVerifier: transaction.codeVerifier,
+    });
+  });
+
+  it('should verify across instances sharing the same secret (multi-instance)', async () => {
+    const first = await buildService();
+    const second = await buildService();
+
+    const transaction = await first.createTransaction();
+
+    await expect(second.verifyTransactionToken(transaction.token)).resolves.toEqual({
+      state: transaction.state,
+      nonce: transaction.nonce,
+      codeVerifier: transaction.codeVerifier,
+    });
+  });
+
+  it('should derive codeChallenge as S256 of codeVerifier (PKCE RFC 7636)', async () => {
+    const service = await buildService();
+
+    const transaction = await service.createTransaction();
+
+    const expectedChallenge = createHash('sha256').update(transaction.codeVerifier).digest('base64url');
+    expect(transaction.codeChallenge).toBe(expectedChallenge);
+    expect(transaction.codeVerifier.length).toBeGreaterThanOrEqual(43);
+    expect(transaction.codeVerifier.length).toBeLessThanOrEqual(128);
+  });
+
+  it('should generate a unique codeVerifier per transaction', async () => {
+    const service = await buildService();
+
+    const first = await service.createTransaction();
+    const second = await service.createTransaction();
+
+    expect(first.codeVerifier).not.toBe(second.codeVerifier);
+    expect(first.codeChallenge).not.toBe(second.codeChallenge);
+  });
+
+  it('should reject a tampered transaction token', async () => {
+    const service = await buildService();
+    const transaction = await service.createTransaction();
+    const [header, payload, signature] = transaction.token.split('.');
+    const signatureBytes = Buffer.from(signature, 'base64url');
+    // Mutate actual signature bits, not unused padding bits in the last encoded character.
+    signatureBytes[0] ^= 1;
+    const tampered = `${header}.${payload}.${signatureBytes.toString('base64url')}`;
+
+    await expect(service.verifyTransactionToken(tampered)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject tokens signed directly with JWT_SECRET (access-token confusion)', async () => {
+    const service = await buildService();
+    const forged = await new SignJWT({ state: 'x'.repeat(32), nonce: 'y'.repeat(32), sub: 'user-123' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(new TextEncoder().encode(JWT_SECRET));
+
+    await expect(service.verifyTransactionToken(forged)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject expired transaction tokens', async () => {
+    const service = await buildService();
+    const derivedKey = createHmac('sha256', JWT_SECRET).update('verseau2-oidc-transaction-v1').digest();
+    const expired = await new SignJWT({ state: 's'.repeat(32), nonce: 'n'.repeat(32) })
+      .setProtectedHeader({ alg: 'HS256', typ: 'OIDC-TX' })
+      .setIssuedAt()
+      .setIssuer('verseau2')
+      .setAudience('verseau2-oidc-transaction')
+      .setJti('jti')
+      .setExpirationTime('0s')
+      .sign(derivedKey);
+
+    await expect(service.verifyTransactionToken(expired)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject a valid transaction token without code_verifier (pre-PKCE token)', async () => {
+    const service = await buildService();
+    const derivedKey = createHmac('sha256', JWT_SECRET).update('verseau2-oidc-transaction-v1').digest();
+    const noVerifier = await new SignJWT({ state: 's'.repeat(32), nonce: 'n'.repeat(32) })
+      .setProtectedHeader({ alg: 'HS256', typ: 'OIDC-TX' })
+      .setIssuedAt()
+      .setIssuer('verseau2')
+      .setAudience('verseau2-oidc-transaction')
+      .setJti('jti')
+      .setExpirationTime('10m')
+      .sign(derivedKey);
+
+    await expect(service.verifyTransactionToken(noVerifier)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject a transaction token with an out-of-spec code_verifier length', async () => {
+    const service = await buildService();
+    const derivedKey = createHmac('sha256', JWT_SECRET).update('verseau2-oidc-transaction-v1').digest();
+    const shortVerifier = await new SignJWT({
+      state: 's'.repeat(32),
+      nonce: 'n'.repeat(32),
+      code_verifier: 'too-short',
+    })
+      .setProtectedHeader({ alg: 'HS256', typ: 'OIDC-TX' })
+      .setIssuedAt()
+      .setIssuer('verseau2')
+      .setAudience('verseau2-oidc-transaction')
+      .setJti('jti')
+      .setExpirationTime('10m')
+      .sign(derivedKey);
+
+    await expect(service.verifyTransactionToken(shortVerifier)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('should reject missing or malformed tokens without leaking details', async () => {
+    const service = await buildService();
+
+    await expect(service.verifyTransactionToken(undefined)).rejects.toThrow('Invalid OIDC transaction');
+    await expect(service.verifyTransactionToken('')).rejects.toThrow('Invalid OIDC transaction');
+    await expect(service.verifyTransactionToken('not-a-jwt')).rejects.toThrow('Invalid OIDC transaction');
+    expect(service.readTransactionToken(undefined)).toBeUndefined();
+    expect(service.readTransactionToken({})).toBeUndefined();
+  });
+
+  it.each([undefined, 'development', 'test', 'staging', 'production'])(
+    'should set and clear a __Host- prefixed secure cookie with NODE_ENV=%s',
+    async (nodeEnv) => {
+      const service = await buildService(nodeEnv);
+      const res = { cookie: jest.fn(), clearCookie: jest.fn() } as unknown as Response;
+      const cookieOptions = { httpOnly: true, secure: true, sameSite: 'lax', path: '/' };
+
+      expect(service.cookieName).toBe('__Host-verseau_oidc');
+      service.setTransactionCookie(res, 'token');
+      expect(res.cookie).toHaveBeenCalledWith('__Host-verseau_oidc', 'token', {
+        ...cookieOptions,
+        maxAge: 10 * 60 * 1000,
+      });
+
+      service.clearTransactionCookie(res);
+      expect(res.clearCookie).toHaveBeenCalledWith('__Host-verseau_oidc', cookieOptions);
+    },
+  );
+});

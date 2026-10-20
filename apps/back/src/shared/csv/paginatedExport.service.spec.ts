@@ -22,7 +22,7 @@ describe('PaginatedExportService', () => {
   });
 
   it('throws when total exceeds export limit', async () => {
-    await expect(service.collectAllRows(async () => ({ data: [], total: 12001 }))).rejects.toBeInstanceOf(
+    await expect(service.collectAllRows(() => Promise.resolve({ data: [], total: 12001 }))).rejects.toBeInstanceOf(
       BadRequestException,
     );
   });

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FctAssain xsi:schemaLocation="http://xml.sandre.eaufrance.fr/scenario/fct_assain/4 http://xml.sandre.eaufrance.fr/scenario/fct_assain/4/sandre_sc_fct_assain.xsd" xmlns="http://xml.sandre.eaufrance.fr/scenario/fct_assain/4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <Scenario>
+        <CodeScenario>FCT_ASSAIN</CodeScenario>
+        <VersionScenario>4</VersionScenario>
+        <NomScenario>Test Scenario</NomScenario>
+        <DateCreationFichier>2025-01-01</DateCreationFichier>
+        <DateDebutReference>2024-01-01</DateDebutReference>
+        <DateFinReference>2024-12-31</DateFinReference>
+        <Emetteur>
+            <CdIntervenant schemeAgencyID="SIRET">12345678901234</CdIntervenant>
+            <NomIntervenant>Test Emetteur</NomIntervenant>
+            <Contact>
+                <NomContact>TEST User</NomContact>
+            </Contact>
+        </Emetteur>
+        <Destinataire>
+            <CdIntervenant schemeAgencyID="SIRET">00000000000000</CdIntervenant>
+            <NomIntervenant>Destinataire Test</NomIntervenant>
+        </Destinataire>
+    </Scenario>
+    <OuvrageDepollution>
+        <CdOuvrageDepollution>TEST_STEU_CONTACT_1101</CdOuvrageDepollution>
+        <TypeOuvrageDepollution>4</TypeOuvrageDepollution>
+        <NomOuvrageDepollution>Ouvrage Test</NomOuvrageDepollution>
+    </OuvrageDepollution>
+    <SystemeCollecte>
+        <CdSystemeCollecte>TEST_SCL_CONTACT_1101</CdSystemeCollecte>
+        <LbSystemeCollecte>Systeme Collecte Test</LbSystemeCollecte>
+    </SystemeCollecte>
+</FctAssain>

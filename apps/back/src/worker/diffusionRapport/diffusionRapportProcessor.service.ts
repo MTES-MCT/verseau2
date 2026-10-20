@@ -8,6 +8,7 @@ import { S3 } from '@infra/s3/s3';
 import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { DepotModel } from '@dossier/depot/depot.model';
+import { getDepotReportKey } from '@dossier/depot/depotStorageKeys';
 import { MasaModel } from '@dossier/masa/masa.model';
 import { DepotStep } from '@lib/dossier';
 import { AsyncTask } from '@worker/asyncTask';
@@ -61,15 +62,15 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       }
 
       // 1. Generate PDF report
-      const controlesV2 = await this.controleGateway.findControlesV2ByDepotId(depotId);
+      const controles = await this.controleGateway.findByDepotId(depotId);
       const reponsesSandre = await this.reponseSandreGateway.findByDepotId(depotId);
       this.logger.log(`Generating PDF report`, { depotId, masaId });
-      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controlesV2, masa ?? undefined, reponsesSandre);
+      const pdfBuffer = await this.pdfGenerator.generateReport(depot, controles, masa ?? undefined, reponsesSandre);
 
       // 2. Upload PDF to S3
-      const pdfPath = `rapports/${depotId}/rapport.pdf`;
+      const pdfPath = getDepotReportKey(depotId);
       await this.s3.upload(pdfPath, pdfBuffer, 'application/pdf');
-      this.logger.log(`PDF uploaded to S3`, { pdfPath });
+      this.logger.log(`PDF uploaded to S3`, { depotId, pdfPath });
 
       await this.depotGateway.updateDepot(depotId, { rapportPath: pdfPath });
 
@@ -84,13 +85,12 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       }
 
       this.logger.log(`Diffusion rapport processing completed`, { depotId, masaId, destinataires });
-    } catch (error) {
-      this.logger.error(`Failed to process diffusion rapport`, {
+    } catch (error: unknown) {
+      this.logger.log(`Failed to process diffusion rapport`, {
         depotId,
         masaId,
         destinataires,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error,
       });
       throw error;
     }
@@ -99,7 +99,8 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
   private async sendEmailToDeposant(depot: DepotModel, pdfBuffer: Buffer, masa?: MasaModel): Promise<void> {
     const user = depot.user;
     if (!user || !user.email) {
-      this.logger.error('User email not available, skipping email notification', {
+      this.logger.warn('User email not available, skipping email notification', {
+        depotId: depot.id,
         userId: depot.user?.id,
       });
       return;
@@ -130,7 +131,7 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
       },
       EmailTemplate.RAPPORT,
     );
-    this.logger.log('Job email added - to déposant', { email: user.email });
+    this.logger.log('Job email added - to déposant', { depotId: depot.id });
     await this.depotGateway.updateDepot(depot.id, {
       step: DepotStep.SEND_EMAIL_TO_DEPOSANT,
     });
@@ -233,11 +234,10 @@ export class DiffusionRapportProcessorService implements AsyncTask<DiffusionRapp
           });
         }
       }
-    } catch (error) {
-      this.logger.error(`Failed to send files to Agence de l'eau SFTP`, {
+    } catch (error: unknown) {
+      this.logger.warn(`Failed to send files to Agence de l'eau SFTP, continuing report diffusion`, {
         depotId: depot.id,
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error,
       });
     }
   }

@@ -40,6 +40,7 @@ import { seedUserWithDroits, seedUserWithoutDroits, clearUserWithDroits } from '
 
 // Import shared mocks
 import { S3TestMock, TransferClientTestMock, QueueTestMock } from '../mock/shared-mocks';
+import { uploadTestDepot } from '../depotUpload.helper';
 
 // ============= Test Suite =============
 
@@ -122,7 +123,7 @@ describe('Dossier E2E - Depot Upload', () => {
     await app?.close();
   });
 
-  describe('POST /depot/upload', () => {
+  describe('Direct depot upload', () => {
     it('should upload an XML file and enqueue processing', async () => {
       const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <SA_Assainissement xmlns="http://xml.sandre.eaufrance.fr/scenario/assainissement/2">
@@ -131,32 +132,26 @@ describe('Dossier E2E - Depot Upload', () => {
   </FctAssainissement>
 </SA_Assainissement>`;
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(xmlContent), { filename: 'test-upload.xml', contentType: 'application/xml' })
-        .expect(201);
+      const response = await uploadTestDepot(app, s3Mock, xmlContent, 'test-upload.xml');
 
       const responseBody = response.body as { id: string; nomOriginalFichier: string; type: string; itvCdn: number };
 
       expect(responseBody.nomOriginalFichier).toBe('test-upload.xml');
-      expect(responseBody.type).toBe('application/xml');
       expect(responseBody.id).toBeDefined();
-      expect(responseBody.itvCdn).toBe(TEST_USER.itvCdn);
 
       // Wait for async S3 upload and queue job to complete
       await queueMock.waitForJob();
 
-      // Verify S3 upload was called
-      expect(s3Mock.uploads).toHaveLength(1);
-      expect(s3Mock.uploads[0].key).toContain('test-upload.xml');
+      // The API never receives or uploads the file body.
+      expect(s3Mock.uploads).toHaveLength(0);
+      expect(s3Mock.hasFile(`depots/${responseBody.id}/file.xml`)).toBe(true);
 
       // Verify queue job was sent
       const processFileJobs = queueMock.getJobsByName(QueueName.process_file);
       expect(processFileJobs).toHaveLength(1);
       expect(processFileJobs[0].data).toMatchObject({
         depotId: responseBody.id,
-        filePath: expect.stringContaining('test-upload.xml') as string,
+        filePath: `depots/${responseBody.id}/file.xml`,
         utilisateur: {
           nom: TEST_USER.nom,
           prenom: TEST_USER.prenom,
@@ -172,16 +167,14 @@ describe('Dossier E2E - Depot Upload', () => {
       expect(depot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       // itvCdn may be returned as string from DB, compare as string
       expect(String(depot.itvCdn)).toBe(String(TEST_USER.itvCdn));
-      expect(depot.path).toContain('test-upload.xml');
+      expect(depot.path).toBe(`depots/${responseBody.id}/file.xml`);
     });
 
-    it('should return 400 when no file is provided', async () => {
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
+    it('should return 400 when no metadata is provided', async () => {
+      await request(app.getHttpServer())
+        .post('/depot/upload/init')
         .set('Cookie', ['access_token=test-token'])
         .expect(400);
-
-      expect((response.body as { message: string }).message).toBe('No file provided');
 
       // No S3 upload should have happened
       expect(s3Mock.uploads).toHaveLength(0);
@@ -189,9 +182,9 @@ describe('Dossier E2E - Depot Upload', () => {
 
     it('should return 400 when file is not XML', async () => {
       const response = await request(app.getHttpServer())
-        .post('/depot/upload')
+        .post('/depot/upload/init')
         .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from('plain text content'), { filename: 'test.txt', contentType: 'text/plain' })
+        .send({ fileName: 'test.txt', size: 18, contentType: 'text/plain' })
         .expect(400);
 
       expect((response.body as { message: string }).message).toBe('File must be an XML file');
@@ -210,12 +203,10 @@ describe('Dossier E2E - Depot Upload', () => {
         prenom: TEST_USER.prenom,
       });
 
-      const xmlContent = '<root></root>';
-
       const response = await request(app.getHttpServer())
-        .post('/depot/upload')
+        .post('/depot/upload/init')
         .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(xmlContent), { filename: 'test.xml', contentType: 'application/xml' })
+        .send({ fileName: 'test.xml', size: 13, contentType: 'application/xml' })
         .expect(403);
 
       expect((response.body as { message: string }).message).toBe('Aucun intervenant (ITV) lié à votre compte');
@@ -225,11 +216,7 @@ describe('Dossier E2E - Depot Upload', () => {
       const xmlContent = '<root></root>';
       const filenameWithAccents = 'données_été_été.xml';
 
-      const response = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(xmlContent), { filename: filenameWithAccents, contentType: 'application/xml' })
-        .expect(201);
+      const response = await uploadTestDepot(app, s3Mock, xmlContent, filenameWithAccents);
 
       const responseBody = response.body as { id: string; nomOriginalFichier: string };
 
@@ -244,11 +231,9 @@ describe('Dossier E2E - Depot Upload', () => {
     });
 
     it('should return 401 when no access token is provided', async () => {
-      const xmlContent = '<root></root>';
-
       await request(app.getHttpServer())
-        .post('/depot/upload')
-        .attach('file', Buffer.from(xmlContent), { filename: 'test.xml', contentType: 'application/xml' })
+        .post('/depot/upload/init')
+        .send({ fileName: 'test.xml', size: 13, contentType: 'application/xml' })
         .expect(401);
     });
   });
@@ -257,11 +242,7 @@ describe('Dossier E2E - Depot Upload', () => {
     it('should return list of depots for the authenticated user', async () => {
       // First upload a file
       const xmlContent = '<root></root>';
-      const uploadResponse = await request(app.getHttpServer())
-        .post('/depot/upload')
-        .set('Cookie', ['access_token=test-token'])
-        .attach('file', Buffer.from(xmlContent), { filename: 'list-test.xml', contentType: 'application/xml' })
-        .expect(201);
+      const uploadResponse = await uploadTestDepot(app, s3Mock, xmlContent, 'list-test.xml');
 
       // Wait for async S3 upload and queue job
       await queueMock.waitForJob();

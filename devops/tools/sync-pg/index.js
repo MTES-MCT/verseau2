@@ -5,10 +5,14 @@ const S3Service = require('./s3-service');
 const PgService = require('./pg-service');
 const SchemaManager = require('./schema-manager');
 const { EXCLUDED_TABLES } = require('./schemas');
+const { sendReport } = require('./restore-report');
 require('./server');
 
 async function main() {
   let tempFilePath = null;
+  let fileName;
+  let errorMessage;
+  let skipped = false;
 
   const startedAt = new Date();
 
@@ -24,9 +28,19 @@ async function main() {
     const pgService = new PgService(config);
     const schemaManager = new SchemaManager(config);
 
+    // Check the latest S3 dump against the last completed schema swap before downloading.
+    const key = await s3Service.getMostRecentKey();
+    fileName = path.basename(key);
+    const lastRestoredDump = await schemaManager.getLastRestoredDumpSource();
+    if (fileName === lastRestoredDump) {
+      skipped = true;
+      console.log(`Dump ${fileName} already restored; skipping sync.`);
+      return;
+    }
+
     // Step 1: Download dump from S3 and verify contents
     console.log('=== Step 1/4: Download & verify dump ===');
-    tempFilePath = await s3Service.downloadFile();
+    tempFilePath = await s3Service.downloadFile(key);
     console.log('Downloaded file:', tempFilePath);
     await pgService.verifyDumpContents(tempFilePath);
 
@@ -58,13 +72,28 @@ async function main() {
 
     console.log('\n✅ Sync process finished successfully!');
   } catch (error) {
+    errorMessage = error instanceof Error ? error.message : String(error);
     console.error('\n❌ Sync process failed:', error);
 
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      console.log('Cleaning up temporary file after error...');
-      fs.unlinkSync(tempFilePath);
+    try {
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        console.log('Cleaning up temporary file after error...');
+        fs.unlinkSync(tempFilePath);
+      }
+    } catch (cleanupError) {
+      console.error('Temporary file cleanup failed:', cleanupError);
     }
+  } finally {
+    await sendReport({
+      error: errorMessage,
+      fileName,
+      skipped,
+      excludedTables: EXCLUDED_TABLES,
+      durationMs: Date.now() - startedAt.getTime(),
+    });
+  }
 
+  if (errorMessage !== undefined) {
     process.exit(1);
   }
 }

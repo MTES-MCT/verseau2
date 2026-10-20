@@ -17,11 +17,14 @@ import {
   OIDCTokens,
   OIDCConfiguration,
   AuthenticatedUserAndNomPrenom,
+  INTERNAL_TOKEN_ISSUER,
+  INTERNAL_TOKEN_AUDIENCE,
 } from './authentication';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SignJWT, jwtVerify } from 'jose';
 import { DroitsUserService } from '@user/droitsUser.service';
+import { logAuthenticationFailure } from './logAuthenticationFailure';
 
 @Injectable()
 export class AuthenticationService implements Authentication {
@@ -75,7 +78,9 @@ export class AuthenticationService implements Authentication {
   ): Promise<string> {
     const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt();
+      .setIssuedAt()
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience(INTERNAL_TOKEN_AUDIENCE);
 
     if (expiresIn) {
       jwt.setExpirationTime(`${expiresIn}s`);
@@ -87,17 +92,6 @@ export class AuthenticationService implements Authentication {
   }
 
   /**
-   * Résout les claims métier (itvCdn, isExpertNational) depuis Lanceleau via DroitsUserService.
-   */
-  private async resolveBusinessClaims(sub: string): Promise<{ itvCdn: number | null; isExpertNational: boolean }> {
-    const [itvCdn, isExpertNational] = await Promise.all([
-      this.droitsUserService.resolveItvCdn(sub),
-      this.droitsUserService.isExpertNationalVerseau(sub),
-    ]);
-    return { itvCdn, isExpertNational };
-  }
-
-  /**
    * Valide exclusivement le JWT interne signé par Verseau2.
    * Tout token non signé par JWT_SECRET est rejeté (pas de fallback Cerbere).
    */
@@ -105,11 +99,13 @@ export class AuthenticationService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
       });
 
       return this.mapInternalClaimsToUser(payload);
     } catch (error) {
-      this.logger.error(`Token validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logAuthenticationFailure(this.logger, 'Token validation failed', error);
       throw new UnauthorizedException();
     }
   }
@@ -123,6 +119,8 @@ export class AuthenticationService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
         // Le refresh est appelé précisément quand l'access token a expiré.
         // On tolère une expiration de 7 jours (durée max du refresh token).
         clockTolerance: 7 * 24 * 60 * 60,
@@ -134,9 +132,7 @@ export class AuthenticationService implements Authentication {
 
       return payload.sub;
     } catch (error) {
-      this.logger.error(
-        `Failed to extract subject from expired token: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      logAuthenticationFailure(this.logger, 'Failed to extract subject from expired token', error);
       throw new UnauthorizedException();
     }
   }
@@ -157,14 +153,21 @@ export class AuthenticationService implements Authentication {
     };
   }
 
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
+  async handleCallback(
+    code: string,
+    nonce: string,
+    codeVerifier: string,
+  ): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     const configuration = await this.getConfiguration();
     const callbackUrl = new URL(this.redirectUri);
     callbackUrl.searchParams.set('code', code);
 
+    // PKCE (RFC 7636) : le code_verifier vient du cookie de transaction signé,
+    // jamais du corps HTTP. Le challenge S256 correspondant a été envoyé dans
+    // la requête d'autorisation via GET /auth/login.
     const tokens = await authorizationCodeGrant(configuration, callbackUrl, {
       expectedNonce: nonce,
-      pkceCodeVerifier: undefined,
+      pkceCodeVerifier: codeVerifier,
     });
 
     const idTokenClaims = tokens.claims();
@@ -175,8 +178,7 @@ export class AuthenticationService implements Authentication {
     const userInfo = await this.fetchUserInfoClaims(tokens.access_token, idTokenClaims.sub);
     const user = this.mapOpenIdUserToUser(userInfo);
 
-    // Résoudre les claims métier depuis Lanceleau
-    const { itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId);
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
 
     // Forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(
@@ -191,8 +193,8 @@ export class AuthenticationService implements Authentication {
       ...user,
       itvCdn,
       isExpertNational,
-      nom: (userInfo.family_name as string) || undefined,
-      prenom: (userInfo.given_name as string) || undefined,
+      nom: userInfo.family_name || undefined,
+      prenom: userInfo.given_name || undefined,
     };
 
     return {
@@ -243,7 +245,7 @@ export class AuthenticationService implements Authentication {
     try {
       configuration = await this.getConfiguration();
     } catch (error) {
-      this.logger.error(
+      this.logger.debug(
         `Failed to get OIDC configuration during token refresh: ${error instanceof Error ? error.message : String(error)}`,
       );
       throw error;
@@ -254,10 +256,7 @@ export class AuthenticationService implements Authentication {
       tokens = await refreshTokenGrant(configuration, refreshToken);
       this.logger.log('OIDC refresh token grant succeeded');
     } catch (error) {
-      this.logger.error(
-        `OIDC refresh token grant failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error,
-      );
+      logAuthenticationFailure(this.logger, 'OIDC refresh token grant failed', error);
       throw new UnauthorizedException();
     }
 
@@ -268,25 +267,13 @@ export class AuthenticationService implements Authentication {
       // car le spec OIDC n'impose pas le retour d'un id_token lors d'un refresh grant.
       const userInfo = await this.fetchUserInfoClaims(tokens.access_token, expectedSubject);
       user = this.mapOpenIdUserToUser(userInfo);
-      this.logger.log(`User info retrieved for cerbereId=${user.cerbereId}`);
+      this.logger.log('User info retrieved after token refresh');
     } catch (error) {
-      this.logger.error(
-        `Failed to fetch user info after token refresh: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      logAuthenticationFailure(this.logger, 'Failed to fetch user info after token refresh', error);
       throw new UnauthorizedException();
     }
 
-    let itvCdn: number | null;
-    let isExpertNational: boolean;
-    try {
-      // Re-résoudre les claims métier (peuvent avoir changé)
-      ({ itvCdn, isExpertNational } = await this.resolveBusinessClaims(user.cerbereId));
-    } catch (error) {
-      this.logger.error(
-        `Failed to resolve business claims for cerbereId=${user.cerbereId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      throw new UnauthorizedException();
-    }
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.mel);
 
     // Re-forger le JWT interne Verseau2
     const internalToken = await this.signInternalToken(
@@ -298,7 +285,7 @@ export class AuthenticationService implements Authentication {
     );
 
     if (!tokens.refresh_token) {
-      this.logger.warn('AS did not return a new refresh token');
+      this.logger.debug('AS did not return a new refresh token; keeping the existing token');
     }
 
     this.logger.log('Token refresh completed successfully');

@@ -284,7 +284,7 @@ export interface ConformiteSteuFilters extends PaginationQuery {
 
 /** Filtres pour la recherche de conformité SCL */
 export interface ConformiteSclFilters extends PaginationQuery {
-  ouvrageDepollutionIds: number[];
+  systemeCollecteIds: number[];
   year: number;
   systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;

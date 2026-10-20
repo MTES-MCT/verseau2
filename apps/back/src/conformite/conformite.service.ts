@@ -53,7 +53,7 @@ export interface ListConformiteSteuOptions extends PaginationQuery {
 }
 
 export interface ListConformiteSclOptions extends PaginationQuery {
-  authorizedSteuCdas: string[];
+  authorizedSclCdas: string[];
   year: number;
   systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
@@ -139,7 +139,7 @@ export class ConformiteService {
   @TraceCalls(LOG_LEVELS[2])
   async listConformiteScl(options: ListConformiteSclOptions): Promise<PaginatedConformiteSclRows> {
     const {
-      authorizedSteuCdas,
+      authorizedSclCdas,
       year,
       systemeCollecteCode,
       trancheObligationRfa,
@@ -150,17 +150,17 @@ export class ConformiteService {
       sortOrder,
     } = options;
 
-    if (authorizedSteuCdas.length === 0) {
+    if (authorizedSclCdas.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
-    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
-    if (ouvrageDepollutionIds.length === 0) {
+    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
+    if (systemeCollecteIds.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSclFilters = {
-      ouvrageDepollutionIds,
+      systemeCollecteIds,
       year,
       page,
       pageSize,

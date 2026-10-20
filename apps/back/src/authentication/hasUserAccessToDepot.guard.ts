@@ -24,7 +24,7 @@ export class HasUserAccessToDepotGuard implements CanActivate {
     // Get depot ID from route params (supports both :id and :depotId)
     const depotId = request.params.id || request.params.depotId;
 
-    if (!depotId) {
+    if (typeof depotId !== 'string' || !depotId) {
       this.logger.warn('No depot ID found in request params');
       throw new ForbiddenException('Depot ID is required');
     }

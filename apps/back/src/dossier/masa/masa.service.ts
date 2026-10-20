@@ -26,7 +26,7 @@ export class MasaService {
 
     const existingMasa = await this.masaGateway.findByDepotId(payload.verseau2DepotId);
     if (existingMasa) {
-      this.logger.warn('MASA return already processed', { depotId: payload.verseau2DepotId });
+      this.logger.debug('MASA return already processed', { depotId: payload.verseau2DepotId });
       return existingMasa;
     }
 

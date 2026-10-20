@@ -6,9 +6,8 @@ import { SandreService } from '@dossier/controle/technique/sandre/sandre.service
 import { DepotService } from '@dossier/depot/depot.service';
 import { QueueGateway } from '@queue/queue';
 import type { Queue } from '@queue/queue';
-import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
 import { SharedModule } from '@shared/shared.module';
-import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { loggerProviderMock, loggerValueMock } from '@shared/logger/logger.mock';
 import { ControleSandreStatus, DepotStep, DepotStatus } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 
@@ -18,7 +17,6 @@ describe('ControleSandreUploadProcessorService', () => {
   let mockSandreService: SandreService;
   let mockDepotService: DepotService;
   let mockQueueService: Queue;
-  let mockDepotCoordinatorService: DepotCoordinatorService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -38,11 +36,7 @@ describe('ControleSandreUploadProcessorService', () => {
     mockQueueService = {
       send: jest.fn(),
       work: jest.fn(),
-    } as unknown as Queue;
-
-    mockDepotCoordinatorService = {
-      checkControlesCompletion: jest.fn().mockResolvedValue(undefined),
-    } as unknown as DepotCoordinatorService;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [SharedModule],
@@ -52,7 +46,6 @@ describe('ControleSandreUploadProcessorService', () => {
         { provide: SandreService, useValue: mockSandreService },
         { provide: DepotService, useValue: mockDepotService },
         { provide: QueueGateway, useValue: mockQueueService },
-        { provide: DepotCoordinatorService, useValue: mockDepotCoordinatorService },
         loggerProviderMock,
       ],
     }).compile();
@@ -79,7 +72,14 @@ describe('ControleSandreUploadProcessorService', () => {
       status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
     });
-    expect(mockDepotCoordinatorService.checkControlesCompletion).not.toHaveBeenCalled();
+    expect(mockQueueService.send).not.toHaveBeenCalled();
+    expect(loggerValueMock.log).toHaveBeenCalledWith('Depot dep_1 - SANDRE upload failed', {
+      errorMessage: error.message,
+      retryCount: 0,
+      retryLimit: 2,
+    });
+    expect(loggerValueMock.debug).not.toHaveBeenCalled();
+    expect(loggerValueMock.error).not.toHaveBeenCalled();
   });
 
   it('should finalize depot state on the last failed attempt', async () => {
@@ -101,10 +101,19 @@ describe('ControleSandreUploadProcessorService', () => {
       step: DepotStep.PARSER_SANDRE_IN_PROGRESS,
     });
     expect(mockDepotService.update).toHaveBeenNthCalledWith(2, 'dep_1', {
+      status: DepotStatus.REJETE,
       step: DepotStep.CONTROLE_SANDRE_FAILED,
       controleSandreStatus: ControleSandreStatus.FAILED,
       error: DepotError.SANDRE_UPLOAD_FAILED,
     });
-    expect(mockDepotCoordinatorService.checkControlesCompletion).toHaveBeenCalledWith('dep_1');
+    // Technical error: no rapport is sent
+    expect(mockQueueService.send).not.toHaveBeenCalled();
+    expect(loggerValueMock.log).toHaveBeenCalledWith('Depot dep_1 - SANDRE upload failed', {
+      errorMessage: error.message,
+      retryCount: 2,
+      retryLimit: 2,
+    });
+    expect(loggerValueMock.debug).not.toHaveBeenCalled();
+    expect(loggerValueMock.error).not.toHaveBeenCalled();
   });
 });

@@ -4,11 +4,20 @@ import { MigrationService } from './infra/database/migration.service';
 import cookieParser from 'cookie-parser';
 import { LoggerService } from '@shared/logger/logger.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import type { NextFunction, Request, Response } from 'express';
 
 async function bootstrapServer() {
+  const logger = new LoggerService('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(ApiModule, {
-    logger: new LoggerService('Bootstrap'),
+    logger,
   });
+
+  if (process.env.DISABLE_INDEXING === 'true') {
+    app.use((_req: Request, res: Response, next: NextFunction) => {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      next();
+    });
+  }
 
   app.use(cookieParser());
   app.set('trust proxy', true);
@@ -17,7 +26,7 @@ async function bootstrapServer() {
   try {
     await migrationService.runMigrationsIfEnabled();
   } catch (error) {
-    console.error('Fatal: Migration failed on startup', error);
+    logger.error('Migration failed on startup; stopping the API', error);
     process.exit(1);
   }
 

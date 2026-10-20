@@ -7,9 +7,13 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: '0 0 * * *' # Midnight UTC, on the default branch.
 
 jobs:
   changes:
+    if: github.event_name != 'schedule' && github.event.action != 'labeled'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -120,3 +124,49 @@ jobs:
       - name: Run tests
         if: matrix.workspace != 'back'
         run: pnpm --filter ${{ matrix.workspace }} run --if-present test
+
+  browser-e2e:
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'e2e') &&
+       (github.event.action != 'labeled' || github.event.label.name == 'e2e'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install Cypress Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0t64 libgbm1 libnotify4 libnss3 libxss1 libasound2t64 libxtst6 xauth xvfb
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Cypress and Docker
+        run: |
+          pnpm --filter e2e exec cypress verify
+          docker info --format '{{.ServerVersion}}'
+
+      - name: Run browser E2E tests
+        run: pnpm test:e2e
+
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e-artifacts
+          path: e2e/artifacts/
+          if-no-files-found: ignore
+          retention-days: 7

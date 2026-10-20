@@ -7,6 +7,7 @@ export type DepotModel = Pick<
   | 'nomOriginalFichier'
   | 'tailleFichier'
   | 'path'
+  | 'uploadExpiresAt'
   | 'rapportPath'
   | 'type'
   | 'error'

@@ -10,8 +10,10 @@ import {
   getControlesSandre,
   getMasa,
   type RouteResponse,
+  initializeDepotUpload,
+  completeDepotUpload,
 } from '@lib/dossier';
-import { apiPostFormData, apiDownload, apiCall, buildRoutePath } from './apiClient';
+import { apiDownload, apiCall, buildRoutePath } from './apiClient';
 
 export type DroitsDeDepotResponse = RouteResponse<typeof checkDroitsRoute>;
 
@@ -31,10 +33,28 @@ export async function fetchMasa(depotId: string) {
   return apiCall(getMasa, { params: { depotId } });
 }
 
-export async function uploadDepot(file: File): Promise<void> {
-  const formData = new FormData();
-  formData.append('file', file);
-  await apiPostFormData<void>('/depot/upload', formData);
+export type DepotUploadSession = RouteResponse<typeof initializeDepotUpload>;
+
+export async function initializeUpload(file: File): Promise<DepotUploadSession> {
+  return apiCall(initializeDepotUpload, {
+    body: { fileName: file.name, size: file.size, contentType: file.type },
+  });
+}
+
+export async function uploadDepotFile(file: File, session: DepotUploadSession): Promise<void> {
+  const response = await fetch(session.uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: session.headers,
+    credentials: 'omit',
+  });
+  if (!response.ok) {
+    throw new Error(`L’envoi du fichier a échoué (${response.status}). Veuillez réessayer.`);
+  }
+}
+
+export async function completeUpload(depotId: string) {
+  return apiCall(completeDepotUpload, { params: { id: depotId } });
 }
 
 export async function checkDroitsDeDepot(

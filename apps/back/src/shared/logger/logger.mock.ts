@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
-import { ConsoleLogger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { LoggerService } from './logger.service';
 
 export const loggerValueMock = {
@@ -8,6 +8,7 @@ export const loggerValueMock = {
   warn: jest.fn(),
   debug: jest.fn(),
   verbose: jest.fn(),
+  fatal: jest.fn(),
   setContext: jest.fn(),
 };
 
@@ -16,6 +17,7 @@ export const loggerProviderMock = {
   useValue: loggerValueMock,
 };
 
+@Injectable()
 export class LoggerServiceMock extends LoggerService {
   constructor() {
     super('LoggerServiceMock');
@@ -30,6 +32,18 @@ export class LoggerServiceMock extends LoggerService {
   }
 
   debug(message: any, ...optionalParams: [...any, string?]): void {
+    // Mock implementation
+  }
+
+  warn(message: any, ...optionalParams: [...any, string?]): void {
+    // Mock implementation
+  }
+
+  verbose(message: any, ...optionalParams: [...any, string?]): void {
+    // Mock implementation
+  }
+
+  fatal(message: any, ...optionalParams: [...any, string?]): void {
     // Mock implementation
   }
 

@@ -50,8 +50,7 @@ class S3Service {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
   };
 
-  async downloadFile() {
-    const key = await this.getMostRecentKey();
+  async downloadFile(key) {
     console.log(`Starting download from s3://${this.config.aws.bucket}/${key}`);
     
     const command = new GetObjectCommand({

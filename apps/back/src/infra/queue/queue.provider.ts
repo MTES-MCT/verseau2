@@ -1,10 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { PgBoss } from 'pg-boss';
+import { PgBoss, type QueueOptions } from 'pg-boss';
 import { PGBOSS, QueueName, resolveQueueName } from './queue';
 import { LoggerService } from '@shared/logger/logger.service';
-import { UpdateQueueOptions } from 'pg-boss/dist/types';
 
-const queueOptions: Partial<Record<QueueName, UpdateQueueOptions>> = {
+const queueOptions: Partial<Record<QueueName, QueueOptions>> = {
   [QueueName.controle_sandre_upload]: {
     expireInSeconds: 120, // 2 minutes
     retryLimit: 2,

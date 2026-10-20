@@ -57,8 +57,8 @@ npm run test:e2e --workspace=apps/back  # E2E with testcontainers
 ### File Processing Flow
 1. User uploads file → `DepotController` saves to S3
 2. Server enqueues job to `QueueName.process_file` (pg-boss)
-3. Worker picks up job → `FileProcessorService` dispatches control jobs
-4. Runs `controle_sandre` and `controle_metier` in parallel; when both succeed, enqueues `send_to_sftp` (coordination in `DepotCoordinatorService`)
+3. Worker picks up job → `FileProcessorService` dispatches the `controle_metier` job
+4. Controls run sequentially: `controle_metier` first; on success it enqueues `controle_sandre_upload`, whose poll processor enqueues `send_to_sftp` when the file is SANDRE-conformant
 5. Worker processors execute the controls + SFTP export
 6. Frontend polls depot status via API
 

@@ -17,7 +17,8 @@ import {
   ErrorCode,
 } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
-import { DepotCoordinatorService } from '@dossier/depot/depotCoordinator.service';
+import { QueueGateway, QueueName, RapportDestinataire } from '@queue/queue';
+import type { DiffusionRapportJobData, Queue } from '@queue/queue';
 import { ControleGateway } from '@dossier/controle/controle.gateway';
 import { DataSource } from 'typeorm';
 
@@ -29,7 +30,7 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
     private readonly controleMetierV2Service: ControleMetierV2Service,
     private readonly controleV1Service: ControleV1Service,
     private readonly depotService: DepotService,
-    private readonly depotCoordinatorService: DepotCoordinatorService,
+    @Inject(QueueGateway) private readonly queueService: Queue,
     @Inject(ControleGateway) private readonly controleGateway: ControleGateway,
     private readonly logger: LoggerService,
   ) {
@@ -41,6 +42,8 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       status: DepotStatus.EN_COURS_DE_TRAITEMENT,
       step: DepotStep.CONTROLE_IN_PROGRESS,
     });
+
+    let followUp: () => Promise<void>;
 
     try {
       this.logger.log(`Depot ${depotId} - Downloading file for Business controls (V1 & V2)`, filePath);
@@ -72,13 +75,38 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
         v2Count: resultsV2.length,
       });
 
-      await this.depotService.update(depotId, {
-        controleStatus: allSuccess ? ControleStatus.SUCCESS : ControleStatus.FAILED,
-        step: allSuccess ? DepotStep.CONTROLE_COMPLETED : DepotStep.CONTROLE_FAILED,
-        etapeMetier: allSuccess ? EtapeMetier.CONTROLE_METIER : EtapeMetier.CONTROLE_REFERENTIEL,
-      });
+      if (allSuccess) {
+        await this.depotService.update(depotId, {
+          controleStatus: ControleStatus.SUCCESS,
+          step: DepotStep.CONTROLE_COMPLETED,
+          etapeMetier: EtapeMetier.CONTROLE_METIER,
+        });
 
-      await this.depotCoordinatorService.checkControlesCompletion(depotId);
+        // Sequential processing: SANDRE control starts only after business controls succeed
+        followUp = async () => {
+          this.logger.log(`Depot ${depotId} - Business controls succeeded, dispatching SANDRE control`);
+          await this.queueService.send(QueueName.controle_sandre_upload, {
+            depotId,
+            filePath,
+          });
+        };
+      } else {
+        this.logger.log(`Depot ${depotId} - Business controls failed, rejecting depot`);
+
+        await this.depotService.update(depotId, {
+          status: DepotStatus.REJETE,
+          controleStatus: ControleStatus.FAILED,
+          step: DepotStep.CONTROLE_FAILED,
+          etapeMetier: EtapeMetier.CONTROLE_REFERENTIEL,
+        });
+
+        followUp = async () => {
+          await this.queueService.send<DiffusionRapportJobData>(QueueName.diffusion_rapport, {
+            depotId,
+            destinataires: [RapportDestinataire.DEPOSANT],
+          });
+        };
+      }
     } catch (error) {
       this.logger.error(`Depot ${depotId} - Controles Métier failed`, error);
 
@@ -90,13 +118,16 @@ export class ControleMetierProcessorService implements AsyncTask<{ depotId: stri
       }
 
       await this.depotService.update(depotId, {
+        status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,
         controleStatus: ControleStatus.FAILED,
         error: DepotError.CONTROLE_METIER_TECHNICAL_FAILURE,
       });
 
-      await this.depotCoordinatorService.checkControlesCompletion(depotId);
+      return;
     }
+
+    await followUp();
   }
 
   private async createTechnicalErrorControle(depotId: string): Promise<void> {

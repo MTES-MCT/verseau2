@@ -9,7 +9,7 @@ export default function CallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const { refreshUser } = useAuth();
+  const { login, refreshUser } = useAuth();
   const callbackProcessed = useRef(false);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function CallbackPage() {
             <div className="fr-alert fr-alert--error">
               <h3 className="fr-alert__title">Erreur d'authentification</h3>
               <p>{error}</p>
-              <button className="fr-btn fr-btn--secondary fr-mt-2w" onClick={() => navigate('/', { replace: true })}>
+              <button className="fr-btn fr-btn--secondary fr-mt-2w" onClick={() => login()}>
                 Réessayer
               </button>
             </div>

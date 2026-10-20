@@ -27,6 +27,9 @@ export class DepotEntity extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   path?: string;
 
+  @Column({ type: 'timestamptz', name: 'upload_expires_at', nullable: true })
+  uploadExpiresAt?: Date;
+
   @Column({ type: 'varchar', name: 'rapport_path', nullable: true })
   rapportPath?: string;
 

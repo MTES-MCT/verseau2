@@ -455,8 +455,9 @@ describe('ConformiteDashboard', () => {
   it('affiche le bouton export désactivé sans résultat', () => {
     renderPage();
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      /veuillez sélectionner un ouvrage pour afficher les résultats/i,
+    expect(screen.getByText(/veuillez sélectionner un ouvrage pour afficher les résultats/i)).toHaveAttribute(
+      'role',
+      'status',
     );
     expect(screen.queryByRole('button', { name: /exporter csv/i })).not.toBeInTheDocument();
   });

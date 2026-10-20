@@ -17,23 +17,31 @@ interface RefreshResponse {
   expiresIn?: number;
 }
 
+export type SessionChange =
+  { type: 'login'; expiresAt: number } | { type: 'refresh'; expiresAt: number; status: number } | { type: 'cleared' };
+
+type StoredSessionChange = { type: 'login' } | { type: 'refresh'; status: number };
+
 interface OIDCConfiguration {
   authorizationEndpoint: string;
   clientId: string;
   redirectUri: string;
   scope: string;
+  state: string;
+  nonce: string;
+  codeChallenge: string;
 }
 
 const STORAGE_KEY = 'verseau_session';
 const STATE_KEY = 'oidc_state';
-const NONCE_KEY = 'oidc_nonce';
 
-class AuthService {
+export class AuthService {
   private storage: Storage;
   private sessionStorage: Storage;
 
   /** Shared promise so concurrent refreshes trigger only one request. */
-  private refreshPromise: Promise<void> | null = null;
+  private refreshPromise: Promise<number> | null = null;
+  private readonly sessionListeners = new Set<(change: SessionChange) => void>();
 
   constructor() {
     this.storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage);
@@ -41,70 +49,77 @@ class AuthService {
   }
 
   /**
-   * Generate a random UUID for state/nonce
+   * Récupère la configuration OIDC et la tentative de connexion générée côté serveur.
+   * Le cookie de transaction est posé par le backend sur cette réponse.
    */
-  private generateRandomValue(): string {
-    return crypto.randomUUID();
-  }
-
-  /**
-   * Initiate the OIDC login flow
-   */
-  async login(): Promise<void> {
-    // Get OIDC configuration from backend
+  private async fetchLoginConfiguration(): Promise<OIDCConfiguration> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'GET',
+      credentials: 'include',
     });
 
     if (!response.ok) {
       throw new Error('Failed to get OIDC configuration');
     }
 
-    const config: OIDCConfiguration = await response.json();
+    return response.json();
+  }
 
-    // Generate state and nonce on frontend
-    const state = this.generateRandomValue();
-    const nonce = this.generateRandomValue();
+  /**
+   * Initiate the OIDC login flow.
+   * Le state et le nonce sont générés côté serveur et liés au navigateur
+   * par un cookie de transaction vérifié au callback.
+   */
+  async login(): Promise<void> {
+    const config = await this.fetchLoginConfiguration();
 
-    // Store state and nonce in sessionStorage for validation
-    this.sessionStorage.setItem(STATE_KEY, state);
-    this.sessionStorage.setItem(NONCE_KEY, nonce);
+    // Mémorise le state pour la vérification côté client au retour de l'IdP.
+    this.sessionStorage.setItem(STATE_KEY, config.state);
 
-    // Build authorization URL
+    // Build authorization URL (PKCE : challenge S256 généré côté serveur,
+    // le code_verifier reste dans le cookie de transaction signé)
     const authUrl = new URL(config.authorizationEndpoint);
     authUrl.searchParams.set('client_id', config.clientId);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('redirect_uri', config.redirectUri);
     authUrl.searchParams.set('scope', config.scope);
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('nonce', nonce);
+    authUrl.searchParams.set('state', config.state);
+    authUrl.searchParams.set('nonce', config.nonce);
+    authUrl.searchParams.set('code_challenge', config.codeChallenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
 
     // Redirect to authorization endpoint
     window.location.href = authUrl.toString();
   }
 
   /**
+   * Initialise une tentative de connexion sans rediriger (page mock de développement).
+   */
+  async initMockTransaction(): Promise<string> {
+    const config = await this.fetchLoginConfiguration();
+    this.sessionStorage.setItem(STATE_KEY, config.state);
+    return config.state;
+  }
+
+  /**
    * Handle the OIDC callback after user authentication
    */
   async handleCallback(code: string, state: string): Promise<void> {
-    // Retrieve state and nonce from sessionStorage
+    // Retrieve state from sessionStorage
     const expectedState = this.sessionStorage.getItem(STATE_KEY);
-    const expectedNonce = this.sessionStorage.getItem(NONCE_KEY);
 
     // Clean up
     this.sessionStorage.removeItem(STATE_KEY);
-    this.sessionStorage.removeItem(NONCE_KEY);
 
     // Validate state
     if (!expectedState || state !== expectedState) {
-      throw new Error('Invalid state parameter - possible CSRF attack');
+      throw new Error(
+        'La vérification de sécurité de la connexion a échoué. Votre demande de connexion a peut-être expiré ou a été ouverte dans un autre onglet. Veuillez réessayer.',
+      );
     }
 
-    if (!expectedNonce) {
-      throw new Error('Missing nonce');
-    }
-
-    // Send code and nonce to backend
+    // Send code and state to backend. Le nonce est relu par le backend
+    // dans le cookie de transaction signé, jamais depuis le corps HTTP.
     const response = await fetch(`${API_BASE_URL}/auth/callback`, {
       method: 'POST',
       headers: {
@@ -112,23 +127,26 @@ class AuthService {
       },
       body: JSON.stringify({
         code,
-        nonce: expectedNonce,
+        state,
       }),
       credentials: 'include',
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Authentication failed: ${error}`);
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(payload?.message ?? "Échec de l'authentification");
     }
 
     const data: AuthCallbackResponse = await response.json();
 
     // Tokens are set as httpOnly cookies by the backend.
     // We only store the expiration timestamp so the frontend can proactively refresh.
-    this.storeSession({
-      expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
-    });
+    this.storeSession(
+      {
+        expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
+      },
+      { type: 'login' },
+    );
   }
 
   /**
@@ -174,7 +192,7 @@ class AuthService {
   /**
    * Refresh the access token (deduplicated: concurrent calls share a single request)
    */
-  async refreshToken(): Promise<void> {
+  async refreshToken(): Promise<number> {
     if (!this.refreshPromise) {
       this.refreshPromise = this.doRefreshToken().finally(() => {
         this.refreshPromise = null;
@@ -183,7 +201,7 @@ class AuthService {
     return this.refreshPromise;
   }
 
-  private async doRefreshToken(): Promise<void> {
+  private async doRefreshToken(): Promise<number> {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
@@ -195,9 +213,14 @@ class AuthService {
 
     const data: RefreshResponse = await response.json();
 
-    this.storeSession({
-      expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
-    });
+    this.storeSession(
+      {
+        expires_at: Date.now() + (data.expiresIn || 3600) * 1000,
+      },
+      { type: 'refresh', status: response.status },
+    );
+
+    return response.status;
   }
 
   /**
@@ -247,12 +270,26 @@ class AuthService {
     return response.json();
   }
 
-  private storeSession(session: SessionStorage): void {
+  getSessionExpiresAt(): number | null {
+    return this.getSession()?.expires_at ?? null;
+  }
+
+  subscribeToSessionChanges(listener: (change: SessionChange) => void): () => void {
+    this.sessionListeners.add(listener);
+    return () => {
+      this.sessionListeners.delete(listener);
+    };
+  }
+
+  private storeSession(session: SessionStorage, change: StoredSessionChange): void {
     try {
       this.storage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
       reportError(error, { source: 'AuthService.storeSession' });
+      return;
     }
+
+    this.sessionListeners.forEach((listener) => listener({ ...change, expiresAt: session.expires_at }));
   }
 
   private getSession(): SessionStorage | null {
@@ -276,6 +313,8 @@ class AuthService {
     } catch (error) {
       reportError(error, { source: 'AuthService.clearSession' });
     }
+
+    this.sessionListeners.forEach((listener) => listener({ type: 'cleared' }));
   }
 }
 

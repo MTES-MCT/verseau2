@@ -35,7 +35,7 @@ export class DroitsDepotService {
     }
 
     const user = await this.userGateway.findBySub(subId);
-    this.logger.log('Checking droits de depot for user', user);
+    this.logger.log('Checking droits de depot for user', { subId, userId: user?.id });
     if (!user) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
@@ -44,21 +44,22 @@ export class DroitsDepotService {
     }
 
     const ag = await this.masaProvider.findAgByEmail(user.email);
-    this.logger.log('Ag entity found', ag);
+    this.logger.debug('Ag entity lookup completed', { found: Boolean(ag) });
     if (!ag) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
     const roles = await this.masaProvider.findRolesByPrCdn(ag.principalIdentifiant);
     const roleCdns = new Set(roles?.map((r) => r.roleOrionId));
-    const hasRoleDeposantOrExpertBassin = roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU);
-    this.logger.log('hasRoleDeposantOrExpertBassin', hasRoleDeposantOrExpertBassin);
-    if (!hasRoleDeposantOrExpertBassin) {
+    const hasRoleDepotAutorise =
+      roleCdns.has(ROLE.DEPOSANT) || roleCdns.has(ROLE.EXPERT_BASSIN_VERSEAU) || roleCdns.has(ROLE.DEPOSANT_SATESE);
+    this.logger.debug('hasRoleDepotAutorise', hasRoleDepotAutorise);
+    if (!hasRoleDepotAutorise) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
     const intervenant = await this.masaProvider.findIntervenantById(ag.intervenantId);
-    this.logger.log('Intervenant found', {
+    this.logger.debug('Intervenant found', {
       intervenantId: intervenant?.intervenantId,
       siret: intervenant?.intervenantSiret,
     });
@@ -67,13 +68,13 @@ export class DroitsDepotService {
     }
     const userSiret = intervenant.intervenantSiret;
 
-    this.logger.log(
+    this.logger.debug(
       'Validating droits de depot for cdOuvrageDepollutionList',
       cdOuvrageDepollutionList,
       cdSystemeCollecteList,
     );
     const matches = await this.masaProvider.findVSteuSclItvByCodes(cdOuvrageDepollutionList, cdSystemeCollecteList);
-    this.logger.log('VSteuSclItv entities found', matches);
+    this.logger.debug('VSteuSclItv entities found', { count: matches.length });
 
     for (const code of cdOuvrageDepollutionList) {
       const matchesForCode = matches.filter((m) => m.ouvrageDepollutionCode === code);

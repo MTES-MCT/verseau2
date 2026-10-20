@@ -1,5 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  S3ServiceException,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 import { S3 } from './s3';
 export const S3_CLIENT = Symbol('S3_CLIENT');
@@ -11,6 +20,7 @@ export class S3Service implements S3 {
   constructor(
     bucket: string,
     @Inject(S3_CLIENT) private readonly s3Client: S3Client,
+    private readonly uploadClient: S3Client = s3Client,
   ) {
     this.bucket = bucket;
   }
@@ -24,6 +34,49 @@ export class S3Service implements S3 {
     });
 
     await this.s3Client.send(command);
+  }
+
+  async createUploadUrl(key: string, expiresIn: number, size: number): Promise<string> {
+    return getSignedUrl(
+      this.uploadClient,
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ContentType: 'application/xml',
+        ContentLength: size,
+      }),
+      { expiresIn, signableHeaders: new Set(['content-type', 'content-length']) },
+    );
+  }
+
+  async head(key: string): Promise<{ size: number; contentType?: string; etag: string } | null> {
+    try {
+      const result = await this.s3Client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      if (result.ContentLength === undefined || !result.ETag) {
+        throw new Error('Missing S3 object metadata');
+      }
+      return { size: result.ContentLength, contentType: result.ContentType, etag: result.ETag };
+    } catch (error) {
+      if (error instanceof S3ServiceException && error.$metadata.httpStatusCode === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async copy(sourceKey: string, destinationKey: string, etag: string): Promise<void> {
+    await this.s3Client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        Key: destinationKey,
+        CopySource: `${this.bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`,
+        CopySourceIfMatch: etag,
+      }),
+    );
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async download(key: string): Promise<Buffer> {

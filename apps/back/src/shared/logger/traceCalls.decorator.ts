@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return*/
 
-import { Logger, LogLevel } from '@nestjs/common';
+import { LogLevel } from '@nestjs/common';
 import { performance } from 'perf_hooks';
 import { ulid } from 'ulid';
 import { LoggerService } from './logger.service';
@@ -10,7 +10,7 @@ function bufferLine(logLines: string[], callIdPrefix: string, msg: string) {
 }
 
 function flush(logLines: string[], logger: LoggerService, level: LogLevel) {
-  const logMethod = logger[level as keyof Logger] as (msg: string) => void;
+  const logMethod = (logger as unknown as Record<LogLevel, (msg: string) => void>)[level];
   if (typeof logMethod === 'function') {
     logLines.forEach((line) => logMethod.call(logger, line));
   } else {
@@ -18,9 +18,16 @@ function flush(logLines: string[], logger: LoggerService, level: LogLevel) {
   }
 }
 
-function flushError(logLines: string[], logger: LoggerService, callIdPrefix: string, errorMsg: string) {
-  logLines.push(`${callIdPrefix} ${errorMsg}`);
-  logLines.forEach((line) => logger.error(line));
+function flushError(
+  logLines: string[],
+  logger: LoggerService,
+  level: LogLevel,
+  callIdPrefix: string,
+  errorMsg: string,
+) {
+  // The boundary handling the exception owns the warn/error log, not this tracing decorator.
+  flush(logLines, logger, level);
+  logger.debug(`${callIdPrefix} ${errorMsg}`);
 }
 
 /**
@@ -127,13 +134,15 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
               flush(logLines, logger, level);
               return res;
             })
-            .catch((err: Error) => {
+            .catch((err: unknown) => {
               const duration = (performance.now() - startTime).toFixed(2);
+              const message = err instanceof Error ? err.message : String(err);
               flushError(
                 logLines,
                 logger,
+                level,
                 callIdPrefix,
-                `!!! [ERROR] ${propName} | Duration: ${duration}ms | ${err.message}`,
+                `!!! [ERROR] ${propName} | Duration: ${duration}ms | ${message}`,
               );
               throw err;
             });
@@ -146,7 +155,13 @@ export function TraceCalls(level: LogLevel = 'debug'): MethodDecorator {
       } catch (err) {
         const duration = (performance.now() - startTime).toFixed(2);
         const message = err instanceof Error ? err.message : String(err);
-        flushError(logLines, logger, callIdPrefix, `!!! [ERROR] ${propName} | Duration: ${duration}ms | ${message}`);
+        flushError(
+          logLines,
+          logger,
+          level,
+          callIdPrefix,
+          `!!! [ERROR] ${propName} | Duration: ${duration}ms | ${message}`,
+        );
         throw err;
       }
     };

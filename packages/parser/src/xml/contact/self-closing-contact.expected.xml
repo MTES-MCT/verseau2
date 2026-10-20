@@ -1,0 +1,7 @@
+<Scenario>
+	<Emetteur>
+		<Contact id="1" >
+			<NomContact>NOM</NomContact>
+		</Contact>
+	</Emetteur>
+</Scenario>

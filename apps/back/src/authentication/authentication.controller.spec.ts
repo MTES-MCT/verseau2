@@ -1,25 +1,39 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { AuthenticationController } from './authentication.controller';
 import { Authentication, OIDCTokens } from './authentication';
+import { OidcTransactionService } from './oidcTransaction.service';
 import { UserService } from '@user/user.service';
 import { DroitsUserService } from '@user/droitsUser.service';
 import type { CustomRequest } from '@shared/constants/customRequest';
 import type { Response } from 'express';
-import { loggerProviderMock } from '@shared/logger/logger.mock';
+import { loggerProviderMock, loggerValueMock } from '@shared/logger/logger.mock';
 
 const makeResponse = (): jest.Mocked<Response> =>
   ({
     cookie: jest.fn(),
     clearCookie: jest.fn(),
+    set: jest.fn(),
   }) as unknown as jest.Mocked<Response>;
 
 const makeRequest = (cookies: Record<string, string> = {}): CustomRequest => ({ cookies }) as unknown as CustomRequest;
 
+const TRANSACTION_COOKIE = '__Host-verseau_oidc';
+const TRANSACTION_STATE = 'state-abc';
+const TRANSACTION_NONCE = 'nonce-from-cookie';
+const TRANSACTION_CODE_VERIFIER = 'code-verifier-from-cookie';
+const TRANSACTION_CODE_CHALLENGE = 'code-challenge-abc';
+
 describe('AuthenticationController', () => {
   let controller: AuthenticationController;
   let mockAuthentication: jest.Mocked<Authentication>;
+  let mockOidcTransaction: jest.Mocked<OidcTransactionService>;
   let mockUserService: jest.Mocked<UserService>;
   let mockDroitsUserService: jest.Mocked<DroitsUserService>;
 
@@ -32,7 +46,7 @@ describe('AuthenticationController', () => {
       refreshTokens: jest.fn(),
       buildCookieResponse: jest.fn(),
       clearCookieResponse: jest.fn(),
-    } as jest.Mocked<Authentication>;
+    };
 
     mockUserService = {
       findOrCreateUser: jest.fn(),
@@ -40,6 +54,7 @@ describe('AuthenticationController', () => {
     } as unknown as jest.Mocked<UserService>;
 
     mockDroitsUserService = {
+      resolveVerseauAccess: jest.fn(),
       resolveItvCdn: jest.fn(),
       isExpertNationalVerseau: jest.fn(),
       canConsultDepot: jest.fn(),
@@ -47,12 +62,36 @@ describe('AuthenticationController', () => {
       findIntervenantByUserSub: jest.fn(),
     } as unknown as jest.Mocked<DroitsUserService>;
 
+    mockOidcTransaction = {
+      cookieName: TRANSACTION_COOKIE,
+      createTransaction: jest.fn(),
+      verifyTransactionToken: jest.fn(),
+      readTransactionToken: jest.fn((cookies: unknown) => {
+        if (typeof cookies !== 'object' || cookies === null) {
+          return undefined;
+        }
+        const token = (cookies as Record<string, unknown>)[TRANSACTION_COOKIE];
+        return typeof token === 'string' ? token : undefined;
+      }),
+      setTransactionCookie: jest.fn(),
+      clearTransactionCookie: jest.fn(),
+    } as unknown as jest.Mocked<OidcTransactionService>;
+    mockOidcTransaction.verifyTransactionToken.mockResolvedValue({
+      state: TRANSACTION_STATE,
+      nonce: TRANSACTION_NONCE,
+      codeVerifier: TRANSACTION_CODE_VERIFIER,
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthenticationController],
       providers: [
         {
           provide: Authentication,
           useValue: mockAuthentication,
+        },
+        {
+          provide: OidcTransactionService,
+          useValue: mockOidcTransaction,
         },
         {
           provide: UserService,
@@ -74,6 +113,30 @@ describe('AuthenticationController', () => {
   });
 
   describe('refresh', () => {
+    it.each([
+      [new UnauthorizedException(), 'warn'],
+      [new ForbiddenException(), 'warn'],
+      [new ServiceUnavailableException(), 'error'],
+      [new Error('Unexpected infrastructure failure'), 'error'],
+    ] as const)('classifies refresh failure %s at %s level without changing the response', async (error, level) => {
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(error);
+
+      await expect(
+        controller.refresh(
+          makeRequest({
+            refresh_token: 'secret-refresh',
+            access_token: 'secret-access',
+          }),
+          makeResponse(),
+        ),
+      ).rejects.toThrow();
+
+      expect(loggerValueMock[level]).toHaveBeenCalledTimes(1);
+      expect(loggerValueMock.warn.mock.calls.length + loggerValueMock.error.mock.calls.length).toBe(1);
+      expect(JSON.stringify(loggerValueMock[level].mock.calls)).not.toContain('secret-');
+    });
+
     it('should throw BadRequestException when refresh token cookie is missing', async () => {
       const req = makeRequest({});
       const res = makeResponse();
@@ -151,6 +214,16 @@ describe('AuthenticationController', () => {
       await expect(controller.refresh(req, res)).rejects.toThrow(UnauthorizedException);
       expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
+
+    it('préserve le 403 lorsque les droits Verseau ont été retirés', async () => {
+      const req = makeRequest({ refresh_token: 'refresh-token', access_token: 'internal-jwt' });
+      const res = makeResponse();
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue('user-123');
+      mockAuthentication.refreshTokens.mockRejectedValue(new ForbiddenException());
+
+      await expect(controller.refresh(req, res)).rejects.toMatchObject({ status: 403 });
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
   });
 
   describe('logout', () => {
@@ -163,22 +236,82 @@ describe('AuthenticationController', () => {
     });
   });
 
+  describe('login', () => {
+    it('should return server-generated state/nonce and set the transaction cookie', async () => {
+      const res = makeResponse();
+      mockAuthentication.getOIDCConfiguration.mockResolvedValue({
+        authorizationEndpoint: 'https://auth.example.com/authorize',
+        clientId: 'test-client-id',
+        redirectUri: 'https://app.example.com/callback',
+        scope: 'openid profile',
+      });
+      mockOidcTransaction.createTransaction.mockResolvedValue({
+        state: TRANSACTION_STATE,
+        nonce: TRANSACTION_NONCE,
+        codeVerifier: TRANSACTION_CODE_VERIFIER,
+        codeChallenge: TRANSACTION_CODE_CHALLENGE,
+        token: 'signed-transaction-token',
+      });
+
+      const result = await controller.login(res);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          state: TRANSACTION_STATE,
+          nonce: TRANSACTION_NONCE,
+          codeChallenge: TRANSACTION_CODE_CHALLENGE,
+        }),
+      );
+      expect(mockOidcTransaction.setTransactionCookie).toHaveBeenCalledWith(res, 'signed-transaction-token');
+      expect(res.set).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      // Le code_verifier ne doit jamais quitter le serveur.
+      expect(result).not.toHaveProperty('codeVerifier');
+    });
+  });
+
   describe('callback', () => {
+    const validCookies = { [TRANSACTION_COOKIE]: 'signed-transaction-token' };
+
     it('should throw BadRequestException when code is missing', async () => {
       const res = makeResponse();
-      await expect(controller.callback('', 'nonce', '', '', res)).rejects.toThrow(BadRequestException);
+      await expect(controller.callback('', TRANSACTION_STATE, '', '', makeRequest(validCookies), res)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
-    it('should throw BadRequestException when nonce is missing', async () => {
+    it('should throw BadRequestException when state is missing', async () => {
       const res = makeResponse();
-      await expect(controller.callback('code', '', '', '', res)).rejects.toThrow(BadRequestException);
+      await expect(controller.callback('code', '', '', '', makeRequest(validCookies), res)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException when OIDC error is present', async () => {
       const res = makeResponse();
-      await expect(controller.callback('code', 'nonce', 'access_denied', 'User denied', res)).rejects.toThrow(
-        BadRequestException,
+      await expect(
+        controller.callback('code', TRANSACTION_STATE, 'access_denied', 'User denied', makeRequest(validCookies), res),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw UnauthorizedException when the transaction cookie is missing or invalid', async () => {
+      const res = makeResponse();
+      mockOidcTransaction.verifyTransactionToken.mockRejectedValueOnce(new UnauthorizedException());
+
+      await expect(controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest({}), res)).rejects.toThrow(
+        UnauthorizedException,
       );
+      expect(mockOidcTransaction.clearTransactionCookie).not.toHaveBeenCalled();
+      expect(mockAuthentication.handleCallback).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when state does not match the transaction (login CSRF)', async () => {
+      const res = makeResponse();
+
+      await expect(
+        controller.callback('attacker-code', 'attacker-state', '', '', makeRequest(validCookies), res),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockOidcTransaction.clearTransactionCookie).not.toHaveBeenCalled();
+      expect(mockAuthentication.handleCallback).not.toHaveBeenCalled();
     });
 
     it('should set cookies and return user on successful callback', async () => {
@@ -199,9 +332,15 @@ describe('AuthenticationController', () => {
       });
       mockUserService.findOrCreateUser.mockResolvedValue({} as never);
 
-      const result = await controller.callback('auth-code', 'nonce-abc', '', '', res);
+      const result = await controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res);
 
-      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith('auth-code', 'nonce-abc');
+      // Le nonce et le code_verifier utilisés viennent du cookie vérifié, jamais du corps HTTP.
+      expect(mockAuthentication.handleCallback).toHaveBeenCalledWith(
+        'auth-code',
+        TRANSACTION_NONCE,
+        TRANSACTION_CODE_VERIFIER,
+      );
+      expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
       expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith('user-123', {
         email: 'user@example.com',
         nom: 'Doe',
@@ -209,6 +348,29 @@ describe('AuthenticationController', () => {
       });
       expect(mockAuthentication.buildCookieResponse).toHaveBeenCalled();
       expect(result).toEqual({ user: mockUser, expiresIn: 3600 });
+    });
+
+    it('should clear the transaction cookie when the OIDC exchange fails', async () => {
+      const res = makeResponse();
+      mockAuthentication.handleCallback.mockRejectedValueOnce(new Error('invalid_grant'));
+
+      await expect(
+        controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
+    });
+
+    it('préserve le 403 et ne synchronise pas le compte refusé', async () => {
+      const res = makeResponse();
+      mockAuthentication.handleCallback.mockRejectedValue(new ForbiddenException());
+
+      await expect(
+        controller.callback('auth-code', TRANSACTION_STATE, '', '', makeRequest(validCookies), res),
+      ).rejects.toMatchObject({ status: 403 });
+
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
+      expect(mockAuthentication.buildCookieResponse).not.toHaveBeenCalled();
     });
   });
 });

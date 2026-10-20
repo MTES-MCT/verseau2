@@ -6,7 +6,7 @@ import { DepotEntity } from '@dossier/depot/depot.entity';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
-import { DepotStep, DepotStatus } from '@lib/dossier';
+import { ControleName, ControleType, DepotStep, DepotStatus, ErrorCode, EvenementType } from '@lib/dossier';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
 import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
 import { DiffusionRapportProcessorService } from '@worker/diffusionRapport/diffusionRapportProcessor.service';
@@ -32,6 +32,7 @@ import type { App } from 'supertest/types';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
 import { MasaProvider } from '@masa/masa.provider';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { loggerProviderMock } from '@shared/logger/logger.mock';
 import { Zip } from '@shared/zip/zip';
 import { ZipService } from '@shared/zip/zip.service';
@@ -50,6 +51,7 @@ import {
   ControleGatewayTestMock,
   AgenceEauClientTestMock,
   MasaProviderTestMock,
+  LanceleauGatewayTestMock,
 } from './mock/shared-mocks';
 
 describe('Worker Service (e2e)', () => {
@@ -115,6 +117,7 @@ describe('Worker Service (e2e)', () => {
         { provide: QueueGateway, useValue: queueMock },
         { provide: ControleV1Service, useClass: ControleV1TestMock },
         { provide: RoseauGateway, useClass: RoseauGatewayTestMock },
+        { provide: LanceleauGateway, useClass: LanceleauGatewayTestMock },
         loggerProviderMock,
       ],
     }).compile();
@@ -173,19 +176,13 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_IN_PROGRESS);
 
-      // Verify jobs enqueued
-      expect(queueMock.jobs).toHaveLength(2);
+      // Verify jobs enqueued (sequential flow: only the business control is dispatched,
+      // the SANDRE control is dispatched by the business control processor on success)
+      expect(queueMock.jobs).toHaveLength(1);
       expect(queueMock.jobs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             name: QueueName.controle_metier,
-            data: {
-              depotId: depot.id,
-              filePath: 'test_file.xml',
-            },
-          }),
-          expect.objectContaining({
-            name: QueueName.controle_sandre_upload,
             data: {
               depotId: depot.id,
               filePath: 'test_file.xml',
@@ -232,20 +229,33 @@ describe('Worker Service (e2e)', () => {
   });
 
   describe('SftpProcessorService', () => {
+    let sftpUser: UserEntity;
+
+    beforeEach(async () => {
+      sftpUser = await dataSource.getRepository(UserEntity).save({
+        id: 'user_sftp_processor',
+        sub: 'sftp-user-sub',
+        email: 'sftp-user@example.com',
+        nom: 'Cerbere',
+        prenom: 'Contact',
+      });
+    });
+
     it('should send file to SFTP successfully', async () => {
       // Create depot
       const depot = await dataSource.getRepository(DepotEntity).save({
         id: 'dep_test_004',
-        path: 'sftp_test.xml',
+        path: 'depots/dep_test_004/file.xml',
         nomOriginalFichier: 'sftp_test.xml',
         type: 'application/xml',
         tailleFichier: 1024,
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
+        userId: sftpUser.id,
       });
 
       // Seed S3 with file
-      s3Mock.seed('sftp_test.xml', '<data>test</data>');
+      s3Mock.seed(depot.path, '<data>test</data>');
 
       // Reset mocks
       agentVerseauClientMock.reset();
@@ -253,7 +263,7 @@ describe('Worker Service (e2e)', () => {
       // Process SFTP
       await sftpProcessorService.process({
         depotId: depot.id,
-        filePath: 'sftp_test.xml',
+        filePath: depot.path,
       });
 
       // Verify depot status stays EN_COURS_DE_TRAITEMENT (waiting for MASA)
@@ -264,8 +274,8 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.step).toBe(DepotStep.SFTP_COMPLETED);
       // Verify SFTP was called
       expect(agentVerseauClientMock.calls).toHaveLength(2);
-      expect(agentVerseauClientMock.calls[0].fileName).toBe('sftp_test.xml');
-      expect(agentVerseauClientMock.calls[1].fileName).toBe('sftp_test.xml.ack');
+      expect(agentVerseauClientMock.calls[0].fileName).toBe(`${depot.id}_sftp_test.xml`);
+      expect(agentVerseauClientMock.calls[1].fileName).toBe(`${depot.id}_sftp_test.xml.ack`);
     });
 
     it('should handle SFTP failures', async () => {
@@ -278,6 +288,7 @@ describe('Worker Service (e2e)', () => {
         tailleFichier: 1024,
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
         step: DepotStep.READY_FOR_SFTP,
+        userId: sftpUser.id,
       });
 
       // Seed S3 with file
@@ -337,13 +348,17 @@ describe('Worker Service (e2e)', () => {
       s3Mock.seed('rejected_file.xml', '<data>test</data>');
 
       // Set mock for controles (e.g., an error occurred)
-      controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([
+      controleGatewayMock.findByDepotId.mockResolvedValue([
         {
           id: 'ctrl_001',
-          name: 'StructureXML',
-          evenementType: 'ERREUR',
-          error: 'Le fichier XML est mal formé',
+          name: ControleName.CTL005,
+          type: ControleType.CONTROLE_V1,
+          success: false,
+          evenementType: EvenementType.ERREUR,
+          error: ErrorCode.E2_033,
+          errorParams: ['99', '1A', '0600000001'],
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ]);
 
@@ -414,7 +429,7 @@ describe('Worker Service (e2e)', () => {
       agenceEauClientMock.reset();
       masaProviderMock.reset();
       s3Mock.seed('valid_file.xml', '<data>test</data>');
-      controleGatewayMock.findControlesV2ByDepotId.mockResolvedValue([]);
+      controleGatewayMock.findByDepotId.mockResolvedValue([]);
 
       // Process the diffusion rapport with MASA
       await diffusionRapportProcessorService.process({

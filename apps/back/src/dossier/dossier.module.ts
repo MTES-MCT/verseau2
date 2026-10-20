@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DepotController } from './depot/depot.controller';
 import { DepotEntity } from './depot/depot.entity';
 import { DepotRepository } from './depot/depot.repository';
 import { DepotService } from './depot/depot.service';
 import { DroitsDepotService } from './depot/droitsDepot.service';
-import { DeposerUnFichier } from './depot/usecase/deposerUnFichier';
+import { DepotUploadService } from './depot/depotUpload.service';
+import { DepotUploadGateway } from './depot/depotUpload.gateway';
+import { DepotUploadRepository } from './depot/depotUpload.repository';
 import { InfraModule } from '@infra/infra.module';
 import { SandreService } from './controle/technique/sandre/sandre.service';
 import { SandreMockService } from './controle/technique/sandre/sandre.mock.service';
@@ -24,7 +26,6 @@ import { ControleMapper } from './controle/isov1/controle.mapper';
 import { DepotAdminController } from './depot/depotAdmin.controller';
 import { DepotGateway } from './depot/depot.gateway';
 import { ControleController } from './controle/controle.controller';
-import { DepotCoordinatorService } from './depot/depotCoordinator.service';
 import { MasaEntity } from './masa/masa.entity';
 import { MasaController } from './masa/masa.controller';
 import { MasaService } from './masa/masa.service';
@@ -33,6 +34,7 @@ import { MasaGateway } from './masa/masa.gateway';
 import { MasaRepository } from './masa/masa.repository';
 import { MasaApiKeyGuard } from './masa/masaApiKey.guard';
 import { MasaIpGuard } from './masa/masaIp.guard';
+import { MasaResponseHeaderMiddleware } from './masa/masaResponseHeader.middleware';
 import { IsAdminGuard } from '@authentication/isAdmin.guard';
 import { RapportPdfGeneratorService } from './rapport/rapportPdfGenerator.service';
 import { ControleMetierV2Service } from './controle/metierv2/controleMetierV2.service';
@@ -67,8 +69,8 @@ const sandreServiceFactory = {
     { provide: DepotGateway, useClass: DepotRepository },
     DepotService,
     DroitsDepotService,
-    DepotCoordinatorService,
-    DeposerUnFichier,
+    DepotUploadService,
+    { provide: DepotUploadGateway, useClass: DepotUploadRepository },
     // Sandre control
     sandreServiceFactory,
     { provide: ReponseSandreGateway, useClass: ReponseSandreRepository },
@@ -84,13 +86,14 @@ const sandreServiceFactory = {
     MasaService,
     MasaApiKeyGuard,
     MasaIpGuard,
+    MasaResponseHeaderMiddleware,
     IsAdminGuard,
     RapportPdfGeneratorService,
   ],
   exports: [
+    DepotUploadService,
     DepotService,
     DroitsDepotService,
-    DepotCoordinatorService,
     SandreService,
     ReponseSandreGateway,
     ControleV1Service,
@@ -101,4 +104,8 @@ const sandreServiceFactory = {
     ControleGateway,
   ],
 })
-export class DossierModule {}
+export class DossierModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MasaResponseHeaderMiddleware).forRoutes(MasaController);
+  }
+}

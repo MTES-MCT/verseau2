@@ -1,13 +1,29 @@
+const parseDate = (date: Date | string): Date => {
+  return typeof date === 'string' ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00Z` : date) : date;
+};
+
 export const formatDate = (date: Date | string | null, timezone: string = 'Europe/Paris'): string => {
   if (!date) {
     return '-';
   }
-  const d = typeof date === 'string' ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00Z` : date) : date;
-  return d.toLocaleDateString('fr-FR', {
+  return parseDate(date).toLocaleDateString('fr-FR', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     timeZone: timezone,
+  });
+};
+
+export const formatDateTime = (date: Date | string | null): string => {
+  if (!date) {
+    return '-';
+  }
+  return parseDate(date).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 

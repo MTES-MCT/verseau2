@@ -22,7 +22,7 @@ export class MasaController {
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(masaPayloadSchema))
   async processRetourAgentVerseau(@Body() payload: MasaWebhookPayloadDto) {
-    this.logger.log('Processing Masa webhook payload', { payload });
+    this.logger.log('Processing MASA webhook', { depotId: payload.verseau2DepotId, statut: payload.statut });
     return await this.masaService.processRetourAgentVerseau(payload);
   }
 }

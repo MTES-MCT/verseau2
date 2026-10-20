@@ -3,13 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { EmailProvider } from '../email.provider';
 import { EmailParams, EmailTemplate } from '../notification';
 import * as nodemailer from 'nodemailer';
-import * as brevo from '@getbrevo/brevo';
+import { BrevoClient } from '@getbrevo/brevo';
 import { LoggerService } from '@shared/logger/logger.service';
 
 @Injectable()
 export class EmailBrevoCatcherProvider implements EmailProvider {
   private transporter: nodemailer.Transporter;
-  private emailsApi: brevo.TransactionalEmailsApi;
+  private readonly brevo: BrevoClient;
 
   constructor(
     private readonly config: ConfigService,
@@ -19,8 +19,7 @@ export class EmailBrevoCatcherProvider implements EmailProvider {
     const port = this.config.get<number>('MAILCATCHER_PORT', 1025);
 
     const apiKey = this.config.getOrThrow<string>('BREVO_API_KEY');
-    this.emailsApi = new brevo.TransactionalEmailsApi();
-    this.emailsApi.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, apiKey);
+    this.brevo = new BrevoClient({ apiKey, maxRetries: 0 });
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -49,20 +48,19 @@ export class EmailBrevoCatcherProvider implements EmailProvider {
 
     try {
       const info = (await this.transporter.sendMail(mailOptions)) as { messageId: string };
-      this.logger.log(`Email sent via MailCatcher to ${emailParams.to.map((t) => t.email).join(', ')}`);
+      this.logger.log('Email sent via MailCatcher', { template, recipientCount: emailParams.to.length });
       return {
         response: info,
         body: { messageId: info.messageId },
       };
     } catch (error) {
-      this.logger.error('Error sending email via MailCatcher', error);
+      this.logger.debug('Error sending email via MailCatcher', error);
       throw error;
     }
   }
 
-  private async findTemplateById(id: number): Promise<brevo.GetSmtpTemplateOverview> {
-    const template = await this.emailsApi.getSmtpTemplate(id);
-    return template.body;
+  private async findTemplateById(id: number) {
+    return this.brevo.transactionalEmails.getSmtpTemplate({ templateId: id });
   }
 
   private replaceTemplateParams(content: string, params: EmailParams) {

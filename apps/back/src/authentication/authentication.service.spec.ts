@@ -1,38 +1,45 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import { jest as esmJest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { AuthenticationService } from './authentication.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DroitsUserService } from '@user/droitsUser.service';
-import { UnauthorizedException } from '@nestjs/common';
-import { AuthenticatedUser } from './authentication';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { AuthenticatedUser, INTERNAL_TOKEN_AUDIENCE, INTERNAL_TOKEN_ISSUER } from './authentication';
 
-// Mock external modules
-jest.mock('openid-client', () => ({
+// Register ESM mocks before loading AuthenticationService and its dependencies.
+esmJest.unstable_mockModule('openid-client', () => ({
   Configuration: jest.fn(),
   discovery: jest.fn(),
   authorizationCodeGrant: jest.fn(),
   refreshTokenGrant: jest.fn(),
   fetchUserInfo: jest.fn(),
+  ResponseBodyError: class extends Error {},
 }));
 
 const mockSign = jest.fn().mockResolvedValue('mock-internal-jwt');
 const mockSetProtectedHeader = jest.fn().mockReturnThis();
 const mockSetIssuedAt = jest.fn().mockReturnThis();
+const mockSetIssuer = jest.fn().mockReturnThis();
+const mockSetAudience = jest.fn().mockReturnThis();
 const mockSetExpirationTime = jest.fn().mockReturnThis();
 
-jest.mock('jose', () => ({
+esmJest.unstable_mockModule('jose', () => ({
+  errors: { JOSEError: class extends Error {} },
   jwtVerify: jest.fn(),
   SignJWT: jest.fn().mockImplementation(() => ({
     setProtectedHeader: mockSetProtectedHeader,
     setIssuedAt: mockSetIssuedAt,
+    setIssuer: mockSetIssuer,
+    setAudience: mockSetAudience,
     setExpirationTime: mockSetExpirationTime,
     sign: mockSign,
   })),
 }));
 
-import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo } from 'openid-client';
-import { jwtVerify } from 'jose';
+import { AuthenticationService } from './authentication.service';
+import { discovery, authorizationCodeGrant, refreshTokenGrant, fetchUserInfo, ResponseBodyError } from 'openid-client';
+import { jwtVerify, errors } from 'jose';
 
 const mockServerMetadata = {
   issuer: 'https://auth.example.com',
@@ -105,6 +112,7 @@ describe('AuthenticationService', () => {
 
     // Mock DroitsUserService
     mockDroitsUserService = {
+      resolveVerseauAccess: jest.fn().mockResolvedValue({ itvCdn: null, isExpertNational: false }),
       resolveItvCdn: jest.fn().mockResolvedValue(null),
       isExpertNationalVerseau: jest.fn().mockResolvedValue(false),
       canConsultDepot: jest.fn(),
@@ -157,7 +165,11 @@ describe('AuthenticationService', () => {
 
       const result = await service.validateToken('mock.jwt.token');
 
-      expect(jwtVerify).toHaveBeenCalledWith('mock.jwt.token', expect.any(Uint8Array), { algorithms: ['HS256'] });
+      expect(jwtVerify).toHaveBeenCalledWith('mock.jwt.token', expect.any(Uint8Array), {
+        algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
+      });
       expect(result).toEqual(
         createAuthenticatedUser({
           cerbereId: 'user-123',
@@ -169,12 +181,19 @@ describe('AuthenticationService', () => {
     });
 
     it('should reject a token that fails verification (no fallback)', async () => {
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error('signature verification failed'));
+      (jwtVerify as jest.Mock).mockRejectedValue(
+        Object.assign(new errors.JOSEError('signature verification failed'), {
+          code: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+        }),
+      );
 
       await expect(service.validateToken('invalid.jwt.token')).rejects.toThrow(UnauthorizedException);
 
       // Detailed error is logged server-side
-      expect(mockLogger.error).toHaveBeenCalledWith('Token validation failed: signature verification failed');
+      expect(mockLogger.warn).toHaveBeenCalledWith('Token validation failed', {
+        errorCode: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+      });
+      expect(mockLogger.error).not.toHaveBeenCalled();
       // fetchUserInfo should NOT be called — no fallback to Cerbere
       expect(fetchUserInfo).not.toHaveBeenCalled();
     });
@@ -200,8 +219,13 @@ describe('AuthenticationService', () => {
       (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(minimalUserInfo);
 
-      const result = await service.handleCallback('mock-code', 'mock-nonce');
+      const result = await service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier');
 
+      // PKCE : le code_verifier est transmis à l'échange de code (openid-client).
+      expect(authorizationCodeGrant).toHaveBeenCalledWith(mockConfiguration, expect.any(URL), {
+        expectedNonce: 'mock-nonce',
+        pkceCodeVerifier: 'mock-code-verifier',
+      });
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'mock-access-token', 'user-minimal');
       expect(result.user).toEqual(
         expect.objectContaining({
@@ -209,6 +233,27 @@ describe('AuthenticationService', () => {
           mel: 'minimal@example.com',
         }),
       );
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('minimal@example.com');
+    });
+
+    it('refuse une première connexion avant la création du compte local', async () => {
+      const mockTokens = {
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+        claims: () => ({ sub: 'new-user' }),
+      };
+      (authorizationCodeGrant as jest.Mock).mockResolvedValue(mockTokens);
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'new-user', email: 'new.user@example.com' });
+      mockDroitsUserService.resolveVerseauAccess.mockRejectedValue(
+        new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
+      );
+
+      await expect(service.handleCallback('mock-code', 'mock-nonce', 'mock-code-verifier')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('new.user@example.com');
+      expect(mockSign).not.toHaveBeenCalled();
     });
   });
 
@@ -222,18 +267,24 @@ describe('AuthenticationService', () => {
 
       expect(jwtVerify).toHaveBeenCalledWith('expired.jwt.token', expect.any(Uint8Array), {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
         clockTolerance: 7 * 24 * 60 * 60,
       });
       expect(result).toBe('user-123');
     });
 
     it('should throw UnauthorizedException when signature verification fails', async () => {
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error('signature verification failed'));
+      (jwtVerify as jest.Mock).mockRejectedValue(
+        Object.assign(new errors.JOSEError('signature verification failed'), {
+          code: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+        }),
+      );
 
       await expect(service.extractSubjectFromExpiredToken('forged.jwt.token')).rejects.toThrow(UnauthorizedException);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to extract subject from expired token: signature verification failed',
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to extract subject from expired token', {
+        errorCode: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+      });
     });
 
     it('should throw UnauthorizedException when sub claim is missing', async () => {
@@ -242,7 +293,7 @@ describe('AuthenticationService', () => {
       });
 
       await expect(service.extractSubjectFromExpiredToken('no-sub.jwt.token')).rejects.toThrow(UnauthorizedException);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to extract subject from expired token: Missing sub claim');
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to extract subject from expired token', expect.any(Error));
     });
   });
 
@@ -267,15 +318,13 @@ describe('AuthenticationService', () => {
 
       (refreshTokenGrant as jest.Mock).mockResolvedValue(mockRefreshedTokens);
       (fetchUserInfo as jest.Mock).mockResolvedValue(mockUserInfo);
-      mockDroitsUserService.resolveItvCdn.mockResolvedValue(42);
-      mockDroitsUserService.isExpertNationalVerseau.mockResolvedValue(true);
+      mockDroitsUserService.resolveVerseauAccess.mockResolvedValue({ itvCdn: 42, isExpertNational: true });
 
       const result = await service.refreshTokens(mockRefreshToken, 'user-123');
 
       expect(refreshTokenGrant).toHaveBeenCalledWith(mockConfiguration, mockRefreshToken);
       expect(fetchUserInfo).toHaveBeenCalledWith(mockConfiguration, 'new-cerbere-access-token', 'user-123');
-      expect(mockDroitsUserService.resolveItvCdn).toHaveBeenCalledWith('user-123');
-      expect(mockDroitsUserService.isExpertNationalVerseau).toHaveBeenCalledWith('user-123');
+      expect(mockDroitsUserService.resolveVerseauAccess).toHaveBeenCalledWith('john.doe@example.com');
 
       // Le token retourné est un JWT interne (pas le token Cerbere)
       expect(result.accessToken).toBe('mock-internal-jwt');
@@ -308,10 +357,46 @@ describe('AuthenticationService', () => {
       await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
 
       // Detailed error is logged server-side (message + original error object)
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'OIDC refresh token grant failed: Invalid refresh token',
-        expect.any(Error),
+      expect(mockLogger.error).toHaveBeenCalledWith('OIDC refresh token grant failed', expect.any(Error));
+    });
+
+    it('logs an expired or revoked OAuth refresh token as a warning', async () => {
+      const error = Object.assign(Object.create(ResponseBodyError.prototype) as Error, {
+        error: 'invalid_grant',
+        status: 400,
+      });
+      (refreshTokenGrant as jest.Mock).mockRejectedValue(error);
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('OIDC refresh token grant failed', {
+        statusCode: 400,
+        oauthError: 'invalid_grant',
+      });
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it('keeps OAuth provider failures at error level', async () => {
+      const error = Object.assign(Object.create(ResponseBodyError.prototype) as Error, {
+        error: 'temporarily_unavailable',
+        status: 503,
+      });
+      (refreshTokenGrant as jest.Mock).mockRejectedValue(error);
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toThrow(UnauthorizedException);
+
+      expect(mockLogger.error).toHaveBeenCalledWith('OIDC refresh token grant failed', error);
+    });
+
+    it('refuse le renouvellement lorsque les droits ont été retirés', async () => {
+      (refreshTokenGrant as jest.Mock).mockResolvedValue({ access_token: 'new-access-token', expires_in: 3600 });
+      (fetchUserInfo as jest.Mock).mockResolvedValue({ sub: 'user-123', email: 'user@example.com' });
+      mockDroitsUserService.resolveVerseauAccess.mockRejectedValue(
+        new ForbiddenException({ code: 'VERSEAU_ACCESS_DENIED' }),
       );
+
+      await expect(service.refreshTokens(mockRefreshToken, 'user-123')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockSign).not.toHaveBeenCalled();
     });
   });
 
@@ -409,10 +494,38 @@ describe('AuthenticationService', () => {
     });
   });
 
+  describe('token rejection logging', () => {
+    it.each(['ERR_JWT_EXPIRED', 'ERR_JWT_INVALID', 'ERR_JWT_CLAIM_VALIDATION_FAILED'])(
+      'logs expected %s rejection without the JWT payload',
+      async (code) => {
+        const error = Object.assign(new errors.JOSEError('Invalid token'), {
+          code,
+          payload: { email: 'private@example.com' },
+        });
+        (jwtVerify as jest.Mock).mockRejectedValue(error);
+
+        await expect(service.validateToken('secret-token')).rejects.toThrow(UnauthorizedException);
+
+        expect(mockLogger.warn).toHaveBeenCalledWith('Token validation failed', { errorCode: code });
+        expect(mockLogger.error).not.toHaveBeenCalled();
+      },
+    );
+
+    it('keeps unexpected verifier failures at error level', async () => {
+      const error = new TypeError('Unexpected cryptographic failure');
+      (jwtVerify as jest.Mock).mockRejectedValue(error);
+
+      await expect(service.validateToken('token')).rejects.toThrow(UnauthorizedException);
+
+      expect(mockLogger.error).toHaveBeenCalledWith('Token validation failed', error);
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+  });
+
   describe('refreshTokens — rotation logging', () => {
     const mockRefreshToken = 'old-refresh-token';
 
-    it('should warn when the AS does not return a new refresh token', async () => {
+    it('logs the normal absence of token rotation at debug level', async () => {
       const mockRefreshedTokens = {
         access_token: 'new-cerbere-access-token',
         id_token: 'new-id-token',
@@ -426,7 +539,10 @@ describe('AuthenticationService', () => {
 
       await service.refreshTokens(mockRefreshToken, 'user-123');
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('AS did not return a new refresh token');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'AS did not return a new refresh token; keeping the existing token',
+      );
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
     it('should NOT warn when the AS returns a new refresh token', async () => {

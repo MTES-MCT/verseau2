@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { VERSEAU_ACCESS_DENIED_MESSAGE } from '@lib/shared';
 
 describe('authService.refreshToken deduplication', () => {
+  let store: Record<string, string>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     vi.stubGlobal('fetch', vi.fn());
 
     // Provide localStorage stub
-    const store: Record<string, string> = {};
+    store = {};
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => store[key] ?? null,
       setItem: (key: string, value: string) => {
@@ -35,6 +38,14 @@ describe('authService.refreshToken deduplication', () => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
+
+  it('exposes the refresh response status', async () => {
+    const authService = await loadAuthService();
+
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ expiresIn: 3600 }), { status: 201 }));
+
+    await expect(authService.refreshToken()).resolves.toBe(201);
+  });
 
   it('deduplicates concurrent refreshToken calls into a single fetch', async () => {
     const authService = await loadAuthService();
@@ -91,5 +102,126 @@ describe('authService.refreshToken deduplication', () => {
     results.forEach((r) => expect(r.status).toBe('rejected'));
     // Only one fetch was made
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('authService OIDC transaction', () => {
+  let sessionStore: Record<string, string>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.stubGlobal('fetch', vi.fn());
+    sessionStore = {};
+    const localStore: Record<string, string> = {};
+    vi.stubGlobal('sessionStorage', {
+      getItem: (key: string) => sessionStore[key] ?? null,
+      setItem: (key: string, value: string) => {
+        sessionStore[key] = String(value);
+      },
+      removeItem: (key: string) => {
+        delete sessionStore[key];
+      },
+      clear: () => {
+        sessionStore = {};
+      },
+    });
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => localStore[key] ?? null,
+      setItem: (key: string, value: string) => {
+        localStore[key] = String(value);
+      },
+      removeItem: (key: string) => {
+        delete localStore[key];
+      },
+      clear: () => {
+        for (const key of Object.keys(localStore)) {
+          delete localStore[key];
+        }
+      },
+    });
+  });
+
+  async function loadAuthService() {
+    const mod = await import('./auth.service');
+    return mod.authService;
+  }
+
+  const loginConfig = (state = 'server-state-abc') =>
+    new Response(
+      JSON.stringify({
+        authorizationEndpoint: 'https://auth.example.com/authorize',
+        clientId: 'test-client-id',
+        redirectUri: 'https://app.example.com/callback',
+        scope: 'openid profile',
+        state,
+        nonce: 'server-nonce-abc',
+        codeChallenge: 'server-code-challenge-abc',
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+
+  it('initializes a server transaction with credentials included', async () => {
+    const authService = await loadAuthService();
+    vi.mocked(fetch).mockResolvedValueOnce(loginConfig('server-state-abc'));
+
+    const state = await authService.initMockTransaction();
+
+    expect(state).toBe('server-state-abc');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/login$/),
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    expect(sessionStore['oidc_state']).toBe('server-state-abc');
+  });
+
+  it('sends code and state (never a nonce) to the callback', async () => {
+    const authService = await loadAuthService();
+    sessionStore['oidc_state'] = 'server-state-abc';
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ expiresIn: 3600, user: {} }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await authService.handleCallback('auth-code', 'server-state-abc');
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/auth\/callback$/);
+    expect(options.credentials).toBe('include');
+    expect(JSON.parse(options.body as string)).toEqual({ code: 'auth-code', state: 'server-state-abc' });
+  });
+
+  it('rejects a mismatched state without calling the backend', async () => {
+    const authService = await loadAuthService();
+    sessionStore['oidc_state'] = 'server-state-abc';
+
+    await expect(authService.handleCallback('attacker-code', 'attacker-state')).rejects.toThrow();
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('exposes the backend message when Verseau access is denied', async () => {
+    const authService = await loadAuthService();
+    sessionStore['oidc_state'] = 'server-state-abc';
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          message: VERSEAU_ACCESS_DENIED_MESSAGE,
+          error: 'Forbidden',
+          statusCode: 403,
+        }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await expect(authService.handleCallback('auth-code', 'server-state-abc')).rejects.toThrow(
+      VERSEAU_ACCESS_DENIED_MESSAGE,
+    );
   });
 });

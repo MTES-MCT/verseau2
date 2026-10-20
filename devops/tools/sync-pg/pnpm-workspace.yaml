@@ -1,0 +1,11 @@
+packages:
+  - '.'
+
+# Require all package releases to age for five days before they are eligible.
+minimumReleaseAge: 7200
+
+allowBuilds:
+  '@matrix-org/matrix-sdk-crypto-nodejs': true
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

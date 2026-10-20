@@ -6,6 +6,8 @@ import { AsyncTask } from '@worker/asyncTask';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 import { addNameTagToXml } from '@lib/parser';
+import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+
 @Injectable()
 export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: string; filePath: string }> {
   constructor(
@@ -13,6 +15,7 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
     @Inject(S3) private readonly s3: S3,
     private readonly logger: LoggerService,
     private readonly depotService: DepotService,
+    @Inject(LanceleauGateway) private readonly lanceleauGateway: LanceleauGateway,
   ) {
     this.logger.setContext(SftpAgentVerseauProcessorService.name);
   }
@@ -25,37 +28,44 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
     });
 
     try {
-      this.logger.log('Downloading file', filePath);
       const depot = await this.depotService.findDepotByIdWithUser(depotId);
       if (!depot) {
         throw new Error(`Depot with id ${depotId} not found`);
       }
-      const file = await this.s3.download(filePath);
       if (!depot.path) {
         throw new Error('Remote path is undefined');
       }
-
-      let fileToSend = file;
-      if (depot.user) {
-        const xmlContent = file.toString('utf-8');
-        const fullName = `${depot.user.nom.toUpperCase() || ''} ${depot.user.prenom || ''}`.trim();
-        if (fullName) {
-          const modifiedXml = addNameTagToXml(xmlContent, fullName);
-          fileToSend = Buffer.from(modifiedXml, 'utf-8');
-          this.logger.log(`Added NomContact tag to XML for user ${depot.userId} in depot ${depotId}`);
-        }
+      if (!depot.user?.email) {
+        throw new Error(`Depot with id ${depotId} has no associated user email`);
       }
 
-      await this.agentVerseauClient.send(fileToSend, depot.path);
-      await this.agentVerseauClient.send(Buffer.alloc(0), `${depot.path}.ack`);
+      const contact = await this.lanceleauGateway.findOrionContactByEmail(depot.user.email);
+      if (!contact?.nom || !contact.prenom) {
+        throw new Error(`Orion contact is missing or incomplete for depot ${depotId}`);
+      }
+
+      this.logger.log('Downloading file', { depotId, filePath });
+      const file = await this.s3.download(filePath);
+      const xmlContent = file.toString('utf-8');
+      const fullName = `${contact.nom.toUpperCase()} ${contact.prenom}`;
+      const modifiedXml = addNameTagToXml(xmlContent, fullName);
+      const fileToSend = Buffer.from(modifiedXml, 'utf-8');
+
+      this.logger.log(`Added NomContact tag to XML for user ${depot.userId} in depot ${depotId}`);
+
+      // The external filename is independent of the S3 key.
+      const remotePath = `${depot.id}_${depot.nomOriginalFichier}`;
+      await this.agentVerseauClient.send(fileToSend, remotePath);
+      await this.agentVerseauClient.send(Buffer.alloc(0), `${remotePath}.ack`);
       await this.depotService.update(depotId, {
         step: DepotStep.SFTP_COMPLETED,
       });
-    } catch (error) {
-      this.logger.error(
-        'Failed to process file',
-        error instanceof Error ? error.stack || error.message : String(error),
-      );
+      this.logger.log('Files sent to Agent Verseau', { depotId });
+    } catch (error: unknown) {
+      this.logger.log('Failed to process file', {
+        depotId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       await this.depotService.update(depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.SFTP_FAILED,

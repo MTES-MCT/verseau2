@@ -1,0 +1,83 @@
+import { fr } from '@codegouvfr/react-dsfr';
+
+export function AccessibilityPage() {
+  return (
+    <article className={`accessibility-page ${fr.cx('fr-py-4w')}`}>
+      <h1>Déclaration d’accessibilité</h1>
+      <p>
+        Établie le <span>8 septembre 2026</span>.
+      </p>
+      <p>
+        <span>
+          Le Ministère de la Transition écologique, de la Biodiversité et des Négociations internationales sur le climat
+          et la nature
+        </span>{' '}
+        s’engage à rendre son service accessible, conformément à l’article 47 de la loi n° 2005-102 du 11 février 2005.
+      </p>
+      <p>À cette fin, nous mettons en œuvre la stratégie et les actions suivantes&nbsp;:</p>
+      <ul>
+        <li>
+          <a href="https://beta.gouv.fr/accessibilite/schema-pluriannuel">Schéma pluriannuel</a>
+        </li>
+      </ul>
+      <p>
+        Cette déclaration d’accessibilité s’applique à <strong>Sain'eau</strong> (
+        <span>https://saineau.beta.gouv.fr/</span>).
+      </p>
+
+      <h2>État de conformité</h2>
+      <p>
+        <strong>Sain'eau</strong> est <strong>non conforme</strong> avec le{' '}
+        <abbr title="Référentiel général d’amélioration de l’accessibilité">RGAA</abbr>. Le site n’a encore pas été
+        audité.
+      </p>
+
+      <h2>Amélioration et contact</h2>
+      <p>
+        Si vous n’arrivez pas à accéder à un contenu ou à un service, vous pouvez contacter le responsable de{' '}
+        <span>Sain'eau</span> pour être orienté vers une alternative accessible ou obtenir le contenu sous une autre
+        forme.
+      </p>
+      <ul>
+        <li>
+          Adresse&nbsp;: <span>Tour Séquoia 1 place Carpeaux 92055 LA DÉFENSE CEDEX</span>
+        </li>
+      </ul>
+
+      <h2>Voie de recours</h2>
+      <p>
+        Cette procédure est à utiliser dans le cas suivant&nbsp;: vous avez signalé au responsable du site internet un
+        défaut d’accessibilité qui vous empêche d’accéder à un contenu ou à un des services du portail et vous n’avez
+        pas obtenu de réponse satisfaisante.
+      </p>
+      <p>Vous pouvez&nbsp;:</p>
+      <ul>
+        <li>
+          Écrire un message au <a href="https://formulaire.defenseurdesdroits.fr/">Défenseur des droits</a>
+        </li>
+        <li>
+          Contacter{' '}
+          <a href="https://www.defenseurdesdroits.fr/saisir/delegues">
+            le délégué du Défenseur des droits dans votre région
+          </a>
+        </li>
+        <li>
+          Envoyer un courrier par la poste (gratuit, ne pas mettre de timbre)&nbsp;:
+          <br />
+          Défenseur des droits
+          <br />
+          Libre réponse 71120 75342 Paris CEDEX 07
+        </li>
+      </ul>
+
+      <hr />
+      <p>
+        Cette déclaration d’accessibilité a été créé le <span>8 septembre 2026</span> grâce au{' '}
+        <a href="https://betagouv.github.io/a11y-generateur-declaration/#create">
+          Générateur de Déclaration d’Accessibilité
+        </a>
+        .
+      </p>
+    </article>
+  );
+}

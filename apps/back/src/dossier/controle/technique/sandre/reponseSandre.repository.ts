@@ -34,7 +34,7 @@ export class ReponseSandreRepository extends Repository<ReponseSandreEntity> imp
       return { ...savedReponse };
     } catch (error) {
       if (error instanceof QueryFailedError && (error.driverError as { code?: string })?.code === PG_UNIQUE_VIOLATION) {
-        this.logger.warn('ReponseSandre already exists for this depot, skipping duplicate insert', {
+        this.logger.log('ReponseSandre already exists for this depot, skipping duplicate insert', {
           depotId: data.depotId,
         });
         const existing = await this.findByDepotId(data.depotId!);
@@ -54,7 +54,7 @@ export class ReponseSandreRepository extends Repository<ReponseSandreEntity> imp
   }
 
   async findByDepotId(depotId: string): Promise<ReponseSandreModel[]> {
-    return await this.find({ where: { depot: { id: depotId } }, relations: ['depot'] });
+    return await this.find({ where: { depot: { id: depotId } }, relations: { depot: true } });
   }
 
   async findByStatus(status: SandreAcceptationStatus): Promise<ReponseSandreModel[]> {

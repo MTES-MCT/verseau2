@@ -105,8 +105,8 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       return `Le code de l'émetteur ${cdEmetteur} des données est inconnu. Veuillez vérifier son exactitude ou le créer dans Lanceleau.`;
     }
     case ErrorCode.E2_033: {
-      const [numeroPointMesure, cdOuvrage] = params as ErrorParamsMap[ErrorCode.E2_033];
-      return `Le point de mesure N° ${numeroPointMesure} est inconnu pour l'ouvrage ${cdOuvrage} ! Veuillez contacter le service gestionnaire de l'ouvrage.`;
+      const [numeroPointMesure, locGlobalePointMesure, cdOuvrage] = params as ErrorParamsMap[ErrorCode.E2_033];
+      return `Le point de mesure N° ${numeroPointMesure}-${locGlobalePointMesure} est inconnu pour l'ouvrage ${cdOuvrage} ! Veuillez contacter le service gestionnaire de l'ouvrage.`;
     }
     case ErrorCode.E2_034: {
       const [cdTypeDeversoir] = params as ErrorParamsMap[ErrorCode.E2_034];

@@ -1,4 +1,29 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'e2e'
 
+catalog:
+  zod: '4.6.5'
+
+# Throttler 6.5.0 has no Nest 12 peer range yet. Compatibility with these exact
+# versions is covered by apps/back/src/infra/throttler/throttler.module.spec.ts.
+# Remove these exceptions when upstream declares Nest 12 support.
+peerDependencyRules:
+  allowedVersions:
+    '@nestjs/throttler@6.5.0>@nestjs/common': '12.0.3'
+    '@nestjs/throttler@6.5.0>@nestjs/core': '12.0.3'
+
+# Require all package releases to age for five days before they are eligible.
+minimumReleaseAge: 7200
+
+allowBuilds:
+  '@badeball/cypress-cucumber-preprocessor': false
+  cypress: true
+  '@parcel/watcher': false
+  '@sentry/cli': true
+  cpu-features: false
+  esbuild: true
+  protobufjs: false
+  ssh2: false
+  unrs-resolver: true

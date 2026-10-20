@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { type UseMutationResult, useMutation, useQuery } from '@tanstack/react-query';
 import {
@@ -7,10 +7,11 @@ import {
   isFluxQualifie,
   type FctAssainissement,
 } from '@lib/parser';
-import { uploadDepot } from '../../api/depot';
+import { initializeUpload, uploadDepotFile, completeUpload, type DepotUploadSession } from '../../api/depot';
 import { fetchParametresFromCodes } from '../../api/referentiel';
 import { AppRoutes } from '../../routes';
 import { useCheckDroitsDeDepot, type DroitsDeDepotStatus } from '../../hooks/useCheckDroitsDeDepot';
+import { ApiError } from '../../api/apiError';
 
 type LocationState = {
   fileName?: string;
@@ -48,8 +49,38 @@ export function useDepotRecap(): UseDepotRecapResult {
   });
   const { mutate } = parseMutation;
 
+  const pendingUpload = useRef<{
+    fileContent: string | undefined;
+    fileName: string | undefined;
+    session: DepotUploadSession;
+    uploaded: boolean;
+  } | null>(null);
+
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => uploadDepot(file),
+    mutationFn: async (file: File) => {
+      let pending = pendingUpload.current;
+      if (
+        !pending ||
+        pending.fileContent !== fileContent ||
+        pending.fileName !== fileName ||
+        (!pending.uploaded && Date.parse(pending.session.expiresAt) <= Date.now())
+      ) {
+        pending = { fileContent, fileName, session: await initializeUpload(file), uploaded: false };
+        pendingUpload.current = pending;
+      }
+      if (!pending.uploaded) {
+        await uploadDepotFile(file, pending.session);
+        pending.uploaded = true;
+      }
+      try {
+        return await completeUpload(pending.session.depotId);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 410) {
+          pendingUpload.current = null;
+        }
+        throw error;
+      }
+    },
   });
 
   useEffect(() => {
@@ -99,7 +130,7 @@ export function useDepotRecap(): UseDepotRecapResult {
   const handleReturn = () => navigate(AppRoutes.DEPOT_UPLOAD);
 
   const handleFinalize = () => {
-    if (!fileName || !fileContent || droitsDeDepotStatus !== 'authorized') {
+    if (!fileName || !fileContent || droitsDeDepotStatus !== 'authorized' || uploadMutation.isPending) {
       return;
     }
     const file = buildFileFromContent(fileContent, fileName);

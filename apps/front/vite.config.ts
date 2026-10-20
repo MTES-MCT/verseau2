@@ -66,9 +66,9 @@ export default defineConfig(({ command, mode }) => {
     },
     resolve: {
       alias: {
-        '@lib/parser': path.resolve(__dirname, '../../packages/parser/src/index.ts'),
-        '@lib/dossier': path.resolve(__dirname, '../../packages/dossier/src/index.ts'),
-        '@lib/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+        '@lib/parser': path.resolve(import.meta.dirname, '../../packages/parser/src/index.ts'),
+        '@lib/dossier': path.resolve(import.meta.dirname, '../../packages/dossier/src/index.ts'),
+        '@lib/shared': path.resolve(import.meta.dirname, '../../packages/shared/src/index.ts'),
       },
     },
     optimizeDeps: {

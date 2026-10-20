@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { UserGateway } from './user.gateway';
 import { DepotModel } from '@dossier/depot/depot.model';
 import { IntervenantForAuthentication } from '@referentiel/lanceleau/lanceleau.model';
+import { VerseauAccessClaims } from '@authentication/authentication';
 import { LoggerService } from '@shared/logger/logger.service';
 import { MasaProvider } from '@masa/masa.provider';
-import { ROLE } from './user.model';
+import { ROLE, VERSEAU_AUTHORIZED_ROLES } from './user.model';
+import { VERSEAU_ACCESS_DENIED_MESSAGE } from '@lib/shared';
 
 @Injectable()
 export class DroitsUserService {
@@ -15,6 +17,28 @@ export class DroitsUserService {
     private readonly logger: LoggerService,
   ) {
     this.logger.setContext(DroitsUserService.name);
+  }
+
+  async resolveVerseauAccess(email: string): Promise<VerseauAccessClaims> {
+    if (!email.trim()) {
+      throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
+    }
+
+    const ag = await this.masaProvider.findAgByEmail(email);
+    if (!ag) {
+      throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
+    }
+
+    const roles = await this.masaProvider.findRolesByPrCdn(ag.principalIdentifiant);
+    const roleCdns = new Set(roles?.map((role) => role.roleOrionId) ?? []);
+    if (!VERSEAU_AUTHORIZED_ROLES.some((role) => roleCdns.has(role))) {
+      throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
+    }
+
+    return {
+      itvCdn: ag.intervenantId,
+      isExpertNational: roleCdns.has(ROLE.EXPERT_NATIONAL_VERSEAU),
+    };
   }
 
   async resolveItvCdn(sub: string): Promise<number | null> {

@@ -6,6 +6,8 @@ import {
   OIDCTokens,
   OIDCConfiguration,
   AuthenticatedUserAndNomPrenom,
+  INTERNAL_TOKEN_ISSUER,
+  INTERNAL_TOKEN_AUDIENCE,
 } from './authentication';
 import type { CookieOptions, Response } from 'express';
 import { DroitsUserService } from '@user/droitsUser.service';
@@ -36,6 +38,8 @@ export class AuthenticationMockService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
       });
       return {
         cerbereId: (payload.sub as string) || '',
@@ -56,6 +60,8 @@ export class AuthenticationMockService implements Authentication {
     try {
       const { payload } = await jwtVerify(token, this.jwtSecret, {
         algorithms: ['HS256'],
+        issuer: INTERNAL_TOKEN_ISSUER,
+        audience: INTERNAL_TOKEN_AUDIENCE,
         clockTolerance: 7 * 24 * 60 * 60,
       });
       if (!payload.sub) {
@@ -68,17 +74,27 @@ export class AuthenticationMockService implements Authentication {
   }
 
   getOIDCConfiguration(): Promise<OIDCConfiguration> {
+    const frontendOrigin = (this.configService.get<string>('CORS_ORIGIN') || 'http://localhost:5180').replace(
+      /\/+$/,
+      '',
+    );
+
     return Promise.resolve({
-      authorizationEndpoint: 'http://localhost:5173/mock_authorization',
+      authorizationEndpoint: `${frontendOrigin}/mock_authorization`,
       clientId: 'mock-client-id',
-      redirectUri: 'http://localhost:5173/dashboard',
+      redirectUri: `${frontendOrigin}/dashboard`,
       scope: 'openid profile identite_pivot email cerbere_utilisateur cerbere_description cerbere_autorisations',
     });
   }
 
-  async handleCallback(code: string, nonce: string): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
+  async handleCallback(
+    code: string,
+    nonce: string,
+    codeVerifier: string,
+  ): Promise<OIDCTokens & { user: AuthenticatedUserAndNomPrenom }> {
     void code;
     void nonce;
+    void codeVerifier;
     const user = await this.getMockUser();
 
     const expiresIn = 3600;
@@ -156,7 +172,9 @@ export class AuthenticationMockService implements Authentication {
   ): Promise<string> {
     const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt();
+      .setIssuedAt()
+      .setIssuer(INTERNAL_TOKEN_ISSUER)
+      .setAudience(INTERNAL_TOKEN_AUDIENCE);
 
     if (expiresIn) {
       jwt.setExpirationTime(`${expiresIn}s`);
@@ -180,14 +198,12 @@ export class AuthenticationMockService implements Authentication {
       throw new UnauthorizedException(MOCK_AUTHENTICATION_FAILED_MESSAGE);
     }
 
-    const [itvCdn, isExpertNational] = await Promise.all([
-      this.droitsUserService.resolveItvCdn(user.sub),
-      this.droitsUserService.isExpertNationalVerseau(user.sub),
-    ]);
+    const email = user.email || mockEmail;
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(email);
 
     return {
       cerbereId: user.sub,
-      mel: user.email || mockEmail,
+      mel: email,
       itvCdn,
       isExpertNational,
       nom: user.nom || undefined,

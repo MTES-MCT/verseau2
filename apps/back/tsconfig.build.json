@@ -3,19 +3,19 @@
   "compilerOptions": {
     "rootDir": "src",
     "paths": {
-      "@queue/*": ["src/infra/queue/*"],
-      "@database/*": ["src/infra/database/*"],
-      "@shared/*": ["src/shared/*"],
-      "@worker/*": ["src/worker/*"],
-      "@depot/*": ["src/depot/*"],
-      "@dossier/*": ["src/dossier/*"],
-      "@s3/*": ["src/infra/s3/*"],
-      "@infra/*": ["src/infra/*"],
-      "@notification/*": ["src/notification/*"],
-      "@referentiel/*": ["src/referentiel/*"],
-      "@authentication/*": ["src/authentication/*"],
-      "@user/*": ["src/user/*"],
-      "@masa/*": ["src/masa/*"]
+      "@queue/*": ["./src/infra/queue/*"],
+      "@database/*": ["./src/infra/database/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@worker/*": ["./src/worker/*"],
+      "@depot/*": ["./src/depot/*"],
+      "@dossier/*": ["./src/dossier/*"],
+      "@s3/*": ["./src/infra/s3/*"],
+      "@infra/*": ["./src/infra/*"],
+      "@notification/*": ["./src/notification/*"],
+      "@referentiel/*": ["./src/referentiel/*"],
+      "@authentication/*": ["./src/authentication/*"],
+      "@user/*": ["./src/user/*"],
+      "@masa/*": ["./src/masa/*"]
     }
   },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "./src/infra/database/migrationDatasource.ts"]

@@ -2,14 +2,14 @@
 
 FROM node:24-alpine
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install the package-manager version declared by the project.
+RUN npm install -g pnpm@12.4.2
 
 # Create app directory
 WORKDIR /usr/src/app
 
-# Copy monorepo package.json and lock file for workspace support
-COPY package*.json ./
+# Copy monorepo package metadata for workspace support
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy local packages that the backend depends on
 COPY packages/dossier ./packages/dossier
@@ -20,7 +20,7 @@ COPY packages/shared ./packages/shared
 COPY apps/back ./apps/back
 
 # Install dependencies
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # Build shared packages first
 RUN pnpm --filter dossier build

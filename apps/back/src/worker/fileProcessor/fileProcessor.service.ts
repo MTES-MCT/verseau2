@@ -61,7 +61,7 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
         if (!(rightsError instanceof DepotRightsException)) {
           throw rightsError;
         }
-        this.logger.warn(`Depot ${fichierDeDepot.depotId} - Rights check failed: ${rightsError.code}`);
+        this.logger.log(`Depot ${fichierDeDepot.depotId} - Deposit rejected: ${rightsError.code}`);
         await this.depotService.update(fichierDeDepot.depotId, {
           status: DepotStatus.REJETE,
           error: rightsError.code,
@@ -70,23 +70,21 @@ export class FileProcessorService implements AsyncTask<FichierDeDepot> {
         return;
       }
 
-      this.logger.log(`Depot ${fichierDeDepot.depotId} - Dispatching controls to queues`);
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Dispatching business control job`);
 
-      // Dispatch to both control queues
-      await Promise.all([
-        this.queueService.send(QueueName.controle_metier, {
-          depotId: fichierDeDepot.depotId,
-          filePath: fichierDeDepot.filePath,
-        }),
-        this.queueService.send(QueueName.controle_sandre_upload, {
-          depotId: fichierDeDepot.depotId,
-          filePath: fichierDeDepot.filePath,
-        }),
-      ]);
+      // Sequential processing: business controls run first; SANDRE control is
+      // dispatched by the business control processor only on success.
+      await this.queueService.send(QueueName.controle_metier, {
+        depotId: fichierDeDepot.depotId,
+        filePath: fichierDeDepot.filePath,
+      });
 
-      this.logger.log(`Depot ${fichierDeDepot.depotId} - Controls dispatched successfully`);
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Business control job dispatched successfully`);
     } catch (error: unknown) {
-      this.logger.error(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, error);
+      // Keep the business processing outcome visible; the worker owns the technical error log.
+      this.logger.log(`Depot ${fichierDeDepot.depotId} - Unexpected error during processing`, {
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
       await this.depotService.update(fichierDeDepot.depotId, {
         status: DepotStatus.REJETE,
         step: DepotStep.CONTROLE_FAILED,

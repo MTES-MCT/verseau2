@@ -6,7 +6,7 @@ dotenv.config({
   override: true,
 });
 
-import { INestApplication } from '@nestjs/common';
+import { ForbiddenException, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
@@ -38,11 +38,25 @@ import {
 } from './createReferentielDataset';
 import { MasaService } from '@dossier/masa/masa.service';
 import { MasaWebhookStatus } from '@dossier/masa/masa.model';
+import { MasaIpGuard } from '@dossier/masa/masaIp.guard';
 
-describe('Controller (e2e) - Unauthorized', () => {
+describe('Controller (e2e) - Access control', () => {
   let app: INestApplication<App>;
   let authService: Authentication;
   let masaService: MasaService;
+  let masaIpGuard: MasaIpGuard;
+  let masaProvider: MasaProvider;
+
+  const mockAuthenticatedUser = (
+    overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
+  ): import('@authentication/authentication').AuthenticatedUser => ({
+    cerbereId: 'test-user-id',
+    mel: 'dev@example.com',
+    itvCdn: 100,
+    isExpertNational: false,
+    ...overrides,
+  });
+
   beforeAll(async () => {
     await startPostgresContainer();
     const connectionUri = getPostgresConnectionUri();
@@ -63,10 +77,16 @@ describe('Controller (e2e) - Unauthorized', () => {
     await app.init();
     authService = app.get<Authentication>(Authentication);
     masaService = app.get<MasaService>(MasaService);
+    masaIpGuard = app.get<MasaIpGuard>(MasaIpGuard);
+    masaProvider = app.get<MasaProvider>(MasaProvider);
   });
 
   afterAll(async () => {
     await app.close();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('Controller (e2e) - Version', () => {
@@ -84,6 +104,47 @@ describe('Controller (e2e) - Unauthorized', () => {
     it('/auth/callback (POST) - Should return 400 for missing body (Public)', async () => {
       // Expecting 400 Bad Request because we are not sending body, but it proves access is allowed (not 401)
       return request(app.getHttpServer()).post('/auth/callback').send({}).expect(400);
+    });
+
+    it('/auth/callback (POST) - Should return 401 without transaction cookie', async () => {
+      // Sans tentative initiée via GET /auth/login, aucun échange OIDC ne doit avoir lieu.
+      return request(app.getHttpServer()).post('/auth/callback').send({ code: 'code', state: 'state' }).expect(401);
+    });
+
+    it('/auth/callback (POST) - Should return 401 on cross-origin login CSRF with attacker code+state', async () => {
+      // L'attaquant initie sa propre connexion et récupère un couple valide pour son compte.
+      const attacker = request.agent(app.getHttpServer());
+      const attackerLogin = await attacker.get('/auth/login').expect(200);
+      const attackerBody = attackerLogin.body as { state?: unknown; nonce?: unknown; codeChallenge?: unknown };
+      expect(typeof attackerBody.state).toBe('string');
+      expect(typeof attackerBody.nonce).toBe('string');
+      expect(typeof attackerBody.codeChallenge).toBe('string');
+      const attackerCookie = String(attackerLogin.headers['set-cookie'] ?? '');
+      expect(attackerCookie).toMatch(/^__Host-verseau_oidc=/);
+      expect(attackerCookie).toContain('; Secure');
+      const attackerState = attackerBody.state as string;
+
+      // La victime initie sa propre connexion dans son navigateur.
+      const victim = request.agent(app.getHttpServer());
+      const victimLogin = await victim.get('/auth/login').expect(200);
+      const victimBody = victimLogin.body as { state?: unknown; codeChallenge?: unknown };
+      expect(victimBody.state).not.toBe(attackerState);
+      expect(victimBody.codeChallenge).not.toBe(attackerBody.codeChallenge);
+      const victimCookie = String(victimLogin.headers['set-cookie'] ?? '').split(';')[0];
+      expect(victimCookie).toMatch(/^__Host-verseau_oidc=/);
+      const handleCallbackSpy = jest.spyOn(authService, 'handleCallback');
+
+      // Le formulaire auto-soumis cross-origin rejoue le code/state de l'attaquant
+      // avec les cookies de la victime : la session ne doit pas être établie.
+      const response = await victim
+        .post('/auth/callback')
+        // Supertest utilise HTTP : transmettre explicitement le cookie Secure.
+        .set('Cookie', victimCookie)
+        .type('form')
+        .send({ code: 'attacker-code', state: attackerState })
+        .expect(401);
+      expect(String(response.headers['set-cookie'] ?? '')).not.toMatch(/access_token=/);
+      expect(handleCallbackSpy).not.toHaveBeenCalled();
     });
 
     it('/auth/refresh (POST) - Should return 201', async () => {
@@ -133,8 +194,11 @@ describe('Controller (e2e) - Unauthorized', () => {
   });
 
   describe('Controller (e2e) - Depot', () => {
-    it('/depot/upload (POST) - Should return 401 Unauthorized when no token is provided', async () => {
-      return request(app.getHttpServer()).post('/depot/upload').expect(401);
+    it('/depot/upload/init (POST) - Should return 401 Unauthorized when no token is provided', async () => {
+      return request(app.getHttpServer()).post('/depot/upload/init').expect(401);
+    });
+    it('/depot/:id/upload/complete (POST) requires authentication', async () => {
+      return request(app.getHttpServer()).post('/depot/unknown/upload/complete').expect(401);
     });
 
     it('/depot (GET) - Should return 401 Unauthorized when no token is provided', async () => {
@@ -150,11 +214,44 @@ describe('Controller (e2e) - Unauthorized', () => {
     it('/admin/depot (GET) - Should return 401 Unauthorized when no token is provided', async () => {
       return request(app.getHttpServer()).get('/admin/depot').expect(401);
     });
+
+    it.each(['/admin/depot', '/admin/depot/dep_forbidden/rapport', '/admin/depot/dep_forbidden/xml'])(
+      '%s (GET) - Should return 403 Forbidden for a non-admin user',
+      async (endpoint) => {
+        jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser());
+
+        return request(app.getHttpServer()).get(endpoint).set('Cookie', ['access_token=token-user-1']).expect(403);
+      },
+    );
   });
 
   describe('Controller (e2e) - Masa', () => {
     it('/webhook/masa/agent-verseau (POST) - Should return 401 Unauthorized', async () => {
-      return request(app.getHttpServer()).post('/webhook/masa/agent-verseau').expect(401);
+      return request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .expect('X-Source', 'Verseau2')
+        .expect(401);
+    });
+
+    it('/webhook/masa/agent-verseau (POST) - Should return 400 Bad Request', async () => {
+      return request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send({})
+        .expect('X-Source', 'Verseau2')
+        .expect(400);
+    });
+
+    it('/webhook/masa/agent-verseau (POST) - Should return 403 Forbidden', async () => {
+      jest.spyOn(masaIpGuard, 'canActivate').mockImplementation(() => {
+        throw new ForbiddenException('IP is not allowed');
+      });
+
+      return request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .expect('X-Source', 'Verseau2')
+        .expect(403);
     });
 
     it('/webhook/masa/agent-verseau (POST) - Should return 200 OK', async () => {
@@ -177,6 +274,7 @@ describe('Controller (e2e) - Unauthorized', () => {
           statut: MasaWebhookStatus.INTEGRE,
           rapport: 'test',
         })
+        .expect('X-Source', 'Verseau2')
         .expect(200);
       return response;
     });
@@ -204,6 +302,37 @@ describe('Controller (e2e) - Unauthorized', () => {
         .expect(200);
       return response;
     });
+
+    it('/webhook/masa/agent-verseau (POST) - Should normalize a NULL numeroDepotVerseau1', async () => {
+      const processRetourAgentVerseau = jest.spyOn(masaService, 'processRetourAgentVerseau').mockResolvedValue({
+        id: 'masa-id-123',
+        depotId: 'dep_01m0fnz8t33qwq4pzqw6tney3a',
+        numeroDepotVerseau1: null,
+        statut: MasaStatus.REFUSE,
+        statutMasa: MasaWebhookStatus.ERREUR_BLOQUANTE,
+        rapport: "<p>Le dépôt automatique du fichier n'a pas pu être effectué.</p>",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const payload = {
+        verseau2DepotId: 'dep_01m0fnz8t33qwq4pzqw6tney3a',
+        numeroDepotVerseau1: 'NULL',
+        statut: 'Erreur bloquante',
+        rapport: "<p>Le dépôt automatique du fichier n'a pas pu être effectué.</p>",
+      };
+
+      await request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send(payload)
+        .expect(200);
+
+      expect(processRetourAgentVerseau).toHaveBeenCalledWith({
+        ...payload,
+        numeroDepotVerseau1: null,
+        statut: MasaWebhookStatus.ERREUR_BLOQUANTE,
+      });
+    });
   });
 
   describe('Controller (e2e) - Referentiel', () => {
@@ -223,6 +352,39 @@ describe('Controller (e2e) - Unauthorized', () => {
         .get('/referentiel/points-mesure')
         .query({ ouvrageType: 'steu', ouvrageCode: 'STEU001' })
         .expect(401);
+    });
+
+    it.each([
+      '/referentiel/points-mesure?ouvrageType=steu&ouvrageCode=STEU001',
+      '/referentiel/steu/STEU001/detail',
+      '/referentiel/scl/SCL001/detail',
+    ])('%s (GET) - Should return 403 Forbidden when user has no intervenant', async (endpoint) => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser({ itvCdn: null }));
+
+      return request(app.getHttpServer()).get(endpoint).set('Cookie', ['access_token=token-user-1']).expect(403);
+    });
+
+    it('/referentiel/points-mesure (GET) - Should return 403 Forbidden for an unauthorized ouvrage', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser());
+      jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
+        intervenantId: 100,
+        intervenantSiret: 'SIRET001',
+      });
+      jest.spyOn(masaProvider, 'findVSteuSclItvByItvRfa').mockResolvedValue([
+        {
+          ouvrageDepollutionCode: 'STEU001',
+          systemeCollecteCode: null as unknown as string,
+          maitreOuvrageSiret: null,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+
+      return request(app.getHttpServer())
+        .get('/referentiel/points-mesure')
+        .query({ ouvrageType: 'steu', ouvrageCode: 'STEU002' })
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
     });
   });
 
@@ -367,7 +529,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   });
 });
 
-describe('ControleController (e2e) - UseOrGuards', () => {
+describe('Depot access guards (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let authService: Authentication;
@@ -520,6 +682,20 @@ describe('ControleController (e2e) - UseOrGuards', () => {
     it('/depot/:depotId/masa (GET) - Should return 403', async () => {
       return request(app.getHttpServer())
         .get(`/depot/${DEPOT_ID}/masa`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
+    });
+
+    it('/depot/:id/rapport (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/rapport`)
+        .set('Cookie', ['access_token=token-user-1'])
+        .expect(403);
+    });
+
+    it('/depot/:id/xml (GET) - Should return 403', async () => {
+      return request(app.getHttpServer())
+        .get(`/depot/${DEPOT_ID}/xml`)
         .set('Cookie', ['access_token=token-user-1'])
         .expect(403);
     });
