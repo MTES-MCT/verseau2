@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as Sentry from '@sentry/nestjs';
-import { resolveSourceVersion } from '@shared/release';
+import { resolveSourceVersion, SOURCE_VERSION_FILE } from '@shared/release';
 
 export type ProcessType = 'api' | 'worker';
 export const SENTRY_SHUTDOWN_TIMEOUT_MS = 2000;
@@ -11,7 +11,7 @@ const PROCESS_DSN_ENV_KEYS: Record<ProcessType, 'SENTRY_API_DSN' | 'SENTRY_WORKE
   worker: 'SENTRY_WORKER_DSN',
 };
 
-export function resolveRelease(env: NodeJS.ProcessEnv, releaseFile = '.release'): string | undefined {
+export function resolveRelease(env: NodeJS.ProcessEnv, releaseFile = SOURCE_VERSION_FILE): string | undefined {
   // Use console during early instrumentation: importing the application logger
   // would load NestJS before Sentry has initialized.
   const explicit = env.SENTRY_RELEASE?.trim();
@@ -29,7 +29,7 @@ export function resolveRelease(env: NodeJS.ProcessEnv, releaseFile = '.release')
   const sourceVersion = resolveSourceVersion(env, releaseFile);
   if (sourceVersion) {
     console.info('[Sentry] Release resolved', {
-      source: env.SOURCE_VERSION?.trim() ? 'SOURCE_VERSION' : '.release',
+      source: env.SOURCE_VERSION?.trim() ? 'SOURCE_VERSION' : SOURCE_VERSION_FILE,
       release: sourceVersion,
     });
     return sourceVersion;

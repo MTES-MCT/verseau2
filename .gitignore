@@ -96,4 +96,4 @@ scripts/
 .codegraph/
 
 # Git commit captured during the build (Sentry release)
-.release
+.source-version

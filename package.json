@@ -7,7 +7,7 @@
     "node": "^24.15.0"
   },
   "scripts": {
-    "build": "node -e \"if(process.env.SOURCE_VERSION){require('node:fs').writeFileSync('.release',process.env.SOURCE_VERSION)}\" && pnpm --filter front build && pnpm --filter back build",
+    "build": "node -e \"if(process.env.SOURCE_VERSION){require('node:fs').writeFileSync('.source-version',process.env.SOURCE_VERSION)}\" && pnpm --filter front build && pnpm --filter back build",
     "start": "pnpm --filter back start",
     "dev": "concurrently \"pnpm dev:back\" \"pnpm dev:front\"",
     "dev:back": "pnpm --filter back dev",
