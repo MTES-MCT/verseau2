@@ -3,6 +3,10 @@
 import * as Sentry from '@sentry/nestjs';
 import { getSentryOptions } from '../../../src/monitoring/sentry';
 
+// Reserve stdout for the JSON result consumed by the parent test. Keep early
+// instrumentation diagnostics visible on stderr instead.
+console.info = (...args: unknown[]) => console.error(...args);
+
 type TestEnvelope = Parameters<ReturnType<NonNullable<Sentry.NodeOptions['transport']>>['send']>[0];
 const envelopes: TestEnvelope[] = [];
 type TestSpan = Parameters<NonNullable<Sentry.NodeOptions['beforeSendSpan']>>[0];
