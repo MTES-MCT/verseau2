@@ -94,3 +94,6 @@ scripts/
 
 .worktrees/
 .codegraph/
+
+# Git commit captured during the build (Sentry release)
+.release
