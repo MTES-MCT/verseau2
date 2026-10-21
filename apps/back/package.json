@@ -43,6 +43,7 @@
     "@nestjs/serve-static": "^12.0.0",
     "@nestjs/throttler": "^6.7.0",
     "@nestjs/typeorm": "^12.0.1",
+    "@sentry/nestjs": "^11.8.0",
     "axios": "^1.20.0",
     "basic-ftp": "^6.2.1",
     "cache-manager": "^7.2.9",
@@ -66,6 +67,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
+    "@golevelup/ts-jest": "^3.0.0",
     "@jest/globals": "^30.5.1",
     "@nestjs/cli": "^12.0.3",
     "@nestjs/schematics": "^12.0.3",
