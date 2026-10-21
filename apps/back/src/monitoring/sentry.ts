@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import * as Sentry from '@sentry/nestjs';
 import { resolveSourceVersion } from '@shared/release';
 
@@ -11,15 +12,33 @@ const PROCESS_DSN_ENV_KEYS: Record<ProcessType, 'SENTRY_API_DSN' | 'SENTRY_WORKE
 };
 
 export function resolveRelease(env: NodeJS.ProcessEnv, releaseFile = '.release'): string | undefined {
+  // Use console during early instrumentation: importing the application logger
+  // would load NestJS before Sentry has initialized.
   const explicit = env.SENTRY_RELEASE?.trim();
   if (explicit) {
+    console.info('[Sentry] Release resolved', { source: 'SENTRY_RELEASE', release: explicit });
     return explicit;
+  }
+  if (!env.SOURCE_VERSION?.trim()) {
+    console.info('[Sentry] Looking up build release file', {
+      cwd: process.cwd(),
+      releaseFile: resolve(releaseFile),
+      exists: existsSync(releaseFile),
+    });
   }
   const sourceVersion = resolveSourceVersion(env, releaseFile);
   if (sourceVersion) {
+    console.info('[Sentry] Release resolved', {
+      source: env.SOURCE_VERSION?.trim() ? 'SOURCE_VERSION' : '.release',
+      release: sourceVersion,
+    });
     return sourceVersion;
   }
-  return env.CONTAINER_VERSION?.trim() || undefined;
+  const containerVersion = env.CONTAINER_VERSION?.trim() || undefined;
+  console.warn('[Sentry] Git release unavailable; falling back to CONTAINER_VERSION', {
+    release: containerVersion ?? null,
+  });
+  return containerVersion;
 }
 
 export function getSentryOptions(env: NodeJS.ProcessEnv, processType: ProcessType): Sentry.NodeOptions | undefined {
@@ -110,6 +129,16 @@ export function initSentry(processType: ProcessType): void {
   const options = getSentryOptions(process.env, processType);
   if (options) {
     Sentry.init(options);
+    console.info('[Sentry] Initialized', {
+      processType,
+      environment: options.environment,
+      release: options.release ?? null,
+    });
+  } else {
+    console.info('[Sentry] Disabled: process DSN is not configured', {
+      processType,
+      dsnEnvKey: PROCESS_DSN_ENV_KEYS[processType],
+    });
   }
 }
 

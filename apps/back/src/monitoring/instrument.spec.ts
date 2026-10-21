@@ -19,10 +19,13 @@ describe('Sentry lifecycle', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     process.env = {};
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     process.env = originalEnv;
   });
 
@@ -42,6 +45,11 @@ describe('Sentry lifecycle', () => {
         initialScope: { tags: { process_type: 'worker' }, attributes: { process_type: 'worker' } },
       }),
     );
+    expect(console.info).toHaveBeenCalledWith('[Sentry] Initialized', {
+      processType: 'worker',
+      environment: 'development',
+      release: 'test-build-commit',
+    });
   });
 
   it('initializes from injected variables without loading env files on deployments', () => {
@@ -60,6 +68,10 @@ describe('Sentry lifecycle', () => {
     expect(Sentry.init).not.toHaveBeenCalled();
     expect(config).not.toHaveBeenCalled();
     expect(Sentry.close).not.toHaveBeenCalled();
+    expect(console.info).toHaveBeenCalledWith('[Sentry] Disabled: process DSN is not configured', {
+      processType: 'api',
+      dsnEnvKey: 'SENTRY_API_DSN',
+    });
   });
 
   it('flushes at shutdown with a finite timeout', async () => {

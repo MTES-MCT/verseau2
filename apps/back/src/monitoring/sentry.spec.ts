@@ -67,6 +67,15 @@ describe('Sentry configuration', () => {
   });
 
   describe('release resolution', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'info').mockImplementation(() => undefined);
+      jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('prefers the explicit SENTRY_RELEASE variable over every other source', () => {
       expect(
         resolveRelease(
@@ -74,6 +83,10 @@ describe('Sentry configuration', () => {
           '/nonexistent/.release',
         ),
       ).toBe('explicit-release');
+      expect(console.info).toHaveBeenCalledWith('[Sentry] Release resolved', {
+        source: 'SENTRY_RELEASE',
+        release: 'explicit-release',
+      });
     });
 
     it('reads the .release file written during a build', () => {
@@ -82,6 +95,15 @@ describe('Sentry configuration', () => {
       writeFileSync(file, '  5f2d9c43a1b7e8d0 \n');
       try {
         expect(resolveRelease({ CONTAINER_VERSION: 'deployment-id' }, file)).toBe('5f2d9c43a1b7e8d0');
+        expect(console.info).toHaveBeenCalledWith('[Sentry] Looking up build release file', {
+          cwd: process.cwd(),
+          releaseFile: file,
+          exists: true,
+        });
+        expect(console.info).toHaveBeenCalledWith('[Sentry] Release resolved', {
+          source: '.release',
+          release: '5f2d9c43a1b7e8d0',
+        });
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
@@ -89,6 +111,10 @@ describe('Sentry configuration', () => {
 
     it('uses a runtime-injected SOURCE_VERSION when the platform provides one', () => {
       expect(resolveRelease({ SOURCE_VERSION: 'runtime-commit' }, '/nonexistent/.release')).toBe('runtime-commit');
+      expect(console.info).toHaveBeenCalledWith('[Sentry] Release resolved', {
+        source: 'SOURCE_VERSION',
+        release: 'runtime-commit',
+      });
       const dir = mkdtempSync(join(tmpdir(), 'sentry-release-'));
       const file = join(dir, '.release');
       writeFileSync(file, 'build-commit\n');
@@ -103,11 +129,42 @@ describe('Sentry configuration', () => {
 
     it('falls back to the runtime-injected CONTAINER_VERSION', () => {
       expect(resolveRelease({ CONTAINER_VERSION: 'deployment-id' }, '/nonexistent/.release')).toBe('deployment-id');
+      expect(console.info).toHaveBeenCalledWith('[Sentry] Looking up build release file', {
+        cwd: process.cwd(),
+        releaseFile: '/nonexistent/.release',
+        exists: false,
+      });
+      expect(console.warn).toHaveBeenCalledWith('[Sentry] Git release unavailable; falling back to CONTAINER_VERSION', {
+        release: 'deployment-id',
+      });
     });
 
     it('reports no release when nothing is available', () => {
       expect(resolveRelease({}, '/nonexistent/.release')).toBeUndefined();
+      expect(console.warn).toHaveBeenCalledWith('[Sentry] Git release unavailable; falling back to CONTAINER_VERSION', {
+        release: null,
+      });
       expect(getSentryOptions({ SENTRY_API_DSN: dsn }, 'api')?.release).toBeUndefined();
+    });
+
+    it('distinguishes an empty build release file from a missing one', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'sentry-release-'));
+      const file = join(dir, '.release');
+      writeFileSync(file, ' \n');
+      try {
+        expect(resolveRelease({ CONTAINER_VERSION: 'deployment-id' }, file)).toBe('deployment-id');
+        expect(console.info).toHaveBeenCalledWith('[Sentry] Looking up build release file', {
+          cwd: process.cwd(),
+          releaseFile: file,
+          exists: true,
+        });
+        expect(console.warn).toHaveBeenCalledWith(
+          '[Sentry] Git release unavailable; falling back to CONTAINER_VERSION',
+          { release: 'deployment-id' },
+        );
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     });
   });
 
