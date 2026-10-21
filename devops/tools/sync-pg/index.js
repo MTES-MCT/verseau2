@@ -35,6 +35,7 @@ async function main() {
     if (fileName === lastRestoredDump) {
       skipped = true;
       console.log(`Dump ${fileName} already restored; skipping sync.`);
+      await schemaManager.grantReadWriteAccess();
       return;
     }
 
@@ -62,6 +63,7 @@ async function main() {
     const dumpSource = path.basename(tempFilePath);
     await schemaManager.swapStagingToLive(dumpSource, rowCounts, startedAt);
     await schemaManager.createVSteuSclItvMaterializedView();
+    await schemaManager.grantReadWriteAccess();
 
     // Cleanup temp file
     console.log('\nCleaning up temporary file...');

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import {
   ControleName,
   ErrorCode,
@@ -145,6 +145,30 @@ describe('ControlePage', () => {
       expect(screen.getByRole('heading', { name: /contrôles sandre/i, level: 2 })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /intégration des données/i, level: 2 })).not.toBeInTheDocument();
     });
+  });
+
+  it('counts Sandre warnings as avertissements and includes them only in the warning filter', async () => {
+    mockFetchControles.mockResolvedValue([]);
+    mockFetchMasa.mockResolvedValue(null);
+    mockFetchControlesSandre.mockResolvedValue([
+      makeControleSandre({
+        errors: [{ code: 'MISSING_XML_DECLARATION', message: 'Déclaration XML absente', severite: 'Warning' }],
+      }),
+    ]);
+
+    renderControlePage();
+
+    const row = await screen.findByRole('row', { name: /acceptation: conforme/i });
+    expect(within(row).getByText('Avertissement')).toHaveClass('fr-badge--warning');
+    expect(within(screen.getByTestId('clickable-stat-card-Avertissement')).getByText('1')).toBeInTheDocument();
+    expect(within(screen.getByTestId('clickable-stat-card-Erreur')).getByText('0')).toBeInTheDocument();
+
+    clickFilterCard('Erreur');
+    expect(screen.getByText('Déclaration XML absente')).toBeInTheDocument();
+    clickFilterCard('Avertissement');
+    expect(screen.queryByText('Déclaration XML absente')).not.toBeInTheDocument();
+    clickFilterCard('Avertissement');
+    expect(screen.getByText('Déclaration XML absente')).toBeInTheDocument();
   });
 
   it('shows no table when the selected filter matches no row', async () => {

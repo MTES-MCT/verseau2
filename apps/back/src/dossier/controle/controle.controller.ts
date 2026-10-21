@@ -4,6 +4,7 @@ import type { RouteParams, RouteResponse } from '@lib/dossier';
 import { getControles, getControlesSandre, getMasa } from '@lib/dossier';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
 import { ReponseSandreGateway } from './technique/sandre/reponseSandre.gateway';
+import { mapReponseSandreModelToDto } from './technique/sandre/reponseSandre.mapper';
 import { MasaGateway } from '../masa/masa.gateway';
 import { mapMasaModelToDto } from '../masa/masa.mapper';
 import { HasUserAccessToDepotGuard } from '@authentication/hasUserAccessToDepot.guard';
@@ -31,7 +32,8 @@ export class ControleController {
   async getControleSandre(
     @Param(new ZodValidationPipe(getControlesSandre['params'])) { depotId }: RouteParams<typeof getControlesSandre>,
   ): Promise<RouteResponse<typeof getControlesSandre>> {
-    return this.reponseSandreGateway.findByDepotId(depotId);
+    const reponses = await this.reponseSandreGateway.findByDepotId(depotId);
+    return reponses.map(mapReponseSandreModelToDto);
   }
 
   @UseOrGuards(HasUserAccessToDepotGuard, IsAdminGuard)

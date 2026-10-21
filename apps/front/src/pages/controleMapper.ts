@@ -1,5 +1,5 @@
 import type { ControleDto, ControleSandreDto, ControleName } from '@lib/dossier';
-import { ErrorCode, SandreAcceptationStatus, buildMessage, ControleDescription } from '@lib/dossier';
+import { ErrorCode, EvenementType, SandreAcceptationStatus, buildMessage, ControleDescription } from '@lib/dossier';
 import type { ControleSandreView, ControleView } from '../types/controle.types';
 
 const acceptationLabel: Record<SandreAcceptationStatus, string> = {
@@ -26,20 +26,14 @@ export function mapSandreControles(controles: ControleSandreDto[]): ControleDto[
     }
 
     return controle.errors.map((error, index) => {
-      const errorParams = [
-        error.message,
-        error.location,
-        error.ligne ? `Ligne ${error.ligne}` : null,
-        error.colonne ? `Colonne ${error.colonne}` : null,
-        error.severite ? `Sévérité ${error.severite}` : null,
-      ].filter(Boolean) as string[];
-
       return {
         id: `${controle.id}_${index}`,
         name,
         success: false,
+        evenementType:
+          error.severite?.trim().toLowerCase() === 'warning' ? EvenementType.AVERTISSEMENT : EvenementType.ERREUR,
         error: error.code as ErrorCode | undefined,
-        errorParams: errorParams.length ? errorParams : undefined,
+        errorParams: [error.message],
         createdAt: controle.createdAt,
         updatedAt: controle.updatedAt,
       };
@@ -65,6 +59,7 @@ export function mapSandreControlesToView(controles: ControleSandreDto[]): Contro
   return dtos.map((controle) => ({
     name: controle.name,
     success: controle.success,
-    message: controle.error ? `${controle.error} - ${controle.errorParams?.join(', ') || ''}` : '-',
+    message: controle.errorParams?.[0] || '-',
+    evenementType: controle.evenementType,
   }));
 }

@@ -1,4 +1,5 @@
 import type { MesureDto, MesuresGraphItemDto } from '@lib/dossier';
+import { getEndOfPreviousYearAsISODate } from '@lib/shared';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepotDetailsPage } from './DepotDetails';
@@ -32,6 +33,9 @@ vi.mock('../hooks/useQualifications', () => ({
 }));
 vi.mock('../components/MesuresGraph', () => ({
   MesuresGraph: ({ parametreLabel }: { parametreLabel: string }) => <div>Graphique {parametreLabel}</div>,
+}));
+vi.mock('../helper/fileDownload', () => ({
+  triggerFileDownload: vi.fn(),
 }));
 
 vi.mock('../api/mesures', async () => {
@@ -353,6 +357,9 @@ describe('DepotDetailsPage', () => {
       expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledTimes(1);
       expect(screen.getByText(/graphique matières en suspension/i)).toBeInTheDocument();
     });
+    expect(mesuresApi.fetchMesuresGraph).toHaveBeenCalledWith(
+      expect.objectContaining({ ouvrageType: 'steu', ouvrageCode: 'STEU001' }),
+    );
   });
 
   it('charge seulement le tableau quand la vue tableau est active et que la recherche est lancée', async () => {
@@ -465,7 +472,9 @@ describe('DepotDetailsPage', () => {
       expect(mockUseMesures.mock.lastCall?.[1]).toBe(false);
     });
 
-    fireEvent.change(screen.getByLabelText(/date fin/i), { target: { value: '2024-12-30' } });
+    // Une date de fin valide (dans la période par défaut) déclenche une nouvelle recherche.
+    const dateFinValide = `${getEndOfPreviousYearAsISODate().slice(0, 4)}-12-30`;
+    fireEvent.change(screen.getByLabelText(/date fin/i), { target: { value: dateFinValide } });
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
     await waitFor(() => {
@@ -604,12 +613,53 @@ describe('DepotDetailsPage', () => {
     expect(screen.queryByRole('navigation', { name: /pagination/i })).not.toBeInTheDocument();
   });
 
+  it.each(['steu', 'scl'] as const)('sends one %s code for both list and CSV export', async (ouvrageType) => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      ...emptyOuvragesResult,
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    mockUseAsyncSystemesCollecteSearch.mockReturnValue({
+      ...emptyOuvragesResult,
+      data: [{ systemeCollecteCode: 'SCL001', systemeCollecteNom: 'Collecteur A' }],
+    } as unknown as ReturnType<typeof useAsyncSystemesCollecteSearch>);
+    mockUseMesures.mockReturnValue({
+      ...emptyMesuresResult,
+      data: { data: [makeMesure()], total: 1, page: 1, pageSize: 20 },
+    } as unknown as ReturnType<typeof useMesures>);
+    vi.mocked(mesuresApi.downloadMesuresExport).mockResolvedValue({ blob: new Blob(['csv-content']) });
+
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    if (ouvrageType === 'scl') {
+      fireEvent.click(screen.getByRole('radio', { name: /système de collecte/i }));
+    }
+    fireEvent.click(
+      screen.getByRole('combobox', { name: ouvrageType === 'scl' ? /système de collecte/i : /station/i }),
+    );
+    fireEvent.click(screen.getByRole('option', { name: ouvrageType === 'scl' ? /collecteur a/i : /station a/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    const query = mockUseMesures.mock.lastCall?.[0];
+    expect(query).toEqual(
+      expect.objectContaining({ ouvrageType, ouvrageCode: ouvrageType === 'scl' ? 'SCL001' : 'STEU001' }),
+    );
+    expect(query).not.toHaveProperty('steuSandreCdas');
+    expect(query).not.toHaveProperty('sclSandreCdas');
+    expect(mockUseMesures.mock.lastCall?.[1]).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: /exporter csv/i }));
+
+    await waitFor(() => {
+      expect(mesuresApi.downloadMesuresExport).toHaveBeenCalledWith(query);
+    });
+  });
+
   it('shows validation error on search without ouvrage selected (STEU mode)', () => {
     renderWithQueryClient(<DepotDetailsPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
-    expect(screen.getByText(/veuillez sélectionner au moins une station/i)).toBeInTheDocument();
+    expect(screen.getByText(/veuillez sélectionner une station/i)).toBeInTheDocument();
   });
 
   it('shows validation error on search without SCL selected (SCL mode)', () => {
@@ -619,7 +669,41 @@ describe('DepotDetailsPage', () => {
     fireEvent.click(screen.getByRole('radio', { name: /système de collecte/i }));
     fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
 
-    expect(screen.getByText(/veuillez sélectionner au moins un système de collecte/i)).toBeInTheDocument();
+    expect(screen.getByText(/veuillez sélectionner un système de collecte/i)).toBeInTheDocument();
+  });
+
+  it('refuses a search with an inverted period and does not query the API', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+    fireEvent.change(screen.getByLabelText(/date fin/i), { target: { value: '2000-01-01' } });
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    expect(screen.getByText(/date de début doit être antérieure ou égale à la date de fin/i)).toBeInTheDocument();
+    expect(mockUseMesures.mock.lastCall?.[1]).toBe(false);
+  });
+
+  it('refuses a search without a period and does not query the API', async () => {
+    mockUseAsyncOuvragesSearch.mockReturnValue({
+      data: [{ ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionNom: 'Station A' }],
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useAsyncOuvragesSearch>);
+    renderWithQueryClient(<DepotDetailsPage />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: /station/i }));
+    fireEvent.click(screen.getByRole('option', { name: /station a/i }));
+    fireEvent.change(screen.getByLabelText(/date début/i), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /rechercher/i }));
+
+    expect(screen.getByText(/veuillez saisir une date de début et une date de fin/i)).toBeInTheDocument();
+    expect(mockUseMesures.mock.lastCall?.[1]).toBe(false);
   });
 
   it('renders statut dropdown populated with nomenclature items', () => {
