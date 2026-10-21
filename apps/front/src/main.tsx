@@ -19,6 +19,11 @@ startReactDsfr({ defaultColorScheme: 'system', Link });
 initSentry();
 
 const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
   queryCache: new QueryCache({
     onError: (error) => reportError(error, { source: 'react-query' }),
   }),
