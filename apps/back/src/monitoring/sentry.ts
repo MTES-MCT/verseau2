@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as Sentry from '@sentry/nestjs';
 import { resolveSourceVersion, SOURCE_VERSION_FILE } from '@shared/release';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 export type ProcessType = 'api' | 'worker';
 export const SENTRY_SHUTDOWN_TIMEOUT_MS = 2000;
@@ -57,9 +58,14 @@ export function getSentryOptions(env: NodeJS.ProcessEnv, processType: ProcessTyp
 
   return {
     dsn,
+    integrations: [nodeProfilingIntegration()],
     environment: env.SENTRY_ENVIRONMENT || env.NODE_ENV || 'development',
     release: resolveRelease(env),
     tracesSampleRate,
+    // Set sampling rate for profiling - this is evaluated only once per SDK.init call
+    profileSessionSampleRate: 1.0,
+    // Trace lifecycle automatically enables profiling during active traces
+    profileLifecycle: 'trace',
     initialScope: { tags: { process_type: processType }, attributes: { process_type: processType } },
     // Do not propagate monitoring headers to OIDC, S3 or other third parties.
     tracePropagationTargets: [],
