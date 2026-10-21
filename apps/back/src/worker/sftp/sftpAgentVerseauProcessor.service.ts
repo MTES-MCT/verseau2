@@ -35,11 +35,11 @@ export class SftpAgentVerseauProcessorService implements AsyncTask<{ depotId: st
       if (!depot.path) {
         throw new Error('Remote path is undefined');
       }
-      if (!depot.user?.email) {
-        throw new Error(`Depot with id ${depotId} has no associated user email`);
+      if (!depot.user?.uid) {
+        throw new Error(`Depot with id ${depotId} has no associated user UID`);
       }
 
-      const contact = await this.lanceleauGateway.findOrionContactByEmail(depot.user.email);
+      const contact = await this.lanceleauGateway.findOrionContactByLogin(depot.user.uid);
       if (!contact?.nom || !contact.prenom) {
         throw new Error(`Orion contact is missing or incomplete for depot ${depotId}`);
       }

@@ -318,6 +318,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: TEST_USER.sub,
+      uid: `uid-${TEST_USER.sub}`,
       mel: TEST_USER.email,
       itvCdn: TEST_USER.itvCdn,
       isExpertNational: false,

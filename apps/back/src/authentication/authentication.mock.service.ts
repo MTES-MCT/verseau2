@@ -13,7 +13,6 @@ import type { CookieOptions, Response } from 'express';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@user/user.entity';
-import { normalizeEmail } from '@shared/service/string.service';
 import { SignJWT, jwtVerify } from 'jose';
 
 const MOCK_AUTHENTICATION_FAILED_MESSAGE = 'Mock authentication failed';
@@ -41,8 +40,12 @@ export class AuthenticationMockService implements Authentication {
         issuer: INTERNAL_TOKEN_ISSUER,
         audience: INTERNAL_TOKEN_AUDIENCE,
       });
+      if (typeof payload.uid !== 'string' || !payload.uid.trim()) {
+        throw new UnauthorizedException();
+      }
       return {
         cerbereId: (payload.sub as string) || '',
+        uid: payload.uid.trim(),
         mel: (payload.email as string) || '',
         itvCdn: (payload.itvCdn as number) ?? null,
         isExpertNational: (payload.isExpertNational as boolean) ?? false,
@@ -100,6 +103,7 @@ export class AuthenticationMockService implements Authentication {
     const expiresIn = 3600;
     const internalToken = await this.signInternalToken(
       user.cerbereId,
+      user.uid,
       user.mel,
       user.itvCdn,
       user.isExpertNational,
@@ -127,6 +131,7 @@ export class AuthenticationMockService implements Authentication {
     const expiresIn = 3600;
     const internalToken = await this.signInternalToken(
       user.cerbereId,
+      user.uid,
       user.mel,
       user.itvCdn,
       user.isExpertNational,
@@ -137,6 +142,7 @@ export class AuthenticationMockService implements Authentication {
       accessToken: internalToken,
       refreshToken: internalToken,
       expiresIn,
+      user,
     };
   }
 
@@ -165,12 +171,13 @@ export class AuthenticationMockService implements Authentication {
 
   private async signInternalToken(
     sub: string,
+    uid: string,
     email: string,
     itvCdn: number | null,
     isExpertNational: boolean,
     expiresIn?: number,
   ): Promise<string> {
-    const jwt = new SignJWT({ sub, email, itvCdn, isExpertNational })
+    const jwt = new SignJWT({ sub, uid, email, itvCdn, isExpertNational })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setIssuer(INTERNAL_TOKEN_ISSUER)
@@ -186,24 +193,24 @@ export class AuthenticationMockService implements Authentication {
   }
 
   private async getMockUser(): Promise<AuthenticatedUserAndNomPrenom> {
-    const mockEmail = this.configService.get<string>('OIDC_MOCK_EMAIL')?.trim();
-    if (!mockEmail) {
+    const mockUid = this.configService.get<string>('OIDC_MOCK_UID')?.trim();
+    if (!mockUid) {
       throw new UnauthorizedException(MOCK_AUTHENTICATION_FAILED_MESSAGE);
     }
 
     const user = await this.dataSource.getRepository(UserEntity).findOne({
-      where: { email: normalizeEmail(mockEmail) },
+      where: { uid: mockUid },
     });
     if (!user) {
       throw new UnauthorizedException(MOCK_AUTHENTICATION_FAILED_MESSAGE);
     }
 
-    const email = user.email || mockEmail;
-    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(email);
+    const { itvCdn, isExpertNational } = await this.droitsUserService.resolveVerseauAccess(user.uid);
 
     return {
       cerbereId: user.sub,
-      mel: email,
+      uid: user.uid,
+      mel: user.email || '',
       itvCdn,
       isExpertNational,
       nom: user.nom || undefined,

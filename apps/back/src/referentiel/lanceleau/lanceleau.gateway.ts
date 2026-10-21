@@ -3,7 +3,7 @@ import { SupEntity } from './entities/sup.entity';
 import { FanEntity } from './entities/fan.entity';
 import { ParEntity } from './entities/par.entity';
 import { UrfEntity } from './entities/urf.entity';
-import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
+import { AgByLogin, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 import { OrionContact } from './lanceleau.model';
 
 export interface LanceleauGateway {
@@ -16,11 +16,11 @@ export interface LanceleauGateway {
   findUrfByRfa(urfRfa: string): Promise<UrfEntity | null>;
   hasRole(prCdn: number, roleCdn: number): Promise<boolean>;
   findOrionRolesByPrCdn(prCdn: number): Promise<RolePrincipal[] | null>;
-  findAgByEmail(email: string): Promise<AgByEmail | null>;
+  findAgByLogin(login: string): Promise<AgByLogin | null>;
   findVSteuSclItvByCodes(steuCodes: string[], sclCodes: string[]): Promise<VSteuSclItvResult[]>;
   findVSteuSclItvByItvRfa(itvRfa: string): Promise<VSteuSclItvResult[]>;
-  findSiretByEmail(email: string): Promise<string | null>;
-  findOrionContactByEmail(mail: string): Promise<OrionContact | null>;
+  findSiretByLogin(login: string): Promise<string | null>;
+  findOrionContactByLogin(login: string): Promise<OrionContact | null>;
 }
 
 export const LanceleauGateway = Symbol('LanceleauGateway');

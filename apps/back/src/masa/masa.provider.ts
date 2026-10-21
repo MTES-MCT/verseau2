@@ -18,7 +18,7 @@ import {
   SteuCdnBySandreCda,
   SclCdnBySandreCda,
   ItvCdnByRfa,
-  AgByEmail,
+  AgByLogin,
   IntervenantAuth,
   VSteuSclItvResult,
   ConformiteSteuFilters,
@@ -250,24 +250,24 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Indicateurs — Résolution du SIRET intervenant à partir de l'email utilisateur
+  // Indicateurs — Résolution du SIRET intervenant à partir du login Cerbere
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // route: GET /api/intervenants?email=:email&fields=siret
-  async findSiretByEmail(email: string): Promise<string | null> {
-    return this.lanceleauGateway.findSiretByEmail(email);
+  // route: GET /api/intervenants?login=:login&fields=siret
+  async findSiretByLogin(login: string): Promise<string | null> {
+    return this.lanceleauGateway.findSiretByLogin(login);
   }
 
   // ---------------------------------------------------------------------------
-  // Authentification — Résolution de l'AG (agent) par email utilisateur
+  // Authentification — Résolution de l'AG (agent) par login Cerbere
   // Utilisé par les guards et le login pour résoudre l'itvCdn et le prCdn
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // route: GET /api/agents?email=:email
-  async findAgByEmail(email: string): Promise<AgByEmail | null> {
-    return this.lanceleauGateway.findAgByEmail(email);
+  // route: GET /api/agents?login=:login
+  async findAgByLogin(login: string): Promise<AgByLogin | null> {
+    return this.lanceleauGateway.findAgByLogin(login);
   }
 
   // ---------------------------------------------------------------------------

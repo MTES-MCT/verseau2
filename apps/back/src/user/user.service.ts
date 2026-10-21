@@ -7,19 +7,21 @@ import { normalizeEmail } from '@shared/service/string.service';
 export class UserService {
   constructor(@Inject(UserGateway) private readonly userGateway: UserGateway) {}
 
-  async findOrCreateUser(sub: string, claims?: { email?: string; nom?: string; prenom?: string }): Promise<UserModel> {
-    // Normalize email to lowercase for consistent matching with Lanceleau referential
-    const normalizedClaims = claims?.email ? { ...claims, email: normalizeEmail(claims.email) } : claims;
+  async findOrCreateUser(
+    sub: string,
+    claims: { uid: string; email?: string; nom?: string; prenom?: string },
+  ): Promise<UserModel> {
+    const normalizedClaims = claims.email ? { ...claims, email: normalizeEmail(claims.email) } : claims;
 
     // Find existing user by sub
     const existingUser = await this.userGateway.findBySub(sub);
     if (existingUser) {
-      // Update user claims if provided
+      // Synchronize the profile returned by Cerbere
       if (
-        normalizedClaims &&
-        (normalizedClaims.email !== existingUser.email ||
-          normalizedClaims.nom !== existingUser.nom ||
-          normalizedClaims.prenom !== existingUser.prenom)
+        normalizedClaims.uid !== existingUser.uid ||
+        normalizedClaims.email !== existingUser.email ||
+        normalizedClaims.nom !== existingUser.nom ||
+        normalizedClaims.prenom !== existingUser.prenom
       ) {
         return await this.userGateway.updateUser(existingUser.id, normalizedClaims);
       }

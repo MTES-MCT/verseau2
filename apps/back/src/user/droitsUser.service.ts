@@ -19,12 +19,12 @@ export class DroitsUserService {
     this.logger.setContext(DroitsUserService.name);
   }
 
-  async resolveVerseauAccess(email: string): Promise<VerseauAccessClaims> {
-    if (!email.trim()) {
+  async resolveVerseauAccess(login: string): Promise<VerseauAccessClaims> {
+    if (!login.trim()) {
       throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
     }
 
-    const ag = await this.masaProvider.findAgByEmail(email);
+    const ag = await this.masaProvider.findAgByLogin(login);
     if (!ag) {
       throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
     }
@@ -43,21 +43,21 @@ export class DroitsUserService {
 
   async resolveItvCdn(sub: string): Promise<number | null> {
     const user = await this.userGateway.findBySub(sub);
-    if (!user || !user.email) {
+    if (!user?.uid) {
       return null;
     }
 
-    const ag = await this.masaProvider.findAgByEmail(user.email);
+    const ag = await this.masaProvider.findAgByLogin(user.uid);
     return ag ? ag.intervenantId : null;
   }
 
   async isExpertNationalVerseau(sub: string): Promise<boolean> {
     try {
       const user = await this.userGateway.findBySub(sub);
-      if (!user?.email) {
+      if (!user?.uid) {
         return false;
       }
-      const ag = await this.masaProvider.findAgByEmail(user.email);
+      const ag = await this.masaProvider.findAgByLogin(user.uid);
       if (!ag) {
         return false;
       }
@@ -71,10 +71,10 @@ export class DroitsUserService {
   async isExpertBassinVerseau(sub: string): Promise<boolean> {
     try {
       const user = await this.userGateway.findBySub(sub);
-      if (!user?.email) {
+      if (!user?.uid) {
         return false;
       }
-      const ag = await this.masaProvider.findAgByEmail(user.email);
+      const ag = await this.masaProvider.findAgByLogin(user.uid);
       if (!ag) {
         return false;
       }

@@ -244,11 +244,11 @@ export class RoseauGatewayTestMock {
  */
 export class LanceleauGatewayTestMock {
   findIntervenantById = jest.fn().mockResolvedValue(null);
-  findOrionContactByEmail = jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
+  findOrionContactByLogin = jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
 
   reset(): void {
     this.findIntervenantById.mockClear().mockResolvedValue(null);
-    this.findOrionContactByEmail.mockClear().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
+    this.findOrionContactByLogin.mockClear().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
   }
 }
 
@@ -261,6 +261,7 @@ export class UserServiceTestMock {
   private mockUser: Partial<UserEntity> = {
     id: 'user_123',
     sub: 'test-user-id',
+    uid: 'cerbere-test-user',
     email: 'dev@example.com',
     nom: 'Test',
     prenom: 'User',
@@ -289,6 +290,7 @@ export class UserServiceTestMock {
     this.mockUser = {
       id: 'user_123',
       sub: 'test-user-id',
+      uid: 'cerbere-test-user',
       email: 'dev@example.com',
       nom: 'Test',
       prenom: 'User',
@@ -365,7 +367,7 @@ export class ConfigServiceTestMock {
       SFTP_PRIVATE_KEY: 'key',
       SFTP_AGENCY_CONFIG: '{}',
       OIDC_MOCK: 'true',
-      OIDC_MOCK_EMAIL: 'dev@example.com',
+      OIDC_MOCK_UID: 'cerbere-test-user',
       OIDC_ISSUER_URL: 'https://mock-issuer',
       OIDC_CLIENT_ID: 'mock-client',
       OIDC_CLIENT_SECRET: 'mock-secret',
@@ -416,7 +418,7 @@ export class ConfigServiceTestMock {
       SFTP_PRIVATE_KEY: 'key',
       SFTP_AGENCY_CONFIG: '{}',
       OIDC_MOCK: 'true',
-      OIDC_MOCK_EMAIL: 'dev@example.com',
+      OIDC_MOCK_UID: 'cerbere-test-user',
       OIDC_ISSUER_URL: 'https://mock-issuer',
       OIDC_CLIENT_ID: 'mock-client',
       OIDC_CLIENT_SECRET: 'mock-secret',

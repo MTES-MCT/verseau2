@@ -48,6 +48,7 @@ try {
     }
     await seedUserWithDroits(database, {
       sub: 'e2e-user',
+      uid: 'cerbere-e2e-user',
       email: 'e2e@example.com',
       itvCdn: 100,
       itvRfa: '12345678901234',

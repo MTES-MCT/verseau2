@@ -3,6 +3,7 @@ import { seedOrionCredentials, seedAg, seedItv, clearLanceleauData } from './cre
 
 export interface UserWithDroitsData {
   sub: string;
+  uid?: string;
   email: string;
   nom?: string;
   prenom?: string;
@@ -15,14 +16,14 @@ export interface UserWithDroitsData {
 /**
  * Seeds a complete user with lanceleau linking for authentication flow.
  * Creates:
- * - UserEntity with given sub and email
- * - OrionCredentialsEntity linking email to prCdn
+ * - UserEntity with given sub, uid and email
+ * - OrionCredentialsEntity linking uid to prCdn
  * - AgEntity linking prCdn to itvCdn
  * - If itvRfa is provided:
  *   - ItvEntity with itvCdn and itvRfa (SIRET)
  *   - OrionRoleForPrincipal with role 301 (required for depot)
  *
- * This establishes the chain: User.email → OrionCredentials.mail → AgEntity.prCdn → AgEntity.itvCdn
+ * This establishes the chain: User.uid → OrionCredentials.loginLb → AgEntity.prCdn → AgEntity.itvCdn
  * which is used by DroitsUserService.resolveItvCdn()
  *
  * For DroitsDepotService.validateDroits(), you also need:
@@ -33,16 +34,17 @@ export async function seedUserWithDroits(dataSource: DataSource, data: UserWithD
   const prCdn = data.prCdn ?? 1000;
 
   // Create user
+  const uid = data.uid ?? `uid-${data.sub}`;
   await dataSource.query(
     `
-    INSERT INTO "user" (id, sub, email, nom, prenom)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO "user" (id, sub, uid, email, nom, prenom)
+    VALUES ($1, $2, $3, $4, $5, $6)
   `,
-    [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
+    [userId, data.sub, uid, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  // Create orion credentials linking email to prCdn
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub, data.nom ?? 'Test', data.prenom ?? 'User');
+  // Create orion credentials linking UID to prCdn
+  await seedOrionCredentials(dataSource, prCdn, data.email, uid, data.nom ?? 'Test', data.prenom ?? 'User');
 
   // Create ag linking prCdn to itvCdn
   await seedAg(dataSource, prCdn, data.itvCdn);
@@ -101,15 +103,16 @@ export async function seedUserExpertBassin(dataSource: DataSource, data: UserWit
   const userId = `user_${Date.now()}`;
   const prCdn = data.prCdn ?? 1000;
 
+  const uid = data.uid ?? `uid-${data.sub}`;
   await dataSource.query(
     `
-    INSERT INTO "user" (id, sub, email, nom, prenom)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO "user" (id, sub, uid, email, nom, prenom)
+    VALUES ($1, $2, $3, $4, $5, $6)
   `,
-    [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
+    [userId, data.sub, uid, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub, data.nom ?? 'Test', data.prenom ?? 'User');
+  await seedOrionCredentials(dataSource, prCdn, data.email, uid, data.nom ?? 'Test', data.prenom ?? 'User');
   await seedAg(dataSource, prCdn, data.itvCdn);
 
   if (data.itvRfa) {
@@ -130,15 +133,16 @@ export async function seedUserRole308(dataSource: DataSource, data: UserWithDroi
   const userId = `user_${Date.now()}`;
   const prCdn = data.prCdn ?? 1000;
 
+  const uid = data.uid ?? `uid-${data.sub}`;
   await dataSource.query(
     `
-    INSERT INTO "user" (id, sub, email, nom, prenom)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO "user" (id, sub, uid, email, nom, prenom)
+    VALUES ($1, $2, $3, $4, $5, $6)
   `,
-    [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
+    [userId, data.sub, uid, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub);
+  await seedOrionCredentials(dataSource, prCdn, data.email, uid);
   await seedAg(dataSource, prCdn, data.itvCdn);
 
   if (data.itvRfa) {
@@ -156,16 +160,16 @@ export async function seedUserRole308(dataSource: DataSource, data: UserWithDroi
  */
 export async function seedUserWithoutDroits(
   dataSource: DataSource,
-  data: Pick<UserWithDroitsData, 'sub' | 'email' | 'nom' | 'prenom'>,
+  data: Pick<UserWithDroitsData, 'sub' | 'uid' | 'email' | 'nom' | 'prenom'>,
 ): Promise<string> {
   const userId = `user_${Date.now()}`;
 
   await dataSource.query(
     `
-    INSERT INTO "user" (id, sub, email, nom, prenom)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO "user" (id, sub, uid, email, nom, prenom)
+    VALUES ($1, $2, $3, $4, $5, $6)
   `,
-    [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
+    [userId, data.sub, data.uid ?? `uid-${data.sub}`, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
   return userId;

@@ -106,7 +106,7 @@ export class DepotController {
       return { authorized: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Droits de dépôt refusés pour ${user.mel} : ${errorMessage}`);
+      this.logger.warn(`Droits de dépôt refusés pour ${user.uid} : ${errorMessage}`);
       return {
         authorized: false,
         errorCode:

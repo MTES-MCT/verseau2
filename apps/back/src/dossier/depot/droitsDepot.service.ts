@@ -39,11 +39,11 @@ export class DroitsDepotService {
     if (!user) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
-    if (!user.email) {
+    if (!user.uid) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
-    const ag = await this.masaProvider.findAgByEmail(user.email);
+    const ag = await this.masaProvider.findAgByLogin(user.uid);
     this.logger.debug('Ag entity lookup completed', { found: Boolean(ag) });
     if (!ag) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);

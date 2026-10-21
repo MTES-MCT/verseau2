@@ -17,12 +17,21 @@ export class UserRepository extends Repository<UserEntity> implements UserGatewa
     return await this.findOne({ where: { id } });
   }
 
-  async createUser(data: { sub: string; email?: string; nom?: string; prenom?: string }): Promise<UserEntity> {
+  async createUser(data: {
+    sub: string;
+    uid: string;
+    email?: string;
+    nom?: string;
+    prenom?: string;
+  }): Promise<UserEntity> {
     const newUser = this.create(data);
     return await this.save(newUser);
   }
 
-  async updateUser(id: string, data: Partial<Pick<UserEntity, 'email' | 'nom' | 'prenom'>>): Promise<UserEntity> {
+  async updateUser(
+    id: string,
+    data: Partial<Pick<UserEntity, 'uid' | 'email' | 'nom' | 'prenom'>>,
+  ): Promise<UserEntity> {
     await this.update(id, data);
     const updatedUser = await this.findOne({ where: { id } });
     if (!updatedUser) {

@@ -54,6 +54,7 @@ const mockUser = (
   overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
 ): import('@authentication/authentication').AuthenticatedUser => ({
   cerbereId: 'test-sub',
+  uid: 'cerbere-test-user',
   mel: 'test@example.com',
   itvCdn: ITV_CDN,
   isExpertNational: false,

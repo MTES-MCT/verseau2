@@ -41,7 +41,7 @@ const env = {
   USE_SANDRE_MOCK: 'true',
   SANDRE_MOCK_BEHAVIOR: 'conformant',
   OIDC_MOCK: 'true',
-  OIDC_MOCK_EMAIL: 'e2e@example.com',
+  OIDC_MOCK_UID: 'cerbere-e2e-user',
   JWT_SECRET: 'e2e-only-secret-with-at-least-32-characters',
   MASA_API_KEY: masaApiKey,
   CYPRESS_MASA_API_KEY: masaApiKey,
