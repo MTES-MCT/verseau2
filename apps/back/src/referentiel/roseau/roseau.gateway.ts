@@ -9,6 +9,7 @@ import {
   MaxDebitBySandreCda,
   ChargeEntranteMaxComparison,
   PointMesure,
+  PointsMesureBySystemeCollecte,
   ParametreMesure,
   NomenclatureItem,
   ProductionBoueZero,
@@ -37,7 +38,7 @@ export interface RoseauGateway {
   findMaxDebitsReferenceBatch(steuSandreCdas: string[]): Promise<MaxDebitBySandreCda[]>;
   findChargeEntranteMaxComparisonBatch(steuSandreCdas: string[], year: number): Promise<ChargeEntranteMaxComparison[]>;
   findProductionBoueZeroBatch(steuSandreCdas: string[], year: number): Promise<ProductionBoueZero[]>;
-  findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]>;
+  findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointsMesureBySystemeCollecte>;
   findPointsMesureByOuvrage(
     ouvrageType: 'steu' | 'scl',
     ouvrageCode: string,

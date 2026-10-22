@@ -28,6 +28,7 @@ import {
   ChargeEntranteMaxComparison,
   ProductionBoueZero,
   PointMesure,
+  PointsMesureBySystemeCollecte,
   ParametreMesure,
   NomenclatureItem,
   SclRef,
@@ -624,9 +625,9 @@ export class RoseauRepository implements RoseauGateway {
     });
   }
 
-  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
+  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointsMesureBySystemeCollecte> {
     if (systemeCollecteIds.length === 0) {
-      return [];
+      return {};
     }
 
     const rows = await this.pmoRepository
@@ -637,21 +638,28 @@ export class RoseauRepository implements RoseauGateway {
       .leftJoin(TlrefEntity, 't16', 't16.tlref_cdn = pmo.tlref_16_cdn')
       .addSelect('t16.tlref_elt_cda', 'localisation_globale')
       .innerJoin(SclEntity, 'scl', 'scl.scl_cdn = pmo.scl_cdn')
+      .addSelect('scl.scl_cdn', 'scl_cdn')
       .where('scl.scl_cdn IN (:...systemeCollecteIds)', { systemeCollecteIds })
       .orderBy('pmo.pmo_no', 'ASC')
       .getRawMany<{
+        scl_cdn: number;
         pmo_cdn: number;
         pmo_no: string;
         pmo_lb: string | null;
         localisation_globale: string | null;
       }>();
 
-    return rows.map((r) => ({
-      pointMesureId: r.pmo_cdn,
-      pointMesureNumero: r.pmo_no?.trim() ?? '',
-      pointMesureLibelle: r.pmo_lb?.trim() ?? null,
-      pointMesureLocalisationGlobale: r.localisation_globale?.trim() ?? null,
-    }));
+    const pointsBySystemeCollecte: PointsMesureBySystemeCollecte = {};
+    for (const row of rows) {
+      const points = (pointsBySystemeCollecte[row.scl_cdn] ??= []);
+      points.push({
+        pointMesureId: row.pmo_cdn,
+        pointMesureNumero: row.pmo_no?.trim() ?? '',
+        pointMesureLibelle: row.pmo_lb?.trim() ?? null,
+        pointMesureLocalisationGlobale: row.localisation_globale?.trim() ?? null,
+      });
+    }
+    return pointsBySystemeCollecte;
   }
 
   async findNomenclatureByRfa(trlRfa: string): Promise<NomenclatureItem[]> {

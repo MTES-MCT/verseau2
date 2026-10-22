@@ -246,6 +246,8 @@ export interface PointMesure {
   pointMesureLocalisationGlobale: string | null;
 }
 
+export type PointsMesureBySystemeCollecte = Record<string, PointMesure[]>;
+
 /** Paramètre — utilisé pour le dropdown de sélection */
 export interface ParametreMesure {
   parametreAnalyseCode: string;

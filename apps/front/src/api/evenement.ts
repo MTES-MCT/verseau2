@@ -5,7 +5,6 @@ import {
   listEvenementSteu,
   listEvenementScl,
   listEvenementTypes,
-  listEvenementPmo,
   type RouteQuery,
 } from '@lib/dossier';
 
@@ -19,10 +18,6 @@ export const fetchEvenementScl = async (query: RouteQuery<typeof listEvenementSc
 
 export const fetchEvenementTypes = async () => {
   return apiCall(listEvenementTypes);
-};
-
-export const fetchEvenementPmo = async () => {
-  return apiCall(listEvenementPmo);
 };
 
 export const downloadEvenementSteuExport = async (query: RouteQuery<typeof exportEvenementSteu>) => {
