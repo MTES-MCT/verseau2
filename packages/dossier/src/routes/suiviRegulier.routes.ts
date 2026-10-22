@@ -80,11 +80,15 @@ export const listEvenementPmo = {
   method: 'GET',
   path: '/suivi-regulier/evenement/pmo',
   query: z.object({}),
-  response: z.array(
-    z.object({
-      pointMesureId: z.number(),
-      pointMesureNumero: z.string(),
-      pointMesureLibelle: z.string().nullable(),
-    }),
+  response: z.record(
+    z.string(),
+    z.array(
+      z.object({
+        pointMesureId: z.number(),
+        pointMesureNumero: z.string(),
+        pointMesureLibelle: z.string().nullable(),
+        pointMesureLocalisationGlobale: z.string().nullable(),
+      }),
+    ),
   ),
 } as const satisfies RouteDefinition;

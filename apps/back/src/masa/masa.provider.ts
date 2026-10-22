@@ -46,6 +46,7 @@ import {
   SteuWithName,
   SclWithName,
   PointMesure,
+  PointsMesureBySystemeCollecte,
   ParametreMesure,
   NomenclatureItem,
   PointMesureReferentielRow,
@@ -382,7 +383,7 @@ export class MasaProvider {
   // ---------------------------------------------------------------------------
 
   // route: POST /api/systemes-collecte/points-mesure
-  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointMesure[]> {
+  async findPointsMesureBySystemesCollecte(systemeCollecteIds: number[]): Promise<PointsMesureBySystemeCollecte> {
     return this.roseauGateway.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }
 
