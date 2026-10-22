@@ -58,6 +58,18 @@ export function getSentryOptions(env: NodeJS.ProcessEnv, processType: ProcessTyp
 
   return {
     dsn,
+    ignoreSpans: [
+      {
+        op: /^db\b/,
+        attributes: {
+          'db.query.text': /\bpgboss"?\s*\./i,
+        },
+      },
+      {
+        op: /^db\b/,
+        name: /\bpg-pool"?\s*\./i,
+      },
+    ],
     integrations: [nodeProfilingIntegration()],
     environment: env.SENTRY_ENVIRONMENT || env.NODE_ENV || 'development',
     release: resolveRelease(env),
