@@ -3,7 +3,7 @@
 FROM node:24-alpine
 
 # Install the package-manager version declared by the project.
-RUN npm install -g pnpm@12.4.2
+RUN npm install -g pnpm@12.5.0
 
 # Create app directory
 WORKDIR /usr/src/app
