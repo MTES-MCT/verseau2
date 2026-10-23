@@ -7,7 +7,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the package-manager version declared by the project.
-RUN npm install -g pnpm@12.4.2
+RUN npm install -g pnpm@12.5.0
 
 WORKDIR /app
 
