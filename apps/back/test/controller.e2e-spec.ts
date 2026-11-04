@@ -27,6 +27,7 @@ import { DataSource } from 'typeorm';
 import { DepotStatus, MasaStatus } from '@lib/dossier';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
+import { DepotGateway } from '@dossier/depot/depot.gateway';
 import {
   createLanceleauTables,
   createReferentielSchemas,
@@ -252,6 +253,23 @@ describe('Controller (e2e) - Access control', () => {
         .set('x-api-key', 'private-token')
         .expect('X-Source', 'Verseau2')
         .expect(403);
+    });
+
+    it('/webhook/masa/agent-verseau (POST) - Should return 404 when the depot is missing', async () => {
+      jest.spyOn(app.get<DepotGateway>(DepotGateway), 'findDepotById').mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send({
+          verseau2DepotId: 'dep_missing',
+          numeroDepotVerseau1: null,
+          statut: MasaWebhookStatus.INTEGRE,
+          rapport: 'test',
+        })
+        .expect('X-Source', 'Verseau2')
+        .expect(404)
+        .expect({ statusCode: 404, message: 'Depot with id dep_missing not found', error: 'Not Found' });
     });
 
     it('/webhook/masa/agent-verseau (POST) - Should return 200 OK', async () => {
