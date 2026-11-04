@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MasaGateway } from './masa.gateway';
 import { type MasaWebhookPayloadDto } from './masa.schema';
 import { DepotGateway } from '../depot/depot.gateway';
@@ -21,7 +21,7 @@ export class MasaService {
   async processRetourAgentVerseau(payload: MasaWebhookPayloadDto) {
     const depot = await this.depotGateway.findDepotById(payload.verseau2DepotId);
     if (!depot) {
-      throw new Error('Depot not found');
+      throw new NotFoundException(`Depot with id ${payload.verseau2DepotId} not found`);
     }
 
     const existingMasa = await this.masaGateway.findByDepotId(payload.verseau2DepotId);
