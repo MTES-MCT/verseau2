@@ -1,5 +1,5 @@
-const { Client } = require('pg');
-const { DUMP_SCHEMAS, STAGING_SCHEMAS, STAGING_TO_LIVE, LIVE_TO_DUMP, EXCLUDED_TABLES } = require('./schemas');
+const { Client, escapeIdentifier } = require('pg');
+const { DUMP_SCHEMAS, STAGING_SCHEMAS, LIVE_SCHEMAS, STAGING_TO_LIVE, LIVE_TO_DUMP, EXCLUDED_TABLES } = require('./schemas');
 
 /**
  * Returns a Set of table names excluded for a given dump schema.
@@ -238,6 +238,61 @@ class SchemaManager {
       throw error;
     } finally {
       await client.end();
+    }
+  }
+
+  /**
+   * Reapply optional read/write grants after the swap and materialized-view creation.
+   * Keep grants outside the swap transaction: a failure must not abort restoration.
+   */
+  async grantReadWriteAccess() {
+    const writeUsers = new Set(this.config.pg.writeUsers ?? []);
+    const users = new Set([...(this.config.pg.readUsers ?? []), ...writeUsers]);
+    if (users.size === 0) return;
+
+    let client;
+    try {
+      client = new Client({ connectionString: this.config.pg.connectionString });
+      await client.connect();
+
+      for (const user of users) {
+        const canWrite = writeUsers.has(user);
+        const access = canWrite ? 'Read/write' : 'Read-only';
+        for (const schema of LIVE_SCHEMAS) {
+          try {
+            const role = escapeIdentifier(user);
+            const schemaName = escapeIdentifier(schema);
+            await client.query(`
+              GRANT USAGE ON SCHEMA ${schemaName} TO ${role};
+              GRANT ${canWrite ? 'SELECT, INSERT, UPDATE, DELETE' : 'SELECT'} ON ALL TABLES IN SCHEMA ${schemaName} TO ${role};
+              ${canWrite ? `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ${schemaName} TO ${role};` : ''}
+            `);
+            console.log(`${access} access granted.`, { user, schema });
+          } catch (error) {
+            console.warn(`Could not grant ${access.toLowerCase()} access; continuing restoration.`, {
+              user,
+              schema,
+              code: error?.code,
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Could not connect to apply read/write grants; continuing restoration.', {
+        code: error?.code,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      if (client) {
+        try {
+          await client.end();
+        } catch (error) {
+          console.warn('Could not close the read/write-grant connection; continuing restoration.', {
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
     }
   }
 

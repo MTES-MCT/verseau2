@@ -1,3 +1,4 @@
+import './monitoring/instrument.worker';
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from './worker/worker.module';
 import { LoggerService } from '@shared/logger/logger.service';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { RouteDefinition } from './route.types';
-import {  MesuresGraphItemDtoSchema, PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
+import { MesuresGraphItemDtoSchema, PaginatedMesuresResponseSchema, ParametreMesureSchema } from '../mesure/mesure.dto';
 import { createPaginationQuerySchema } from '../shared/pagination.schema';
 import { TypePointMesure } from '../shared/typePointMesure';
 
@@ -12,23 +12,40 @@ export type MesuresSortByValue = z.infer<typeof MesuresSortBy>;
 export const OuvrageType = z.enum(['steu', 'scl']);
 export type OuvrageTypeValue = z.infer<typeof OuvrageType>;
 
+/** Date de prélèvement au format ISO (AAAA-MM-JJ). */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const mesuresQuery = z
+  .object({
+    ouvrageType: OuvrageType.default('steu'),
+    ouvrageCode: z
+      .string()
+      .trim()
+      .min(1, "Un code d'ouvrage est obligatoire")
+      .max(16, "Un code d'ouvrage ne peut pas dépasser 16 caractères"),
+    pmoCdn: z.coerce.number().optional(),
+    dateDebut: z.string().regex(ISO_DATE, 'dateDebut doit être une date au format AAAA-MM-JJ'),
+    dateFin: z.string().regex(ISO_DATE, 'dateFin doit être une date au format AAAA-MM-JJ'),
+    parametreCode: z.string().optional(),
+    qualification: z.string().optional(),
+    statut: z.string().optional(),
+    finalite: z.string().optional(),
+  })
+  .extend(createPaginationQuerySchema(MesuresSortBy).shape)
+  .superRefine((query, ctx) => {
+    if (query.dateDebut > query.dateFin) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['dateDebut'],
+        message: 'dateDebut doit être antérieure ou égale à dateFin',
+      });
+    }
+  });
+
 export const listMesures = {
   method: 'GET',
   path: '/mesures',
-  query: z
-    .object({
-      ouvrageType: OuvrageType.default('steu'),
-      steuSandreCdas: z.union([z.array(z.string()), z.string().transform((v) => [v])]).optional(),
-      sclSandreCdas: z.union([z.array(z.string()), z.string().transform((v) => [v])]).optional(),
-      pmoCdn: z.coerce.number().optional(),
-      dateDebut: z.string().optional(),
-      dateFin: z.string().optional(),
-      parametreCode: z.string().optional(),
-      qualification: z.string().optional(),
-      statut: z.string().optional(),
-      finalite: z.string().optional(),
-    })
-    .extend(createPaginationQuerySchema(MesuresSortBy).shape),
+  query: mesuresQuery,
   response: PaginatedMesuresResponseSchema,
 } as const satisfies RouteDefinition;
 

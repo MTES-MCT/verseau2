@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SandreAcceptationStatus } from '@lib/dossier';
-import { SandreTokenResponse, SandreUploadParams, SandreValidationResult } from './sandre';
+import { SandreTaskReference, SandreUploadParams, SandreValidationResult } from './sandre';
 import { LoggerService } from '@shared/logger/logger.service';
 
 interface MockValidationData {
@@ -48,21 +48,17 @@ export class SandreMockService {
 
   /**
    * Upload a file to SANDRE for validation (mock)
-   * @param params Upload parameters including file and scenario information
-   * @returns Token response with links to check validation status
+   * @param _params XML file to validate
+   * @returns Native session and task identifiers
    */
-  validateFile(params: SandreUploadParams): Promise<SandreTokenResponse> {
-    this.logger.warn('MOCK: Validating file with SANDRE', {
-      xsd: params.xsd,
-      nomSI: params.nomSI,
-      versionSI: params.versionSI,
-    });
+  validateFile(_params: SandreUploadParams): Promise<SandreTaskReference> {
+    this.logger.warn('MOCK: Validating file with SANDRE');
 
     // Generate a unique mock token
     const jeton = `mock_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Parse scenario code and version from xsd (format: "SCENARIO;VERSION")
-    const [codeScenario, versionScenario] = params.xsd.split(';');
+    // Match the scenario used by Verseau2 fixtures.
+    const [codeScenario, versionScenario] = ['FCT_ASSAIN', '4'];
 
     // Determine validation result based on configured behavior
     const isConformant = this.determineConformity();
@@ -98,18 +94,21 @@ export class SandreMockService {
     });
 
     return Promise.resolve({
-      jeton,
-      lienAcquittement: `http://mock.sandre.eaufrance.fr/acquittement/${jeton}`,
-      lienCertificat: `http://mock.sandre.eaufrance.fr/certificat/${jeton}`,
+      sessionId: `session_${jeton}`,
+      taskId: jeton,
     });
   }
 
   /**
-   * Get validation result for a given token (mock)
-   * @param token The jeton token from validateFile response
+   * Get validation result for a native task (mock)
+   * @param reference The identifiers returned by validateFile
    * @returns Validation result with status and errors
    */
-  getValidationResult(token: string): Promise<SandreValidationResult> {
+  getValidationResult(reference: SandreTaskReference): Promise<SandreValidationResult> {
+    return this.getLegacyValidationResult(reference.taskId);
+  }
+
+  getLegacyValidationResult(token: string): Promise<SandreValidationResult> {
     this.logger.warn('MOCK: Fetching validation result', { token });
 
     const validationData = this.validationResults.get(token);

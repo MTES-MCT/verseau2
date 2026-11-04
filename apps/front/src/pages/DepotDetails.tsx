@@ -41,6 +41,7 @@ export function DepotDetailsPage() {
     systemesCollecteLoading,
     setSclSearch,
     ouvrageError,
+    dateError,
     pointsMesure,
     pointsMesureLoading,
     parametres,
@@ -290,6 +291,7 @@ export function DepotDetailsPage() {
                 value: form.dateDebut,
                 onChange: (e) => updateForm('dateDebut', e.target.value),
               }}
+              state={dateError ? 'error' : 'default'}
             />
           </div>
 
@@ -301,6 +303,7 @@ export function DepotDetailsPage() {
                 value: form.dateFin,
                 onChange: (e) => updateForm('dateFin', e.target.value),
               }}
+              state={dateError ? 'error' : 'default'}
             />
           </div>
 
@@ -317,6 +320,10 @@ export function DepotDetailsPage() {
             </Button>
           </div>
         </div>
+
+        {dateError && (
+          <Alert severity="error" title="Période invalide" description={dateError} className={fr.cx('fr-mb-3w')} />
+        )}
 
         {/* Zone C — Filtres avancés */}
         <div className={fr.cx('fr-mb-3w')}>

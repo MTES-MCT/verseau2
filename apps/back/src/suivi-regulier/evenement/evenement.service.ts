@@ -195,7 +195,7 @@ export class EvenementService {
   async listAvailablePointsMesure(authorizedSclCdas: string[]) {
     const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
     if (systemeCollecteIds.length === 0) {
-      return [];
+      return {};
     }
     return this.masaProvider.findPointsMesureBySystemesCollecte(systemeCollecteIds);
   }

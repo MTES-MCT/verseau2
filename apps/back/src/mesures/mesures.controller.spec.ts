@@ -74,6 +74,9 @@ describe('MesuresController', () => {
       mesuresService.listMesures.mockResolvedValue(paginated);
 
       const result = await controller.listMesures(makeRequest(['STEU001'], []), {
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
         ouvrageType: 'steu',
@@ -89,7 +92,7 @@ describe('MesuresController', () => {
       mesuresService.listMesures.mockResolvedValue({ data: [], total: 0, page: 2, pageSize: 10 });
 
       await controller.listMesures(makeRequest(['STEU001'], []), {
-        steuSandreCdas: ['STEU001'],
+        ouvrageCode: 'STEU001',
         dateDebut: '2024-01-01',
         dateFin: '2024-12-31',
         parametreCode: 'MES_CO',
@@ -105,7 +108,7 @@ describe('MesuresController', () => {
       expect(mesuresService.listMesures).toHaveBeenCalledWith(
         expect.objectContaining({
           authorizedSteuCdas: ['STEU001'],
-          ouvrageDepollutionCodes: ['STEU001'],
+          ouvrageCode: 'STEU001',
           dateDebut: '2024-01-01',
           dateFin: '2024-12-31',
           parametreCode: 'MES_CO',
@@ -125,7 +128,7 @@ describe('MesuresController', () => {
       mesuresService.getMesuresGraph = jest.fn().mockResolvedValue([]);
 
       const result = await controller.getMesuresGraph(makeRequest(['STEU001'], []), {
-        steuSandreCdas: ['STEU001'],
+        ouvrageCode: 'STEU001',
         dateDebut: '2024-01-01',
         dateFin: '2024-12-31',
         parametreCode: 'MES_CO',
@@ -141,7 +144,7 @@ describe('MesuresController', () => {
       expect(mesuresService.getMesuresGraph).toHaveBeenCalledWith(
         expect.objectContaining({
           authorizedSteuCdas: ['STEU001'],
-          ouvrageDepollutionCodes: ['STEU001'],
+          ouvrageCode: 'STEU001',
           dateDebut: '2024-01-01',
           dateFin: '2024-12-31',
           parametreCode: 'MES_CO',

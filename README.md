@@ -101,7 +101,7 @@ S3_ACCESS_KEY=MY_ACCESS_KEY
 S3_SECRET_KEY=MY_SECRET_KEY
 
 # SANDRE Configuration
-SANDRE_API_URL=https://www.sandre.eaufrance.fr/PS5/api
+SANDRE_API_URL=https://www.sandre.eaufrance.fr/parseur
 USE_SANDRE_MOCK=false
 
 # Logs
