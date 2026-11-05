@@ -396,13 +396,13 @@ export class ConfigServiceTestMock {
     };
   }
 
-  get(key: string): string | null {
-    return this.configValues[key] ?? null;
+  get(key: string): string | null | undefined {
+    return this.configValues[key];
   }
 
   getOrThrow(key: string): string {
     const val = this.get(key);
-    if (val === null) {
+    if (val === undefined || val === null) {
       throw new Error(`Config key ${key} missing`);
     }
     return val;
