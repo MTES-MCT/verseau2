@@ -267,30 +267,15 @@ describe('Dossier E2E - Real Queue Processing', () => {
       .overrideProvider(LoggerService)
       .useValue(loggerValueMock)
       .overrideProvider(ConfigService)
-      .useValue({
-        get: (key: string) => {
-          if (key === 'DATABASE_URL') {
-            return connectionUri;
-          }
-          if (key === 'MASA_API_KEY') {
-            return 'private-token';
-          }
-          return process.env[key] ?? null;
-        },
-        getOrThrow: (key: string) => {
-          if (key === 'DATABASE_URL') {
-            return connectionUri;
-          }
-          if (key === 'MASA_API_KEY') {
-            return 'private-token';
-          }
-          const val = process.env[key];
-          if (!val) {
-            throw new Error(`Config key ${key} missing`);
-          }
-          return val;
-        },
-      })
+      .useValue(
+        new ConfigService({
+          ...process.env,
+          DATABASE_URL: connectionUri,
+          MASA_API_KEY: 'private-token',
+          // Exercise the injected scanner even when the local environment enables bypass.
+          ANTIVIRUS_BYPASS: 'false',
+        }),
+      )
       .compile();
 
     app = moduleFixture.createNestApplication({ logger: false });
