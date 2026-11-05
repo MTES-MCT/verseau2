@@ -1,1 +1,1 @@
-scanner: pnpm start
+scanner: ANTIVIRUS_HOST="${ANTIVIRUS_HOST:-$SCALINGO_PRIVATE_HOSTNAME}" pnpm start

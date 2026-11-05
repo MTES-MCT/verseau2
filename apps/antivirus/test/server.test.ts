@@ -14,21 +14,39 @@ test('requires ANTIVIRUS_TOKEN and loads it unchanged', () => {
   }
 });
 
-test('production fails closed on missing private config, unsafe override, daemon disabled, invalid limits/token', () => {
+test('production fails closed on missing private config, daemon disabled, invalid limits/token', () => {
   const base = { ANTIVIRUS_TOKEN: TOKEN };
   assert.equal(loadConfig(base).port, 3011);
+  assert.equal(loadConfig(base).host, '127.0.0.1');
+  assert.equal(loadConfig({ ...base, ANTIVIRUS_HOST: 'scanner.internal' }).host, 'scanner.internal');
   assert.equal(loadConfig({ ...base, PORT: '9999' }).port, 3011);
   const prod = { ...base, NODE_ENV: 'production', ANTIVIRUS_PRIVATE_ONLY: 'true',
-    SCALINGO_PRIVATE_HOSTNAME: '1.scanner.ap-test.pn-test.private-network.internal' };
-  assert.equal(loadConfig(prod).host, prod.SCALINGO_PRIVATE_HOSTNAME);
+    ANTIVIRUS_HOST: '1.scanner.ap-test.pn-test.private-network.internal' };
+  assert.equal(loadConfig(prod).host, prod.ANTIVIRUS_HOST);
   for (const env of [{ ...base, NODE_ENV: 'production' }, { ...prod, ANTIVIRUS_PRIVATE_ONLY: '' },
-    { ...prod, SCALINGO_PRIVATE_HOSTNAME: '0.0.0.0' }, { ...prod, ANTIVIRUS_HOST: '0.0.0.0' },
+    { ...prod, ANTIVIRUS_HOST: '' }, { ...prod, ANTIVIRUS_HOST: undefined },
     { ...prod, FRESHCLAM_DISABLE_DAEMON: 'true' }, { ...prod, CLAMD_DISABLE_DAEMON: 'true' },
     { ...prod, CLAMAV_DISABLE_PROCESS_TYPES: 'scanner,one-off' },
     { ...base, ANTIVIRUS_TOKEN: 'short' }, { ...base, ANTIVIRUS_PORT: '0' },
     { ...base, SCAN_TIMEOUT_MS: 'Infinity' }, { ...base, SIGNATURE_MAX_AGE_HOURS: '0' },
     { ...base, CLAMD_SOCKET_PATH: 'relative' }]) {
     assert.throws(() => loadConfig(env));
+  }
+});
+
+test('production loads bind hostnames without imposing a DNS suffix or reading ANTIVIRUS_URL', () => {
+  const base = { NODE_ENV: 'production', ANTIVIRUS_PRIVATE_ONLY: 'true', ANTIVIRUS_TOKEN: TOKEN,
+    ANTIVIRUS_URL: 'http://scanner.ap-test.pn-test.private-network.internal:3011' };
+  const hostname = '1.scanner.ap-test.pn-test.private-network.internal';
+  for (const host of [hostname, `${hostname}.`, 'scanner.internal', 'scanner', '127.0.0.1']) {
+    const config = loadConfig({ ...base, ANTIVIRUS_HOST: host });
+    assert.equal(config.host, host);
+    assert.equal(config.port, 3011);
+  }
+  // ANTIVIRUS_URL does not replace a missing bind hostname.
+  for (const host of [undefined, '', '   ']) {
+    assert.throws(() => loadConfig({ ...base, ANTIVIRUS_HOST: host }),
+      /Production requires ANTIVIRUS_HOST/);
   }
 });
 

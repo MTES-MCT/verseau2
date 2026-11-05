@@ -36,6 +36,18 @@ export function applyPolicy(original) {
   return `${lines.join('\n').trimEnd()}\n${Object.entries(policy).map(([key, value]) => `${key} ${value}`).join('\n')}\n`;
 }
 
+export function fixProcessTypeDetection(original) {
+  // Scalingo's runtime stack may not provide rev. Strip only the final index,
+  // preserving hyphenated process types such as one-off.
+  const upstream = 'current_process_type="$( echo "${CONTAINER}" | rev | cut -d\'-\' -f2- | rev )"';
+  const replacement = 'current_process_type="${CONTAINER%-*}"';
+  if (original.split('\n').includes(replacement)) return original;
+  if (!original.split('\n').includes(upstream)) {
+    throw new Error('Unexpected ClamAV process-type detection: review upstream buildpack changes');
+  }
+  return original.replace(upstream, replacement);
+}
+
 export async function configure(root = process.cwd()) {
   const conf = resolve(root, 'clamav/conf/clamd.conf');
   const original = await readFile(conf, 'utf8'); // Missing buildpack is fatal, not silently skipped.
@@ -44,7 +56,10 @@ export async function configure(root = process.cwd()) {
       /^\s*TCPSocket\b/m.test(original)) {
     throw new Error('Unexpected generated ClamAV configuration: review upstream buildpack changes');
   }
+  const profile = resolve(root, '.profile.d/010-clamav.sh');
+  const startup = fixProcessTypeDetection(await readFile(profile, 'utf8'));
   await writeFile(conf, applyPolicy(original));
+  await writeFile(profile, startup);
   // VERSION's date uses the daemon timezone. This runs BEFORE 020-clamd.sh.
   await writeFile(resolve(root, '.profile.d/005-antivirus-timezone.sh'), 'export TZ=UTC\n');
 }

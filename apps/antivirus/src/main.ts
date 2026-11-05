@@ -1,14 +1,17 @@
 import { lookup } from 'node:dns/promises';
-import { loadConfig } from './config.ts';
+import { ConfigurationError, loadConfig } from './config.ts';
 import { createScannerServer } from './server.ts';
 
 async function main() {
   const config = loadConfig(process.env);
   let host = config.host;
   if (config.production) {
-    const addresses = await lookup(host, { all: true, family: 4 });
+    const addresses = await lookup(host, { all: true, family: 4 }).catch(() => {
+      // DNS errors can contain the hostname; never log the raw exception.
+      throw new ConfigurationError('ANTIVIRUS_HOST DNS resolution failed');
+    });
     if (addresses.length !== 1 || !/^10\.240\.[0-3]\.\d+$/.test(addresses[0]!.address)) {
-      throw new Error('Private hostname must resolve to the single Scalingo private-network interface');
+      throw new ConfigurationError('Private hostname must resolve to the single Scalingo private-network interface');
     }
     host = addresses[0]!.address;
   }
@@ -27,7 +30,8 @@ async function main() {
   }
 }
 
-void main().catch(() => {
-  console.error('{"event":"startup_configuration_error"}');
+void main().catch((error: unknown) => {
+  const reason = error instanceof ConfigurationError ? error.message : 'Unexpected startup failure';
+  console.error(JSON.stringify({ event: 'startup_configuration_error', reason }));
   process.exitCode = 1;
 });
