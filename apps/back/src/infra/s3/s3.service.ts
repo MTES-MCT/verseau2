@@ -9,7 +9,7 @@ import {
   S3ServiceException,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Readable } from 'stream';
+import { addAbortSignal, Readable } from 'node:stream';
 import { S3 } from './s3';
 export const S3_CLIENT = Symbol('S3_CLIENT');
 
@@ -100,5 +100,24 @@ export class S3Service implements S3 {
     } else {
       throw new Error('Unexpected response body type');
     }
+  }
+
+  async downloadStream(key: string, signal?: AbortSignal): Promise<{ stream: Readable; size: number }> {
+    const response = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      abortSignal: signal,
+    });
+    if (!(response.Body instanceof Readable)) {
+      throw new Error('Unexpected response body type');
+    }
+    const stream = response.Body;
+    const size = response.ContentLength;
+    if (size === undefined || !Number.isSafeInteger(size) || size < 0) {
+      stream.destroy();
+      throw new Error('Missing or invalid S3 content length');
+    }
+    if (signal) {
+      addAbortSignal(signal, stream);
+    }
+    return { stream, size };
   }
 }

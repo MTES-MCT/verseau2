@@ -9,6 +9,7 @@ import type { TransferClient } from '@infra/transferClient/transferClient';
 import type { Queue, QueueJob, QueueOptions } from '@infra/queue/queue';
 import type { UserEntity } from '@user/user.entity';
 import { createHash } from 'node:crypto';
+import { addAbortSignal, Readable } from 'node:stream';
 // ============= Infrastructure Mocks =============
 
 /**
@@ -62,6 +63,24 @@ export class S3TestMock implements S3 {
     }
     await Promise.resolve();
     return file;
+  }
+
+  downloadStream(key: string, signal?: AbortSignal): Promise<{ stream: Readable; size: number }> {
+    const file = this.files.get(key);
+    if (!file) {
+      return Promise.reject(new Error(`File not found in S3Mock: ${key}`));
+    }
+    const stream = Readable.from(
+      (function* () {
+        for (let offset = 0; offset < file.length; offset += 64 * 1024) {
+          yield file.subarray(offset, offset + 64 * 1024);
+        }
+      })(),
+    );
+    if (signal) {
+      addAbortSignal(signal, stream);
+    }
+    return Promise.resolve({ stream, size: file.length });
   }
 
   /**

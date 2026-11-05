@@ -1,6 +1,7 @@
 import { DepotEntity } from './depot.entity';
 import { DepotModel } from './depot.model';
 import { DepotDto } from '@lib/dossier';
+import { normalizeAntivirusAnalysis } from './antivirusAnalysis.model';
 
 export const mapDepotEntityToDepotDto = (depotModel: DepotModel): DepotDto => {
   return {
@@ -8,6 +9,7 @@ export const mapDepotEntityToDepotDto = (depotModel: DepotModel): DepotDto => {
     numeroDepotVerseau1: depotModel.masa?.numeroDepotVerseau1,
     nomOriginalFichier: depotModel.nomOriginalFichier,
     status: depotModel.status,
+    antivirusStatus: normalizeAntivirusAnalysis(depotModel.id, depotModel.antivirusAnalysis).status,
     etapeMetier: depotModel.etapeMetier,
     rapportPath: depotModel.rapportPath,
     createdAt: depotModel.createdAt,
@@ -16,5 +18,9 @@ export const mapDepotEntityToDepotDto = (depotModel: DepotModel): DepotDto => {
 };
 
 export const mapDepotEntityToModel = (depotEntity: DepotEntity): DepotModel => {
-  return { ...depotEntity, etapeMetier: depotEntity.etapeMetier ?? undefined };
+  return {
+    ...depotEntity,
+    antivirusAnalysis: normalizeAntivirusAnalysis(depotEntity.id, depotEntity.antivirusAnalysis),
+    etapeMetier: depotEntity.etapeMetier ?? undefined,
+  };
 };

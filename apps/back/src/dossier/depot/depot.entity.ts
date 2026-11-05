@@ -15,6 +15,7 @@ import { ControleEntity } from '@dossier/controle/controle.entity';
 import { DepotStep, DepotStatus, EtapeMetier, ControleStatus, ControleSandreStatus } from '@lib/dossier';
 import { MasaEntity } from '@dossier/masa/masa.entity';
 import { DepotError } from '@dossier/depot/depotError';
+import { AntivirusAnalysisEntity } from './antivirusAnalysis.entity';
 
 @Entity('depot')
 export class DepotEntity extends BaseEntity {
@@ -29,6 +30,9 @@ export class DepotEntity extends BaseEntity {
 
   @Column({ type: 'timestamptz', name: 'upload_expires_at', nullable: true })
   uploadExpiresAt?: Date;
+
+  @OneToOne(() => AntivirusAnalysisEntity, (analysis) => analysis.depot)
+  antivirusAnalysis?: AntivirusAnalysisEntity | null;
 
   @Column({ type: 'varchar', name: 'rapport_path', nullable: true })
   rapportPath?: string;

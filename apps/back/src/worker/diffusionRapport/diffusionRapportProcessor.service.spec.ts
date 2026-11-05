@@ -127,6 +127,7 @@ describe('DiffusionRapportProcessorService', () => {
       delete: jest.fn(),
       upload: jest.fn().mockResolvedValue(undefined),
       download: jest.fn().mockResolvedValue(xmlBuffer),
+      downloadStream: jest.fn(),
     };
 
     agencyTransferClient = {

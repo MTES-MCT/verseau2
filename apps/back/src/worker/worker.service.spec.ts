@@ -4,6 +4,7 @@ import { QueueName, QueueOptions } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import type { LoggerService } from '@shared/logger/logger.service';
 import type { FileProcessorService } from './fileProcessor/fileProcessor.service';
+import type { AntivirusProcessorService } from './antivirus/antivirusProcessor.service';
 import type { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
 import type { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import type { ControleSandreUploadProcessorService } from './controleSandre/controle-sandre-upload.processor.service';
@@ -16,6 +17,7 @@ import { EmailTemplate } from '@notification/notification';
 import { performance } from 'node:perf_hooks';
 
 describe('WorkerService', () => {
+  const activeQueues = Object.values(QueueName).filter((name) => name !== QueueName.process_file_failed);
   type TestJob = {
     id: string;
     data: {
@@ -26,6 +28,7 @@ describe('WorkerService', () => {
     };
     retryCount?: number;
     retryLimit?: number;
+    signal?: AbortSignal;
   };
 
   afterEach(() => jest.restoreAllMocks());
@@ -70,6 +73,7 @@ describe('WorkerService', () => {
       cls,
       logger as unknown as LoggerService,
       { cleanup } as unknown as DepotUploadService,
+      { process, exhausted: process } as unknown as AntivirusProcessorService,
     );
 
     await service.onModuleInit();
@@ -77,70 +81,92 @@ describe('WorkerService', () => {
     return { work, handlers, logger, process, send, cleanup, runWith };
   }
 
-  it('registers every queue worker with batchSize 1', async () => {
+  it('registers active queue workers with batchSize 1, without a removed file finalizer', async () => {
     const { work } = await setup();
 
-    expect(work).toHaveBeenCalledTimes(Object.values(QueueName).length);
+    expect(work).toHaveBeenCalledTimes(activeQueues.length);
 
-    for (const queueName of Object.values(QueueName)) {
+    for (const queueName of activeQueues) {
       expect(work).toHaveBeenCalledWith(queueName, { batchSize: 1, includeMetadata: true }, expect.any(Function));
+    }
+    expect(work).not.toHaveBeenCalledWith(QueueName.process_file_failed, expect.anything(), expect.anything());
+  });
+
+  it.each([QueueName.antivirus_scan])('forwards queue retry metadata and cancellation to %s', async (queueName) => {
+    const { handlers, process } = await setup();
+    const signal = new AbortController().signal;
+    const data = { depotId: 'dep_1' };
+    await handlers.get(queueName)!([{ id: 'job_1', data, retryCount: 1, retryLimit: 3, signal }]);
+    expect(process).toHaveBeenCalledWith(data, { retryCount: 1, retryLimit: 3, signal });
+  });
+
+  it('calls file processing with only the job data', async () => {
+    const { handlers, process } = await setup();
+    const data = { depotId: 'dep_1' };
+    await handlers.get(QueueName.process_file)!([
+      { id: 'job_1', data, retryCount: 1, retryLimit: 3, signal: new AbortController().signal },
+    ]);
+    expect(process).toHaveBeenCalledWith(data);
+  });
+
+  it.each(activeQueues)('logs a propagated %s failure once and preserves it for retry', async (queueName) => {
+    const { handlers, logger, process, send, cleanup, runWith } = await setup();
+    const error = new Error('Unexpected processing failure');
+    process.mockRejectedValue(error);
+    send.mockRejectedValue(error);
+    cleanup.mockRejectedValue(error);
+    const handler = handlers.get(queueName);
+    if (!handler) {
+      throw new Error(`Missing worker for ${queueName}`);
+    }
+    const job = {
+      id: 'job_1',
+      data: {
+        depotId: 'dep_1',
+        template: EmailTemplate.RAPPORT,
+        params: { depotId: 'dep_1' },
+        correlationId: 'cid_1',
+      },
+      retryCount: 1,
+      retryLimit: 2,
+    };
+
+    await expect(handler([job])).rejects.toBe(error);
+
+    const context = {
+      queueName,
+      jobId: 'job_1',
+      depotId: 'dep_1',
+      ...(queueName === QueueName.email ? { template: EmailTemplate.RAPPORT } : {}),
+      retryCount: 1,
+      retryLimit: 2,
+      attempt: 2,
+    };
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith('Job processing failed', {
+      ...context,
+      durationMs: expect.any(Number) as unknown,
+      handlerOutcome: 'failed',
+      retryOutcome: 'retry_expected',
+      error,
+    });
+    const level = queueName === QueueName.controle_sandre_poll ? 'debug' : 'log';
+    expect(logger[level]).toHaveBeenCalledTimes(1);
+    expect(logger[level]).toHaveBeenCalledWith('Job processing started', context);
+    expect(runWith).toHaveBeenCalledWith({ correlationId: 'cid_1', jobContext: context }, expect.any(Function));
+    if (queueName === QueueName.controle_sandre_upload) {
+      expect(process).toHaveBeenCalledWith({ ...job.data, retryCount: 1, retryLimit: 2 });
+    }
+    if (queueName === QueueName.antivirus_scan) {
+      expect(process).toHaveBeenCalledWith(job.data, {
+        retryCount: 1,
+        retryLimit: 2,
+        signal: undefined,
+      });
     }
   });
 
-  it.each(Object.values(QueueName))(
-    'logs a propagated %s failure once and preserves it for retry',
-    async (queueName) => {
-      const { handlers, logger, process, send, cleanup, runWith } = await setup();
-      const error = new Error('Unexpected processing failure');
-      process.mockRejectedValue(error);
-      send.mockRejectedValue(error);
-      cleanup.mockRejectedValue(error);
-      const handler = handlers.get(queueName);
-      if (!handler) {
-        throw new Error(`Missing worker for ${queueName}`);
-      }
-      const job = {
-        id: 'job_1',
-        data: {
-          depotId: 'dep_1',
-          template: EmailTemplate.RAPPORT,
-          params: { depotId: 'dep_1' },
-          correlationId: 'cid_1',
-        },
-        retryCount: 1,
-        retryLimit: 2,
-      };
-
-      await expect(handler([job])).rejects.toBe(error);
-
-      const context = {
-        queueName,
-        jobId: 'job_1',
-        depotId: 'dep_1',
-        ...(queueName === QueueName.email ? { template: EmailTemplate.RAPPORT } : {}),
-        retryCount: 1,
-        retryLimit: 2,
-        attempt: 2,
-      };
-      expect(logger.error).toHaveBeenCalledTimes(1);
-      expect(logger.error).toHaveBeenCalledWith('Job processing failed', {
-        ...context,
-        durationMs: expect.any(Number) as unknown,
-        handlerOutcome: 'failed',
-        retryOutcome: 'retry_expected',
-        error,
-      });
-      const level = queueName === QueueName.controle_sandre_poll ? 'debug' : 'log';
-      expect(logger[level]).toHaveBeenCalledTimes(1);
-      expect(logger[level]).toHaveBeenCalledWith('Job processing started', context);
-      expect(runWith).toHaveBeenCalledWith({ correlationId: 'cid_1', jobContext: context }, expect.any(Function));
-      if (queueName === QueueName.controle_sandre_upload) {
-        expect(process).toHaveBeenCalledWith({ ...job.data, retryCount: 1, retryLimit: 2 });
-      }
-    },
-  );
-
-  it.each(Object.values(QueueName))('logs %s start and completion at the operational level', async (queueName) => {
+  it.each(activeQueues)('logs %s start and completion at the operational level', async (queueName) => {
     const { handlers, logger } = await setup();
     const handler = handlers.get(queueName);
     if (!handler) {

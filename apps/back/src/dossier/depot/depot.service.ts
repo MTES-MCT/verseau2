@@ -1,8 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateDepotModel, DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
 import { S3 } from '@infra/s3/s3';
 import { LoggerService } from '@shared/logger/logger.service';
+import { AntivirusStatus } from '@lib/dossier';
 
 @Injectable()
 export class DepotService {
@@ -79,14 +80,19 @@ export class DepotService {
   async downloadXml(depotId: string): Promise<Buffer> {
     const depot = await this.findById(depotId);
 
+    // Access depends only on the saved verdict; FileProcessorService owns validation.
+    if (depot.antivirusAnalysis?.status !== AntivirusStatus.CLEAN) {
+      throw new ForbiddenException('Fichier XML indisponible : contrôle antivirus non validé.');
+    }
+
     if (!depot.path) {
       throw new NotFoundException(`XML file not found for depot: ${depotId}`);
     }
 
     try {
       return await this.s3.download(depot.path);
-    } catch (error) {
-      this.logger.error(`Failed to download XML for depot ${depotId} from path ${depot.path}`, error);
+    } catch {
+      this.logger.warn('XML download refused or unavailable', { depotId });
       throw new NotFoundException(`XML file not found in storage for depot: ${depotId}`);
     }
   }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
+import { AntivirusProcessorService } from './antivirus/antivirusProcessor.service';
 import { DossierModule } from '@dossier/dossier.module';
 import { InfraModule } from '@infra/infra.module';
 import { NotificationModule } from '@notification/notification.module';
@@ -16,6 +17,8 @@ import { DiffusionRapportProcessorService } from './diffusionRapport/diffusionRa
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { MasaModule } from '@masa/masa.module';
 import { MonitoringModule } from '../monitoring/monitoring.module';
+import { DepotUploadGateway } from '@dossier/depot/depotUpload.gateway';
+import { DepotUploadRepository } from '@dossier/depot/depotUpload.repository';
 
 @Module({
   imports: [
@@ -28,7 +31,10 @@ import { MonitoringModule } from '../monitoring/monitoring.module';
     MasaModule,
   ],
   providers: [
+    // DossierModule keeps its upload transaction port private; reuse the stateless adapter here.
+    { provide: DepotUploadGateway, useClass: DepotUploadRepository },
     FileProcessorService,
+    AntivirusProcessorService,
     WorkerService,
     SftpAgentVerseauProcessorService,
     ControleMetierProcessorService,

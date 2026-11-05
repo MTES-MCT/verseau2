@@ -4,10 +4,7 @@ import type { DroitsDeDepotStatus } from '../../../hooks/useCheckDroitsDeDepot';
 import '../../../../icons/fr-icon-loader-5-line.css';
 
 type DroitsDeDepotIcon =
-  | 'fr-icon-loader-5-line'
-  | 'fr-icon-checkbox-circle-line'
-  | 'fr-icon-close-circle-line'
-  | 'fr-icon-warning-line';
+  'fr-icon-loader-5-line' | 'fr-icon-checkbox-circle-line' | 'fr-icon-close-circle-line' | 'fr-icon-warning-line';
 
 type DroitsDeDepotColorClassName = 'fr-label--success' | 'fr-label--error' | undefined;
 

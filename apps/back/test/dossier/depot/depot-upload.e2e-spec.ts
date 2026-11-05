@@ -150,7 +150,7 @@ describe('Depot upload (e2e)', () => {
     const session = await initialize();
     expect(createUploadUrl).toHaveBeenCalledWith(`uploads/${session.depotId}/file.xml`, 900, 13);
     expect(s3Mock.uploads).toHaveLength(0);
-    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+    expect(queueMock.getJobsByName(QueueName.antivirus_scan)).toHaveLength(0);
     expect(queueMock.getJobsByName(QueueName.cleanup_depot_upload)).toHaveLength(1);
     expect((await findDepot(session.depotId)).step).toBe(DepotStep.UPLOADING_TO_S3);
     seedUpload(session);
@@ -160,9 +160,9 @@ describe('Depot upload (e2e)', () => {
     expect(depot.path).toBe(`depots/${depot.id}/file.xml`);
     expect(depot.stepHistory).toEqual([DepotStep.UPLOADING_TO_S3, DepotStep.PENDING]);
     expect(s3Mock.getFile(depot.path!)).toEqual(Buffer.from('<root></root>'));
-    expect(queueMock.getJobsByName(QueueName.process_file)).toEqual([
+    expect(queueMock.getJobsByName(QueueName.antivirus_scan)).toEqual([
       {
-        name: QueueName.process_file,
+        name: QueueName.antivirus_scan,
         data: { depotId: depot.id, filePath: depot.path, utilisateur: { id: 'user_123', nom: 'Test', prenom: 'User' } },
       },
     ]);
@@ -213,7 +213,7 @@ describe('Depot upload (e2e)', () => {
   it('rejects confirmation before upload and allows retry once it exists', async () => {
     const session = await initialize();
     await complete(session.depotId).expect(409);
-    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+    expect(queueMock.getJobsByName(QueueName.antivirus_scan)).toHaveLength(0);
     seedUpload(session);
     await complete(session.depotId).expect(201);
   });
@@ -225,7 +225,7 @@ describe('Depot upload (e2e)', () => {
     seedUpload(session);
     jest.spyOn(s3Mock, 'head').mockResolvedValue({ size: 13, contentType: 'text/plain', etag: 'etag' });
     await complete(session.depotId).expect(400);
-    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+    expect(queueMock.getJobsByName(QueueName.antivirus_scan)).toHaveLength(0);
   });
 
   it('only lets the initializing user confirm the depot', async () => {
@@ -236,7 +236,7 @@ describe('Depot upload (e2e)', () => {
       .save({ id: 'user_other', sub: 'other-user', email: 'other@example.com', nom: 'Other', prenom: 'User' });
     await dataSource.getRepository(DepotEntity).update(session.depotId, { userId: 'user_other' });
     await complete(session.depotId).expect(403);
-    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(0);
+    expect(queueMock.getJobsByName(QueueName.antivirus_scan)).toHaveLength(0);
   });
 
   it('rolls back confirmation on queue failure and can retry', async () => {
@@ -247,7 +247,7 @@ describe('Depot upload (e2e)', () => {
     expect((await findDepot(session.depotId)).path).toBeNull();
     queueMock.setFailure(false);
     await complete(session.depotId).expect(201);
-    expect(queueMock.getJobsByName(QueueName.process_file)).toHaveLength(1);
+    expect(queueMock.getJobsByName(QueueName.antivirus_scan)).toHaveLength(1);
   });
 
   it('rejects confirmation and skips cleanup for a depot without a direct upload session', async () => {

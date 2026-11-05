@@ -5,6 +5,7 @@ import type { CustomClsStore, JobLogContext } from '@shared/logger/cls-store.int
 import { QueueGateway, QueueName, QueueOptions } from '@queue/queue';
 import type { DiffusionRapportJobData, EmailJobData, Queue, QueueJob } from '@queue/queue';
 import { FileProcessorService } from './fileProcessor/fileProcessor.service';
+import { AntivirusProcessorService } from './antivirus/antivirusProcessor.service';
 import { FichierDeDepot } from '@dossier/depot/file/file';
 import { LoggerService } from '@shared/logger/logger.service';
 import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcessor.service';
@@ -20,7 +21,10 @@ import { DepotUploadService } from '@dossier/depot/depotUpload.service';
 @Injectable()
 export class WorkerService implements OnModuleInit {
   private readonly queueConfig: Record<QueueName, QueueOptions> = {
+    [QueueName.antivirus_scan]: { batchSize: 1 },
+    [QueueName.antivirus_scan_failed]: { batchSize: 1 },
     [QueueName.process_file]: { batchSize: 1 },
+    [QueueName.process_file_failed]: { batchSize: 1 },
     [QueueName.cleanup_depot_upload]: { batchSize: 1 },
     [QueueName.email]: { batchSize: 1 },
     [QueueName.send_to_sftp]: { batchSize: 1 },
@@ -44,6 +48,7 @@ export class WorkerService implements OnModuleInit {
     private readonly cls: ClsService<CustomClsStore>,
     private readonly logger: LoggerService,
     private readonly depotUploadService: DepotUploadService,
+    private readonly antivirusProcessorService: AntivirusProcessorService,
   ) {
     this.logger.setContext(WorkerService.name);
   }
@@ -54,6 +59,25 @@ export class WorkerService implements OnModuleInit {
       const options = { ...(config ?? { batchSize: 1 }), includeMetadata: true };
 
       switch (queueName) {
+        case QueueName.antivirus_scan_failed:
+          await this.queueService.work<FichierDeDepot & { correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              const context = this.createJobContext(queueName, job, { depotId: job.data.depotId });
+              return this.cls.runWith({ correlationId: job.data.correlationId, jobContext: context }, async () => {
+                const startedAt = this.logJobStarted(context);
+                try {
+                  await this.antivirusProcessorService.exhausted(job.data);
+                  this.logJobCompleted(context, startedAt);
+                } catch (error) {
+                  this.logJobFailed(context, startedAt, error);
+                  throw error;
+                }
+              });
+            },
+          );
+          break;
         case QueueName.cleanup_depot_upload:
           await this.queueService.work<{ depotId: string; correlationId?: string }>(
             queueName,
@@ -76,6 +100,7 @@ export class WorkerService implements OnModuleInit {
             },
           );
           break;
+        case QueueName.antivirus_scan:
         case QueueName.process_file:
           await this.queueService.work<FichierDeDepot & { correlationId?: string }>(
             queueName,
@@ -87,7 +112,14 @@ export class WorkerService implements OnModuleInit {
                 async () => {
                   const startedAt = this.logJobStarted(context);
                   try {
-                    const result = await this.fileProcessorService.process(job.data);
+                    const result =
+                      queueName === QueueName.antivirus_scan
+                        ? await this.antivirusProcessorService.process(job.data, {
+                            retryCount: job.retryCount,
+                            retryLimit: job.retryLimit,
+                            signal: job.signal,
+                          })
+                        : await this.fileProcessorService.process(job.data);
                     this.logJobCompleted(context, startedAt);
                     return result;
                   } catch (error: unknown) {

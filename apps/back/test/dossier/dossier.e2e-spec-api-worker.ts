@@ -67,6 +67,12 @@ import { loggerValueMock } from '@shared/logger/logger.mock';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { uploadTestDepot } from '../depotUpload.helper';
 import type { SendOptions } from '@infra/queue/pgboss';
+import { AntivirusGateway } from '@infra/antivirus/antivirus.gateway';
+import { MockAntivirusGateway } from '@infra/antivirus/antivirus.mock';
+import { AntivirusProcessorService } from '@worker/antivirus/antivirusProcessor.service';
+import { AntivirusTransientError } from '@infra/antivirus/antivirus.errors';
+import { cleanScan } from '../fixtures/antivirus';
+import { AntivirusAnalysisEntity } from '@dossier/depot/antivirusAnalysis.entity';
 
 /**
  * Real Queue Service implementation for testing.
@@ -242,6 +248,8 @@ describe('Dossier E2E - Real Queue Processing', () => {
         WorkerModule, // Include WorkerModule to register job handlers
       ],
     })
+      .overrideProvider(AntivirusGateway)
+      .useClass(MockAntivirusGateway)
       .overrideModule(InfraModule)
       .useModule(InfraWithRealDbMockModule)
       .overrideProvider(PGBOSS)
@@ -337,6 +345,115 @@ describe('Dossier E2E - Real Queue Processing', () => {
   });
 
   describe('Full file processing flow with real queue', () => {
+    it('does not publish process_file or download a Buffer while the streaming scan is pending', async () => {
+      const scanner = app.get<AntivirusGateway>(AntivirusGateway);
+      const originalScan: AntivirusGateway['scanStream'] = scanner.scanStream.bind(scanner);
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const scanSpy = jest.spyOn(scanner, 'scanStream').mockImplementation(async (...args) => {
+        await gate;
+        return originalScan(...args);
+      });
+      const downloadSpy = jest.spyOn(s3Mock, 'download');
+      const legacyScanSpy = jest.spyOn(scanner, 'scan');
+      let depotId!: string;
+      try {
+        depotId = await uploadXmlDepot(validXmlWithRights, 'stream-gate.xml');
+        await waitFor(() => Promise.resolve(scanSpy.mock.calls.length > 0), { timeoutMs: 6000, pollIntervalMs: 50 });
+        expect(downloadSpy).not.toHaveBeenCalled();
+        expect(legacyScanSpy).not.toHaveBeenCalled();
+        expect(await getJobsForDepot(dataSource, QueueName.process_file, depotId)).toHaveLength(0);
+        expect(await dataSource.getRepository(AntivirusAnalysisEntity).countBy({ depotId })).toBe(0);
+      } finally {
+        release();
+        scanSpy.mockRestore();
+        downloadSpy.mockRestore();
+        legacyScanSpy.mockRestore();
+      }
+      await waitForJobCompletion(dataSource, QueueName.process_file, depotId, { timeoutMs: 6000, pollIntervalMs: 100 });
+      expect(await dataSource.getRepository(AntivirusAnalysisEntity).findOneBy({ depotId })).toMatchObject({
+        status: 'clean',
+      });
+    }, 15000);
+
+    it('persists infection and rejects without publishing a parser job or buffering the file', async () => {
+      const scanner = app.get<AntivirusGateway>(AntivirusGateway);
+      const scanSpy = jest.spyOn(scanner, 'scanStream').mockResolvedValue({
+        ...cleanScan(Buffer.from(validXmlWithRights)),
+        verdict: 'infected',
+        detection: 'Eicar-Test-Signature',
+      });
+      const downloadSpy = jest.spyOn(s3Mock, 'download');
+      try {
+        const depotId = await uploadXmlDepot(validXmlWithRights, 'infected.xml');
+        await waitForJobCompletion(dataSource, QueueName.antivirus_scan, depotId, {
+          timeoutMs: 6000,
+          pollIntervalMs: 100,
+        });
+        expect(await findDepotOrFail(depotId)).toMatchObject({
+          status: DepotStatus.REJETE,
+          error: DepotError.ANTIVIRUS_INFECTED,
+        });
+        expect(await getJobsForDepot(dataSource, QueueName.process_file, depotId)).toHaveLength(0);
+        expect(downloadSpy).not.toHaveBeenCalled();
+      } finally {
+        scanSpy.mockRestore();
+        downloadSpy.mockRestore();
+      }
+    }, 12000);
+
+    it('rolls back both the clean verdict and real SQL publication when a scan handoff fails', async () => {
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: createTestDepotId('scan_handoff'),
+        path: 'processing/atomic-scan.xml',
+        nomOriginalFichier: 'scan.xml',
+        tailleFichier: 7,
+        type: 'application/xml',
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PENDING,
+      });
+      s3Mock.seed(depot.path, '<root/>');
+      const queue = app.get<Queue>(QueueGateway);
+      const send: Queue['send'] = queue.send.bind(queue);
+      const spy = jest.spyOn(queue, 'send').mockImplementation(async (name, data, options) => {
+        const id = await send(name, data, options);
+        if (name === String(QueueName.process_file)) {
+          throw new Error('Failure after SQL insertion');
+        }
+        return id;
+      });
+      const processor = app.get(AntivirusProcessorService);
+      const job = { depotId: depot.id, filePath: depot.path, utilisateur: { id: testUserId, nom: 'N', prenom: 'P' } };
+      try {
+        await expect(processor.process(job, { retryCount: 0, retryLimit: 3 })).rejects.toThrow('ANTIVIRUS_RETRY');
+        expect(await getJobsForDepot(dataSource, QueueName.process_file, depot.id)).toHaveLength(0);
+        expect(await dataSource.getRepository(AntivirusAnalysisEntity).countBy({ depotId: depot.id })).toBe(0);
+      } finally {
+        spy.mockRestore();
+      }
+      const scanner = app.get<AntivirusGateway>(AntivirusGateway);
+      const scanSpy = jest
+        .spyOn(scanner, 'scanStream')
+        .mockRejectedValueOnce(new AntivirusTransientError('BUSY', null));
+      try {
+        await queue.send(QueueName.antivirus_scan, job, { retryLimit: 1, retryDelay: 0 });
+        await waitForJobCompletion(dataSource, QueueName.antivirus_scan, depot.id, {
+          timeoutMs: 6000,
+          pollIntervalMs: 100,
+        });
+        expect(scanSpy).toHaveBeenCalledTimes(2);
+        expect(await getJobsForDepot(dataSource, QueueName.process_file, depot.id)).toHaveLength(1);
+      } finally {
+        scanSpy.mockRestore();
+      }
+      await waitForJobCompletion(dataSource, QueueName.process_file, depot.id, {
+        timeoutMs: 6000,
+        pollIntervalMs: 100,
+      });
+    }, 15000);
+
     it.each([
       { format: 'spaces and LF', fixture: 'spaces-lf.xml', indent: '    ', lineEnding: '\n', seedId: 1100 },
       { format: 'spaces and CRLF', fixture: 'spaces-crlf.xml', indent: '    ', lineEnding: '\r\n', seedId: 1101 },
@@ -403,7 +520,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       const queueSpy = jest.spyOn(queueService, 'send').mockImplementation(async (name: string, data, options) => {
         const result = await originalSend(name, data, options);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-        if (name === QueueName.process_file) {
+        if (name === QueueName.antivirus_scan) {
           throw new Error('Failure after SQL insertion, before transaction commit');
         }
         return result as string | null;
@@ -418,7 +535,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
         expect(finalDepot.path).toBeNull();
         expect(finalDepot.step).toBe(DepotStep.UPLOADING_TO_S3);
         expect(notificationMock.sendEmail).not.toHaveBeenCalled();
-        const processFileJobs = await getJobsForDepot(dataSource, QueueName.process_file, depotId);
+        const processFileJobs = await getJobsForDepot(dataSource, QueueName.antivirus_scan, depotId);
         expect(processFileJobs).toHaveLength(0);
       } finally {
         queueSpy.mockRestore();
@@ -431,7 +548,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
             .expect(201),
         ),
       );
-      expect(await getJobsForDepot(dataSource, QueueName.process_file, depotId)).toHaveLength(1);
+      expect(await getJobsForDepot(dataSource, QueueName.antivirus_scan, depotId)).toHaveLength(1);
     }, 12000);
 
     it('should process file and verify control jobs are not dispatched because user lacks rights', async () => {

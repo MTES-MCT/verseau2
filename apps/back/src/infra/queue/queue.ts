@@ -16,10 +16,16 @@ export interface QueueJob<TData = object> {
   data: TData;
   retryLimit?: number;
   retryCount?: number;
+  signal?: AbortSignal;
+  expireInSeconds?: number;
+  startedOn?: Date;
 }
 
 export enum QueueName {
+  antivirus_scan = 'antivirus_scan',
+  antivirus_scan_failed = 'antivirus_scan_failed',
   process_file = 'process_file',
+  process_file_failed = 'process_file_failed',
   cleanup_depot_upload = 'cleanup_depot_upload',
   email = 'email',
   send_to_sftp = 'send_to_sftp',

@@ -129,7 +129,7 @@ export class DepotUploadService {
       depot.step = DepotStep.PENDING;
       depot.stepHistory = [...(depot.stepHistory ?? []), DepotStep.PENDING];
       const saved = await transaction.save(depot);
-      await transaction.send<FichierDeDepot>(QueueName.process_file, { depotId: depot.id, filePath, utilisateur });
+      await transaction.send<FichierDeDepot>(QueueName.antivirus_scan, { depotId: depot.id, filePath, utilisateur });
       return saved;
     });
   }

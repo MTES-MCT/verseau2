@@ -4,7 +4,7 @@ import { Test } from '@nestjs/testing';
 import { ClsModule } from 'nestjs-cls';
 import { PgBoss } from 'pg-boss';
 import { DataSource } from 'typeorm';
-import { PGBOSS, QueueGateway, QueueName } from '@queue/queue';
+import { PGBOSS, QueueGateway, QueueName, resolveQueueName } from '@queue/queue';
 import type { Queue } from '@queue/queue';
 import { QueueModule } from '@queue/queue.module';
 import { SharedModule } from '@shared/shared.module';
@@ -30,13 +30,14 @@ describe('Production queue lifecycle', () => {
 
   it('initializes queues before consumers and stops pg-boss before closing TypeORM', async () => {
     const container = await startPostgresContainer({ new: true });
+    const prefix = 'antivirus_lifecycle';
     const app = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
           isGlobal: true,
           ignoreEnvFile: true,
           skipProcessEnv: true,
-          load: [() => ({ DATABASE_URL: container.getConnectionUri(), DDL_SYNC: 'false' })],
+          load: [() => ({ DATABASE_URL: container.getConnectionUri(), DDL_SYNC: 'false', QUEUE_PREFIX: prefix })],
         }),
         ClsModule.forRoot({ global: true }),
         SharedModule,
@@ -64,8 +65,26 @@ describe('Production queue lifecycle', () => {
     });
 
     try {
-      const queues = await Promise.all(Object.values(QueueName).map((name) => boss.getQueue(name)));
+      const queues = await Promise.all(
+        Object.values(QueueName).map((name) => boss.getQueue(resolveQueueName(name, prefix))),
+      );
       expect(queues.every((queue) => Boolean(queue))).toBe(true);
+      expect(await boss.getQueue(resolveQueueName(QueueName.process_file, prefix))).toMatchObject({
+        retryLimit: 3,
+        retryDelay: 30,
+        retryBackoff: true,
+        retryDelayMax: 120,
+        expireInSeconds: 300,
+        deadLetter: resolveQueueName(QueueName.process_file_failed, prefix),
+      });
+      expect(await boss.getQueue(resolveQueueName(QueueName.antivirus_scan, prefix))).toMatchObject({
+        retryLimit: 3,
+        retryDelay: 30,
+        retryBackoff: true,
+        retryDelayMax: 120,
+        expireInSeconds: Math.ceil(Number(process.env.ANTIVIRUS_TIMEOUT_MS ?? 150_000) / 1000) + 150,
+        deadLetter: resolveQueueName(QueueName.antivirus_scan_failed, prefix),
+      });
 
       await app.init();
 

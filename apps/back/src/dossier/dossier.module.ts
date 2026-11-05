@@ -39,6 +39,9 @@ import { IsAdminGuard } from '@authentication/isAdmin.guard';
 import { RapportPdfGeneratorService } from './rapport/rapportPdfGenerator.service';
 import { ControleMetierV2Service } from './controle/metierv2/controleMetierV2.service';
 import { ControleMetierV2Pfas } from './controle/metierv2/controleMetierV2Pfas';
+import { DepotAntivirusGateway } from './depot/depotAntivirus.gateway';
+import { DepotAntivirusRepository } from './depot/depotAntivirus.repository';
+import { AntivirusAnalysisEntity } from './depot/antivirusAnalysis.entity';
 
 const sandreServiceFactory = {
   provide: SandreService,
@@ -57,7 +60,7 @@ const sandreServiceFactory = {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity, ControleEntity, MasaEntity]),
+    TypeOrmModule.forFeature([DepotEntity, AntivirusAnalysisEntity, ReponseSandreEntity, ControleEntity, MasaEntity]),
     InfraModule,
     UserModule,
     ReferentielModule,
@@ -67,6 +70,7 @@ const sandreServiceFactory = {
   providers: [
     // Depot
     { provide: DepotGateway, useClass: DepotRepository },
+    { provide: DepotAntivirusGateway, useClass: DepotAntivirusRepository },
     DepotService,
     DroitsDepotService,
     DepotUploadService,
@@ -101,6 +105,7 @@ const sandreServiceFactory = {
     RapportPdfGeneratorService,
     MasaGateway,
     DepotGateway,
+    DepotAntivirusGateway,
     ControleGateway,
   ],
 })

@@ -5,6 +5,7 @@ import { DepotModel, UpdateDepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
 import { DepotStep } from '@lib/dossier';
 import { mapDepotEntityToModel } from './depot.mapper';
+import { AntivirusAnalysisEntity } from './antivirusAnalysis.entity';
 
 @Injectable()
 export class DepotRepository extends Repository<DepotEntity> implements DepotGateway {
@@ -13,14 +14,17 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   }
 
   async createDepot(depot: Partial<DepotModel>): Promise<DepotModel> {
-    const newDepot = this.create(depot);
+    const newDepot = this.create(this.withoutAntivirusFields(depot));
     newDepot.updateStep(DepotStep.PENDING);
     const savedDepot = await this.save(newDepot);
     return mapDepotEntityToModel(savedDepot);
   }
 
   async findDepotById(id: string): Promise<DepotModel | null> {
-    const entity = await this.findOne({ where: { id }, relations: { user: true, masa: true } });
+    const entity = await this.findOne({
+      where: { id },
+      relations: { user: true, masa: true, antivirusAnalysis: true },
+    });
     return entity ? mapDepotEntityToModel(entity) : null;
   }
 
@@ -30,7 +34,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
 
   async findAllDepotsByAdmin(): Promise<DepotModel[]> {
     const entities = await this.find({
-      relations: { user: true, masa: true },
+      relations: { user: true, masa: true, antivirusAnalysis: true },
       order: {
         createdAt: 'DESC',
       },
@@ -45,10 +49,13 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
       });
 
       if (entity) {
+        // Load separately: PostgreSQL cannot lock the nullable side of an outer join.
+        entity.antivirusAnalysis = await manager.findOne(AntivirusAnalysisEntity, { where: { depotId: id } });
         if (updateData.step !== undefined) {
           entity.updateStep(updateData.step);
         }
-        Object.assign(entity, updateData);
+        // Only DepotAntivirusGateway can modify verdicts; old full-model updates cannot reset them.
+        Object.assign(entity, this.withoutAntivirusFields(updateData));
 
         await manager.save(entity);
         return mapDepotEntityToModel(entity);
@@ -57,10 +64,14 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
     });
   }
 
+  private withoutAntivirusFields(data: object): Partial<DepotEntity> {
+    return Object.fromEntries(Object.entries(data).filter(([key]) => key !== 'antivirusAnalysis'));
+  }
+
   async findByUserId(userId: string): Promise<DepotModel[]> {
     const entities = await this.find({
       where: { user: { id: userId } },
-      relations: { masa: true },
+      relations: { masa: true, antivirusAnalysis: true },
       order: {
         createdAt: 'DESC',
       },
@@ -71,7 +82,7 @@ export class DepotRepository extends Repository<DepotEntity> implements DepotGat
   async findByItvCdn(itvCdn: number): Promise<DepotModel[]> {
     const entities = await this.find({
       where: { itvCdn },
-      relations: { masa: true },
+      relations: { masa: true, antivirusAnalysis: true },
       order: {
         createdAt: 'DESC',
       },

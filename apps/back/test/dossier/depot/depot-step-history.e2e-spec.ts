@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { DepotEntity } from '@dossier/depot/depot.entity';
+import { AntivirusAnalysisEntity } from '@dossier/depot/antivirusAnalysis.entity';
 import { DepotStep, DepotStatus, EtapeMetier } from '@lib/dossier';
 import { DepotError } from '@dossier/depot/depotError';
 import { UserEntity } from '@user/user.entity';
@@ -31,7 +32,7 @@ describe('DepotRepository - Step History Integration Tests', () => {
         TypeOrmModule.forRoot({
           type: 'postgres',
           url: postgresUri,
-          entities: [DepotEntity, UserEntity, ControleEntity, MasaEntity],
+          entities: [DepotEntity, AntivirusAnalysisEntity, UserEntity, ControleEntity, MasaEntity],
           synchronize: true,
         }),
         TypeOrmModule.forFeature([DepotEntity]),

@@ -7,6 +7,7 @@ export * from './conformite/conformitePropertyToHeader.mapper';
 export * from './depot/depot.dto';
 export * from './depot/depot.status';
 export * from './depot/depotUpload';
+export * from './antivirus/antivirus';
 export * from './masa/masa.dto';
 export * from './indicateur/indicateur.dto';
 export * from './mesure/mesure.dto';

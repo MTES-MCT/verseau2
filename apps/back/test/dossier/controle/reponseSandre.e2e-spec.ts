@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
+import { AntivirusAnalysisEntity } from '@dossier/depot/antivirusAnalysis.entity';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { ReponseSandreEntity } from '@dossier/controle/technique/sandre/reponseSandre.entity';
@@ -32,7 +33,7 @@ describe('ReponseSandreRepository (e2e)', () => {
           type: 'postgres',
           url: getPostgresConnectionUri(),
           dropSchema: true,
-          entities: [DepotEntity, ReponseSandreEntity, UserEntity, ControleEntity, MasaEntity],
+          entities: [DepotEntity, AntivirusAnalysisEntity, ReponseSandreEntity, UserEntity, ControleEntity, MasaEntity],
           synchronize: true,
         }),
         TypeOrmModule.forFeature([DepotEntity, ReponseSandreEntity]),

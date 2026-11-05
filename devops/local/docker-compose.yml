@@ -47,6 +47,66 @@ services:
       - '1025:1025'
       - '1080:1080'
 
+  # Antivirus ClamAV (clamd + freshclam) pour le scanner apps/antivirus.
+  # Le scanner se connecte uniquement au socket Unix partagé par le volume
+  # verseau2-clamav-socket (aucun TCP exposé) via CLAMD_SOCKET_PATH.
+  # Politique clamd : ./clamav/clamd.conf, en sync avec
+  # apps/antivirus/scripts/configure-clamd.mjs.
+  clamav:
+    image: clamav/clamav:1.4.6_base-debian
+    container_name: verseau2-clamav
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+    volumes:
+      - ./clamav/clamd.conf:/etc/clamav/clamd.conf:ro
+      - verseau2-clamav-data:/var/lib/clamav
+      - verseau2-clamav-socket:/tmp
+    healthcheck:
+      # Le healthcheck image (TCP 3310) est inutilisable : la politique désactive le TCP.
+      test: ['CMD-SHELL', 'clamdscan --ping 3']
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      # Premier démarrage : téléchargement des signatures (~300 Mo) puis chargement du moteur.
+      start_period: 10m
+    networks:
+      - verseau2-network
+
+  # Scanner antivirus (apps/antivirus) en mode dev : la source est montée
+  # depuis apps/antivirus et démarrée directement par node (aucune dépendance
+  # à installer, aucun build). Il joint clamd uniquement via le socket Unix
+  # partagé (CLAMD_SOCKET_PATH) et sert /scan sur le port 3011.
+  # Redémarrer le service pour appliquer les modifications du code :
+  # docker compose restart antivirus
+  antivirus:
+    image: node:24
+    container_name: verseau2-antivirus
+    restart: unless-stopped
+    working_dir: /scanner
+    command: ['node', 'src/main.ts']
+    environment:
+      ANTIVIRUS_TOKEN: local-dev-verseau2-antivirus-token-0123456789
+      ANTIVIRUS_HOST: 0.0.0.0
+      ANTIVIRUS_PORT: 3011
+      CLAMD_SOCKET_PATH: /clamav-socket/clamd.sock
+    volumes:
+      - ../../apps/antivirus:/scanner:ro
+      - verseau2-clamav-socket:/clamav-socket
+    ports:
+      - '3031:3011'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -T 5 -O /dev/null --header="Authorization: Bearer $$ANTIVIRUS_TOKEN" http://127.0.0.1:3011/health/ready']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      clamav:
+        condition: service_healthy
+    networks:
+      - verseau2-network
+
   # Pour tester l'application en local
   app:
     build:
@@ -54,6 +114,8 @@ services:
       dockerfile: devops/local/Dockerfile
     environment:
       NODE_OPTIONS: --max-old-space-size=1024
+      ANTIVIRUS_URL: http://antivirus:3011
+      ANTIVIRUS_TOKEN: local-dev-verseau2-antivirus-token-0123456789
     mem_limit: 1024m
     deploy:
       resources:
@@ -62,8 +124,12 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      - postgres
-      - s3mock
+      postgres:
+        condition: service_started
+      s3mock:
+        condition: service_started
+      antivirus:
+        condition: service_healthy
     networks:
       - verseau2-network
 
@@ -91,6 +157,8 @@ services:
 volumes:
   verseau2-postgres-data:
   sync-pg-node-modules:
+  verseau2-clamav-data:
+  verseau2-clamav-socket:
 
 networks:
   verseau2-network:

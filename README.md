@@ -50,6 +50,8 @@ Le projet est organisé en monorepo avec les composants suivants :
   - Interface utilisateur basée sur le Design System de l'État (DSFR)
   - Communication avec l'API backend
 
+- **Antivirus privé (apps/antivirus)** : application Node 24 autonome, avec son propre lockfile et un déploiement indépendant ; voir le [runbook de mise en service](docs/antivirus-rollout.md) et le [contrat HTTP](apps/antivirus/CONTRACT.md). La recette finale des gates API/worker reste un prérequis de release.
+
 - **Packages partagés**
   - `@lib/dossier` : Types et DTOs partagés
   - `@lib/parser` : Parser XML pour fichiers SANDRE
@@ -141,7 +143,7 @@ Le fichier est envoyé par le navigateur directement à S3. L'API reçoit unique
 
 1. `POST /api/depot/upload/init` avec `{ fileName, size, contentType }` crée le dépôt et renvoie `{ depotId, uploadUrl, headers, expiresAt }`.
 2. Le navigateur fait un `PUT` du fichier brut vers `uploadUrl`, avec les `headers` renvoyés, sans cookie API.
-3. `POST /api/depot/:id/upload/complete` vérifie l'objet avec `HEAD`, le copie côté S3 vers sa clé définitive et publie `process_file`. La confirmation et le job pg-boss sont enregistrés dans la même transaction PostgreSQL. Les confirmations répétées sont idempotentes.
+3. `POST /api/depot/:id/upload/complete` vérifie l'objet avec `HEAD`, le copie côté S3 vers sa clé définitive et publie `antivirus_scan`. La confirmation et le job pg-boss sont enregistrés dans la même transaction PostgreSQL. Le worker streame cet objet vers l'antivirus, sans buffer complet ni fichier temporaire, puis persiste le verdict clean et publie `process_file` dans une même transaction. Les confirmations répétées sont idempotentes.
 
 La taille maximale reste **70 Mio** : les métadonnées sont validées à l'initialisation et la taille exacte déclarée est liée à l'URL présignée via l'en-tête signé `Content-Length`. S3 refuse ainsi un PUT de taille différente. Le navigateur génère automatiquement cet en-tête à partir du fichier brut ; le front ne doit pas le définir manuellement. La taille réelle est également vérifiée à la confirmation. Le XML et les droits métier sont vérifiés par le worker.
 
