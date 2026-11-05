@@ -23,7 +23,7 @@ const getLogging = (configService: ConfigService) => {
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const migrationsPath = path.join(__dirname, '../migrations/**/*{.js, .ts}');
+        const migrationsPath = path.join(__dirname, '../migrations/**/*{.js,.ts}');
         const poolSize = resolveDatabasePoolSize(configService);
         const processType = configService.get<string>('PROCESS_TYPE') ?? 'local';
         new LoggerService('DatabaseModule').log(`Database pool size for ${processType} is ${poolSize}`);
