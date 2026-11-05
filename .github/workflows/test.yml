@@ -34,7 +34,11 @@ jobs:
               - '.github/workflows/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
-              - '**/package.json'
+              - 'package.json'
+              - 'apps/back/package.json'
+              - 'apps/front/package.json'
+              - 'e2e/package.json'
+              - 'devops/tools/sync-pg/package.json'
               - 'packages/dossier/**'
               - 'packages/parser/**'
               - 'packages/shared/**'
@@ -42,8 +46,6 @@ jobs:
               - 'apps/front/**'
             back:
               - 'apps/back/**'
-            antivirus:
-              - 'apps/antivirus/**'
 
       - name: Select workspaces to test
         id: matrix
@@ -51,7 +53,7 @@ jobs:
           workspaces=()
 
           if [[ "${{ steps.filter.outputs.all }}" == "true" ]]; then
-            workspaces=(front back parser dossier verseau-antivirus)
+            workspaces=(front back parser dossier)
           else
             if [[ "${{ steps.filter.outputs.front }}" == "true" ]]; then
               workspaces+=(front)
@@ -61,9 +63,6 @@ jobs:
               workspaces+=(back)
             fi
 
-            if [[ "${{ steps.filter.outputs.antivirus }}" == "true" ]]; then
-              workspaces+=(verseau-antivirus)
-            fi
           fi
 
           if [[ ${#workspaces[@]} -eq 0 ]]; then
@@ -103,12 +102,9 @@ jobs:
         with:
           node-version: 24.x
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/antivirus/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Cache node_modules
-        if: matrix.workspace != 'verseau-antivirus'
         uses: actions/cache@v4
         id: cache-node-modules
         with:
@@ -116,17 +112,15 @@ jobs:
             node_modules
             apps/*/node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml', 'apps/antivirus/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
       - name: Install dependencies
         # Always validate the frozen lockfile, even after an exact cache hit.
-        if: matrix.workspace != 'verseau-antivirus'
         run: pnpm install --frozen-lockfile
 
       - name: Build ${{ matrix.workspace }}
-        if: matrix.workspace != 'verseau-antivirus'
         run: pnpm --filter ${{ matrix.workspace }} run --if-present build
 
       - name: Run backend tests
@@ -134,24 +128,8 @@ jobs:
         run: pnpm --filter back run --if-present test:ci
 
       - name: Run tests
-        if: matrix.workspace != 'back' && matrix.workspace != 'verseau-antivirus'
+        if: matrix.workspace != 'back'
         run: pnpm --filter ${{ matrix.workspace }} run --if-present test
-
-      - name: Copy standalone antivirus application
-        if: matrix.workspace == 'verseau-antivirus'
-        shell: bash
-        run: |
-          standalone_dir=$(mktemp -d "$RUNNER_TEMP/verseau-antivirus.XXXXXX")
-          tar --exclude='./node_modules' --exclude='./dist' -C apps/antivirus -cf - . | tar -xf - -C "$standalone_dir"
-          echo "ANTIVIRUS_STANDALONE_DIR=$standalone_dir" >> "$GITHUB_ENV"
-
-      - name: Install, build and test standalone antivirus
-        if: matrix.workspace == 'verseau-antivirus'
-        working-directory: ${{ env.ANTIVIRUS_STANDALONE_DIR }}
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
-          pnpm test
 
   browser-e2e:
     if: >-
