@@ -98,10 +98,9 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
   constructor(private readonly dataSource: DataSource) {}
 
   async findConformiteSteu(filters: ConformiteSteuFilters): Promise<{ data: ConformiteSteuRow[]; total: number }> {
-    const { ouvrageDepollutionIds, year, ouvrageDepollutionCode, trancheObligationRfa, impact, page, pageSize } =
-      filters;
+    const { ouvrageDepollutionCodes, year, trancheObligationRfa, impact, page, pageSize } = filters;
 
-    if (ouvrageDepollutionIds.length === 0) {
+    if (ouvrageDepollutionCodes.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -131,12 +130,8 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
     };
 
     const anneePlaceholder = addParam(annee);
-    const steuPlaceholders = ouvrageDepollutionIds.map((steuCdn) => addParam(steuCdn)).join(', ');
-    const whereClauses = [`steu.steu_cdn IN (${steuPlaceholders})`];
-
-    if (ouvrageDepollutionCode) {
-      whereClauses.push(`RTRIM(steu.steu_sandre_cda) = ${addParam(ouvrageDepollutionCode)}`);
-    }
+    const steuPlaceholders = ouvrageDepollutionCodes.map((code) => addParam(code)).join(', ');
+    const whereClauses = [`RTRIM(steu.steu_sandre_cda) IN (${steuPlaceholders})`];
 
     if (trancheObligationRfa) {
       whereClauses.push(`tltobl.tltobl_rfa = ${addParam(trancheObligationRfa)}`);
@@ -253,9 +248,9 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
   }
 
   async findConformiteScl(filters: ConformiteSclFilters): Promise<{ data: ConformiteSclRow[]; total: number }> {
-    const { systemeCollecteIds, year, systemeCollecteCode, trancheObligationRfa, impact, page, pageSize } = filters;
+    const { systemeCollecteCodes, year, trancheObligationRfa, impact, page, pageSize } = filters;
 
-    if (systemeCollecteIds.length === 0) {
+    if (systemeCollecteCodes.length === 0) {
       return { data: [], total: 0 };
     }
 
@@ -284,12 +279,8 @@ export class RoseauConformiteRepository implements RoseauConformiteGateway {
     };
 
     const anneePlaceholder = addParam(year);
-    const sclPlaceholders = systemeCollecteIds.map((sclCdn) => addParam(sclCdn)).join(', ');
-    const whereClauses = [`scl.scl_cdn IN (${sclPlaceholders})`];
-
-    if (systemeCollecteCode) {
-      whereClauses.push(`RTRIM(scl.scl_sandre_cda) = ${addParam(systemeCollecteCode)}`);
-    }
+    const sclPlaceholders = systemeCollecteCodes.map((code) => addParam(code)).join(', ');
+    const whereClauses = [`RTRIM(scl.scl_sandre_cda) IN (${sclPlaceholders})`];
 
     if (trancheObligationRfa) {
       whereClauses.push(`tltobl.tltobl_rfa = ${addParam(trancheObligationRfa)}`);

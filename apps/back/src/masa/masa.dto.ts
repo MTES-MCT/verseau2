@@ -276,9 +276,8 @@ export interface PointMesureReferentielRow {
 
 /** Filtres pour la recherche de conformité STEU */
 export interface ConformiteSteuFilters extends PaginationQuery {
-  ouvrageDepollutionIds: number[];
+  ouvrageDepollutionCodes: string[];
   year: number;
-  ouvrageDepollutionCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSteuSortByValue;
@@ -286,9 +285,8 @@ export interface ConformiteSteuFilters extends PaginationQuery {
 
 /** Filtres pour la recherche de conformité SCL */
 export interface ConformiteSclFilters extends PaginationQuery {
-  systemeCollecteIds: number[];
+  systemeCollecteCodes: string[];
   year: number;
-  systemeCollecteCode?: string;
   trancheObligationRfa?: TrancheObligationRfa;
   impact?: 'avec' | 'sans';
   sortBy?: MasaConformiteSclSortByValue;
