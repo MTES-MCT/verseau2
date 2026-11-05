@@ -1,5 +1,5 @@
 import { CacheModule } from '@nestjs/cache-manager';
-import { INestApplication } from '@nestjs/common';
+import { ForbiddenException, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
@@ -68,6 +68,8 @@ describe('DroitsDepotService (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let droitsDepotService: DroitsDepotService;
+  let droitsUserService: DroitsUserService;
+  let lanceleauRepository: LanceleauRepository;
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -106,6 +108,8 @@ describe('DroitsDepotService (e2e)', () => {
 
     dataSource = moduleFixture.get(getDataSourceToken());
     droitsDepotService = moduleFixture.get(DroitsDepotService);
+    droitsUserService = moduleFixture.get(DroitsUserService);
+    lanceleauRepository = moduleFixture.get(LanceleauRepository);
 
     await createReferentielDataset(dataSource);
     await dataSource.synchronize();
@@ -117,6 +121,39 @@ describe('DroitsDepotService (e2e)', () => {
 
   beforeEach(async () => {
     await clearUserWithDroits(dataSource);
+  });
+
+  describe('identification par le claim email Cerbère', () => {
+    it.each(['contact@example.com', ''])(
+      'résout les droits, le SIRET et le contact via login_lb quand mail vaut %j',
+      async (orionMail) => {
+        await seedUserWithDroits(dataSource, { ...TEST_USER, orionMail });
+
+        await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).resolves.toEqual({
+          itvCdn: TEST_USER.itvCdn,
+          isExpertNational: false,
+        });
+        await expect(droitsUserService.resolveItvCdn(TEST_USER.sub)).resolves.toBe(TEST_USER.itvCdn);
+        await expect(lanceleauRepository.findSiretByEmail(`  ${TEST_USER.email}  `)).resolves.toBe(TEST_USER.itvRfa);
+        await expect(lanceleauRepository.findOrionContactByEmail(`  ${TEST_USER.email}  `)).resolves.toEqual({
+          nom: 'Test',
+          prenom: 'User',
+        });
+      },
+    );
+
+    it('ne se rabat pas sur mail quand login_lb ne correspond pas', async () => {
+      await seedUserWithDroits(dataSource, {
+        ...TEST_USER,
+        email: 'autre-login@example.com',
+        orionMail: TEST_USER.email,
+      });
+
+      await expect(lanceleauRepository.findAgByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(lanceleauRepository.findSiretByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(lanceleauRepository.findOrionContactByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('validation des erreurs', () => {
