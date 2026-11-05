@@ -52,6 +52,7 @@ describe('Controller (e2e) - Access control', () => {
     overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
   ): import('@authentication/authentication').AuthenticatedUser => ({
     cerbereId: 'test-user-id',
+    uid: 'cerbere-test-user',
     mel: 'dev@example.com',
     itvCdn: 100,
     isExpertNational: false,
@@ -413,6 +414,7 @@ describe('Controller (e2e) - Access control', () => {
     it('/indicateurs/steu (GET) - Should return 200 when a token is provided', async () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue({
         cerbereId: 'test-user-id',
+        uid: 'cerbere-test-user',
         mel: 'dev@example.com',
         itvCdn: 100,
         isExpertNational: false,
@@ -464,6 +466,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   it('should return authorized: true when validateDroits succeeds', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,
@@ -484,6 +487,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   it('should return errorCode FLUX_QUALIFIE_INTERDIT when service throws FLUX_QUALIFIE_INTERDIT', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,
@@ -507,6 +511,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   it('should return errorCode DROITS_INSUFFISANTS when service throws DROITS_INSUFFISANTS', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,
@@ -530,6 +535,7 @@ describe('DepotController (e2e) - droits-de-depot errorCode mapping', () => {
   it('should pass isFluxQualifie=false when query param is absent', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,
@@ -562,6 +568,7 @@ describe('Depot access guards (e2e)', () => {
     overrides: Partial<import('@authentication/authentication').AuthenticatedUser> = {},
   ): import('@authentication/authentication').AuthenticatedUser => ({
     cerbereId: TEST_USER_SUB,
+    uid: 'cerbere-test-user',
     mel: TEST_USER_EMAIL,
     itvCdn: null,
     isExpertNational: false,
@@ -761,6 +768,7 @@ describe('ReferentielController (e2e) - points-mesure', () => {
   it('/referentiel/points-mesure (GET) - Should return 200 with points for an authorized steu', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,
@@ -855,6 +863,7 @@ describe('ReferentielController (e2e) - parametres', () => {
   it('/referentiel/parametres (POST) - Should return ordered parameters for posted codes', async () => {
     jest.spyOn(authService, 'validateToken').mockResolvedValue({
       cerbereId: 'test-user-id',
+      uid: 'cerbere-test-user',
       mel: 'dev@example.com',
       itvCdn: 100,
       isExpertNational: false,

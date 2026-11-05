@@ -203,8 +203,8 @@ export interface ItvCdnByRfa {
   intervenantId: number;
 }
 
-/** Résultat de résolution AG (agent) par email — utilisé pour l'authentification */
-export interface AgByEmail {
+/** Résultat de résolution AG (agent) par login Cerbere — utilisé pour l'authentification */
+export interface AgByLogin {
   intervenantId: number;
   principalIdentifiant: number;
 }

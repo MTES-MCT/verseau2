@@ -8,6 +8,10 @@ export class UserEntity extends BaseEntity {
   @Index()
   sub: string; // OIDC subject claim
 
+  @Column({ type: 'varchar', unique: true })
+  @Index()
+  uid: string; // Cerbere UID, matches Lanceleau login_lb
+
   @Column({ type: 'varchar', nullable: true })
   email: string;
 

@@ -20,14 +20,14 @@ export class IndicateursService {
   @TraceCalls(LOG_LEVELS[2])
   async getIndicateursSteu(subId: string, page: number, pageSize: number): Promise<PaginatedIndicateurSteuResponse> {
     const user = await this.userGateway.findBySub(subId);
-    if (!user) {
+    if (!user?.uid) {
       this.logger.warn(`Utilisateur non trouvé pour subId: ${subId}`);
       return { data: [], total: 0, page, pageSize };
     }
 
-    const siret = await this.masaProvider.findSiretByEmail(user.email);
+    const siret = await this.masaProvider.findSiretByLogin(user.uid);
     if (!siret) {
-      this.logger.warn(`Aucun intervenant avec SIRET trouvé pour l'utilisateur ${user.email}`);
+      this.logger.warn(`Aucun intervenant avec SIRET trouvé pour l'utilisateur ${user.uid}`);
       return { data: [], total: 0, page, pageSize };
     }
 

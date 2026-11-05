@@ -771,13 +771,19 @@ export async function clearLanceleauData(dataSource: DataSource): Promise<void> 
   await dataSource.query(`DELETE FROM lanceleau.t_orion_role_for_principal`);
 }
 
-export async function seedUser(dataSource: DataSource, id: string, sub: string, email: string): Promise<void> {
+export async function seedUser(
+  dataSource: DataSource,
+  id: string,
+  sub: string,
+  email: string,
+  uid = `uid-${sub}`,
+): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO "user" (id, sub, email, created_at, updated_at)
-    VALUES ($1, $2, $3, NOW(), NOW())
+    INSERT INTO "user" (id, sub, uid, email, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, NOW(), NOW())
   `,
-    [id, sub, email],
+    [id, sub, uid, email],
   );
 }
 

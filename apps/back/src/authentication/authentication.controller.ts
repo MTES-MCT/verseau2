@@ -107,6 +107,7 @@ export class AuthenticationController {
       // Sync user data to DB
       try {
         await this.userService.findOrCreateUser(result.user.cerbereId, {
+          uid: result.user.uid,
           email: result.user.mel,
           nom: result.user.nom,
           prenom: result.user.prenom,
@@ -157,6 +158,15 @@ export class AuthenticationController {
 
     try {
       const tokens = await this.authentication.refreshTokens(refreshToken, expectedSubject);
+
+      if (tokens.user) {
+        await this.userService.findOrCreateUser(tokens.user.cerbereId, {
+          uid: tokens.user.uid,
+          email: tokens.user.mel,
+          nom: tokens.user.nom,
+          prenom: tokens.user.prenom,
+        });
+      }
 
       const tokensWithFallbackRefresh: typeof tokens = {
         ...tokens,

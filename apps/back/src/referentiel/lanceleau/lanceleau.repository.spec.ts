@@ -19,16 +19,18 @@ describe('LanceleauRepository', () => {
   let queryBuilder: {
     select: jest.Mock;
     addSelect: jest.Mock;
+    innerJoin: jest.Mock;
     where: jest.Mock;
-    getRawOne: jest.Mock;
+    getRawMany: jest.Mock;
   };
 
   beforeEach(async () => {
     queryBuilder = {
       select: jest.fn().mockReturnThis(),
       addSelect: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      getRawOne: jest.fn(),
+      getRawMany: jest.fn().mockResolvedValue([]),
     };
     orionCredentialsRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
@@ -38,13 +40,19 @@ describe('LanceleauRepository', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LanceleauRepository,
-        { provide: getRepositoryToken(ItvEntity), useValue: emptyRepository },
+        {
+          provide: getRepositoryToken(ItvEntity),
+          useValue: { createQueryBuilder: jest.fn().mockReturnValue(queryBuilder) },
+        },
         { provide: getRepositoryToken(SupEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(FanEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(ParEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(UrfEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(OrionRoleForPrincipalEntity), useValue: emptyRepository },
-        { provide: getRepositoryToken(AgEntity), useValue: emptyRepository },
+        {
+          provide: getRepositoryToken(AgEntity),
+          useValue: { createQueryBuilder: jest.fn().mockReturnValue(queryBuilder) },
+        },
         { provide: getRepositoryToken(VSteuSclItvEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(OrionCredentialsEntity), useValue: orionCredentialsRepository },
       ],
@@ -53,21 +61,98 @@ describe('LanceleauRepository', () => {
     repository = module.get(LanceleauRepository);
   });
 
-  it('should find and normalize an Orion contact by email', async () => {
-    queryBuilder.getRawOne.mockResolvedValue({ nom: '  Doe  ', prenom: '  John  ' });
+  describe('findIntervenantById', () => {
+    it('returns the matching intervenant with its name and SIRET', async () => {
+      queryBuilder.getRawMany.mockResolvedValue([{ itvCdn: 42, itvNomLb: 'Intervenant', itvRfa: '12345678901234' }]);
 
-    await expect(repository.findOrionContactByEmail('  user@example.com  ')).resolves.toEqual({
+      await expect(repository.findIntervenantById(42)).resolves.toEqual({
+        intervenantId: 42,
+        intervenantNom: 'Intervenant',
+        intervenantSiret: '12345678901234',
+      });
+
+      expect(queryBuilder.select).toHaveBeenCalledWith('itv.itvCdn', 'itvCdn');
+      expect(queryBuilder.addSelect).toHaveBeenCalledWith('itv.itvNomLb', 'itvNomLb');
+      expect(queryBuilder.addSelect).toHaveBeenCalledWith('itv.itvRfa', 'itvRfa');
+      expect(queryBuilder.where).toHaveBeenCalledWith('itv.itvCdn = :itvCdn', { itvCdn: 42 });
+    });
+
+    it('returns null when no intervenant matches the ID', async () => {
+      await expect(repository.findIntervenantById(42)).resolves.toBeNull();
+    });
+
+    it.each([false, true])('throws for multiple rows (identical values: %s)', async (identical) => {
+      const row = { itvCdn: 42, itvNomLb: 'Intervenant', itvRfa: '12345678901234' };
+      const otherRow = identical ? { ...row } : { ...row, itvNomLb: 'Other intervenant', itvRfa: '12345678901235' };
+      queryBuilder.getRawMany.mockResolvedValue([row, otherRow]);
+
+      await expect(repository.findIntervenantById(42)).rejects.toThrow('DUPLICATE_INTERVENANT_ID');
+    });
+  });
+
+  it('should find and normalize an Orion contact by login', async () => {
+    queryBuilder.getRawMany.mockResolvedValue([{ nom: '  Doe  ', prenom: '  John  ' }]);
+
+    await expect(repository.findOrionContactByLogin('  cerbere-user  ')).resolves.toEqual({
       nom: 'Doe',
       prenom: 'John',
     });
 
     expect(orionCredentialsRepository.createQueryBuilder).toHaveBeenCalledWith('oc');
-    expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.mail) = :mail', { mail: 'user@example.com' });
+    expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :login', { login: 'cerbere-user' });
   });
 
-  it('should return null when no Orion contact matches the email', async () => {
-    queryBuilder.getRawOne.mockResolvedValue(null);
+  it('resolves agent rights by login_lb, not mail', async () => {
+    queryBuilder.getRawMany.mockResolvedValue([{ itvCdn: 42, prCdn: 123 }]);
 
-    await expect(repository.findOrionContactByEmail('unknown@example.com')).resolves.toBeNull();
+    await expect(repository.findAgByLogin('  cerbere-user  ')).resolves.toEqual({
+      intervenantId: 42,
+      principalIdentifiant: 123,
+    });
+
+    expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :login', { login: 'cerbere-user' });
+  });
+
+  it('resolves the indicator SIRET by login_lb, not mail', async () => {
+    queryBuilder.getRawMany.mockResolvedValue([{ itvRfa: '12345678901234' }]);
+
+    await expect(repository.findSiretByLogin('  cerbere-user  ')).resolves.toBe('12345678901234');
+
+    expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :login', { login: 'cerbere-user' });
+  });
+
+  it.each(['findAgByLogin', 'findSiretByLogin', 'findOrionContactByLogin'] as const)(
+    '%s parameterizes the login rather than interpolating it into SQL',
+    async (method) => {
+      const login = "login' OR 1=1 --";
+      await repository[method](login);
+
+      expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :login', { login });
+    },
+  );
+
+  it.each(['findAgByLogin', 'findSiretByLogin', 'findOrionContactByLogin'] as const)(
+    '%s returns null when no rows match the login',
+    async (method) => {
+      await expect(repository[method]('unknown-login')).resolves.toBeNull();
+    },
+  );
+
+  describe.each(['findAgByLogin', 'findSiretByLogin', 'findOrionContactByLogin'] as const)('%s', (method) => {
+    it.each([false, true])('throws DUPLICATE_LOGIN for multiple rows (identical values: %s)', async (identical) => {
+      const row = { itvCdn: 42, prCdn: 123, itvRfa: '12345678901234', nom: 'Doe', prenom: 'John' };
+      const otherRow = identical
+        ? { ...row }
+        : { itvCdn: 43, prCdn: 124, itvRfa: '12345678901235', nom: 'Smith', prenom: 'Jane' };
+      queryBuilder.getRawMany.mockResolvedValue([row, otherRow]);
+
+      await expect(repository[method]('cerbere-user')).rejects.toThrow('DUPLICATE_LOGIN');
+    });
+  });
+
+  it('returns null when the matching intervenant has no SIRET', async () => {
+    queryBuilder.getRawMany.mockResolvedValue([{ itvRfa: null }]);
+
+    await expect(repository.findSiretByLogin('cerbere-user')).resolves.toBeNull();
   });
 });

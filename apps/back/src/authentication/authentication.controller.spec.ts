@@ -113,6 +113,33 @@ describe('AuthenticationController', () => {
   });
 
   describe('refresh', () => {
+    it('synchronizes UID and report email before issuing refreshed cookies', async () => {
+      const user = {
+        cerbereId: 'user-sub',
+        uid: 'cerbere-user',
+        mel: 'updated@example.com',
+        nom: 'Doe',
+        prenom: 'John',
+        itvCdn: 42,
+        isExpertNational: false,
+      };
+      mockAuthentication.extractSubjectFromExpiredToken.mockResolvedValue(user.cerbereId);
+      mockAuthentication.refreshTokens.mockResolvedValue({ accessToken: 'new-token', expiresIn: 3600, user });
+      const res = makeResponse();
+
+      await expect(
+        controller.refresh(makeRequest({ access_token: 'old-token', refresh_token: 'refresh' }), res),
+      ).resolves.toEqual({ expiresIn: 3600 });
+
+      expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith('user-sub', {
+        uid: 'cerbere-user',
+        email: 'updated@example.com',
+        nom: 'Doe',
+        prenom: 'John',
+      });
+      expect(mockAuthentication.buildCookieResponse).toHaveBeenCalled();
+    });
+
     it.each([
       [new UnauthorizedException(), 'warn'],
       [new ForbiddenException(), 'warn'],
@@ -318,6 +345,7 @@ describe('AuthenticationController', () => {
       const res = makeResponse();
       const mockUser = {
         cerbereId: 'user-123',
+        uid: 'cerbere-user',
         mel: 'user@example.com',
         itvCdn: null,
         isExpertNational: false,
@@ -342,6 +370,7 @@ describe('AuthenticationController', () => {
       );
       expect(mockOidcTransaction.clearTransactionCookie).toHaveBeenCalledWith(res);
       expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith('user-123', {
+        uid: 'cerbere-user',
         email: 'user@example.com',
         nom: 'Doe',
         prenom: 'John',
