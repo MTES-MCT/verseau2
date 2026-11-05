@@ -9,6 +9,14 @@ export interface AntivirusHttpConfig {
   timeoutMs: number;
 }
 
+export function isAntivirusBypassed(config: ConfigService): boolean {
+  const bypass = config.get<unknown>('ANTIVIRUS_BYPASS');
+  if (bypass !== undefined && bypass !== 'true' && bypass !== 'false') {
+    throw new Error('ANTIVIRUS_BYPASS must be true or false');
+  }
+  return bypass === 'true';
+}
+
 export function resolveAntivirusConfig(config: ConfigService): AntivirusHttpConfig {
   const endpoint = config.get<string>('ANTIVIRUS_URL');
   const token = config.get<string>('ANTIVIRUS_TOKEN');
@@ -56,6 +64,9 @@ export function validateAntivirusEnv(env: Record<string, unknown>): void {
   const provider = env.ANTIVIRUS_PROVIDER;
   if (provider !== undefined && provider !== 'http') {
     throw new Error('ANTIVIRUS_PROVIDER must be http; mock adapters are only available through DI overrides');
+  }
+  if (isAntivirusBypassed(new ConfigService(env))) {
+    return;
   }
   if (env.NODE_ENV === 'production' || provider === 'http' || env.ANTIVIRUS_URL || env.ANTIVIRUS_TOKEN) {
     resolveAntivirusConfig(new ConfigService(env));

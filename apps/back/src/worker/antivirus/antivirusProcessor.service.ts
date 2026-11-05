@@ -1,14 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AntivirusStatus, DepotStatus, DepotStep } from '@lib/dossier';
+import { ConfigService } from '@nestjs/config';
+import { AntivirusStatus, DepotStatus, DepotStep, isAntivirusAccepted } from '@lib/dossier';
 import { DepotService } from '@dossier/depot/depot.service';
 import type { DepotModel } from '@dossier/depot/depot.model';
-import { DepotAntivirusGateway } from '@dossier/depot/depotAntivirus.gateway';
+import { DepotAntivirusGateway, type AntivirusCompletionResult } from '@dossier/depot/depotAntivirus.gateway';
 import { DepotUploadGateway } from '@dossier/depot/depotUpload.gateway';
 import { DepotError } from '@dossier/depot/depotError';
 import type { FichierDeDepot } from '@dossier/depot/file/file';
 import { S3 } from '@infra/s3/s3';
 import { AntivirusGateway } from '@infra/antivirus/antivirus.gateway';
 import { AntivirusScanError } from '@infra/antivirus/antivirus.errors';
+import { isAntivirusBypassed } from '@infra/antivirus/antivirus.config';
 import type { AsyncTask } from '@worker/asyncTask';
 import { FileProcessingError, type FileProcessingAttempt } from '@worker/fileProcessingAttempt';
 
@@ -20,6 +22,7 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
     @Inject(AntivirusGateway) private readonly antivirus: AntivirusGateway,
     @Inject(DepotAntivirusGateway) private readonly evidence: DepotAntivirusGateway,
     @Inject(DepotUploadGateway) private readonly lifecycle: DepotUploadGateway,
+    private readonly config: ConfigService,
   ) {}
 
   async process(job: FichierDeDepot, attempt: FileProcessingAttempt = {}): Promise<void> {
@@ -37,12 +40,19 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
         await this.reject(job, DepotError.ANTIVIRUS_INFECTED);
         return;
       }
-      if (depot.antivirusAnalysis?.status === AntivirusStatus.ERROR && depot.antivirusAnalysis.retryable === false) {
+      const bypassed = isAntivirusBypassed(this.config);
+      if (
+        !bypassed &&
+        depot.antivirusAnalysis?.status === AntivirusStatus.ERROR &&
+        depot.antivirusAnalysis.retryable === false
+      ) {
         await this.reject(job, DepotError.ANTIVIRUS_TECHNICAL_FAILURE);
         return;
       }
-      let response: Awaited<ReturnType<AntivirusGateway['scanStream']>> | undefined;
-      if (depot.antivirusAnalysis?.status !== AntivirusStatus.CLEAN) {
+      let response: AntivirusCompletionResult | undefined;
+      if (bypassed) {
+        response = { verdict: 'ignored' };
+      } else if (!isAntivirusAccepted(depot.antivirusAnalysis?.status)) {
         const { stream, size } = await this.s3.downloadStream(filePath, signal);
         try {
           signal?.throwIfAborted();
@@ -61,7 +71,7 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
             await this.reject(job, DepotError.ANTIVIRUS_INFECTED);
             return;
           }
-          if (saved.antivirusAnalysis?.status !== AntivirusStatus.CLEAN) {
+          if (!isAntivirusAccepted(saved.antivirusAnalysis?.status)) {
             if (error.retryable && canRetry) {
               throw error;
             }
@@ -71,7 +81,7 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
             );
             return;
           }
-          // A concurrent clean verdict wins over a late transient failure.
+          // A concurrent accepted state wins over a late transient failure.
         } finally {
           stream.destroy();
         }
@@ -86,7 +96,7 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
         await this.reject(job, DepotError.ANTIVIRUS_INFECTED);
         return;
       }
-      if (saved.antivirusAnalysis?.status !== AntivirusStatus.CLEAN) {
+      if (!isAntivirusAccepted(saved.antivirusAnalysis?.status)) {
         throw new FileProcessingError('ANTIVIRUS_CLEAN_NOT_PERSISTED');
       }
     } catch (error: unknown) {
@@ -102,11 +112,11 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
     }
   }
 
-  /** Final crash/lease-expiration cleanup must not reject an already handed-off clean file. */
+  /** Final crash/lease-expiration cleanup must not reject an already handed-off file. */
   async exhausted(job: FichierDeDepot): Promise<void> {
     try {
       const depot = await this.depotService.findById(job.depotId);
-      if (!this.isPending(depot, job.filePath) || depot.antivirusAnalysis?.status === AntivirusStatus.CLEAN) {
+      if (!this.isPending(depot, job.filePath) || isAntivirusAccepted(depot.antivirusAnalysis?.status)) {
         return;
       }
       if (depot.antivirusAnalysis?.status === AntivirusStatus.INFECTED) {
@@ -122,7 +132,7 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
         },
         job.filePath,
       );
-      if (!saved || saved.antivirusAnalysis?.status === AntivirusStatus.CLEAN) {
+      if (!saved || isAntivirusAccepted(saved.antivirusAnalysis?.status)) {
         return;
       }
       await this.reject(
@@ -149,8 +159,8 @@ export class AntivirusProcessorService implements AsyncTask<FichierDeDepot> {
         if (!depot || !this.isPending(depot, job.filePath)) {
           return;
         }
-        // A late failure must not reject a clean file awaiting its processing consumer.
-        if (depot.antivirusAnalysis?.status === AntivirusStatus.CLEAN) {
+        // A late failure must not reject an accepted file awaiting its processing consumer.
+        if (isAntivirusAccepted(depot.antivirusAnalysis?.status)) {
           return;
         }
         depot.status = DepotStatus.REJETE;

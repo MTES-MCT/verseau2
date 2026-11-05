@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { validateEnv } from '../config/env.validation';
-import { resolveAntivirusConfig } from './antivirus.config';
+import { isAntivirusBypassed, resolveAntivirusConfig } from './antivirus.config';
 import { AntivirusGateway } from './antivirus.gateway';
 import { AntivirusModule, createAntivirusGateway } from './antivirus.module';
 import { MockAntivirusGateway } from './antivirus.mock';
@@ -66,11 +66,33 @@ describe('Antivirus configuration and DI', () => {
     expect(() => validateEnv({ ...env, ANTIVIRUS_TIMEOUT_MS: timeout })).toThrow();
   });
 
-  it.each(['mock', 'disabled', 'clean'])('rejects any environment-selected bypass %s', (provider) => {
+  it.each(['mock', 'disabled', 'clean'])('rejects unsupported provider %s', (provider) => {
     expect(() => validateEnv({ ...env, ANTIVIRUS_PROVIDER: provider })).toThrow();
     expect(() =>
       createAntivirusGateway(new ConfigService({ ...env, NODE_ENV: 'test', ANTIVIRUS_PROVIDER: provider })),
     ).toThrow();
+  });
+
+  it('only enables bypass for the explicit string true', () => {
+    expect(isAntivirusBypassed(new ConfigService({}))).toBe(false);
+    expect(isAntivirusBypassed(new ConfigService({ ANTIVIRUS_BYPASS: 'false' }))).toBe(false);
+    expect(isAntivirusBypassed(new ConfigService({ ANTIVIRUS_BYPASS: 'true' }))).toBe(true);
+    expect(() => validateEnv({ ...env, ANTIVIRUS_BYPASS: 'false', ANTIVIRUS_TOKEN: undefined })).toThrow();
+  });
+
+  it.each(['', '1', 'yes', 'TRUE', ' false ', true, false])('rejects ambiguous bypass value %s', (bypass) => {
+    expect(() => validateEnv({ ...env, ANTIVIRUS_BYPASS: bypass })).toThrow('ANTIVIRUS_BYPASS');
+    expect(() => createAntivirusGateway(new ConfigService({ ...env, ANTIVIRUS_BYPASS: bypass }))).toThrow(
+      'ANTIVIRUS_BYPASS',
+    );
+  });
+
+  it('allows an explicit production bypass without scanner settings, never returning fake clean evidence', async () => {
+    const bypassEnv = { NODE_ENV: 'production', JWT_SECRET: env.JWT_SECRET, ANTIVIRUS_BYPASS: 'true' };
+    expect(validateEnv(bypassEnv)).toBe(bypassEnv);
+    const gateway = createAntivirusGateway(new ConfigService(bypassEnv));
+    await expect(gateway.scan(Buffer.from('xml'))).rejects.toMatchObject({ code: 'SCANNER_BYPASSED' });
+    expect(antivirusScanResponseSchema.safeParse({ verdict: 'ignored' }).success).toBe(false);
   });
 
   it('allows an unrelated nonproduction app to boot without ever approving a scan', async () => {

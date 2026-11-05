@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { downloadRapport, downloadXml, downloadAdminRapport, downloadAdminXml } from '../api/depot';
 import { triggerFileDownload } from '../helper/fileDownload';
-import { AntivirusStatus } from '@lib/dossier';
+import { isAntivirusAccepted, type AntivirusStatus } from '@lib/dossier';
 
 export function useRapportAndXmlDownload(isAdmin = false) {
   const [downloadingDepotId, setDownloadingDepotId] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function useRapportAndXmlDownload(isAdmin = false) {
 
   const handleDownloadXml = async (depotId: string, fileName?: string, antivirusStatus?: AntivirusStatus) => {
     setDownloadError(null);
-    if (antivirusStatus !== AntivirusStatus.CLEAN) {
+    if (!isAntivirusAccepted(antivirusStatus)) {
       setDownloadError('Fichier XML indisponible : contrôle antivirus non validé.');
       return;
     }

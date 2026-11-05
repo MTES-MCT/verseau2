@@ -177,6 +177,50 @@ describe('DepotAntivirusRepository one-to-one persistence', () => {
 
   const job = { depotId: 'dep_test', filePath: path, utilisateur: { id: 'u1', nom: 'N', prenom: 'P' } };
 
+  it('persists ignored without fabricated scan evidence and atomically dispatches only once', async () => {
+    depot.status = DepotStatus.EN_COURS_DE_TRAITEMENT;
+    depot.step = DepotStep.PENDING;
+    await record(failure);
+    const saved = await repository.completeScan(job, { verdict: 'ignored' });
+    expect(saved?.antivirusAnalysis).toMatchObject({
+      status: 'ignored',
+      filePath: path,
+      scannedAt: null,
+      sha256: null,
+      engineVersion: null,
+      signatureVersion: null,
+      signatureUpdatedAt: null,
+      detection: null,
+      errorCode: null,
+      retryable: false,
+    });
+    expect(mapDepotEntityToDepotDto(saved!).antivirusStatus).toBe('ignored');
+    await repository.completeScan(job, { verdict: 'ignored' });
+    await repository.completeScan(job);
+    await expect(record(failure)).resolves.toMatchObject({ antivirusAnalysis: { status: 'ignored' } });
+    expect(queue.send).toHaveBeenCalledTimes(1);
+    expect(queue.send).toHaveBeenCalledWith(QueueName.process_file, job, {
+      db: { executeSql: expect.any(Function) as unknown },
+    });
+    await expect(record(infected)).resolves.toMatchObject({ antivirusAnalysis: { status: 'infected' } });
+    await expect(repository.completeScan(job, { verdict: 'ignored' })).resolves.toMatchObject({
+      antivirusAnalysis: { status: 'infected' },
+    });
+    expect(queue.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('rolls back ignored evidence when enqueue fails and refuses stale bypass jobs', async () => {
+    depot.status = DepotStatus.EN_COURS_DE_TRAITEMENT;
+    depot.step = DepotStep.PENDING;
+    queue.send.mockRejectedValueOnce(new Error('queue unavailable'));
+    await expect(repository.completeScan(job, { verdict: 'ignored' })).rejects.toThrow('queue unavailable');
+    expect(analysis).toBeNull();
+    queue.send.mockClear();
+    await expect(repository.completeScan({ ...job, filePath: 'stale' }, { verdict: 'ignored' })).resolves.toBeNull();
+    expect(analysis).toBeNull();
+    expect(queue.send).not.toHaveBeenCalled();
+  });
+
   it('persists clean and sends process_file through the same database transaction', async () => {
     depot.status = DepotStatus.EN_COURS_DE_TRAITEMENT;
     depot.step = DepotStep.PENDING;

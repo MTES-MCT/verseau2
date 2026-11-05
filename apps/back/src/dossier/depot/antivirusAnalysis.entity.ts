@@ -1,16 +1,10 @@
-import { BeforeInsert, Check, Column, Entity, JoinColumn, OneToOne, PrimaryColumn, Unique } from 'typeorm';
+import { BeforeInsert, Column, Entity, JoinColumn, OneToOne, PrimaryColumn, Unique } from 'typeorm';
 import { AntivirusStatus } from '@lib/dossier';
 import { BaseEntity } from '@shared/repository/base-entity';
 import { DepotEntity } from './depot.entity';
 
 @Entity('antivirus_analysis')
 @Unique('UQ_antivirus_analysis_depot_id', ['depotId'])
-@Check('CHK_antivirus_analysis_status', "status IN ('pending', 'clean', 'infected', 'error')")
-@Check('CHK_antivirus_analysis_sha256', "sha256 IS NULL OR sha256 ~ '^[a-f0-9]{64}$'")
-@Check(
-  'CHK_antivirus_analysis_verdict_metadata',
-  "status NOT IN ('clean', 'infected') OR (file_path IS NOT NULL AND scanned_at IS NOT NULL AND sha256 IS NOT NULL AND engine_version IS NOT NULL AND signature_version IS NOT NULL AND signature_updated_at IS NOT NULL)",
-)
 export class AntivirusAnalysisEntity extends BaseEntity {
   @PrimaryColumn({ primaryKeyConstraintName: 'PK_antivirus_analysis' })
   declare id: string;

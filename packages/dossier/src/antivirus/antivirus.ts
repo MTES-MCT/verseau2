@@ -3,8 +3,13 @@ import { z } from 'zod';
 export enum AntivirusStatus {
   PENDING = 'pending',
   CLEAN = 'clean',
+  IGNORED = 'ignored',
   INFECTED = 'infected',
   ERROR = 'error',
+}
+
+export function isAntivirusAccepted(status: AntivirusStatus | null | undefined): boolean {
+  return status === AntivirusStatus.CLEAN || status === AntivirusStatus.IGNORED;
 }
 
 const timestamp = z.iso.datetime({ offset: true });

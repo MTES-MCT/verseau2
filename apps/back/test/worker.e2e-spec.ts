@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
 import { AntivirusAnalysisEntity } from '@dossier/depot/antivirusAnalysis.entity';
@@ -111,6 +112,7 @@ describe('Worker Service (e2e)', () => {
         LoggerService,
         FileProcessorService,
         AntivirusProcessorService,
+        { provide: ConfigService, useValue: new ConfigService({ ANTIVIRUS_BYPASS: 'false' }) },
         { provide: AntivirusGateway, useClass: MockAntivirusGateway },
         { provide: DepotAntivirusGateway, useClass: DepotAntivirusRepository },
         { provide: DepotUploadGateway, useClass: DepotUploadRepository },
@@ -155,6 +157,50 @@ describe('Worker Service (e2e)', () => {
   });
 
   describe('FileProcessorService', () => {
+    it('bypasses scanning, commits one ignored handoff, processes and permits downloading the XML', async () => {
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_bypassed_scan',
+        path: 'depots/dep_bypassed_scan/file.xml',
+        nomOriginalFichier: 'file.xml',
+        type: 'application/xml',
+        tailleFichier: 7,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PENDING,
+      });
+      s3Mock.seed(depot.path, '<root/>');
+      queueMock.reset();
+      const configSpy = jest.spyOn(app.get(ConfigService), 'get').mockReturnValue('true');
+      const scanSpy = jest.spyOn(app.get<AntivirusGateway>(AntivirusGateway), 'scanStream');
+      const streamSpy = jest.spyOn(s3Mock, 'downloadStream');
+      const job = {
+        depotId: depot.id,
+        filePath: depot.path,
+        utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
+      };
+      try {
+        const scanner = app.get(AntivirusProcessorService);
+        await Promise.all([scanner.process(job), scanner.process(job)]);
+        await scanner.exhausted(job);
+        expect(scanSpy).not.toHaveBeenCalled();
+        expect(streamSpy).not.toHaveBeenCalled();
+        expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.process_file })]);
+        expect((await app.get(DepotService).findById(depot.id)).antivirusAnalysis).toMatchObject({
+          status: 'ignored',
+          scannedAt: null,
+          sha256: null,
+          engineVersion: null,
+        });
+        queueMock.reset();
+        await fileProcessorService.process(job);
+        expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.controle_metier })]);
+        await expect(app.get(DepotService).downloadXml(depot.id)).resolves.toEqual(Buffer.from('<root/>'));
+      } finally {
+        configSpy.mockRestore();
+        scanSpy.mockRestore();
+        streamSpy.mockRestore();
+      }
+    });
+
     it('rolls back scan evidence if enqueue fails, then commits one clean handoff on retry', async () => {
       const depot = await dataSource.getRepository(DepotEntity).save({
         id: 'dep_atomic_scan',

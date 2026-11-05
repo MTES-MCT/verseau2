@@ -73,15 +73,21 @@ describe('user and admin original XML HTTP download gates', () => {
     },
   );
 
-  it('verified clean permits both attachment endpoints with no-store', async () => {
-    gateway.findDepotById.mockResolvedValue({ ...depot, antivirusAnalysis: cleanAnalysis(depot.id, path, buffer) });
-    for (const url of ['/depot/dep_1/xml', '/admin/depot/dep_1/xml']) {
-      const response = await request(app.getHttpServer()).get(url).expect(200);
-      expect(response.headers['cache-control']).toBe('private, no-store');
-      expect(response.headers['content-disposition']).toContain('attachment');
-      expect(response.text).toBe(buffer.toString());
-    }
-  });
+  it.each([AntivirusStatus.CLEAN, AntivirusStatus.IGNORED])(
+    '%s permits both attachment endpoints with no-store',
+    async (status) => {
+      gateway.findDepotById.mockResolvedValue({
+        ...depot,
+        antivirusAnalysis: { ...cleanAnalysis(depot.id, path, buffer), status },
+      });
+      for (const url of ['/depot/dep_1/xml', '/admin/depot/dep_1/xml']) {
+        const response = await request(app.getHttpServer()).get(url).expect(200);
+        expect(response.headers['cache-control']).toBe('private, no-store');
+        expect(response.headers['content-disposition']).toContain('attachment');
+        expect(response.text).toBe(buffer.toString());
+      }
+    },
+  );
 
   it('uses the saved clean verdict without revalidating audit metadata or downloaded bytes', async () => {
     gateway.findDepotById.mockResolvedValue({

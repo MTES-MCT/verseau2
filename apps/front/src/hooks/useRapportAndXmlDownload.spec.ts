@@ -15,7 +15,7 @@ vi.mock('../helper/fileDownload', () => ({ triggerFileDownload: vi.fn() }));
 
 describe('XML download fail-closed UI guard', () => {
   beforeEach(() => vi.clearAllMocks());
-  it.each([false, true])('requires explicit clean even when called directly (admin=%s)', async (admin) => {
+  it.each([false, true])('requires an accepted status even when called directly (admin=%s)', async (admin) => {
     const { result } = renderHook(() => useRapportAndXmlDownload(admin));
     for (const status of [undefined, AntivirusStatus.PENDING, AntivirusStatus.INFECTED, AntivirusStatus.ERROR]) {
       await act(async () => result.current.handleDownloadXml('dep_1', 'original.xml', status));
@@ -25,12 +25,17 @@ describe('XML download fail-closed UI guard', () => {
     expect(api.downloadAdminXml).not.toHaveBeenCalled();
     expect(triggerFileDownload).not.toHaveBeenCalled();
   });
-  it.each([false, true])('routes clean download to the appropriate endpoint (admin=%s)', async (admin) => {
+  it.each([
+    [false, AntivirusStatus.CLEAN],
+    [true, AntivirusStatus.CLEAN],
+    [false, AntivirusStatus.IGNORED],
+    [true, AntivirusStatus.IGNORED],
+  ])('routes accepted download to the appropriate endpoint (admin=%s, status=%s)', async (admin, status) => {
     const blob = new Blob(['<xml/>']);
     vi.mocked(api.downloadXml).mockResolvedValue(blob);
     vi.mocked(api.downloadAdminXml).mockResolvedValue(blob);
     const { result } = renderHook(() => useRapportAndXmlDownload(admin));
-    await act(async () => result.current.handleDownloadXml('dep_1', 'original.xml', AntivirusStatus.CLEAN));
+    await act(async () => result.current.handleDownloadXml('dep_1', 'original.xml', status));
     expect(admin ? api.downloadAdminXml : api.downloadXml).toHaveBeenCalledWith('dep_1');
     expect(triggerFileDownload).toHaveBeenCalledWith(blob, 'original.xml');
   });

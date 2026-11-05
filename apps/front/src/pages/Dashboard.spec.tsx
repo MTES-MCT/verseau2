@@ -122,24 +122,27 @@ describe('Dashboard', () => {
     },
   );
 
-  it('autorise uniquement le téléchargement explicitement clean', async () => {
-    mockUseDepots.mockReturnValue({
-      data: [{ ...depot, antivirusStatus: AntivirusStatus.CLEAN }],
-      isLoading: false,
-      isFetching: false,
-      error: null,
-      isExpertNational: false,
-    } as ReturnType<typeof useDepots>);
-    renderDashboard();
-    const button = screen.getByRole('button', { name: 'XML' });
-    expect(button).toBeEnabled();
-    expect(button).toHaveAccessibleDescription('Télécharger le fichier XML');
-    expect(button.parentElement).not.toHaveAttribute('tabindex');
-    fireEvent.click(button);
-    expect(mockUseRapportAndXmlDownload().handleDownloadXml).toHaveBeenCalledWith(
-      depot.id,
-      depot.nomOriginalFichier,
-      AntivirusStatus.CLEAN,
-    );
-  });
+  it.each([AntivirusStatus.CLEAN, AntivirusStatus.IGNORED])(
+    'autorise le téléchargement pour le statut %s',
+    async (status) => {
+      mockUseDepots.mockReturnValue({
+        data: [{ ...depot, antivirusStatus: status }],
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        isExpertNational: false,
+      } as ReturnType<typeof useDepots>);
+      renderDashboard();
+      const button = screen.getByRole('button', { name: 'XML' });
+      expect(button).toBeEnabled();
+      expect(button).toHaveAccessibleDescription('Télécharger le fichier XML');
+      expect(button.parentElement).not.toHaveAttribute('tabindex');
+      fireEvent.click(button);
+      expect(mockUseRapportAndXmlDownload().handleDownloadXml).toHaveBeenCalledWith(
+        depot.id,
+        depot.nomOriginalFichier,
+        status,
+      );
+    },
+  );
 });

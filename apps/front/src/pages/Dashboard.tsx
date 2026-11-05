@@ -7,7 +7,7 @@ import { Alert } from '@codegouvfr/react-dsfr/Alert';
 import { Pagination } from '@codegouvfr/react-dsfr/Pagination';
 import { Button } from '@codegouvfr/react-dsfr/Button';
 import { Tooltip } from '@codegouvfr/react-dsfr/Tooltip';
-import { DepotStatus, type DepotDto } from '@lib/dossier';
+import { DepotStatus, isAntivirusAccepted, type DepotDto } from '@lib/dossier';
 import { formatDateTime } from '@lib/shared';
 import { ApiError } from '../api/apiClient';
 import { StatCard } from '../components/StatCard';
@@ -101,13 +101,13 @@ export function Dashboard() {
       <Tooltip
         id={`xml-download-tooltip-${depot.id}`}
         title={
-          depot.antivirusStatus === 'clean'
+          isAntivirusAccepted(depot.antivirusStatus)
             ? 'Télécharger le fichier XML'
             : 'XML indisponible : contrôle antivirus non validé'
         }
       >
         <span
-          tabIndex={depot.antivirusStatus !== 'clean' ? 0 : undefined}
+          tabIndex={!isAntivirusAccepted(depot.antivirusStatus) ? 0 : undefined}
           aria-describedby={`xml-download-tooltip-${depot.id}`}
         >
           <Button
@@ -115,7 +115,7 @@ export function Dashboard() {
             priority="tertiary no outline"
             iconId="ri-download-line"
             onClick={() => handleDownloadXml(depot.id, depot.nomOriginalFichier, depot.antivirusStatus)}
-            disabled={downloadingXmlId === depot.id || depot.antivirusStatus !== 'clean'}
+            disabled={downloadingXmlId === depot.id || !isAntivirusAccepted(depot.antivirusStatus)}
             aria-describedby={`xml-download-tooltip-${depot.id}`}
           >
             {downloadingXmlId === depot.id ? 'XML...' : 'XML'}

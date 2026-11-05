@@ -3,7 +3,7 @@ import { CreateDepotModel, DepotModel } from './depot.model';
 import { DepotGateway } from './depot.gateway';
 import { S3 } from '@infra/s3/s3';
 import { LoggerService } from '@shared/logger/logger.service';
-import { AntivirusStatus } from '@lib/dossier';
+import { isAntivirusAccepted } from '@lib/dossier';
 
 @Injectable()
 export class DepotService {
@@ -81,7 +81,7 @@ export class DepotService {
     const depot = await this.findById(depotId);
 
     // Access depends only on the saved verdict; FileProcessorService owns validation.
-    if (depot.antivirusAnalysis?.status !== AntivirusStatus.CLEAN) {
+    if (!isAntivirusAccepted(depot.antivirusAnalysis?.status)) {
       throw new ForbiddenException('Fichier XML indisponible : contrôle antivirus non validé.');
     }
 

@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { createMock } from '@golevelup/ts-jest';
 import { Readable } from 'node:stream';
+import { ConfigService } from '@nestjs/config';
 import { DepotService } from '@dossier/depot/depot.service';
 import type { DepotModel } from '@dossier/depot/depot.model';
 import { DepotAntivirusGateway } from '@dossier/depot/depotAntivirus.gateway';
 import { DepotUploadGateway, DepotUploadTransaction } from '@dossier/depot/depotUpload.gateway';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { DepotError } from '@dossier/depot/depotError';
-import { AntivirusStatus, DepotStatus, DepotStep } from '@lib/dossier';
+import { AntivirusStatus, DepotStatus, DepotStep, isAntivirusAccepted } from '@lib/dossier';
 import { S3 } from '@infra/s3/s3';
 import { AntivirusGateway } from '@infra/antivirus/antivirus.gateway';
 import {
@@ -36,7 +37,7 @@ describe('AntivirusProcessorService streaming lifecycle', () => {
   const buffer = Buffer.from('<root/>');
   const retry = { retryCount: 0, retryLimit: 3 };
 
-  function setup() {
+  function setup(bypass = 'false') {
     let depot = {
       id: job.depotId,
       path: job.filePath,
@@ -93,9 +94,18 @@ describe('AntivirusProcessorService streaming lifecycle', () => {
       const snapshot = copyDepot(depot);
       try {
         signal?.throwIfAborted();
-        const alreadyClean = depot.antivirusAnalysis?.status === AntivirusStatus.CLEAN;
-        const saved = response ? await evidence.recordScan(data.depotId, response, data.filePath) : copyDepot(depot);
-        if (saved?.antivirusAnalysis?.status === AntivirusStatus.CLEAN && !alreadyClean) {
+        const alreadyAccepted = isAntivirusAccepted(depot.antivirusAnalysis?.status);
+        let saved: DepotModel | null;
+        if (response?.verdict === 'ignored') {
+          depot.antivirusAnalysis = {
+            ...cleanAnalysis(data.depotId, data.filePath, buffer),
+            status: AntivirusStatus.IGNORED,
+          };
+          saved = copyDepot(depot);
+        } else {
+          saved = response ? await evidence.recordScan(data.depotId, response, data.filePath) : copyDepot(depot);
+        }
+        if (isAntivirusAccepted(saved?.antivirusAnalysis?.status) && !alreadyAccepted) {
           await tx.send(QueueName.process_file, data);
         }
         return saved;
@@ -104,7 +114,8 @@ describe('AntivirusProcessorService streaming lifecycle', () => {
         throw error;
       }
     });
-    const service = new AntivirusProcessorService(depots, s3, scanner, evidence, lifecycle);
+    const config = new ConfigService({ ANTIVIRUS_BYPASS: bypass });
+    const service = new AntivirusProcessorService(depots, s3, scanner, evidence, lifecycle, config);
     return {
       service,
       scanner,
@@ -123,6 +134,64 @@ describe('AntivirusProcessorService streaming lifecycle', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     jest.clearAllMocks();
+  });
+
+  it.each([undefined, AntivirusStatus.PENDING, AntivirusStatus.ERROR])(
+    'bypasses scans and dispatches processing exactly once from %s',
+    async (status) => {
+      const s = setup('true');
+      if (status) {
+        s.depot.antivirusAnalysis = { ...cleanAnalysis(job.depotId, job.filePath, buffer), status, retryable: false };
+      }
+      await s.service.process(job, retry);
+      await s.service.process(job, retry);
+      expect(s.depot.antivirusAnalysis?.status).toBe(AntivirusStatus.IGNORED);
+      expect(s.depot.status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
+      expect(s.evidence.completeScan).toHaveBeenCalledWith(job, { verdict: 'ignored' }, undefined);
+      expect(s.tx.send).toHaveBeenCalledTimes(1);
+      expect(s.tx.send).toHaveBeenCalledWith(QueueName.process_file, job);
+      expect(s.scanner.scanStream).not.toHaveBeenCalled();
+      expect(s.scanner.scan).not.toHaveBeenCalled();
+      expect(s.s3.downloadStream).not.toHaveBeenCalled();
+      expect(s.s3.download).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rolls back an ignored handoff on enqueue failure and retries without scanning', async () => {
+    const s = setup('true');
+    s.tx.send.mockRejectedValueOnce(new Error('queue unavailable'));
+    await expect(s.service.process(job, retry)).rejects.toThrow('ANTIVIRUS_RETRY');
+    expect(s.depot.antivirusAnalysis).toBeUndefined();
+    await s.service.process(job, retry);
+    expect(s.depot.antivirusAnalysis?.status).toBe(AntivirusStatus.IGNORED);
+    expect(s.tx.send).toHaveBeenCalledTimes(2);
+    expect(s.scanner.scanStream).not.toHaveBeenCalled();
+  });
+
+  it('does not override a known infection when bypass is enabled', async () => {
+    const s = setup('true');
+    s.depot.antivirusAnalysis = {
+      ...cleanAnalysis(job.depotId, job.filePath, buffer),
+      status: AntivirusStatus.INFECTED,
+    };
+    await s.service.process(job, retry);
+    expect(s.depot.error).toBe(DepotError.ANTIVIRUS_INFECTED);
+    expect(s.evidence.completeScan).not.toHaveBeenCalled();
+    expect(s.tx.send).not.toHaveBeenCalled();
+  });
+
+  it('does not rescan or reject an already committed ignored handoff after bypass is disabled', async () => {
+    const s = setup();
+    s.depot.antivirusAnalysis = {
+      ...cleanAnalysis(job.depotId, job.filePath, buffer),
+      status: AntivirusStatus.IGNORED,
+    };
+    await s.service.process(job, retry);
+    await s.service.exhausted(job);
+    expect(s.scanner.scanStream).not.toHaveBeenCalled();
+    expect(s.tx.send).not.toHaveBeenCalled();
+    expect(s.tx.save).not.toHaveBeenCalled();
+    expect(s.evidence.recordScan).not.toHaveBeenCalled();
   });
 
   it('streams the immutable object and commits clean before dispatch, without downloading a Buffer or parsing', async () => {
