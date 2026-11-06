@@ -19,19 +19,10 @@ describe('LanceleauRepository', () => {
   let repository: LanceleauRepository;
   let agRepository: DeepMocked<Repository<AgEntity>>;
   let itvRepository: DeepMocked<Repository<ItvEntity>>;
-  let orionCredentialsRepository: DeepMocked<Repository<OrionCredentialsEntity>>;
   let agQueryBuilder: DeepMocked<SelectQueryBuilder<AgEntity>>;
   let itvQueryBuilder: DeepMocked<SelectQueryBuilder<ItvEntity>>;
-  let queryBuilder: DeepMocked<SelectQueryBuilder<OrionCredentialsEntity>>;
 
   beforeEach(async () => {
-    queryBuilder = createMock<SelectQueryBuilder<OrionCredentialsEntity>>();
-    queryBuilder.select.mockReturnThis();
-    queryBuilder.addSelect.mockReturnThis();
-    queryBuilder.where.mockReturnThis();
-    orionCredentialsRepository = createMock<Repository<OrionCredentialsEntity>>();
-    orionCredentialsRepository.createQueryBuilder.mockReturnValue(queryBuilder);
-
     agQueryBuilder = createMock<SelectQueryBuilder<AgEntity>>();
     agQueryBuilder.innerJoin.mockReturnThis();
     agQueryBuilder.where.mockReturnThis();
@@ -57,7 +48,6 @@ describe('LanceleauRepository', () => {
         { provide: getRepositoryToken(OrionRoleForPrincipalEntity), useValue: emptyRepository },
         { provide: getRepositoryToken(AgEntity), useValue: agRepository },
         { provide: getRepositoryToken(VSteuSclItvEntity), useValue: emptyRepository },
-        { provide: getRepositoryToken(OrionCredentialsEntity), useValue: orionCredentialsRepository },
       ],
     }).compile();
 
@@ -65,21 +55,34 @@ describe('LanceleauRepository', () => {
   });
 
   it('should find an agent by matching the Cerbère email against the Orion login', async () => {
-    agQueryBuilder.getOne.mockResolvedValue(createMock<AgEntity>({ itvCdn: 100, prCdn: 1000 }));
+    agQueryBuilder.getOne.mockResolvedValue(
+      createMock<AgEntity>({
+        itvCdn: 100,
+        prCdn: 1000,
+        agMailLb: '  contact-ag@example.com  ',
+        agNomLb: '  Doe  ',
+        agPrenomLb: '  John  ',
+      }),
+    );
 
-    await expect(repository.findAgByEmail('  user@example.com  ')).resolves.toEqual({
+    await expect(repository.findAgentByOrionLogin('  user@example.com  ')).resolves.toEqual({
       intervenantId: 100,
       principalIdentifiant: 1000,
+      mail: 'contact-ag@example.com',
+      nom: 'Doe',
+      prenom: 'John',
     });
 
     expect(agQueryBuilder.innerJoin).toHaveBeenCalledWith(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn');
-    expect(agQueryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :email', { email: 'user@example.com' });
+    expect(agQueryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :orionLogin', {
+      orionLogin: 'user@example.com',
+    });
   });
 
-  it('should return null when no agent matches the Cerbère email', async () => {
+  it('should return null when no agent matches the Orion login', async () => {
     agQueryBuilder.getOne.mockResolvedValue(null);
 
-    await expect(repository.findAgByEmail('unknown@example.com')).resolves.toBeNull();
+    await expect(repository.findAgentByOrionLogin('unknown@example.com')).resolves.toBeNull();
   });
 
   it('should find a SIRET by matching the Cerbère email against the Orion login', async () => {
@@ -97,21 +100,23 @@ describe('LanceleauRepository', () => {
     await expect(repository.findSiretByEmail('unknown@example.com')).resolves.toBeNull();
   });
 
-  it('should find and normalize an Orion contact by matching the Cerbère email against the Orion login', async () => {
-    queryBuilder.getRawOne.mockResolvedValue({ nom: '  Doe  ', prenom: '  John  ' });
+  it.each([null, '', '  '])('normalizes empty AG contact fields (%j) without hiding the agent', async (value) => {
+    agQueryBuilder.getOne.mockResolvedValue(
+      createMock<AgEntity>({
+        itvCdn: 100,
+        prCdn: 1000,
+        agMailLb: value,
+        agNomLb: value,
+        agPrenomLb: value,
+      }),
+    );
 
-    await expect(repository.findOrionContactByEmail('  user@example.com  ')).resolves.toEqual({
-      nom: 'Doe',
-      prenom: 'John',
+    await expect(repository.findAgentByOrionLogin('user@example.com')).resolves.toEqual({
+      intervenantId: 100,
+      principalIdentifiant: 1000,
+      mail: null,
+      nom: null,
+      prenom: null,
     });
-
-    expect(orionCredentialsRepository.createQueryBuilder).toHaveBeenCalledWith('oc');
-    expect(queryBuilder.where).toHaveBeenCalledWith('TRIM(oc.login_lb) = :email', { email: 'user@example.com' });
-  });
-
-  it('should return null when no Orion contact matches the email', async () => {
-    queryBuilder.getRawOne.mockResolvedValue(null);
-
-    await expect(repository.findOrionContactByEmail('unknown@example.com')).resolves.toBeNull();
   });
 });

@@ -5,12 +5,23 @@ export interface UserWithDroitsData {
   sub: string;
   email: string;
   orionMail?: string;
+  agMail?: string | null;
+  agNom?: string | null;
+  agPrenom?: string | null;
   nom?: string;
   prenom?: string;
   itvCdn: number;
   prCdn?: number;
   /** SIRET for the intervenant (itvRfa). If provided, ItvEntity and role 301 will be seeded */
   itvRfa?: string;
+}
+
+function agContact(data: UserWithDroitsData) {
+  return {
+    mail: data.agMail === undefined ? data.email : data.agMail,
+    nom: data.agNom === undefined ? (data.nom ?? 'Test') : data.agNom,
+    prenom: data.agPrenom === undefined ? (data.prenom ?? 'User') : data.agPrenom,
+  };
 }
 
 /**
@@ -53,7 +64,7 @@ export async function seedUserWithDroits(dataSource: DataSource, data: UserWithD
   );
 
   // Create ag linking prCdn to itvCdn
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedAg(dataSource, prCdn, data.itvCdn, agContact(data));
 
   // If itvRfa is provided, create the ItvEntity and role 301
   if (data.itvRfa) {
@@ -125,7 +136,7 @@ export async function seedUserExpertBassin(dataSource: DataSource, data: UserWit
     data.nom ?? 'Test',
     data.prenom ?? 'User',
   );
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedAg(dataSource, prCdn, data.itvCdn, agContact(data));
 
   if (data.itvRfa) {
     await seedItv(dataSource, data.itvCdn, data.itvRfa);
@@ -154,7 +165,7 @@ export async function seedUserRole308(dataSource: DataSource, data: UserWithDroi
   );
 
   await seedOrionCredentials(dataSource, prCdn, data.orionMail ?? data.email, data.email);
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedAg(dataSource, prCdn, data.itvCdn, agContact(data));
 
   if (data.itvRfa) {
     await seedItv(dataSource, data.itvCdn, data.itvRfa);

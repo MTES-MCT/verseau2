@@ -127,7 +127,13 @@ describe('DroitsDepotService (e2e)', () => {
     it.each(['contact@example.com', ''])(
       'résout les droits, le SIRET et le contact via login_lb quand mail vaut %j',
       async (orionMail) => {
-        await seedUserWithDroits(dataSource, { ...TEST_USER, orionMail });
+        await seedUserWithDroits(dataSource, {
+          ...TEST_USER,
+          orionMail,
+          agMail: '  contact-ag@example.com  ',
+          agNom: '  Agent  ',
+          agPrenom: '  Verseau  ',
+        });
 
         await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).resolves.toEqual({
           itvCdn: TEST_USER.itvCdn,
@@ -135,9 +141,10 @@ describe('DroitsDepotService (e2e)', () => {
         });
         await expect(droitsUserService.resolveItvCdn(TEST_USER.sub)).resolves.toBe(TEST_USER.itvCdn);
         await expect(lanceleauRepository.findSiretByEmail(`  ${TEST_USER.email}  `)).resolves.toBe(TEST_USER.itvRfa);
-        await expect(lanceleauRepository.findOrionContactByEmail(`  ${TEST_USER.email}  `)).resolves.toEqual({
-          nom: 'Test',
-          prenom: 'User',
+        await expect(lanceleauRepository.findAgentByOrionLogin(`  ${TEST_USER.email}  `)).resolves.toMatchObject({
+          mail: 'contact-ag@example.com',
+          nom: 'Agent',
+          prenom: 'Verseau',
         });
       },
     );
@@ -149,10 +156,27 @@ describe('DroitsDepotService (e2e)', () => {
         orionMail: TEST_USER.email,
       });
 
-      await expect(lanceleauRepository.findAgByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(lanceleauRepository.findAgentByOrionLogin(TEST_USER.email)).resolves.toBeNull();
       await expect(lanceleauRepository.findSiretByEmail(TEST_USER.email)).resolves.toBeNull();
-      await expect(lanceleauRepository.findOrionContactByEmail(TEST_USER.email)).resolves.toBeNull();
       await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).rejects.toThrow(ForbiddenException);
+    });
+
+    it.each([null, '', '  '])(
+      'refuse la connexion si le mail AG vaut %j malgré le rôle autorisé et le mail Orion',
+      async (agMail) => {
+        await seedUserWithDroits(dataSource, { ...TEST_USER, agMail });
+
+        await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).rejects.toThrow(ForbiddenException);
+      },
+    );
+
+    it('autorise la connexion sans nom et prénom AG dès lors que le mail et le rôle sont présents', async () => {
+      await seedUserWithDroits(dataSource, { ...TEST_USER, agNom: null, agPrenom: null });
+
+      await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).resolves.toEqual({
+        itvCdn: TEST_USER.itvCdn,
+        isExpertNational: false,
+      });
     });
   });
 
