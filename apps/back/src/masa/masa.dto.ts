@@ -203,10 +203,13 @@ export interface ItvCdnByRfa {
   intervenantId: number;
 }
 
-/** Résultat de résolution AG (agent) par email — utilisé pour l'authentification */
-export interface AgByEmail {
+/** Agent résolu par le login Orion correspondant à l'email Cerbère, avec ses coordonnées AG. */
+export interface Agent {
   intervenantId: number;
   principalIdentifiant: number;
+  mail: string | null;
+  nom: string | null;
+  prenom: string | null;
 }
 
 /** Intervenant résolu pour l'authentification et les droits de dépôt */

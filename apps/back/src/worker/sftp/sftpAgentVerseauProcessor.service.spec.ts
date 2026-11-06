@@ -6,11 +6,15 @@ import { S3 } from '@s3/s3';
 import { DepotService } from '@dossier/depot/depot.service';
 import { LoggerService } from '@shared/logger/logger.service';
 import { DepotStatus, DepotStep, EtapeMetier } from '@lib/dossier';
-import { addNameTagToXml } from '@lib/parser';
-import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
+import { setContactInXml } from '@lib/parser';
+import { MasaProvider } from '@masa/masa.provider';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 
 jest.mock('@lib/parser', () => ({
-  addNameTagToXml: jest.fn((xml, name) => `${xml}<!-- added ${name} -->`),
+  setContactInXml: jest.fn(
+    (xml: string, contact: Parameters<typeof setContactInXml>[1]) =>
+      `${xml}<!-- added ${contact.nomContact} / ${contact.melContact} -->`,
+  ),
 }));
 
 describe('SftpAgentVerseauProcessorService', () => {
@@ -18,7 +22,7 @@ describe('SftpAgentVerseauProcessorService', () => {
   let mockAgentVerseauClient: AgentVerseauClient;
   let mockS3: S3;
   let mockDepotService: DepotService;
-  let mockLanceleauGateway: jest.Mocked<LanceleauGateway>;
+  let mockMasaProvider: DeepMocked<MasaProvider>;
   let logger: LoggerService;
 
   beforeEach(async () => {
@@ -50,9 +54,14 @@ describe('SftpAgentVerseauProcessorService', () => {
       }),
     } as unknown as DepotService;
 
-    mockLanceleauGateway = {
-      findOrionContactByEmail: jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' }),
-    } as unknown as jest.Mocked<LanceleauGateway>;
+    mockMasaProvider = createMock<MasaProvider>();
+    mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
+      principalIdentifiant: 1000,
+      intervenantId: 100,
+      nom: 'Doe',
+      prenom: 'John',
+      mail: 'contact-ag@example.com',
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,7 +69,7 @@ describe('SftpAgentVerseauProcessorService', () => {
         { provide: AgentVerseauClient, useValue: mockAgentVerseauClient },
         { provide: S3, useValue: mockS3 },
         { provide: DepotService, useValue: mockDepotService },
-        { provide: LanceleauGateway, useValue: mockLanceleauGateway },
+        { provide: MasaProvider, useValue: mockMasaProvider },
         {
           provide: LoggerService,
           useValue: logger,
@@ -87,10 +96,13 @@ describe('SftpAgentVerseauProcessorService', () => {
     });
 
     expect(mockDepotService.findDepotByIdWithUser).toHaveBeenCalledWith(depotId);
-    expect(mockLanceleauGateway.findOrionContactByEmail).toHaveBeenCalledWith('user@example.com');
-    expect(addNameTagToXml).toHaveBeenCalledWith(originalXml, 'DOE John');
+    expect(mockMasaProvider.findAgentByOrionLogin).toHaveBeenCalledWith('user@example.com');
+    expect(setContactInXml).toHaveBeenCalledWith(originalXml, {
+      nomContact: 'DOE John',
+      melContact: 'contact-ag@example.com',
+    });
 
-    const expectedXml = `${originalXml}<!-- added DOE John -->`;
+    const expectedXml = `${originalXml}<!-- added DOE John / contact-ag@example.com -->`;
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(1, Buffer.from(expectedXml), 'depot-1_test.xml');
     expect(mockAgentVerseauClient.send).toHaveBeenNthCalledWith(2, Buffer.alloc(0), 'depot-1_test.xml.ack');
 
@@ -130,7 +142,7 @@ describe('SftpAgentVerseauProcessorService', () => {
       'Depot with id depot-1 has no associated user email',
     );
 
-    expect(addNameTagToXml).not.toHaveBeenCalled();
+    expect(setContactInXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
     expect(mockDepotService.update).toHaveBeenCalledWith(depotId, {
       status: DepotStatus.REJETE,
@@ -142,19 +154,46 @@ describe('SftpAgentVerseauProcessorService', () => {
     ['missing', null],
     ['without last name', { nom: null, prenom: 'John' }],
     ['without first name', { nom: 'Doe', prenom: null }],
-  ])('should fail without sending files when Orion contact is %s', async (_label, contact) => {
-    mockLanceleauGateway.findOrionContactByEmail.mockResolvedValue(contact);
-
-    await expect(service.process({ depotId: 'depot-1', filePath: 's3/path.xml' })).rejects.toThrow(
-      'Orion contact is missing or incomplete for depot depot-1',
+    ['with blank last name', { nom: '  ', prenom: 'John' }],
+    ['with blank first name', { nom: 'Doe', prenom: '  ' }],
+  ])('should fail without sending files when AG contact is %s', async (_label, contact) => {
+    mockMasaProvider.findAgentByOrionLogin.mockResolvedValue(
+      contact
+        ? {
+            ...contact,
+            principalIdentifiant: 1000,
+            intervenantId: 100,
+            mail: 'contact-ag@example.com',
+          }
+        : null,
     );
 
-    expect(addNameTagToXml).not.toHaveBeenCalled();
+    await expect(service.process({ depotId: 'depot-1', filePath: 's3/path.xml' })).rejects.toThrow(
+      'AG contact is missing or incomplete for depot depot-1',
+    );
+
+    expect(setContactInXml).not.toHaveBeenCalled();
     expect(mockAgentVerseauClient.send).not.toHaveBeenCalled();
     expect(mockDepotService.update).toHaveBeenCalledWith('depot-1', {
       status: DepotStatus.REJETE,
       step: DepotStep.SFTP_FAILED,
     });
+  });
+
+  it.each([null, ''])('sends the file when the AG name is complete even if the email is %j', async (mail) => {
+    mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
+      principalIdentifiant: 1000,
+      intervenantId: 100,
+      nom: '  Doe  ',
+      prenom: '  John  ',
+      mail,
+    });
+
+    await service.process({ depotId: 'depot-1', filePath: 's3/path.xml' });
+
+    expect(setContactInXml).toHaveBeenCalledWith('<xml></xml>', { nomContact: 'DOE John', melContact: mail });
+    expect(mockAgentVerseauClient.send).toHaveBeenCalledTimes(2);
+    expect(mockDepotService.update).toHaveBeenCalledWith('depot-1', { step: DepotStep.SFTP_COMPLETED });
   });
 
   it('should handle errors and update depot status to REJETE', async () => {

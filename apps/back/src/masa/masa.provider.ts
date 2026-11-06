@@ -18,7 +18,7 @@ import {
   SteuCdnBySandreCda,
   SclCdnBySandreCda,
   ItvCdnByRfa,
-  AgByEmail,
+  Agent,
   IntervenantAuth,
   VSteuSclItvResult,
   ConformiteSteuFilters,
@@ -261,14 +261,14 @@ export class MasaProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Authentification — Résolution de l'AG (agent) par email utilisateur
-  // Utilisé par les guards et le login pour résoudre l'itvCdn et le prCdn
+  // Authentification — Résolution de l'agent par login Orion (email Cerbère)
+  // Utilisé par les guards, le login et l'enrichissement du contact XML (coordonnées AG)
   // TODO: Remplacer par appel à l'API MASA quand disponible
   // ---------------------------------------------------------------------------
 
-  // route: GET /api/agents?email=:email
-  async findAgByEmail(email: string): Promise<AgByEmail | null> {
-    return this.lanceleauGateway.findAgByEmail(email);
+  // route: GET /api/agents?login=:orionLogin
+  async findAgentByOrionLogin(orionLogin: string): Promise<Agent | null> {
+    return this.lanceleauGateway.findAgentByOrionLogin(orionLogin);
   }
 
   // ---------------------------------------------------------------------------

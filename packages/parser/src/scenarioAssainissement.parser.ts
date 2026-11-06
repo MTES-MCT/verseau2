@@ -182,13 +182,31 @@ function insertXmlChild(
   return insertXmlBlockBefore(xml, parent.closeStart, block, lineEnding);
 }
 
+function escapeXmlText(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+/** Add a missing sender name without changing an existing value. */
+export function addNameTagToXml(xml: string, nomContact: string): string {
+  return updateContactXml(xml, { NomContact: nomContact }, false);
+}
+
+/** Impose the referential contact, including an empty email when it is unavailable. */
+export function setContactInXml(xml: string, contact: { nomContact: string; melContact: string | null }): string {
+  return updateContactXml(xml, { NomContact: contact.nomContact, MelContact: contact.melContact ?? '' }, true);
+}
+
 /**
  * Locate elements with strict SAX, then insert into the original source rather than
- * reserialize it. Existing XML bytes survive unchanged (except expanding an empty
- * parent). Parsing stops at the first Scenario's close; errors encountered before
+ * reserialize it. Only requested contact values and missing elements change.
+ * Parsing stops at the first Scenario's close; errors encountered before
  * that point throw, while the remaining source is retained without validation.
  */
-export function addNameTagToXml(xml: string, nomContact: string): string {
+function updateContactXml(
+  xml: string,
+  values: Partial<Record<'NomContact' | 'MelContact', string>>,
+  overwrite: boolean,
+): string {
   const parser = sax.parser(true, { xmlns: true, position: true });
   const scenarioComplete = new Error('Scenario parsing complete');
   const stack: ContactXmlElement[] = [];
@@ -196,7 +214,8 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
   let emetteur: ContactXmlElement | undefined;
   let contact: ContactXmlElement | undefined;
   let destinataire: ContactXmlElement | undefined;
-  let hasNomContact = false;
+  const existingTags = new Set<string>();
+  const replacements: Array<{ element: ContactXmlElement; value: string }> = [];
   let indentationUnit: string | undefined;
 
   parser.onopentag = (tag: sax.QualifiedTag) => {
@@ -229,8 +248,18 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
       destinataire = element;
     } else if (tag.local === 'Contact' && !contact && parent === emetteur && tag.uri === parent?.uri) {
       contact = element;
-    } else if (tag.local === 'NomContact' && parent === contact && tag.uri === parent?.uri) {
-      hasNomContact = true;
+    } else if (
+      (tag.local === 'NomContact' || tag.local === 'MelContact') &&
+      parent === contact &&
+      tag.uri === parent?.uri
+    ) {
+      const value = values[tag.local];
+      if (value !== undefined) {
+        existingTags.add(tag.local);
+        if (overwrite) {
+          replacements.push({ element, value });
+        }
+      }
     }
     stack.push(element);
   };
@@ -257,42 +286,64 @@ export function addNameTagToXml(xml: string, nomContact: string): string {
   }
 
   const parent = contact ?? emetteur ?? scenario;
-  if (!parent || hasNomContact) {
+  if (!parent) {
     return xml;
   }
-  const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
-  const unit =
-    parent.childIndent?.slice(parent.indent?.length ?? 0) ??
-    indentationUnit ??
-    (parent.indent?.includes('\t') ? '\t' : '  ');
-  let indent = parent.childIndent ?? (parent.indent ?? '') + unit;
-  if (!emetteur && destinataire) {
-    indent = destinataire.indent ?? indent;
-  }
-  const prefix = parent.prefix ? `${parent.prefix}:` : '';
-  const name = nomContact.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-  const tags = ['NomContact'];
-  if (!contact) {
-    tags.unshift('Contact');
-  }
-  if (!emetteur) {
-    tags.unshift('Emetteur');
-  }
-  const lines = tags.map((tag, depth) => {
-    const leading = indent + unit.repeat(depth);
-    if (tag === 'NomContact') {
-      return `${leading}<${prefix}${tag}>${name}</${prefix}${tag}>`;
+  const missingValues = Object.entries(values).filter(([tag]) => !existingTags.has(tag));
+  let result = xml;
+  if (missingValues.length > 0) {
+    const lineEnding = xml.includes('\r\n') ? '\r\n' : '\n';
+    const unit =
+      parent.childIndent?.slice(parent.indent?.length ?? 0) ??
+      indentationUnit ??
+      (parent.indent?.includes('\t') ? '\t' : '  ');
+    let indent = parent.childIndent ?? (parent.indent ?? '') + unit;
+    if (!emetteur && destinataire) {
+      indent = destinataire.indent ?? indent;
     }
-    return `${leading}<${prefix}${tag}>`;
-  });
-  for (let depth = tags.length - 2; depth >= 0; depth--) {
-    lines.push(`${indent}${unit.repeat(depth)}</${prefix}${tags[depth]}>`);
+    const prefix = parent.prefix ? `${parent.prefix}:` : '';
+    const tags: string[] = [];
+    if (!contact) {
+      tags.push('Contact');
+    }
+    if (!emetteur) {
+      tags.unshift('Emetteur');
+    }
+    const lines = tags.map((tag, depth) => {
+      const leading = indent + unit.repeat(depth);
+      return `${leading}<${prefix}${tag}>`;
+    });
+    for (const [tag, value] of missingValues) {
+      lines.push(`${indent}${unit.repeat(tags.length)}<${prefix}${tag}>${escapeXmlText(value)}</${prefix}${tag}>`);
+    }
+    for (let depth = tags.length - 1; depth >= 0; depth--) {
+      lines.push(`${indent}${unit.repeat(depth)}</${prefix}${tags[depth]}>`);
+    }
+    const block = lines.join(lineEnding);
+    if (!emetteur && destinataire) {
+      result = insertXmlBlockBefore(xml, destinataire.start, block, lineEnding);
+    } else {
+      result = insertXmlChild(xml, parent, block, lineEnding, !emetteur);
+    }
   }
-  const block = lines.join(lineEnding);
-  if (!emetteur && destinataire) {
-    return insertXmlBlockBefore(xml, destinataire.start, block, lineEnding);
+
+  // Missing values were appended after existing contact elements, so their original
+  // offsets are still valid. Apply all replacements in one pass, without copying
+  // the entire XML once per element (duplicate tags may occur in untrusted input).
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const { element, value } of replacements) {
+    const start = element.selfClosing ? element.openEnd - 2 : element.openEnd;
+    const end = element.selfClosing ? element.openEnd : element.closeStart;
+    const text = escapeXmlText(value);
+    parts.push(result.slice(cursor, start), element.selfClosing ? `>${text}</${element.name}>` : text);
+    cursor = end;
   }
-  return insertXmlChild(xml, parent, block, lineEnding, !emetteur);
+  if (parts.length === 0) {
+    return result;
+  }
+  parts.push(result.slice(cursor));
+  return parts.join('');
 }
 
 export function checkScenarioCodeAndVersion(scenario: Scenario): boolean {

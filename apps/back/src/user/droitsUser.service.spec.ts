@@ -13,7 +13,7 @@ describe('DroitsUserService', () => {
   };
 
   const mockMasaProvider = {
-    findAgByEmail: jest.fn(),
+    findAgentByOrionLogin: jest.fn(),
     findRolesByPrCdn: jest.fn(),
     findIntervenantById: jest.fn(),
     hasRole: jest.fn(),
@@ -47,7 +47,13 @@ describe('DroitsUserService', () => {
     const intervenantId = 100;
 
     beforeEach(() => {
-      mockMasaProvider.findAgByEmail.mockResolvedValue({ principalIdentifiant, intervenantId });
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
+        principalIdentifiant,
+        intervenantId,
+        mail: 'contact-ag@example.com',
+        nom: null,
+        prenom: null,
+      });
     });
 
     it.each([301, 303, 305, 306, 307, 308])('autorise le rôle Orion %i', async (roleOrionId) => {
@@ -80,18 +86,36 @@ describe('DroitsUserService', () => {
     it('refuse un email absent sans interroger le référentiel', async () => {
       await expect(service.resolveVerseauAccess('')).rejects.toMatchObject({ status: 403 });
 
-      expect(mockMasaProvider.findAgByEmail).not.toHaveBeenCalled();
+      expect(mockMasaProvider.findAgentByOrionLogin).not.toHaveBeenCalled();
     });
 
     it('refuse un utilisateur sans agent', async () => {
-      mockMasaProvider.findAgByEmail.mockResolvedValue(null);
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue(null);
 
       await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({ status: 403 });
       expect(mockMasaProvider.findRolesByPrCdn).not.toHaveBeenCalled();
     });
 
+    it.each([null, '', '  \t  '])('refuse un utilisateur avec rôle autorisé mais mail AG égal à %j', async (mail) => {
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({ principalIdentifiant, intervenantId, mail });
+      mockMasaProvider.findRolesByPrCdn.mockResolvedValue([{ principalIdentifiant, roleOrionId: ROLE.DEPOSANT }]);
+
+      await expect(service.resolveVerseauAccess(email)).rejects.toMatchObject({ status: 403 });
+      expect(mockMasaProvider.findRolesByPrCdn).not.toHaveBeenCalled();
+    });
+
+    it('accepte un mail AG différent du login Cerbère sans exiger le nom et le prénom', async () => {
+      mockMasaProvider.findRolesByPrCdn.mockResolvedValue([{ principalIdentifiant, roleOrionId: ROLE.DEPOSANT }]);
+
+      await expect(service.resolveVerseauAccess(email)).resolves.toEqual({
+        itvCdn: intervenantId,
+        isExpertNational: false,
+      });
+      expect(mockMasaProvider.findAgentByOrionLogin).toHaveBeenCalledWith(email);
+    });
+
     it('laisse remonter une indisponibilité du référentiel sans la transformer en refus', async () => {
-      mockMasaProvider.findAgByEmail.mockRejectedValue(new Error('database unavailable'));
+      mockMasaProvider.findAgentByOrionLogin.mockRejectedValue(new Error('database unavailable'));
 
       await expect(service.resolveVerseauAccess(email)).rejects.toThrow('database unavailable');
     });
@@ -104,7 +128,7 @@ describe('DroitsUserService', () => {
 
     it('retourne true si le rôle 305 est présent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue({
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
         principalIdentifiant: prCdn,
         intervenantId: 100,
       });
@@ -118,7 +142,7 @@ describe('DroitsUserService', () => {
 
     it('retourne false si le rôle 305 est absent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue({
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
         principalIdentifiant: prCdn,
         intervenantId: 100,
       });
@@ -135,7 +159,7 @@ describe('DroitsUserService', () => {
       const result = await service.isExpertNationalVerseau(sub);
 
       expect(result).toBe(false);
-      expect(mockMasaProvider.findAgByEmail).not.toHaveBeenCalled();
+      expect(mockMasaProvider.findAgentByOrionLogin).not.toHaveBeenCalled();
     });
 
     it("retourne false si l'utilisateur n'a pas d'email", async () => {
@@ -148,7 +172,7 @@ describe('DroitsUserService', () => {
 
     it('retourne false si aucun AG lié', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue(null);
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue(null);
 
       const result = await service.isExpertNationalVerseau(sub);
 
@@ -166,7 +190,7 @@ describe('DroitsUserService', () => {
 
     it('retourne false si une erreur est levée par hasRole', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue({
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
         principalIdentifiant: prCdn,
         intervenantId: 100,
       });
@@ -185,7 +209,7 @@ describe('DroitsUserService', () => {
 
     it('retourne true si le rôle expert bassin est présent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue({
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
         principalIdentifiant: prCdn,
         intervenantId: 100,
       });
@@ -199,7 +223,7 @@ describe('DroitsUserService', () => {
 
     it('retourne false si le rôle expert bassin est absent', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue({
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
         principalIdentifiant: prCdn,
         intervenantId: 100,
       });
@@ -216,7 +240,7 @@ describe('DroitsUserService', () => {
       const result = await service.isExpertBassinVerseau(sub);
 
       expect(result).toBe(false);
-      expect(mockMasaProvider.findAgByEmail).not.toHaveBeenCalled();
+      expect(mockMasaProvider.findAgentByOrionLogin).not.toHaveBeenCalled();
     });
 
     it("retourne false si l'utilisateur n'a pas d'email", async () => {
@@ -229,7 +253,7 @@ describe('DroitsUserService', () => {
 
     it('retourne false si aucun AG lié', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue(null);
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue(null);
 
       const result = await service.isExpertBassinVerseau(sub);
 
@@ -247,7 +271,7 @@ describe('DroitsUserService', () => {
 
     it('retourne false si une erreur est levée par hasRole', async () => {
       mockUserGateway.findBySub.mockResolvedValue({ email });
-      mockMasaProvider.findAgByEmail.mockResolvedValue({
+      mockMasaProvider.findAgentByOrionLogin.mockResolvedValue({
         principalIdentifiant: prCdn,
         intervenantId: 100,
       });
