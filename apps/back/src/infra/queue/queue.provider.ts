@@ -2,8 +2,26 @@ import { ConfigService } from '@nestjs/config';
 import { PgBoss, type QueueOptions } from 'pg-boss';
 import { PGBOSS, QueueName, resolveQueueName } from './queue';
 import { LoggerService } from '@shared/logger/logger.service';
+import { processFileOptions } from './processFileOptions';
+import { antivirusScanOptions } from './antivirusScanOptions';
 
 const queueOptions: Partial<Record<QueueName, QueueOptions>> = {
+  [QueueName.antivirus_scan]: antivirusScanOptions(),
+  [QueueName.antivirus_scan_failed]: {
+    expireInSeconds: 60,
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+    retryDelayMax: 120,
+  },
+  [QueueName.process_file]: processFileOptions(),
+  [QueueName.process_file_failed]: {
+    expireInSeconds: 60,
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+    retryDelayMax: 120,
+  },
   [QueueName.controle_sandre_upload]: {
     expireInSeconds: 120, // 2 minutes
     retryLimit: 2,
@@ -18,11 +36,21 @@ const queueOptions: Partial<Record<QueueName, QueueOptions>> = {
  * Create and initialize all required queues
  */
 async function initializeQueues(boss: PgBoss, logger: LoggerService, prefix?: string): Promise<void> {
+  // pg-boss validates the dead-letter destination at queue creation/update time.
+  const deadLetter = resolveQueueName(QueueName.process_file_failed, prefix);
+  await boss.createQueue(deadLetter, queueOptions[QueueName.process_file_failed]);
+  const antivirusDeadLetter = resolveQueueName(QueueName.antivirus_scan_failed, prefix);
+  await boss.createQueue(antivirusDeadLetter, queueOptions[QueueName.antivirus_scan_failed]);
   const queueNames = Object.values(QueueName);
   const createQueuePromises = queueNames.map(async (queueName) => {
     try {
       const resolvedName = resolveQueueName(queueName, prefix);
-      const options = queueOptions[queueName];
+      let options: Parameters<PgBoss['createQueue']>[1] = queueOptions[queueName];
+      if (queueName === QueueName.process_file) {
+        options = { ...options, deadLetter };
+      } else if (queueName === QueueName.antivirus_scan) {
+        options = { ...options, deadLetter: antivirusDeadLetter };
+      }
       await boss.createQueue(resolvedName, options);
 
       if (options) {

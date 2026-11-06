@@ -1,0 +1,14 @@
+{
+  "name": "verseau-antivirus",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x", "pnpm": "12.5.0" },
+  "packageManager": "pnpm@12.5.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "scalingo-postbuild": "pnpm build && node scripts/configure-clamd.mjs"
+  },
+  "devDependencies": { "@types/node": "24.10.1", "typescript": "6.0.2" }
+}

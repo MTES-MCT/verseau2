@@ -15,6 +15,7 @@ import { PGBOSS, QueueGateway } from '@infra/queue/queue';
 import { S3 } from '@infra/s3/s3';
 import { AgentVerseauClient } from '@infra/agentVerseauClient/agentVerseauClient';
 import { AgenceEauClient } from '@infra/agenceEauClient/agenceEauClient';
+import { AntivirusModule } from '@infra/antivirus/antivirus.module';
 
 // Minimal placeholder providers - tests should override these
 const minimalQueueProvider = {
@@ -49,6 +50,7 @@ const pgBossNullProvider = {
 @Global()
 @Module({
   imports: [
+    AntivirusModule,
     ClsModule.forRoot({
       global: true,
       middleware: { mount: true },
@@ -64,6 +66,7 @@ const pgBossNullProvider = {
     pgBossNullProvider,
   ],
   exports: [
+    AntivirusModule,
     ClsModule,
     AuthenticationModule,
     ConfigurationModule,

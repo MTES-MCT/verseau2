@@ -1,6 +1,7 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ControleEntity } from '@dossier/controle/controle.entity';
 import { DepotEntity } from '@dossier/depot/depot.entity';
+import { AntivirusAnalysisEntity } from '@dossier/depot/antivirusAnalysis.entity';
 import { UserEntity } from '@user/user.entity';
 import { SteuEntity } from '@referentiel/roseau/entities/steu.entity';
 import { CxnadmEntity } from '@referentiel/roseau/entities/cxnadm.entity';
@@ -42,6 +43,7 @@ export function initTestContainerImports(connectionUri: string) {
         // App entities
         ControleEntity,
         DepotEntity,
+        AntivirusAnalysisEntity,
         UserEntity,
         ReponseSandreEntity,
         MasaEntity,
@@ -80,6 +82,7 @@ export function initTestContainerImports(connectionUri: string) {
     TypeOrmModule.forFeature([
       ControleEntity,
       DepotEntity,
+      AntivirusAnalysisEntity,
       UserEntity,
       ReponseSandreEntity,
       MasaEntity,

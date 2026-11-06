@@ -1,13 +1,22 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { DepotEntity } from '@dossier/depot/depot.entity';
+import { AntivirusAnalysisEntity } from '@dossier/depot/antivirusAnalysis.entity';
+import { DepotAntivirusGateway } from '@dossier/depot/depotAntivirus.gateway';
+import { DepotAntivirusRepository } from '@dossier/depot/depotAntivirus.repository';
+import { DepotUploadGateway } from '@dossier/depot/depotUpload.gateway';
+import { DepotUploadRepository } from '@dossier/depot/depotUpload.repository';
+import { AntivirusGateway } from '@infra/antivirus/antivirus.gateway';
+import { MockAntivirusGateway } from '@infra/antivirus/antivirus.mock';
 import { DepotService } from '@dossier/depot/depot.service';
 import { DepotRepository } from '@dossier/depot/depot.repository';
 import { DepotGateway } from '@dossier/depot/depot.gateway';
 import { ControleName, ControleType, DepotStep, DepotStatus, ErrorCode, EvenementType } from '@lib/dossier';
 import { FileProcessorService } from '@worker/fileProcessor/fileProcessor.service';
+import { AntivirusProcessorService } from '@worker/antivirus/antivirusProcessor.service';
 import { SftpAgentVerseauProcessorService } from '@worker/sftp/sftpAgentVerseauProcessor.service';
 import { DiffusionRapportProcessorService } from '@worker/diffusionRapport/diffusionRapportProcessor.service';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
@@ -87,14 +96,26 @@ describe('Worker Service (e2e)', () => {
           type: 'postgres',
           url: getPostgresConnectionUri(),
           dropSchema: true,
-          entities: [DepotEntity, UserEntity, ControleEntity, ReponseSandreEntity, MasaEntity],
+          entities: [DepotEntity, AntivirusAnalysisEntity, UserEntity, ControleEntity, ReponseSandreEntity, MasaEntity],
           synchronize: true,
         }),
-        TypeOrmModule.forFeature([DepotEntity, UserEntity, ControleEntity, ReponseSandreEntity, MasaEntity]),
+        TypeOrmModule.forFeature([
+          DepotEntity,
+          AntivirusAnalysisEntity,
+          UserEntity,
+          ControleEntity,
+          ReponseSandreEntity,
+          MasaEntity,
+        ]),
       ],
       providers: [
         LoggerService,
         FileProcessorService,
+        AntivirusProcessorService,
+        { provide: ConfigService, useValue: new ConfigService({ ANTIVIRUS_BYPASS: 'false' }) },
+        { provide: AntivirusGateway, useClass: MockAntivirusGateway },
+        { provide: DepotAntivirusGateway, useClass: DepotAntivirusRepository },
+        { provide: DepotUploadGateway, useClass: DepotUploadRepository },
         SftpAgentVerseauProcessorService,
         DiffusionRapportProcessorService,
         RapportPdfGeneratorService,
@@ -136,7 +157,144 @@ describe('Worker Service (e2e)', () => {
   });
 
   describe('FileProcessorService', () => {
-    it('should process file successfully and enqueue SFTP job', async () => {
+    it('bypasses scanning, commits one ignored handoff, processes and permits downloading the XML', async () => {
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_bypassed_scan',
+        path: 'depots/dep_bypassed_scan/file.xml',
+        nomOriginalFichier: 'file.xml',
+        type: 'application/xml',
+        tailleFichier: 7,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PENDING,
+      });
+      s3Mock.seed(depot.path, '<root/>');
+      queueMock.reset();
+      const configSpy = jest.spyOn(app.get(ConfigService), 'get').mockReturnValue('true');
+      const scanSpy = jest.spyOn(app.get<AntivirusGateway>(AntivirusGateway), 'scanStream');
+      const streamSpy = jest.spyOn(s3Mock, 'downloadStream');
+      const job = {
+        depotId: depot.id,
+        filePath: depot.path,
+        utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
+      };
+      try {
+        const scanner = app.get(AntivirusProcessorService);
+        await Promise.all([scanner.process(job), scanner.process(job)]);
+        await scanner.exhausted(job);
+        expect(scanSpy).not.toHaveBeenCalled();
+        expect(streamSpy).not.toHaveBeenCalled();
+        expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.process_file })]);
+        expect((await app.get(DepotService).findById(depot.id)).antivirusAnalysis).toMatchObject({
+          status: 'ignored',
+          scannedAt: null,
+          sha256: null,
+          engineVersion: null,
+        });
+        queueMock.reset();
+        await fileProcessorService.process(job);
+        expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.controle_metier })]);
+        await expect(app.get(DepotService).downloadXml(depot.id)).resolves.toEqual(Buffer.from('<root/>'));
+      } finally {
+        configSpy.mockRestore();
+        scanSpy.mockRestore();
+        streamSpy.mockRestore();
+      }
+    });
+
+    it('rolls back scan evidence if enqueue fails, then commits one clean handoff on retry', async () => {
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_atomic_scan',
+        path: 'depots/dep_atomic_scan/file.xml',
+        nomOriginalFichier: 'file.xml',
+        type: 'application/xml',
+        tailleFichier: 7,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PENDING,
+      });
+      s3Mock.seed(depot.path, '<root/>');
+      queueMock.reset();
+      const job = {
+        depotId: depot.id,
+        filePath: depot.path,
+        utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
+      };
+      const scanner = app.get(AntivirusProcessorService);
+      queueMock.setFailure(true);
+      try {
+        await expect(scanner.process(job, { retryCount: 0, retryLimit: 3 })).rejects.toThrow('ANTIVIRUS_RETRY');
+      } finally {
+        queueMock.setFailure(false);
+      }
+      expect(await dataSource.getRepository(AntivirusAnalysisEntity).countBy({ depotId: depot.id })).toBe(0);
+      expect((await app.get(DepotService).findById(depot.id)).step).toBe(DepotStep.PENDING);
+      await scanner.process(job, { retryCount: 1, retryLimit: 3 });
+      await scanner.process(job, { retryCount: 2, retryLimit: 3 });
+      await scanner.exhausted(job);
+      expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.process_file })]);
+      expect((await app.get(DepotService).findById(depot.id)).antivirusAnalysis?.status).toBe('clean');
+      expect((await app.get(DepotService).findById(depot.id)).status).toBe(DepotStatus.EN_COURS_DE_TRAITEMENT);
+    });
+
+    it('commits only one process_file job for concurrent antivirus attempts under real depot row locks', async () => {
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_concurrent_scan',
+        path: 'depots/dep_concurrent_scan/file.xml',
+        nomOriginalFichier: 'file.xml',
+        type: 'application/xml',
+        tailleFichier: 7,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PENDING,
+      });
+      s3Mock.seed(depot.path, '<root/>');
+      queueMock.reset();
+      const job = {
+        depotId: depot.id,
+        filePath: depot.path,
+        utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
+      };
+      await Promise.all([
+        app.get(AntivirusProcessorService).process(job, { retryCount: 0, retryLimit: 3 }),
+        app.get(AntivirusProcessorService).process(job, { retryCount: 0, retryLimit: 3 }),
+      ]);
+      expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.process_file })]);
+      queueMock.reset();
+      await fileProcessorService.process(job);
+      expect(queueMock.jobs).toEqual([expect.objectContaining({ name: QueueName.controle_metier })]);
+      expect(await dataSource.getRepository(AntivirusAnalysisEntity).countBy({ depotId: depot.id })).toBe(1);
+    });
+
+    it('rejects the depot and preserves clean evidence when business-control enqueue fails', async () => {
+      const depot = await dataSource.getRepository(DepotEntity).save({
+        id: 'dep_enqueue_recovery',
+        path: 'depots/dep_enqueue_recovery/file.xml',
+        nomOriginalFichier: 'file.xml',
+        type: 'application/xml',
+        tailleFichier: 7,
+        status: DepotStatus.EN_COURS_DE_TRAITEMENT,
+        step: DepotStep.PENDING,
+      });
+      s3Mock.seed(depot.path, '<root/>');
+      queueMock.reset();
+      const job = {
+        depotId: depot.id,
+        filePath: depot.path,
+        utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
+      };
+      await app.get(AntivirusProcessorService).process(job, { retryCount: 0, retryLimit: 3 });
+      queueMock.reset();
+      queueMock.setFailure(true);
+      try {
+        await expect(fileProcessorService.process(job)).rejects.toThrow('Queue send failed');
+      } finally {
+        queueMock.setFailure(false);
+      }
+      expect((await app.get(DepotService).findById(depot.id)).status).toBe(DepotStatus.REJETE);
+      expect((await app.get(DepotService).findById(depot.id)).step).toBe(DepotStep.CONTROLE_FAILED);
+      expect((await app.get(DepotService).findById(depot.id)).antivirusAnalysis?.status).toBe('clean');
+      expect(queueMock.jobs).toHaveLength(0);
+    });
+
+    it('should process file successfully and enqueue business controls', async () => {
       // Create depot
       const depot = await dataSource.getRepository(DepotEntity).save({
         id: 'dep_test_001',
@@ -145,7 +303,7 @@ describe('Worker Service (e2e)', () => {
         type: 'application/xml',
         tailleFichier: 1024,
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.UPLOADING_TO_S3,
+        step: DepotStep.PENDING,
       });
 
       // Seed S3 with XML file
@@ -163,11 +321,14 @@ describe('Worker Service (e2e)', () => {
       queueMock.reset();
 
       // Process file
-      await fileProcessorService.process({
+      const job = {
         depotId: depot.id,
         filePath: 'test_file.xml',
         utilisateur: { id: 'user_001', nom: 'Test', prenom: 'User' },
-      });
+      };
+      await app.get(AntivirusProcessorService).process(job);
+      queueMock.reset();
+      await fileProcessorService.process(job);
 
       // Verify depot status updated
       const updatedDepot = await dataSource.getRepository(DepotEntity).findOneOrFail({
@@ -201,13 +362,13 @@ describe('Worker Service (e2e)', () => {
         type: 'application/xml',
         tailleFichier: 1024,
         status: DepotStatus.EN_COURS_DE_TRAITEMENT,
-        step: DepotStep.UPLOADING_TO_S3,
+        step: DepotStep.PENDING,
       });
 
       // Don't seed S3 - file will not be found
-      queueMock.setFailure(true);
+      queueMock.reset();
 
-      // Process file (should throw)
+      // The processor rejects the depot and propagates the storage failure to the worker.
       await expect(
         fileProcessorService.process({
           depotId: depot.id,
@@ -223,8 +384,7 @@ describe('Worker Service (e2e)', () => {
       expect(updatedDepot.status).toBe(DepotStatus.REJETE);
       expect(updatedDepot.step).toBe(DepotStep.CONTROLE_FAILED);
 
-      // Reset failure state
-      queueMock.setFailure(false);
+      expect(queueMock.jobs).toHaveLength(0);
     });
   });
 

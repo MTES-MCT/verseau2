@@ -9,6 +9,7 @@ import { AgenceEauClientModule } from './agenceEauClient/agenceEauClient.module'
 import { ConfigurationModule } from './config/configuration.module';
 import { SharedModule } from '@shared/shared.module';
 import { ThrottlerConfigModule } from './throttler/throttler.module';
+import { AntivirusModule } from './antivirus/antivirus.module';
 
 @Global()
 @Module({
@@ -18,6 +19,7 @@ import { ThrottlerConfigModule } from './throttler/throttler.module';
       middleware: { mount: true },
     }),
     ThrottlerConfigModule,
+    AntivirusModule,
     S3Module.forRootAsync(),
     QueueModule,
     DatabaseModule,
@@ -36,6 +38,7 @@ import { ThrottlerConfigModule } from './throttler/throttler.module';
     AgentVerseauClientModule,
     AgenceEauClientModule,
     ThrottlerConfigModule,
+    AntivirusModule,
   ],
 })
 export class InfraModule {}

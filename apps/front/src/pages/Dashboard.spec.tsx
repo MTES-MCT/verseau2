@@ -1,5 +1,5 @@
-import { DepotStatus, EtapeMetier, type DepotDto } from '@lib/dossier';
-import { render, screen, within } from '@testing-library/react';
+import { AntivirusStatus, DepotStatus, EtapeMetier, type DepotDto } from '@lib/dossier';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDepots } from '../hooks/useDepots';
@@ -94,4 +94,55 @@ describe('Dashboard', () => {
     expect(within(dataRow).getAllByRole('cell')).toHaveLength(6);
     expect(within(dataRow).getAllByRole('cell')[0]).toBeEmptyDOMElement();
   });
+
+  it.each([undefined, AntivirusStatus.PENDING, AntivirusStatus.INFECTED, AntivirusStatus.ERROR])(
+    'désactive le téléchargement XML et explique le blocage en tooltip pour le statut %s, y compris administrateur',
+    (antivirusStatus) => {
+      mockUseDepots.mockReturnValue({
+        data: [{ ...depot, antivirusStatus }],
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        isExpertNational: true,
+      } as ReturnType<typeof useDepots>);
+      renderDashboard();
+      const button = screen.getByRole('button', { name: 'XML' });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(mockUseRapportAndXmlDownload().handleDownloadXml).not.toHaveBeenCalled();
+      const tooltip = screen.getByRole('tooltip');
+      const tooltipText = 'XML indisponible : contrôle antivirus non validé';
+      expect(tooltip).toHaveTextContent(tooltipText);
+      expect(tooltip).toHaveClass('fr-tooltip');
+      expect(button).toHaveAccessibleDescription(tooltipText);
+      expect(button.parentElement).toHaveAttribute('tabindex', '0');
+      expect(button.parentElement).toHaveAccessibleDescription(tooltipText);
+      expect(screen.queryByText(/Contrôle antivirus (en attente|indisponible)/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Fichier rejeté par l’antivirus')).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([AntivirusStatus.CLEAN, AntivirusStatus.IGNORED])(
+    'autorise le téléchargement pour le statut %s',
+    async (status) => {
+      mockUseDepots.mockReturnValue({
+        data: [{ ...depot, antivirusStatus: status }],
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        isExpertNational: false,
+      } as ReturnType<typeof useDepots>);
+      renderDashboard();
+      const button = screen.getByRole('button', { name: 'XML' });
+      expect(button).toBeEnabled();
+      expect(button).toHaveAccessibleDescription('Télécharger le fichier XML');
+      expect(button.parentElement).not.toHaveAttribute('tabindex');
+      fireEvent.click(button);
+      expect(mockUseRapportAndXmlDownload().handleDownloadXml).toHaveBeenCalledWith(
+        depot.id,
+        depot.nomOriginalFichier,
+        status,
+      );
+    },
+  );
 });

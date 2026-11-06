@@ -1,5 +1,6 @@
 import { EtapeMetier } from '@lib/dossier';
 import { DepotEntity } from './depot.entity';
+import type { AntivirusAnalysisModel } from './antivirusAnalysis.model';
 
 export type DepotModel = Pick<
   DepotEntity,
@@ -22,7 +23,10 @@ export type DepotModel = Pick<
   | 'createdAt'
   | 'updatedAt'
   | 'masa'
-> & { etapeMetier?: EtapeMetier };
+> & { etapeMetier?: EtapeMetier; antivirusAnalysis?: AntivirusAnalysisModel };
 
-export type CreateDepotModel = Omit<DepotModel, 'id' | 'createdAt' | 'updatedAt' | 'step' | 'status' | 'user'>;
-export type UpdateDepotModel = Partial<DepotEntity>;
+export type CreateDepotModel = Omit<
+  DepotModel,
+  'id' | 'createdAt' | 'updatedAt' | 'step' | 'status' | 'user' | 'antivirusAnalysis'
+>;
+export type UpdateDepotModel = Partial<Omit<DepotEntity, 'antivirusAnalysis'>>;

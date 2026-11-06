@@ -4,6 +4,7 @@ import { QueueGateway, type Queue } from '@queue/queue';
 import { DepotEntity } from './depot.entity';
 import { DepotUploadGateway, DepotUploadTransaction } from './depotUpload.gateway';
 import { mapDepotEntityToModel } from './depot.mapper';
+import { AntivirusAnalysisEntity } from './antivirusAnalysis.entity';
 
 @Injectable()
 export class DepotUploadRepository implements DepotUploadGateway {
@@ -19,9 +20,17 @@ export class DepotUploadRepository implements DepotUploadGateway {
         create: async (data) => mapDepotEntityToModel(await repository.save(repository.create(data))),
         findForUpdate: async (id) => {
           const depot = await repository.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+          if (depot) {
+            depot.antivirusAnalysis = await manager.findOne(AntivirusAnalysisEntity, { where: { depotId: id } });
+          }
           return depot ? mapDepotEntityToModel(depot) : null;
         },
-        save: async (depot) => mapDepotEntityToModel(await repository.save(repository.create(depot))),
+        save: async (depot) => {
+          const data = Object.fromEntries(Object.entries(depot).filter(([key]) => key !== 'antivirusAnalysis'));
+          const saved = await repository.save(repository.create(data));
+          saved.antivirusAnalysis = await manager.findOne(AntivirusAnalysisEntity, { where: { depotId: saved.id } });
+          return mapDepotEntityToModel(saved);
+        },
         send: async (name, data, options) => {
           const id = await this.queue.send(name, data, {
             ...options,

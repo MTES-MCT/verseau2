@@ -147,7 +147,7 @@ describe('Dossier E2E - Depot Upload', () => {
       expect(s3Mock.hasFile(`depots/${responseBody.id}/file.xml`)).toBe(true);
 
       // Verify queue job was sent
-      const processFileJobs = queueMock.getJobsByName(QueueName.process_file);
+      const processFileJobs = queueMock.getJobsByName(QueueName.antivirus_scan);
       expect(processFileJobs).toHaveLength(1);
       expect(processFileJobs[0].data).toMatchObject({
         depotId: responseBody.id,

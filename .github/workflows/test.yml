@@ -34,7 +34,11 @@ jobs:
               - '.github/workflows/**'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
-              - '**/package.json'
+              - 'package.json'
+              - 'apps/back/package.json'
+              - 'apps/front/package.json'
+              - 'e2e/package.json'
+              - 'devops/tools/sync-pg/package.json'
               - 'packages/dossier/**'
               - 'packages/parser/**'
               - 'packages/shared/**'
@@ -58,6 +62,7 @@ jobs:
             if [[ "${{ steps.filter.outputs.back }}" == "true" ]]; then
               workspaces+=(back)
             fi
+
           fi
 
           if [[ ${#workspaces[@]} -eq 0 ]]; then
@@ -97,6 +102,7 @@ jobs:
         with:
           node-version: 24.x
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -111,7 +117,7 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        # Always validate the frozen lockfile, even after an exact cache hit.
         run: pnpm install --frozen-lockfile
 
       - name: Build ${{ matrix.workspace }}
