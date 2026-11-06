@@ -249,7 +249,7 @@ describe('DiffusionRapportProcessorService', () => {
       },
       {
         id: 'ctrl_v2',
-        name: ControleName.CTL039,
+        name: ControleName.CTL041,
         type: ControleType.CONTROLE_V2,
         success: true,
         createdAt: new Date(),
