@@ -29,7 +29,7 @@ export function AppFooter() {
         sub: [
           {
             alt: 'EAU-FRANCE',
-            imgUrl: 'https://assainissement.developpement-durable.gouv.fr/favicon/partenaires/Logo_eaufrance.svg',
+            imgUrl: `${import.meta.env.BASE_URL}favicon/partenaires/logo-eaufrance.png`,
             linkProps: {
               href: 'https://www.eaufrance.fr/',
               title: 'EAU-FRANCE',
@@ -37,7 +37,7 @@ export function AppFooter() {
           },
           {
             alt: 'OIEAU',
-            imgUrl: 'https://assainissement.developpement-durable.gouv.fr/favicon/partenaires/logo-2x.png',
+            imgUrl: `${import.meta.env.BASE_URL}favicon/partenaires/logo-oieau.png`,
             linkProps: {
               href: 'https://oieau.fr/',
               title: 'OIEAU',
@@ -45,7 +45,7 @@ export function AppFooter() {
           },
           {
             alt: 'OFB',
-            imgUrl: 'https://assainissement.developpement-durable.gouv.fr/favicon/partenaires/logo-ofb1.png',
+            imgUrl: `${import.meta.env.BASE_URL}favicon/partenaires/logo-ofb.jpg`,
             linkProps: {
               href: 'https://ofb.gouv.fr/',
               title: 'OFB',
@@ -53,7 +53,7 @@ export function AppFooter() {
           },
           {
             alt: "Agence de l'eau",
-            imgUrl: 'https://assainissement.developpement-durable.gouv.fr/favicon/partenaires/logo_agences.png',
+            imgUrl: `${import.meta.env.BASE_URL}favicon/partenaires/logo-agences.png`,
             linkProps: {
               href: 'http://www.lesagencesdeleau.fr/',
               title: "Agence de l'eau",

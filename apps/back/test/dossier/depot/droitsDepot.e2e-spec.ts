@@ -1,11 +1,11 @@
 import { CacheModule } from '@nestjs/cache-manager';
-import { INestApplication } from '@nestjs/common';
+import { ForbiddenException, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { App } from 'supertest/types';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
-import { DepotRightsException } from '@dossier/depot/depotError';
+import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
 import { DroitsUserService } from '@user/droitsUser.service';
 import { LanceleauGateway } from '@referentiel/lanceleau/lanceleau.gateway';
 import { LanceleauRepository } from '@referentiel/lanceleau/lanceleau.repository';
@@ -33,6 +33,7 @@ import { createReferentielDataset } from '../../createReferentielDataset';
 import {
   seedUserWithDroits,
   seedUserExpertBassin,
+  seedUserRole308,
   seedVSteuSclItv,
   seedUserWithoutDroits,
   clearUserWithDroits,
@@ -55,10 +56,20 @@ const EXPERT_BASSIN_USER = {
   itvRfa: '99887766554433',
 };
 
+const ROLE_308_USER = {
+  sub: 'role-308-sub',
+  email: 'role-308@example.com',
+  itvCdn: 300,
+  prCdn: 3000,
+  itvRfa: '11223344556677',
+};
+
 describe('DroitsDepotService (e2e)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let droitsDepotService: DroitsDepotService;
+  let droitsUserService: DroitsUserService;
+  let lanceleauRepository: LanceleauRepository;
 
   beforeAll(async () => {
     await startPostgresContainer();
@@ -97,6 +108,8 @@ describe('DroitsDepotService (e2e)', () => {
 
     dataSource = moduleFixture.get(getDataSourceToken());
     droitsDepotService = moduleFixture.get(DroitsDepotService);
+    droitsUserService = moduleFixture.get(DroitsUserService);
+    lanceleauRepository = moduleFixture.get(LanceleauRepository);
 
     await createReferentielDataset(dataSource);
     await dataSource.synchronize();
@@ -108,6 +121,39 @@ describe('DroitsDepotService (e2e)', () => {
 
   beforeEach(async () => {
     await clearUserWithDroits(dataSource);
+  });
+
+  describe('identification par le claim email Cerbère', () => {
+    it.each(['contact@example.com', ''])(
+      'résout les droits, le SIRET et le contact via login_lb quand mail vaut %j',
+      async (orionMail) => {
+        await seedUserWithDroits(dataSource, { ...TEST_USER, orionMail });
+
+        await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).resolves.toEqual({
+          itvCdn: TEST_USER.itvCdn,
+          isExpertNational: false,
+        });
+        await expect(droitsUserService.resolveItvCdn(TEST_USER.sub)).resolves.toBe(TEST_USER.itvCdn);
+        await expect(lanceleauRepository.findSiretByEmail(`  ${TEST_USER.email}  `)).resolves.toBe(TEST_USER.itvRfa);
+        await expect(lanceleauRepository.findOrionContactByEmail(`  ${TEST_USER.email}  `)).resolves.toEqual({
+          nom: 'Test',
+          prenom: 'User',
+        });
+      },
+    );
+
+    it('ne se rabat pas sur mail quand login_lb ne correspond pas', async () => {
+      await seedUserWithDroits(dataSource, {
+        ...TEST_USER,
+        email: 'autre-login@example.com',
+        orionMail: TEST_USER.email,
+      });
+
+      await expect(lanceleauRepository.findAgByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(lanceleauRepository.findSiretByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(lanceleauRepository.findOrionContactByEmail(TEST_USER.email)).resolves.toBeNull();
+      await expect(droitsUserService.resolveVerseauAccess(TEST_USER.email)).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('validation des erreurs', () => {
@@ -274,6 +320,49 @@ describe('DroitsDepotService (e2e)', () => {
 
       await expect(droitsDepotService.validateDroits(EXPERT_BASSIN_USER.sub, ['STEU01'], [])).rejects.toThrow(
         DepotRightsException,
+      );
+    });
+  });
+
+  describe('role 308 — droits par ouvrage', () => {
+    it('valide les droits pour un STEU si le SIRET correspond', async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, ['STEU01'], [])).resolves.toBeUndefined();
+    });
+
+    it('valide les droits pour un SCL si le SIRET correspond', async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, '', 'SCL01', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, [], ['SCL01'])).resolves.toBeUndefined();
+    });
+
+    it("refuse si le SIRET ne correspond pas à l'ouvrage", async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', 'AUTRE_SIRET');
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, ['STEU01'], [])).rejects.toThrow(
+        DepotRightsException,
+      );
+    });
+
+    it("refuse si le role 308 n'a pas de SIRET exploitable", async () => {
+      await seedUserRole308(dataSource, { ...ROLE_308_USER, sub: 'role-308-no-siret-sub', itvRfa: undefined });
+      await seedVSteuSclItv(dataSource, 'STEU01', '', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits('role-308-no-siret-sub', ['STEU01'], [])).rejects.toThrow(
+        DepotRightsException,
+      );
+    });
+
+    it('refuse les flux qualifies meme si le SIRET correspond', async () => {
+      await seedUserRole308(dataSource, ROLE_308_USER);
+      await seedVSteuSclItv(dataSource, 'STEU01', '', ROLE_308_USER.itvRfa);
+
+      await expect(droitsDepotService.validateDroits(ROLE_308_USER.sub, ['STEU01'], [], true)).rejects.toThrow(
+        new DepotRightsException(DepotError.FLUX_QUALIFIE_INTERDIT),
       );
     });
   });

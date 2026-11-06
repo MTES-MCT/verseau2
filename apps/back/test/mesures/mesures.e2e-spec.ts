@@ -90,6 +90,17 @@ describe('MesuresController (e2e)', () => {
     authService = app.get<Authentication>(Authentication);
 
     await createReferentielDataset(dataSource);
+    // Graph enrichment reads events, which are not part of the base referentiel fixture.
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS roseau.evo (
+        steu_cdn INTEGER,
+        evo_evt_dt TIMESTAMP,
+        evo_inactif_on BOOLEAN,
+        tlref_46_cdn INTEGER,
+        tlref_17_cdn INTEGER,
+        evo_desc_txt TEXT
+      )
+    `);
   });
 
   afterAll(async () => {
@@ -153,6 +164,7 @@ describe('MesuresController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/mesures')
+        .query({ ouvrageCode: STEU_SANDRE_CDA, dateDebut: '2024-01-01', dateFin: '2024-12-31' })
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -173,7 +185,13 @@ describe('MesuresController (e2e)', () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
       return request(app.getHttpServer())
-        .get('/mesures?pageSize=999')
+        .get('/mesures')
+        .query({
+          ouvrageCode: STEU_SANDRE_CDA,
+          dateDebut: '2024-01-01',
+          dateFin: '2024-12-31',
+          pageSize: 999,
+        })
         .set('Cookie', ['access_token=token'])
         .expect(400);
     });
@@ -181,7 +199,74 @@ describe('MesuresController (e2e)', () => {
     it('returns 400 for invalid query params (page < 1)', async () => {
       jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
 
-      return request(app.getHttpServer()).get('/mesures?page=0').set('Cookie', ['access_token=token']).expect(400);
+      return request(app.getHttpServer())
+        .get('/mesures')
+        .query({ ouvrageCode: STEU_SANDRE_CDA, dateDebut: '2024-01-01', dateFin: '2024-12-31', page: 0 })
+        .set('Cookie', ['access_token=token'])
+        .expect(400);
+    });
+
+    it('returns 400 when the station is missing', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      await request(app.getHttpServer())
+        .get('/mesures')
+        .query({ dateDebut: '2024-01-01', dateFin: '2024-12-31' })
+        .set('Cookie', ['access_token=token'])
+        .expect(400);
+    });
+
+    it('returns 400 when the period is missing', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      await request(app.getHttpServer())
+        .get('/mesures')
+        .query({ ouvrageCode: STEU_SANDRE_CDA })
+        .set('Cookie', ['access_token=token'])
+        .expect(400);
+    });
+
+    it('returns 400 when the period is inverted', async () => {
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+
+      await request(app.getHttpServer())
+        .get('/mesures')
+        .query({ ouvrageCode: STEU_SANDRE_CDA, dateDebut: '2024-12-31', dateFin: '2024-01-01' })
+        .set('Cookie', ['access_token=token'])
+        .expect(400);
+    });
+  });
+
+  describe.each(['/mesures', '/mesures/graph', '/mesures/export'])('GET %s - single ouvrage contract', (endpoint) => {
+    beforeEach(async () => {
+      await seedMinimalDataset();
+      await seedItv(dataSource, ITV_CDN, ITV_RFA);
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockUser());
+    });
+
+    it.each(['steu', 'scl'])('accepts one authorized %s code', async (ouvrageType) => {
+      await request(app.getHttpServer())
+        .get(endpoint)
+        .query({
+          ouvrageType,
+          ouvrageCode: ouvrageType === 'scl' ? 'SCL_TEST_001' : STEU_SANDRE_CDA,
+          dateDebut: '2024-01-01',
+          dateFin: '2024-12-31',
+        })
+        .set('Cookie', ['access_token=token'])
+        .expect(200);
+    });
+
+    it.each(['steu', 'scl'])('rejects missing, blank and repeated %s codes', async (ouvrageType) => {
+      const code = ouvrageType === 'scl' ? 'SCL_TEST_001' : STEU_SANDRE_CDA;
+
+      for (const ouvrageCode of [undefined, '   ', [code, 'OTHER'], [code, code]]) {
+        await request(app.getHttpServer())
+          .get(endpoint)
+          .query({ ouvrageType, ouvrageCode, dateDebut: '2024-01-01', dateFin: '2024-12-31' })
+          .set('Cookie', ['access_token=token'])
+          .expect(400);
+      }
     });
   });
 
@@ -230,7 +315,12 @@ describe('MesuresController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/mesures')
-        .query({ ouvrageType: 'scl', sclSandreCdas: 'SCL_TEST_001' })
+        .query({
+          ouvrageType: 'scl',
+          ouvrageCode: 'SCL_TEST_001',
+          dateDebut: '2024-01-01',
+          dateFin: '2024-12-31',
+        })
         .set('Cookie', ['access_token=token'])
         .expect(200);
 
@@ -252,7 +342,12 @@ describe('MesuresController (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/mesures')
-        .query({ ouvrageType: 'scl', sclSandreCdas: 'SCL_UNKNOWN' })
+        .query({
+          ouvrageType: 'scl',
+          ouvrageCode: 'SCL_UNKNOWN',
+          dateDebut: '2024-01-01',
+          dateFin: '2024-12-31',
+        })
         .set('Cookie', ['access_token=token'])
         .expect(200);
 

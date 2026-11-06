@@ -14,6 +14,7 @@ import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
 import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 import { OrionContact } from './lanceleau.model';
 
+// Les recherches par email utilisateur utilisent le claim Cerbère email comme login Orion, et non comme mail de contact.
 @Injectable()
 export class LanceleauRepository implements LanceleauGateway {
   constructor(
@@ -97,7 +98,7 @@ export class LanceleauRepository implements LanceleauGateway {
     const ag = await this.agRepository
       .createQueryBuilder('ag')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
-      .where('TRIM(oc.mail) = :email', { email: email.trim() })
+      .where('TRIM(oc.login_lb) = :email', { email: email.trim() })
       .getOne();
 
     if (!ag) {
@@ -152,17 +153,17 @@ export class LanceleauRepository implements LanceleauGateway {
       .select('itv.itv_rfa', 'itvRfa')
       .innerJoin(AgEntity, 'ag', 'ag.itv_cdn = itv.itv_cdn')
       .innerJoin(OrionCredentialsEntity, 'oc', 'oc.pr_cdn = ag.pr_cdn')
-      .where('TRIM(oc.mail) = :email', { email: email.trim() })
+      .where('TRIM(oc.login_lb) = :email', { email: email.trim() })
       .getRawOne<{ itvRfa: string | null }>();
     return row?.itvRfa ?? null;
   }
 
-  async findOrionContactByEmail(mail: string): Promise<OrionContact | null> {
+  async findOrionContactByEmail(email: string): Promise<OrionContact | null> {
     const row = await this.orionCredentialsRepository
       .createQueryBuilder('oc')
       .select('oc.lastName', 'nom')
       .addSelect('oc.firstName', 'prenom')
-      .where('TRIM(oc.mail) = :mail', { mail: mail.trim() })
+      .where('TRIM(oc.login_lb) = :email', { email: email.trim() })
       .getRawOne<OrionContact>();
 
     if (!row) {

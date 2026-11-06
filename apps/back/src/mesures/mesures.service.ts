@@ -33,11 +33,10 @@ export interface ListMesuresOptions extends PaginationQuery {
   ouvrageType: OuvrageTypeValue;
   authorizedSteuCdas: string[];
   authorizedSclCdas: string[];
-  ouvrageDepollutionCodes?: string[];
-  systemeCollecteCodes?: string[];
+  ouvrageCode: string;
   pmoCdn?: number;
-  dateDebut?: string;
-  dateFin?: string;
+  dateDebut: string;
+  dateFin: string;
   parametreCode?: string;
   qualification?: string;
   statut?: string;
@@ -61,8 +60,7 @@ export class MesuresService {
       ouvrageType,
       authorizedSteuCdas,
       authorizedSclCdas,
-      ouvrageDepollutionCodes: requestedOuvrages = [],
-      systemeCollecteCodes: requestedSystemesCollecte = [],
+      ouvrageCode,
       pmoCdn,
       parametreCode,
       qualification,
@@ -71,51 +69,23 @@ export class MesuresService {
       ...rest
     } = options;
 
-    let filters: MesureFilters;
-
-    if (ouvrageType === 'scl') {
-      const systemeCollecteCodes =
-        requestedSystemesCollecte.length > 0
-          ? requestedSystemesCollecte.filter((code) => authorizedSclCdas.includes(code))
-          : authorizedSclCdas;
-
-      if (systemeCollecteCodes.length === 0) {
-        return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
-      }
-
-      filters = {
-        ouvrageType: 'scl',
-        ouvrageDepollutionCodes: [],
-        systemeCollecteCodes,
-        ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
-        ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
-        ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
-        ...(statut ? { resultatAnalyseStatut: statut } : {}),
-        ...(finalite ? { analyseFinalite: finalite } : {}),
-        ...rest,
-      };
-    } else {
-      const ouvrageDepollutionCodes =
-        requestedOuvrages.length > 0
-          ? requestedOuvrages.filter((code) => authorizedSteuCdas.includes(code))
-          : authorizedSteuCdas;
-
-      if (ouvrageDepollutionCodes.length === 0) {
-        return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
-      }
-
-      filters = {
-        ouvrageType: 'steu',
-        ouvrageDepollutionCodes,
-        systemeCollecteCodes: [],
-        ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
-        ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
-        ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
-        ...(statut ? { resultatAnalyseStatut: statut } : {}),
-        ...(finalite ? { analyseFinalite: finalite } : {}),
-        ...rest,
-      };
+    const authorizedCodes = ouvrageType === 'scl' ? authorizedSclCdas : authorizedSteuCdas;
+    // Aucun repli sur l'ensemble des ouvrages autorisés si le code est vide ou hors droits.
+    if (!ouvrageCode || !authorizedCodes.includes(ouvrageCode)) {
+      return { data: [], total: 0, page: rest.page, pageSize: rest.pageSize };
     }
+
+    const filters: MesureFilters = {
+      ouvrageType,
+      ouvrageDepollutionCodes: ouvrageType === 'steu' ? [ouvrageCode] : [],
+      systemeCollecteCodes: ouvrageType === 'scl' ? [ouvrageCode] : [],
+      ...(pmoCdn !== undefined ? { pointMesureId: pmoCdn } : {}),
+      ...(parametreCode ? { parametreAnalyseCode: parametreCode } : {}),
+      ...(qualification ? { resultatAnalyseQualification: qualification } : {}),
+      ...(statut ? { resultatAnalyseStatut: statut } : {}),
+      ...(finalite ? { analyseFinalite: finalite } : {}),
+      ...rest,
+    };
 
     const { data, total } = await this.masaProvider.findMesures(filters);
 
@@ -144,13 +114,14 @@ export class MesuresService {
     >();
 
     const evenementRows = await this.paginatedExportService.collectAllRows(async (page, pageSize) => {
-      const startDate = options.dateDebut ? new Date(`${options.dateDebut}T00:00:00+01:00`) : new Date();
-      const endDate = options.dateFin ? new Date(`${getNextDayAsISODate(options.dateFin)}T00:00:00+01:00`) : new Date();
+      const startDate = new Date(`${options.dateDebut}T00:00:00+01:00`);
+      const endDate = new Date(`${getNextDayAsISODate(options.dateFin)}T00:00:00+01:00`);
       const filtresEvenement: ListEvenementSteuOptions = {
         authorizedSteuCdas: options.authorizedSteuCdas,
         startDate,
         endDate,
-        ouvrageDepollutionCode: options.ouvrageDepollutionCodes?.[0],
+        ouvrageDepollutionCode:
+          options.ouvrageType === 'steu' ? options.ouvrageCode : mesureDonneesBrutesRows[0].ouvrageDepollutionCode,
         page,
         pageSize,
       };

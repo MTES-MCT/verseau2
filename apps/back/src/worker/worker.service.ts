@@ -11,6 +11,7 @@ import { SftpAgentVerseauProcessorService } from './sftp/sftpAgentVerseauProcess
 import { ControleMetierProcessorService } from './controleMetier/controleMetierProcessor.service';
 import { ControleSandreUploadProcessorService } from './controleSandre/controle-sandre-upload.processor.service';
 import { ControleSandrePollProcessorService } from './controleSandre/controle-sandre-poll.processor.service';
+import type { SandrePollJob } from '@dossier/controle/technique/sandre/sandre';
 import { DiffusionRapportProcessorService } from './diffusionRapport/diffusionRapportProcessor.service';
 import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service';
 import { EmailProvider } from '@notification/email.provider';
@@ -192,25 +193,27 @@ export class WorkerService implements OnModuleInit {
           );
           break;
         case QueueName.controle_sandre_poll:
-          await this.queueService.work<{
-            depotId: string;
-            jeton: string;
-            attemptCount: number;
-            correlationId?: string;
-          }>(queueName, options, async ([job]) => {
-            const context = this.createJobContext(queueName, job, { depotId: job.data.depotId });
-            return await this.cls.runWith({ correlationId: job.data.correlationId, jobContext: context }, async () => {
-              const startedAt = this.logJobStarted(context, 'debug');
-              try {
-                const result = await this.controleSandrePollProcessorService.process(job.data);
-                this.logJobCompleted(context, startedAt, 'debug');
-                return result;
-              } catch (error: unknown) {
-                this.logJobFailed(context, startedAt, error);
-                throw error; // Re-throw so pg-boss still marks it as failed for retry
-              }
-            });
-          });
+          await this.queueService.work<SandrePollJob & { correlationId?: string }>(
+            queueName,
+            options,
+            async ([job]) => {
+              const context = this.createJobContext(queueName, job, { depotId: job.data.depotId });
+              return await this.cls.runWith(
+                { correlationId: job.data.correlationId, jobContext: context },
+                async () => {
+                  const startedAt = this.logJobStarted(context, 'debug');
+                  try {
+                    const result = await this.controleSandrePollProcessorService.process(job.data);
+                    this.logJobCompleted(context, startedAt, 'debug');
+                    return result;
+                  } catch (error: unknown) {
+                    this.logJobFailed(context, startedAt, error);
+                    throw error; // Re-throw so pg-boss still marks it as failed for retry
+                  }
+                },
+              );
+            },
+          );
           break;
         case QueueName.process_after_masa_webhook:
           await this.queueService.work<{ masaId: string; depotId: string; correlationId?: string }>(

@@ -46,6 +46,7 @@ export function useMesureFilters(tableEnabled = true) {
   const [hasSearched, setHasSearched] = useState(false);
   const [page, setPage] = useState(1);
   const [ouvrageError, setOuvrageError] = useState<string>('');
+  const [dateError, setDateError] = useState<string>('');
   const [ouvrageSearch, setOuvrageSearch] = useState('');
   const [sclSearch, setSclSearch] = useState('');
 
@@ -67,17 +68,11 @@ export function useMesureFilters(tableEnabled = true) {
 
   const submittedQuery = {
     ouvrageType: submitted.ouvrageType,
-    ...(submitted.ouvrageType === 'scl'
-      ? submitted.selectedOuvrageCode
-        ? { sclSandreCdas: [submitted.selectedOuvrageCode] }
-        : {}
-      : submitted.selectedOuvrageCode
-        ? { steuSandreCdas: [submitted.selectedOuvrageCode] }
-        : {}),
+    ouvrageCode: submitted.selectedOuvrageCode,
     ...(submitted.selectedPmoCdn !== null ? { pmoCdn: submitted.selectedPmoCdn } : {}),
     ...(submitted.selectedParametre ? { parametreCode: submitted.selectedParametre } : {}),
-    ...(submitted.dateDebut ? { dateDebut: submitted.dateDebut } : {}),
-    ...(submitted.dateFin ? { dateFin: submitted.dateFin } : {}),
+    dateDebut: submitted.dateDebut,
+    dateFin: submitted.dateFin,
     ...(submitted.finalite ? { finalite: submitted.finalite } : {}),
     ...(submitted.statut ? { statut: submitted.statut } : {}),
     ...(submitted.qualification ? { qualification: submitted.qualification } : {}),
@@ -97,11 +92,20 @@ export function useMesureFilters(tableEnabled = true) {
     if (!form.selectedOuvrageCode) {
       setOuvrageError(
         form.ouvrageType === 'scl'
-          ? 'Veuillez sélectionner au moins un système de collecte.'
-          : 'Veuillez sélectionner au moins une station.',
+          ? 'Veuillez sélectionner un système de collecte.'
+          : 'Veuillez sélectionner une station.',
       );
       return;
     }
+    if (!form.dateDebut || !form.dateFin) {
+      setDateError('Veuillez saisir une date de début et une date de fin.');
+      return;
+    }
+    if (form.dateDebut > form.dateFin) {
+      setDateError('La date de début doit être antérieure ou égale à la date de fin.');
+      return;
+    }
+    setDateError('');
     setSubmitted(form);
     setHasSearched(true);
     setPage(1);
@@ -171,6 +175,7 @@ export function useMesureFilters(tableEnabled = true) {
     sclSearch,
     setSclSearch,
     ouvrageError,
+    dateError,
     pointsMesure,
     pointsMesureLoading,
     parametres,

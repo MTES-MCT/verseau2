@@ -86,21 +86,18 @@ export class ConformiteService {
       sortOrder,
     } = options;
 
-    if (authorizedSteuCdas.length === 0) {
-      return this.buildEmptyPaginatedResponse(page, pageSize);
-    }
-
-    const ouvrageDepollutionIds = await this.resolveAuthorizedSteuCdns(authorizedSteuCdas);
-    if (ouvrageDepollutionIds.length === 0) {
+    const ouvrageDepollutionCodes = [...new Set(authorizedSteuCdas)].filter(
+      (code) => !ouvrageDepollutionCode || code === ouvrageDepollutionCode,
+    );
+    if (ouvrageDepollutionCodes.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSteuFilters = {
-      ouvrageDepollutionIds,
+      ouvrageDepollutionCodes,
       year,
       page,
       pageSize,
-      ...(ouvrageDepollutionCode ? { ouvrageDepollutionCode } : {}),
       ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),
@@ -150,21 +147,18 @@ export class ConformiteService {
       sortOrder,
     } = options;
 
-    if (authorizedSclCdas.length === 0) {
-      return this.buildEmptyPaginatedResponse(page, pageSize);
-    }
-
-    const systemeCollecteIds = await this.resolveAuthorizedSclCdns(authorizedSclCdas);
-    if (systemeCollecteIds.length === 0) {
+    const systemeCollecteCodes = [...new Set(authorizedSclCdas)].filter(
+      (code) => !systemeCollecteCode || code === systemeCollecteCode,
+    );
+    if (systemeCollecteCodes.length === 0) {
       return this.buildEmptyPaginatedResponse(page, pageSize);
     }
 
     const filters: ConformiteSclFilters = {
-      systemeCollecteIds,
+      systemeCollecteCodes,
       year,
       page,
       pageSize,
-      ...(systemeCollecteCode ? { systemeCollecteCode } : {}),
       ...(trancheObligationRfa ? { trancheObligationRfa } : {}),
       ...(impact ? { impact } : {}),
       ...(sortBy ? { sortBy } : {}),

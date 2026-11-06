@@ -1,3 +1,4 @@
+import './monitoring/instrument.api';
 import { NestFactory } from '@nestjs/core';
 import { ApiModule } from './api/api.module';
 import { MigrationService } from './infra/database/migration.service';

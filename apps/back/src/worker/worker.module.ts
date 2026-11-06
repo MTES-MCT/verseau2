@@ -15,9 +15,18 @@ import { MasaWebhookProcessorService } from './masa/masaWebhookProcessor.service
 import { DiffusionRapportProcessorService } from './diffusionRapport/diffusionRapportProcessor.service';
 import { RapportPdfGeneratorService } from '@dossier/rapport/rapportPdfGenerator.service';
 import { MasaModule } from '@masa/masa.module';
+import { MonitoringModule } from '../monitoring/monitoring.module';
 
 @Module({
-  imports: [InfraModule, DossierModule, NotificationModule, ReferentielModule, UserModule, MasaModule],
+  imports: [
+    MonitoringModule,
+    InfraModule,
+    DossierModule,
+    NotificationModule,
+    ReferentielModule,
+    UserModule,
+    MasaModule,
+  ],
   providers: [
     FileProcessorService,
     WorkerService,

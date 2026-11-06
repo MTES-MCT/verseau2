@@ -96,29 +96,14 @@ describe('MesuresService', () => {
   });
 
   describe('listMesures', () => {
-    it('calls findMesures with all authorized STEUs when no filter given', async () => {
-      masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
-
+    it('does not query any station when the requested code is empty', async () => {
       const result = await service.listMesures({
         authorizedSteuCdas: ['STEU001', 'STEU002'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        page: 1,
-        pageSize: 20,
-      });
-
-      expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001', 'STEU002'], ouvrageType: 'steu' }),
-      );
-      expect(result.total).toBe(1);
-      expect(result.data).toHaveLength(1);
-    });
-
-    it('returns empty result when authorized STEUs is empty', async () => {
-      const result = await service.listMesures({
-        authorizedSteuCdas: [],
-        authorizedSclCdas: [],
-        ouvrageType: 'steu',
+        ouvrageCode: '',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
       });
@@ -127,29 +112,65 @@ describe('MesuresService', () => {
       expect(masaProvider.findMesures).not.toHaveBeenCalled();
     });
 
-    it('intersects requested STEUs with authorized STEUs', async () => {
+    it('returns empty result when authorized STEUs is empty', async () => {
+      const result = await service.listMesures({
+        authorizedSteuCdas: [],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
+      expect(masaProvider.findMesures).not.toHaveBeenCalled();
+    });
+
+    it('queries only the requested STEU even when several STEUs are authorized', async () => {
       masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
 
       await service.listMesures({
         authorizedSteuCdas: ['STEU001', 'STEU003'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001'] }),
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001'], systemeCollecteCodes: [] }),
       );
     });
 
-    it('returns empty when requested STEUs are not in authorized list', async () => {
+    it('returns empty when the requested STEU is not in the authorized list', async () => {
       const result = await service.listMesures({
         authorizedSteuCdas: ['STEU999'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toEqual({ data: [], total: 0, page: 1, pageSize: 20 });
+      expect(masaProvider.findMesures).not.toHaveBeenCalled();
+    });
+
+    it.each(['steu', 'scl'] as const)('does not use rights for another ouvrage type (%s)', async (ouvrageType) => {
+      const result = await service.listMesures({
+        authorizedSteuCdas: ouvrageType === 'scl' ? ['CODE001'] : ['OTHER'],
+        authorizedSclCdas: ouvrageType === 'steu' ? ['CODE001'] : ['OTHER'],
+        ouvrageType,
+        ouvrageCode: 'CODE001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
       });
@@ -165,6 +186,7 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
         dateDebut: '2024-01-01',
         dateFin: '2024-12-31',
         parametreCode: 'MES_CO',
@@ -194,6 +216,9 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 3,
         pageSize: 10,
       });
@@ -207,16 +232,22 @@ describe('MesuresService', () => {
       masaProvider.findMesures.mockResolvedValue({ data: [], total: 0 });
 
       await service.listMesures({
-        authorizedSteuCdas: [],
-        authorizedSclCdas: ['SCL001'],
+        authorizedSteuCdas: ['STEU001'],
+        authorizedSclCdas: ['SCL001', 'SCL002'],
         ouvrageType: 'scl',
-        systemeCollecteCodes: ['SCL001'],
+        ouvrageCode: 'SCL001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
       });
 
       expect(masaProvider.findMesures).toHaveBeenCalledWith(
-        expect.objectContaining({ ouvrageType: 'scl', systemeCollecteCodes: ['SCL001'] }),
+        expect.objectContaining({
+          ouvrageType: 'scl',
+          ouvrageDepollutionCodes: [],
+          systemeCollecteCodes: ['SCL001'],
+        }),
       );
     });
 
@@ -225,6 +256,9 @@ describe('MesuresService', () => {
         authorizedSteuCdas: [],
         authorizedSclCdas: [],
         ouvrageType: 'scl',
+        ouvrageCode: 'SCL001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
       });
@@ -240,6 +274,9 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         statut: 'A',
         page: 1,
         pageSize: 20,
@@ -255,6 +292,9 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         qualification: '1',
         page: 1,
         pageSize: 20,
@@ -307,6 +347,49 @@ describe('MesuresService', () => {
   });
 
   describe('getMesuresGraph', () => {
+    it('scopes STEU events to the parent station of the selected SCL', async () => {
+      masaProvider.findMesures.mockResolvedValue({
+        data: [makeMesureRow()],
+        total: 1,
+      });
+      evenementService.listEvenementSteu.mockResolvedValue({ data: [], total: 0 });
+
+      await service.getMesuresGraph({
+        authorizedSteuCdas: ['STEU001', 'STEU002'],
+        authorizedSclCdas: ['SCL001', 'SCL002'],
+        ouvrageType: 'scl',
+        ouvrageCode: 'SCL001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findMesures).toHaveBeenCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCodes: [], systemeCollecteCodes: ['SCL001'] }),
+      );
+      expect(evenementService.listEvenementSteu).toHaveBeenCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCode: 'STEU001' }),
+      );
+    });
+
+    it('does not query events when the selected ouvrage is unauthorized', async () => {
+      const result = await service.getMesuresGraph({
+        authorizedSteuCdas: ['STEU002'],
+        authorizedSclCdas: [],
+        ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result).toEqual([]);
+      expect(masaProvider.findMesures).not.toHaveBeenCalled();
+      expect(evenementService.listEvenementSteu).not.toHaveBeenCalled();
+    });
+
     it('passes an exclusive upper-bound endDate to event filtering', async () => {
       masaProvider.findMesures.mockResolvedValue({ data: [makeMesureRow()], total: 1 });
       evenementService.listEvenementSteu.mockResolvedValue({
@@ -331,7 +414,7 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
-        ouvrageDepollutionCodes: ['STEU001'],
+        ouvrageCode: 'STEU001',
         dateDebut: '2024-01-01',
         dateFin: '2024-01-31',
         page: 1,
@@ -340,6 +423,7 @@ describe('MesuresService', () => {
 
       expect(evenementService.listEvenementSteu).toHaveBeenCalledWith(
         expect.objectContaining({
+          ouvrageDepollutionCode: 'STEU001',
           startDate: new Date('2024-01-01T00:00:00+01:00'),
           endDate: new Date('2024-02-01T00:00:00+01:00'),
         }),
@@ -362,6 +446,9 @@ describe('MesuresService', () => {
         authorizedSteuCdas: ['STEU001'],
         authorizedSclCdas: [],
         ouvrageType: 'steu',
+        ouvrageCode: 'STEU001',
+        dateDebut: '2024-01-01',
+        dateFin: '2024-12-31',
         page: 1,
         pageSize: 20,
       });

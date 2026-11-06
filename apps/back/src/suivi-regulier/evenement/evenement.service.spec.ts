@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { CsvGenerator } from '@shared/csv/csv.types';
 import { MasaProvider } from '@masa/masa.provider';
 import { PaginatedExportService } from '@shared/csv/paginatedExport.service';
@@ -9,16 +10,11 @@ const DEFAULT_TYPE_EVENEMENT_CODES = ['1', '2', '3', '4', '5', '6', '7', '8', '9
 
 describe('EvenementService', () => {
   let service: EvenementService;
-  let masaProviderMock: Partial<MasaProvider>;
+  let masaProviderMock: DeepMocked<MasaProvider>;
   let csvGenerator: { generate: jest.Mock };
 
   beforeEach(async () => {
-    masaProviderMock = {
-      findEvenementSteu: jest.fn(),
-      findEvenementScl: jest.fn(),
-      findSteuBatchBySandreCdas: jest.fn(),
-      findSclBatchBySandreCdas: jest.fn(),
-    };
+    masaProviderMock = createMock<MasaProvider>();
 
     csvGenerator = { generate: jest.fn().mockReturnValue('csv-content') };
 
@@ -40,9 +36,45 @@ describe('EvenementService', () => {
     service = module.get<EvenementService>(EvenementService);
   });
 
+  describe('listAvailablePointsMesure', () => {
+    it('returns measurement points grouped by collection system', async () => {
+      masaProviderMock.findSclBatchBySandreCdas.mockResolvedValue([
+        { systemeCollecteCode: 'SCL1', systemeCollecteId: 501 },
+      ]);
+      const pointsBySystemeCollecte = {
+        '501': [
+          {
+            pointMesureId: 9001,
+            pointMesureNumero: 'A2',
+            pointMesureLibelle: null,
+            pointMesureLocalisationGlobale: 'A2',
+          },
+        ],
+      };
+      masaProviderMock.findPointsMesureBySystemesCollecte.mockResolvedValue(pointsBySystemeCollecte);
+
+      await expect(service.listAvailablePointsMesure(['SCL1'])).resolves.toEqual(pointsBySystemeCollecte);
+      expect(masaProviderMock.findPointsMesureBySystemesCollecte).toHaveBeenCalledWith([501]);
+    });
+
+    it('returns an empty object when no collection systems are authorized', async () => {
+      await expect(service.listAvailablePointsMesure([])).resolves.toEqual({});
+      expect(masaProviderMock.findPointsMesureBySystemesCollecte).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty object when authorized codes resolve to no collection systems', async () => {
+      masaProviderMock.findSclBatchBySandreCdas.mockResolvedValue([]);
+
+      await expect(service.listAvailablePointsMesure(['SCL1'])).resolves.toEqual({});
+      expect(masaProviderMock.findPointsMesureBySystemesCollecte).not.toHaveBeenCalled();
+    });
+  });
+
   it('does not pass pointMesureId to masaProvider for STEU', async () => {
-    (masaProviderMock.findSteuBatchBySandreCdas as jest.Mock).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
-    (masaProviderMock.findEvenementSteu as jest.Mock).mockResolvedValue({ data: [], total: 0 });
+    masaProviderMock.findSteuBatchBySandreCdas.mockResolvedValue([
+      { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionId: 123 },
+    ]);
+    masaProviderMock.findEvenementSteu.mockResolvedValue({ data: [], total: 0 });
 
     await service.listEvenementSteu({
       authorizedSteuCdas: ['STEU1'],
@@ -63,8 +95,10 @@ describe('EvenementService', () => {
   });
 
   it('passes a single selected event type as an array for STEU', async () => {
-    (masaProviderMock.findSteuBatchBySandreCdas as jest.Mock).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
-    (masaProviderMock.findEvenementSteu as jest.Mock).mockResolvedValue({ data: [], total: 0 });
+    masaProviderMock.findSteuBatchBySandreCdas.mockResolvedValue([
+      { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionId: 123 },
+    ]);
+    masaProviderMock.findEvenementSteu.mockResolvedValue({ data: [], total: 0 });
 
     await service.listEvenementSteu({
       authorizedSteuCdas: ['STEU1'],
@@ -86,8 +120,10 @@ describe('EvenementService', () => {
   });
 
   it('passes default event types for SCL when no event type is provided', async () => {
-    (masaProviderMock.findSclBatchBySandreCdas as jest.Mock).mockResolvedValue([{ systemeCollecteId: 456 }]);
-    (masaProviderMock.findEvenementScl as jest.Mock).mockResolvedValue({ data: [], total: 0 });
+    masaProviderMock.findSclBatchBySandreCdas.mockResolvedValue([
+      { systemeCollecteCode: 'SCL1', systemeCollecteId: 456 },
+    ]);
+    masaProviderMock.findEvenementScl.mockResolvedValue({ data: [], total: 0 });
 
     await service.listEvenementScl({
       authorizedSclCdas: ['SCL1'],
@@ -107,8 +143,10 @@ describe('EvenementService', () => {
   });
 
   it('formats STEU export rows before generating csv', async () => {
-    (masaProviderMock.findSteuBatchBySandreCdas as jest.Mock).mockResolvedValue([{ ouvrageDepollutionId: 123 }]);
-    (masaProviderMock.findEvenementSteu as jest.Mock).mockResolvedValue({
+    masaProviderMock.findSteuBatchBySandreCdas.mockResolvedValue([
+      { ouvrageDepollutionCode: 'STEU1', ouvrageDepollutionId: 123 },
+    ]);
+    masaProviderMock.findEvenementSteu.mockResolvedValue({
       data: [
         {
           ouvrageDepollutionCode: 'STEU1',
@@ -147,12 +185,16 @@ describe('EvenementService', () => {
   });
 
   it('formats SCL export rows before generating csv', async () => {
-    (masaProviderMock.findSclBatchBySandreCdas as jest.Mock).mockResolvedValue([{ systemeCollecteId: 456 }]);
-    (masaProviderMock.findEvenementScl as jest.Mock).mockResolvedValue({
+    masaProviderMock.findSclBatchBySandreCdas.mockResolvedValue([
+      { systemeCollecteCode: 'SCL1', systemeCollecteId: 456 },
+    ]);
+    masaProviderMock.findEvenementScl.mockResolvedValue({
       data: [
         {
           systemeCollecteCode: 'SCL1',
           systemeCollecteNom: 'Réseau 1',
+          ouvrageDepollutionCode: 'STEU1',
+          ouvrageDepollutionNom: null,
           prisEnCompte: false,
           date: '2024-02-20',
           typeEvenementCode: '2',

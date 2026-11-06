@@ -369,6 +369,12 @@ describe('Dossier E2E - Real Queue Processing', () => {
         });
         expect(sftpResult.status).toBe('completed');
         expect((await findDepotOrFail(depotId)).step).toBe(DepotStep.SFTP_COMPLETED);
+        const pollJobs = await getJobsForDepot(dataSource, QueueName.controle_sandre_poll, depotId);
+        expect(pollJobs[0].data).toMatchObject({
+          sessionId: expect.stringMatching(/^session_mock_token_/),
+          taskId: expect.stringMatching(/^mock_token_/),
+        });
+        expect(pollJobs[0].data).not.toHaveProperty('jeton');
 
         const sentFile = agentVerseauClientMock.calls.find((call) => call.fileName === `${depotId}_${filename}`);
         expect(sentFile).toBeDefined();

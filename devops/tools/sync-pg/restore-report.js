@@ -1,4 +1,5 @@
 const { loadTchapConfig, loadEnvironment, loadLogsUrl } = require('./tchap-config');
+const { getErrorDiagnostics } = require('./tchap-diagnostics');
 
 function escapeHtml(value) {
   return value
@@ -21,9 +22,9 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
     lines.push(`Environnement : ${environment.isProduction ? 'PRODUCTION' : environment.label}`);
   }
   if (error !== undefined) {
-    lines.push(`Erreur : ${error}`);
+    lines.push(`❌ Erreur : ${error}`);
   } else if (skipped) {
-    lines.push('Aucun nouveau dump : ce fichier a déjà été restauré.');
+    lines.push('⏭️ Aucun nouveau dump : ce fichier a déjà été restauré.');
   }
 
   const seconds = Math.floor(durationMs / 1000);
@@ -40,7 +41,7 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
       lines.push(`- ${item.latestParis?.slice(0, 10) ?? 'valeur nulle'} : ${item.source}`);
     }
   } catch {
-    lines.push('- fraîcheur indisponible');
+    lines.push('- ⚠️ fraîcheur indisponible');
   }
 
   const logsUrl = loadLogsUrl();
@@ -55,21 +56,25 @@ async function createReport({ error, fileName, excludedTables, durationMs, skipp
 
   const environmentLineIndex = 1;
   const html = lines
-    .map((line, index) => (index === environmentLineIndex ? 'Environnement : <strong>PRODUCTION</strong>' : escapeHtml(line)))
+    .map((line, index) => (index === environmentLineIndex ? 'Environnement : <strong>! PRODUCTION !</strong>' : escapeHtml(line)))
     .join('<br>');
   return { text, html };
 }
 
 async function sendReport(report) {
+  let stage = 'report-preparation';
   try {
     const tchapConfig = loadTchapConfig();
     if (!tchapConfig.enabled) return;
 
     const { text, html } = await createReport(report);
+    stage = 'client-setup';
     const { TchapService } = require('./tchap-service');
-    await new TchapService(tchapConfig).sendText(text, html);
+    const service = new TchapService(tchapConfig);
+    stage = 'identity-check';
+    await service.sendText(text, html);
   } catch (error) {
-    console.error('Échec de l’envoi du bilan Tchap :', error);
+    console.error('Échec de l’envoi du bilan Tchap :', JSON.stringify({ stage, ...getErrorDiagnostics(error) }));
   }
 }
 

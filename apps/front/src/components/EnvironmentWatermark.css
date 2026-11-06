@@ -1,0 +1,21 @@
+.environment-watermark {
+  --environment-watermark-image: var(--environment-watermark-light);
+}
+
+[data-fr-theme='dark'] .environment-watermark {
+  --environment-watermark-image: var(--environment-watermark-dark);
+}
+
+.environment-watermark,
+.environment-watermark .fr-header,
+.environment-watermark .fr-header__brand,
+.environment-watermark .fr-footer {
+  background-image: var(--environment-watermark-image);
+  background-size: 100vw 100vh;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.environment-watermark .fr-header {
+  background-color: var(--background-raised-grey);
+}

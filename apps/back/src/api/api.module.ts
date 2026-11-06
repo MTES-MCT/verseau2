@@ -14,9 +14,11 @@ import { ConformiteModule } from '../conformite/conformite.module';
 import { IndicateursModule } from '../indicateurs/indicateurs.module';
 import { MesuresModule } from '../mesures/mesures.module';
 import { SuiviRegulierModule } from '../suivi-regulier/suivi-regulier.module';
+import { MonitoringModule } from '../monitoring/monitoring.module';
 
 @Module({
   imports: [
+    MonitoringModule,
     AuthenticationModule,
     FrontendStaticModule,
     DossierModule,
