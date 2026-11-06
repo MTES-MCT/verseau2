@@ -145,7 +145,7 @@ describe('RapportPdfGeneratorService', () => {
       },
       {
         id: 'ctrl_v2_success',
-        name: ControleName.CTL039,
+        name: ControleName.CTL041,
         type: ControleType.CONTROLE_V2,
         success: true,
         createdAt: now,
@@ -163,7 +163,7 @@ describe('RapportPdfGeneratorService', () => {
       { indent: 20 },
     );
     expect(text).toHaveBeenCalledWith(
-      '• CTL039 - Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5',
+      '• CTL041 - Vérification des concentrations en DCO en dehors des gammes de valeurs attendues',
       { indent: 20 },
     );
     expect(text).toHaveBeenCalledWith(

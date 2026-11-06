@@ -263,13 +263,12 @@ async function generateDummyPdf() {
       updatedAt: new Date(),
     },
     {
-      id: 'ctrl_039',
-      name: ControleName.CTL039,
+      id: 'ctrl_041',
+      name: ControleName.CTL041,
       type: ControleType.CONTROLE_V2,
       success: false,
-      error: ErrorCode.E2_039,
-      //Ratio DCO/DBO5 hors plage (1.5-3.5) pour l'ouvrage ${params[0]}, point ${params[1]}, date ${params[2]} (DCO=${params[4]}, DBO5=${params[5]}, ratio=${params[6]})
-      errorParams: ['Ouvrage1', 'Point B', '2023-10-01', '', '100', '20', '5'],
+      error: ErrorCode.E2_041,
+      errorParams: ['Ouvrage1', 'Point B', '2023-10-01', '', '100'],
       evenementType: EvenementType.AVERTISSEMENT,
       createdAt: new Date(),
       updatedAt: new Date(),

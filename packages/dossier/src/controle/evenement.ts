@@ -27,21 +27,12 @@ export enum ErrorCode {
   E2_034 = 'E2.034',
   E2_035 = 'E2.035',
   E2_036 = 'E2.036',
-  E2_039 = 'E2.039',
-  E2_040 = 'E2.040',
   E2_041 = 'E2.041',
   E2_042 = 'E2.042',
-  E2_043 = 'E2.043',
-  E2_044 = 'E2.044',
-  E2_045 = 'E2.045',
   E2_046 = 'E2.046',
   E2_047 = 'E2.047',
-  E2_048 = 'E2.048',
-  E2_049 = 'E2.049',
-  E2_050 = 'E2.050',
   E2_051 = 'E2.051',
   E2_052 = 'E2.052',
-  E2_053 = 'E2.053',
   E2_054 = 'E2.054',
   E2_055 = 'E2.055',
   E2_056 = 'E2.056',
@@ -91,55 +82,10 @@ export type ErrorParamsMap = {
   [ErrorCode.E2_034]: [cdTypeDeversoir: string];
   [ErrorCode.E2_035]: [cdConformite: string];
   [ErrorCode.E2_036]: [cdTypeAppareil: string];
-  [ErrorCode.E2_039]: [
-    cdOuvrage: string,
-    locGlobale: string,
-    date: string,
-    cdSupport: string,
-    val1: string,
-    val2: string,
-    ratio: string,
-  ];
-  [ErrorCode.E2_040]: [
-    cdOuvrage: string,
-    locGlobale: string,
-    date: string,
-    cdSupport: string,
-    val1: string,
-    val2: string,
-    ratio: string,
-  ];
   [ErrorCode.E2_041]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
   [ErrorCode.E2_042]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
-  [ErrorCode.E2_043]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
-  [ErrorCode.E2_044]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
-  [ErrorCode.E2_045]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
   [ErrorCode.E2_046]: [cdOuvrage: string, locGlobale: string, date: string, cdSupport: string, val: string];
   [ErrorCode.E2_047]: [
-    cdOuvrage: string,
-    locGlobale: string,
-    date: string,
-    cdSupport: string,
-    val1: string,
-    val2: string,
-  ];
-  [ErrorCode.E2_048]: [
-    cdOuvrage: string,
-    locGlobale: string,
-    date: string,
-    cdSupport: string,
-    val1: string,
-    val2: string,
-  ];
-  [ErrorCode.E2_049]: [
-    cdOuvrage: string,
-    locGlobale: string,
-    date: string,
-    cdSupport: string,
-    val1: string,
-    val2: string,
-  ];
-  [ErrorCode.E2_050]: [
     cdOuvrage: string,
     locGlobale: string,
     date: string,
@@ -151,7 +97,6 @@ export type ErrorParamsMap = {
     | [cdOuvrage: string, date: string, seuil: string, valA3: string, testA3: string, valA4: string, testA4: string]
     | [date: string];
   [ErrorCode.E2_052]: [param: string, cdOuvrage: string, date: string, val: string, cma: string] | [date: string];
-  [ErrorCode.E2_053]: [cdOuvrage: string, date: string, total: string, maxRef: string, threshold: string];
   [ErrorCode.E2_054]: [
     cdOuvrage: string,
     chargeMaxN: string,
