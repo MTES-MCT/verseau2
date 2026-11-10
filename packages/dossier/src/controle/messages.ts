@@ -120,36 +120,18 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
       const [cdTypeAppareil] = params as ErrorParamsMap[ErrorCode.E2_036];
       return `Le code Sandre ${cdTypeAppareil} du type d'appareil de mesure est inconnu ! Veuillez modifier sa valeur dans le fichier.`;
     }
-    case ErrorCode.E2_039:
-      return buildErrorMessage39(params);
-    case ErrorCode.E2_040:
-      return buildErrorMessage40(params);
     case ErrorCode.E2_041:
       return buildErrorMessage41(params);
     case ErrorCode.E2_042:
       return buildErrorMessage42(params);
-    case ErrorCode.E2_043:
-      return buildErrorMessage43(params);
-    case ErrorCode.E2_044:
-      return buildErrorMessage44(params);
-    case ErrorCode.E2_045:
-      return buildErrorMessage45(params);
     case ErrorCode.E2_046:
       return buildErrorMessage46(params);
     case ErrorCode.E2_047:
       return buildErrorMessage47(params);
-    case ErrorCode.E2_048:
-      return buildErrorMessage48(params);
-    case ErrorCode.E2_049:
-      return buildErrorMessage49(params);
-    case ErrorCode.E2_050:
-      return buildErrorMessage50(params);
     case ErrorCode.E2_051:
       return buildErrorMessage51(params);
     case ErrorCode.E2_052:
       return buildErrorMessage52(params);
-    case ErrorCode.E2_053:
-      return buildErrorMessage53(params);
     case ErrorCode.E2_054:
       return buildErrorMessage54(params);
     case ErrorCode.E2_055:
@@ -193,24 +175,6 @@ export function buildMessage(error: ErrorCode | undefined, params: string[]): st
   }
 }
 
-const buildErrorMessage39 = (params: string[]) => {
-  const p = params as ErrorParamsMap[ErrorCode.E2_039];
-  if (p.length === 7) {
-    const [cdOuvrage, locGlobale, date, , val1, val2, ratio] = p;
-    return `Le ratio DCO/DBO5 calculé (${ratio}) est en dehors de la plage de valeurs attendues (1,5 à 3,5) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date} (DCO = ${val1} mg/L, DBO5 = ${val2} mg/L).`;
-  }
-  return p[4];
-};
-
-const buildErrorMessage40 = (params: string[]) => {
-  const p = params as ErrorParamsMap[ErrorCode.E2_040];
-  if (p.length === 7) {
-    const [cdOuvrage, locGlobale, date, , val1, val2, ratio] = p;
-    return `Le ratio MES/DBO5 calculé (${ratio}) est en dehors de la plage de valeurs attendues (0,7 à 1,5) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date} (MES = ${val1} mg/L, DBO5 = ${val2} mg/L).`;
-  }
-  return p[4];
-};
-
 const buildErrorMessage41 = (params: string[]) => {
   const p = params as ErrorParamsMap[ErrorCode.E2_041];
   if (p.length === 5) {
@@ -229,33 +193,6 @@ const buildErrorMessage42 = (params: string[]) => {
   return `Valeur DBO5 manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
 };
 
-const buildErrorMessage43 = (params: string[]) => {
-  const p = params as ErrorParamsMap[ErrorCode.E2_043];
-  if (p.length === 5) {
-    const [cdOuvrage, locGlobale, date, , val] = p;
-    return `La concentration en MES (${val} mg/L) est en dehors de la plage de valeurs attendues (100 à 1200 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
-  }
-  return `Valeur MES manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
-};
-
-const buildErrorMessage44 = (params: string[]) => {
-  const p = params as ErrorParamsMap[ErrorCode.E2_044];
-  if (p.length === 5) {
-    const [cdOuvrage, locGlobale, date, , val] = p;
-    return `La concentration en NTK (${val} mg/L) est en dehors de la plage de valeurs attendues (20 à 160 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
-  }
-  return `Valeur NTK manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
-};
-
-const buildErrorMessage45 = (params: string[]) => {
-  const p = params as ErrorParamsMap[ErrorCode.E2_045];
-  if (p.length === 5) {
-    const [cdOuvrage, locGlobale, date, , val] = p;
-    return `La concentration en Ptot (${val} mg/L) est en dehors de la plage de valeurs attendues (4 à 25 mg/L) pour l'ouvrage ${cdOuvrage}, point de mesure ${locGlobale}, à la date du ${date}.`;
-  }
-  return `Valeur Ptot manquante pour l'ouvrage ${p[0]}, point ${p[1]}, date ${p[2]}`;
-};
-
 const buildErrorMessage46 = (params: string[]) => {
   const p = params as ErrorParamsMap[ErrorCode.E2_046];
   if (p.length === 5) {
@@ -268,21 +205,6 @@ const buildErrorMessage46 = (params: string[]) => {
 const buildErrorMessage47 = (params: string[]) => {
   const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_047];
   return `Incohérence : DCO ≤ DBO5 pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (DCO=${val1} mg/L, DBO5=${val2} mg/L)`;
-};
-
-const buildErrorMessage48 = (params: string[]) => {
-  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_048];
-  return `Incohérence : NTK ≤ N-NH4 pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (NTK=${val1} mg/L, N-NH4=${val2} mg/L)`;
-};
-
-const buildErrorMessage49 = (params: string[]) => {
-  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_049];
-  return `Incohérence : NGL ≤ NTK pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (NGL=${val1}, NTK=${val2})`;
-};
-
-const buildErrorMessage50 = (params: string[]) => {
-  const [cdOuvrage, locGlobale, date, , val1, val2] = params as ErrorParamsMap[ErrorCode.E2_050];
-  return `Incohérence : Ptot ≤ PO4 pour l'ouvrage ${cdOuvrage}, point ${locGlobale}, date ${date} (Ptot=${val1}, PO4=${val2})`;
 };
 
 const buildErrorMessage51 = (params: string[]) => {
@@ -302,16 +224,6 @@ const buildErrorMessage52 = (params: string[]) => {
     return `Concentration ${param} incohérente pour l'ouvrage ${cdOuvrage}, date ${date}. Valeur mesurée: ${val}, CMA année N-1: ${cma}`;
   } else {
     return `Date ${p[0]} invalide pour le contrôle des concentrations DBO5/DCO vs CMA N-1.`;
-  }
-};
-
-const buildErrorMessage53 = (params: string[]) => {
-  const p = params as ErrorParamsMap[ErrorCode.E2_053];
-  if (p.length === 5) {
-    const [cdOuvrage, date, total, maxRef, threshold] = p;
-    return `Débit entrant excédentaire pour l'ouvrage ${cdOuvrage}, date ${date}. Somme mesurée: ${total} m³, max(PC95, Dref): ${maxRef} m³, Seuil (2 x max): ${threshold} m³`;
-  } else {
-    return `Date ${p[0]} invalide pour le contrôle des débits entrants vs seuil.`;
   }
 };
 
