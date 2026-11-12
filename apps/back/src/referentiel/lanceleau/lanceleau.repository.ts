@@ -11,8 +11,7 @@ import { OrionCredentialsEntity } from './entities/orionCredentials.entity';
 import { OrionRoleForPrincipalEntity } from './entities/orionRoleForPrincipal.entity';
 import { AgEntity } from './entities/ag.entity';
 import { VSteuSclItvEntity } from './entities/vSteuSclItv.entity';
-import { AgByEmail, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
-import { OrionContact } from './lanceleau.model';
+import { Agent, IntervenantAuth, ItvCdnByRfa, RolePrincipal, VSteuSclItvResult } from '@masa/masa.dto';
 
 // Les recherches par email utilisateur utilisent le claim Cerbère email comme login Orion, et non comme mail de contact.
 @Injectable()
@@ -34,8 +33,6 @@ export class LanceleauRepository implements LanceleauGateway {
     private readonly agRepository: Repository<AgEntity>,
     @InjectRepository(VSteuSclItvEntity)
     private readonly vSteuSclItvRepository: Repository<VSteuSclItvEntity>,
-    @InjectRepository(OrionCredentialsEntity)
-    private readonly orionCredentialsRepository: Repository<OrionCredentialsEntity>,
   ) {}
 
   async findIntervenantById(itvCdn: number): Promise<IntervenantAuth | null> {
@@ -94,11 +91,11 @@ export class LanceleauRepository implements LanceleauGateway {
     }));
   }
 
-  async findAgByEmail(email: string): Promise<AgByEmail | null> {
+  async findAgentByOrionLogin(orionLogin: string): Promise<Agent | null> {
     const ag = await this.agRepository
       .createQueryBuilder('ag')
       .innerJoin(OrionCredentialsEntity, 'oc', 'ag.pr_cdn = oc.pr_cdn')
-      .where('TRIM(oc.login_lb) = :email', { email: email.trim() })
+      .where('TRIM(oc.login_lb) = :orionLogin', { orionLogin: orionLogin.trim() })
       .getOne();
 
     if (!ag) {
@@ -107,6 +104,9 @@ export class LanceleauRepository implements LanceleauGateway {
     return {
       intervenantId: ag.itvCdn,
       principalIdentifiant: ag.prCdn,
+      mail: ag.agMailLb?.trim() || null,
+      nom: ag.agNomLb?.trim() || null,
+      prenom: ag.agPrenomLb?.trim() || null,
     };
   }
 
@@ -156,23 +156,5 @@ export class LanceleauRepository implements LanceleauGateway {
       .where('TRIM(oc.login_lb) = :email', { email: email.trim() })
       .getRawOne<{ itvRfa: string | null }>();
     return row?.itvRfa ?? null;
-  }
-
-  async findOrionContactByEmail(email: string): Promise<OrionContact | null> {
-    const row = await this.orionCredentialsRepository
-      .createQueryBuilder('oc')
-      .select('oc.lastName', 'nom')
-      .addSelect('oc.firstName', 'prenom')
-      .where('TRIM(oc.login_lb) = :email', { email: email.trim() })
-      .getRawOne<OrionContact>();
-
-    if (!row) {
-      return null;
-    }
-
-    return {
-      nom: row.nom?.trim() || null,
-      prenom: row.prenom?.trim() || null,
-    };
   }
 }

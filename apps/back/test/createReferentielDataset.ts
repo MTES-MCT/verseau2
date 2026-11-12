@@ -325,7 +325,10 @@ export async function createLanceleauTables(dataSource: DataSource): Promise<voi
   await dataSource.query(`
     CREATE TABLE lanceleau.ag (
       pr_cdn INTEGER PRIMARY KEY,
-      itv_cdn INTEGER
+      itv_cdn INTEGER,
+      ag_mail_lb VARCHAR,
+      ag_nom_lb VARCHAR,
+      ag_prenom_lb VARCHAR
     )
   `);
 
@@ -572,13 +575,18 @@ export async function seedOrionCredentials(
   );
 }
 
-export async function seedAg(dataSource: DataSource, prCdn: number, itvCdn: number): Promise<void> {
+export async function seedAg(
+  dataSource: DataSource,
+  prCdn: number,
+  itvCdn: number,
+  options: { mail?: string | null; nom?: string | null; prenom?: string | null } = {},
+): Promise<void> {
   await dataSource.query(
     `
-    INSERT INTO lanceleau.ag (pr_cdn, itv_cdn)
-    VALUES ($1, $2)
+    INSERT INTO lanceleau.ag (pr_cdn, itv_cdn, ag_mail_lb, ag_nom_lb, ag_prenom_lb)
+    VALUES ($1, $2, $3, $4, $5)
   `,
-    [prCdn, itvCdn],
+    [prCdn, itvCdn, options.mail ?? null, options.nom ?? null, options.prenom ?? null],
   );
 }
 

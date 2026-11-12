@@ -24,8 +24,8 @@ export class DroitsUserService {
       throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
     }
 
-    const ag = await this.masaProvider.findAgByEmail(email);
-    if (!ag) {
+    const ag = await this.masaProvider.findAgentByOrionLogin(email);
+    if (!ag?.mail?.trim()) {
       throw new ForbiddenException(VERSEAU_ACCESS_DENIED_MESSAGE);
     }
 
@@ -47,7 +47,7 @@ export class DroitsUserService {
       return null;
     }
 
-    const ag = await this.masaProvider.findAgByEmail(user.email);
+    const ag = await this.masaProvider.findAgentByOrionLogin(user.email);
     return ag ? ag.intervenantId : null;
   }
 
@@ -57,7 +57,7 @@ export class DroitsUserService {
       if (!user?.email) {
         return false;
       }
-      const ag = await this.masaProvider.findAgByEmail(user.email);
+      const ag = await this.masaProvider.findAgentByOrionLogin(user.email);
       if (!ag) {
         return false;
       }
@@ -74,7 +74,7 @@ export class DroitsUserService {
       if (!user?.email) {
         return false;
       }
-      const ag = await this.masaProvider.findAgByEmail(user.email);
+      const ag = await this.masaProvider.findAgentByOrionLogin(user.email);
       if (!ag) {
         return false;
       }
