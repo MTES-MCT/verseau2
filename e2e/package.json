@@ -10,17 +10,17 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@badeball/cypress-cucumber-preprocessor": "^23.2.1",
+    "@badeball/cypress-cucumber-preprocessor": "^28.0.1",
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.8",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
-    "cypress": "^15.21.1",
+    "cypress": "^16.2.1",
     "esbuild": "^0.27.7",
-    "eslint": "^10.13.0",
+    "eslint": "^10.14.0",
     "pg": "^8.23.1",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.71.2"
+    "typescript-eslint": "^8.72.1"
   }
 }
