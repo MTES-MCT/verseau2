@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { PgBoss, type QueueOptions } from 'pg-boss';
 import { PGBOSS, QueueName, resolveQueueName } from './queue';
 import { LoggerService } from '@shared/logger/logger.service';
+import { getQueueErrorDetails } from './queueErrorDetails';
 
 const queueOptions: Partial<Record<QueueName, QueueOptions>> = {
   [QueueName.controle_sandre_upload]: {
@@ -31,8 +32,7 @@ async function initializeQueues(boss: PgBoss, logger: LoggerService, prefix?: st
 
       logger.log(`Queue "${resolvedName}" initialized`);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`Failed to create queue "${queueName}": ${errorMsg}`);
+      logger.error(`Failed to create queue "${queueName}"`, getQueueErrorDetails(error));
       throw error; // Fail-fast: prevent bootstrap with incomplete queue setup
     }
   });
@@ -56,8 +56,7 @@ export const queueProvider = {
 
     // Error handler for pg-boss background operations
     boss.on('error', (error) => {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`PgBoss error: ${errorMsg}`);
+      logger.error('PgBoss error', getQueueErrorDetails(error));
     });
 
     await boss.start();
