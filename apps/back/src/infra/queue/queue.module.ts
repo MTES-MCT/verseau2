@@ -6,6 +6,7 @@ import { QueueGateway, PGBOSS, QUEUE_PREFIX } from './queue';
 import { queueProvider } from './queue.provider';
 import { LoggerService } from '@shared/logger/logger.service';
 import type { PgBoss } from './pgboss';
+import { getQueueErrorDetails } from './queueErrorDetails';
 
 /**
  * Handles graceful shutdown of pg-boss
@@ -24,8 +25,7 @@ class QueueShutdownService implements OnModuleDestroy {
       await this.pgboss.stop();
       this.logger.log('PgBoss stopped successfully');
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error stopping PgBoss: ${errorMsg}`);
+      this.logger.error('Error stopping PgBoss', getQueueErrorDetails(error));
     }
   }
 }
