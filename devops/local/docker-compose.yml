@@ -71,6 +71,10 @@ services:
   sync-pg:
     build: ../tools/sync-pg
     container_name: verseau2-sync-pg
+    # Override SYNC_PG_ENV_FILE to select another file (relative to this compose file).
+    env_file:
+      - path: ${SYNC_PG_ENV_FILE:-../tools/sync-pg/.env.local}
+        required: false
     networks:
       - verseau2-network
     volumes:
