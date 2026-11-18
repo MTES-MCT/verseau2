@@ -228,8 +228,9 @@ for (const { error, missingConfig } of [
   { error: 'Non-Error failure' },
   { error: new Error('Missing S3 configuration. Please check .env file.'), missingConfig: true },
 ]) {
-  test(`index awaits one final report before exiting: ${String(error)}`, async () => {
+  test(`index awaits one final report without forcing exit: ${String(error)}`, async () => {
     const events = [];
+    const processState = { exit: assert.fail, exitCode: undefined };
     let verifiedFilePath;
     let now = 0;
     class TestDate extends Date {
@@ -273,7 +274,7 @@ for (const { error, missingConfig } of [
           assert.equal(metadata.durationMs, missingConfig ? 0 : 3000);
           now += 5000;
           await new Promise(setImmediate);
-          assert.ok(!events.includes('exit'));
+          assert.equal(processState.exitCode, undefined);
           events.push('sent');
         },
       },
@@ -283,9 +284,10 @@ for (const { error, missingConfig } of [
       Error,
       Date: TestDate,
       console: logger,
-      process: { exit(code) { assert.equal(code, 1); events.push('exit'); } },
+      process: processState,
     });
-    assert.deepEqual(events, error === undefined ? ['sent'] : ['sent', 'exit']);
+    assert.deepEqual(events, ['sent']);
+    assert.equal(processState.exitCode, error === undefined ? undefined : 1);
   });
 }
 
