@@ -168,6 +168,8 @@ Le compte S3 de l'API/worker doit pouvoir écrire, lire les métadonnées, copie
 
 Sur le PaaS, le `Procfile` définit `PROCESS_TYPE=api|worker`. TypeORM sélectionne ainsi `DATABASE_POOL_API` ou `DATABASE_POOL_WORKER`; les lancements locaux conservent le pool par défaut. Un rôle ou un pool invalide bloque le démarrage, et la configuration retenue est journalisée.
 
+pg-boss utilise un pool séparé de 4 connexions par processus. `PGBOSS_CONNECTION_TIMEOUT_MS` règle le délai d'attente d'une connexion de ce pool, en millisecondes; sa valeur par défaut est `10000`. Une valeur non entière ou inférieure ou égale à zéro bloque le démarrage. Augmenter ce délai laisse plus de temps aux vérifications internes de pg-boss lorsqu'elles attendent une connexion.
+
 ### Frontend
 
 Créer un fichier `.env` dans `apps/front/` basé sur `src/example.env` :

@@ -4,6 +4,23 @@ import { PGBOSS, QueueName, resolveQueueName } from './queue';
 import { LoggerService } from '@shared/logger/logger.service';
 import { getQueueErrorDetails } from './queueErrorDetails';
 
+const PGBOSS_CONNECTION_TIMEOUT_ENV = 'PGBOSS_CONNECTION_TIMEOUT_MS';
+const DEFAULT_PGBOSS_CONNECTION_TIMEOUT_MILLIS = 10_000;
+
+export function resolvePgBossConnectionTimeoutMillis(configService: ConfigService): number {
+  const configuredTimeout = configService.get<string | null>(PGBOSS_CONNECTION_TIMEOUT_ENV);
+  if (configuredTimeout === undefined || configuredTimeout === null) {
+    return DEFAULT_PGBOSS_CONNECTION_TIMEOUT_MILLIS;
+  }
+
+  const timeout = Number(configuredTimeout);
+  if (!Number.isInteger(timeout) || timeout <= 0) {
+    throw new Error(`${PGBOSS_CONNECTION_TIMEOUT_ENV} must be a positive integer`);
+  }
+
+  return timeout;
+}
+
 const queueOptions: Partial<Record<QueueName, QueueOptions>> = {
   [QueueName.controle_sandre_upload]: {
     expireInSeconds: 120, // 2 minutes
@@ -47,12 +64,15 @@ export const queueProvider = {
     logger.setContext('QueueModule');
     const connectionString = configService.getOrThrow<string>('DATABASE_URL');
     const prefix = configService.get<string>('QUEUE_PREFIX');
+    const connectionTimeoutMillis = resolvePgBossConnectionTimeoutMillis(configService);
 
     if (prefix) {
       logger.log(`Queue prefix configured: "${prefix}"`);
     }
 
-    const boss = new PgBoss({ connectionString, max: 4 });
+    logger.log(`PgBoss connection timeout configured: ${connectionTimeoutMillis} ms`);
+
+    const boss = new PgBoss({ connectionString, max: 4, connectionTimeoutMillis });
 
     // Error handler for pg-boss background operations
     boss.on('error', (error) => {
