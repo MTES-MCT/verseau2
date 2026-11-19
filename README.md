@@ -168,7 +168,7 @@ Le compte S3 de l'API/worker doit pouvoir écrire, lire les métadonnées, copie
 
 Sur le PaaS, le `Procfile` définit `PROCESS_TYPE=api|worker`. TypeORM sélectionne ainsi `DATABASE_POOL_API` ou `DATABASE_POOL_WORKER`; les lancements locaux conservent le pool par défaut. Un rôle ou un pool invalide bloque le démarrage, et la configuration retenue est journalisée.
 
-pg-boss utilise un pool séparé de 4 connexions par processus. `PGBOSS_CONNECTION_TIMEOUT_MS` règle le délai d'attente d'une connexion de ce pool, en millisecondes; sa valeur par défaut est `10000`. Une valeur non entière ou inférieure ou égale à zéro bloque le démarrage. Augmenter ce délai laisse plus de temps aux vérifications internes de pg-boss lorsqu'elles attendent une connexion.
+pg-boss utilise un pool séparé, configurable par processus. `PGBOSS_POOL_MAX` fixe son nombre maximal de connexions (défaut `10`, contre `4` auparavant); le worker traite neuf files et pg-boss exécute en plus jusqu'à quatre tâches internes de maintenance simultanées, qui peuvent toutes occuper des connexions lorsque PostgreSQL ralentit. `PGBOSS_CONNECTION_TIMEOUT_MS` règle le délai d'attente d'une connexion de ce pool, en millisecondes (défaut `10000`; `60000` est un bon point de départ pendant une restauration), car un pool de 10 ne garantit pas à lui seul une connexion libre dans ce cas. Une valeur non entière ou inférieure ou égale à zéro pour l'une de ces variables bloque le démarrage. Le budget de connexions doit compter ce pool en plus du pool TypeORM de chaque processus.
 
 ### Frontend
 
