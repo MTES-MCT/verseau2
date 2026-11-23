@@ -7,9 +7,10 @@ import { getIndicateursSteu } from '@lib/dossier';
 import { CerbereIdCacheInterceptor } from '@shared/cerbereIdCache.interceptor';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { ZodValidationPipe } from '@shared/schema/zodValidation.pipe';
+import { HasUserAccessToOuvragesGuard } from '@shared/guards/hasUserAccessToOuvrages.guard';
 
 @Controller('indicateurs')
-@UseGuards(MeGuard)
+@UseGuards(MeGuard, HasUserAccessToOuvragesGuard)
 @UseInterceptors(CerbereIdCacheInterceptor)
 @CacheTTL(3600000)
 export class IndicateursController {
@@ -20,7 +21,6 @@ export class IndicateursController {
     @Req() req: CustomRequest,
     @Query(new ZodValidationPipe(getIndicateursSteu['query'])) query: RouteQuery<typeof getIndicateursSteu>,
   ): Promise<RouteResponse<typeof getIndicateursSteu>> {
-    const subId = req.user.cerbereId;
-    return await this.indicateursService.getIndicateursSteu(subId, query.page, query.pageSize);
+    return await this.indicateursService.getIndicateursSteu(req.authorizedSteuCdas, query.page, query.pageSize);
   }
 }
