@@ -1,8 +1,32 @@
 client_max_body_size 100m;
 absolute_redirect off;
 
+# ── En-têtes de sécurité ──
+# Le backend NestJS applique le jeu complet d'en-têtes sur toutes ses réponses
+# (apps/back/src/shared/security-headers/security-headers.ts) : CSP adaptée au
+# contexte (API vs SPA), nosniff, X-Frame-Options, HSTS conditionné au https,
+# Referrer-Policy et Permissions-Policy. nginx ajoute ici les mêmes valeurs en
+# défense de profondeur et pour couvrir les réponses qu'il génère lui-même
+# (redirections, pages d'erreur 502/504). Les doublons identiques sont sans
+# effet de bord : les navigateurs parse `nosniff` comme une liste (Fetch
+# Standard), combinent les HSTS identiques, intersectent les CSP (la CSP de
+# nginx se limite à frame-ancestors 'none', qui ne peut pas casser une
+# évolution future de la CSP applicative) et retiennent la dernière
+# Referrer-Policy. HSTS émis sur une réponse http est ignoré par les
+# navigateurs (RFC 6797 §7.2), l'émission inconditionnelle est donc sans
+# risque même si l'écouteur nginx est en http.
+# add_header au niveau location remplace ceux hérités du server : le jeu est
+# complet ici.
+
 # ── Verseau ──
 location /verseau/ {
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     proxy_pass <%= ENV['VERSEAU_UPSTREAM_URL'] %>/;
     proxy_set_header Host <%= ENV['VERSEAU_UPSTREAM_HOST'] %>;
     proxy_set_header X-Real-IP $remote_addr;
@@ -14,10 +38,24 @@ location /verseau/ {
 
 # Redirect /verseau (sans trailing slash) -> /verseau/
 location = /verseau {
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     return 308 /verseau/;
 }
 
 # ── Page d'accueil ──
 location = / {
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     return 302 /verseau/;
 }
