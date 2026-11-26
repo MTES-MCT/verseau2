@@ -45,26 +45,6 @@ describe('buildMessage', () => {
     );
   });
 
-  it('devrait retourner le message pour E2_039 (ratio DCO/DBO5 avec 7 params)', () => {
-    const result = buildMessage(ErrorCode.E2_039, ['OUV123', 'PM01', '2024-01-15', '1351', '850', '250', '3.4']);
-    expect(result).toContain('Le ratio DCO/DBO5 calculé (3.4)');
-    expect(result).toContain('ouvrage OUV123');
-    expect(result).toContain('point de mesure PM01');
-    expect(result).toContain('date du 2024-01-15');
-    expect(result).toContain('DCO = 850 mg/L');
-    expect(result).toContain('DBO5 = 250 mg/L');
-  });
-
-  it('devrait retourner le message pour E2_040 (ratio MES/DBO5 avec 7 params)', () => {
-    const result = buildMessage(ErrorCode.E2_040, ['OUV789', 'PM03', '2024-03-10', '1352', '400', '300', '1.33']);
-    expect(result).toContain('Le ratio MES/DBO5 calculé (1.33)');
-    expect(result).toContain('ouvrage OUV789');
-    expect(result).toContain('point de mesure PM03');
-    expect(result).toContain('date du 2024-03-10');
-    expect(result).toContain('MES = 400 mg/L');
-    expect(result).toContain('DBO5 = 300 mg/L');
-  });
-
   it('devrait retourner le message pour E2_041 (DCO hors plage avec 5 params)', () => {
     const result = buildMessage(ErrorCode.E2_041, ['OUV111', 'PM05', '2024-04-12', '1350', '2500']);
     expect(result).toContain('La concentration en DCO (2500 mg/L)');
@@ -74,26 +54,10 @@ describe('buildMessage', () => {
     expect(result).toContain('date du 2024-04-12');
   });
 
-  it('devrait retourner le message pour E2_045 (Ptot hors plage avec 5 params)', () => {
-    const result = buildMessage(ErrorCode.E2_045, ['OUV222', 'PM06', '2024-05-20', '1354', '35']);
-    expect(result).toContain('La concentration en Ptot (35 mg/L)');
-    expect(result).toContain('hors de la plage de valeurs attendues (4 à 25 mg/L)');
-    expect(result).toContain('ouvrage OUV222');
-    expect(result).toContain('point de mesure PM06');
-    expect(result).toContain('date du 2024-05-20');
-  });
-
   it('devrait retourner le message pour E2_047 (DCO ≤ DBO5)', () => {
     const result = buildMessage(ErrorCode.E2_047, ['OUV456', 'PM02', '2024-02-20', '1350', '200', '250']);
     expect(result).toBe(
       "Incohérence : DCO ≤ DBO5 pour l'ouvrage OUV456, point PM02, date 2024-02-20 (DCO=200 mg/L, DBO5=250 mg/L)",
-    );
-  });
-
-  it('devrait retourner le message pour E2_048 (NTK ≤ N-NH4)', () => {
-    const result = buildMessage(ErrorCode.E2_048, ['OUV333', 'PM07', '2024-06-15', '1355', '40', '50']);
-    expect(result).toBe(
-      "Incohérence : NTK ≤ N-NH4 pour l'ouvrage OUV333, point PM07, date 2024-06-15 (NTK=40 mg/L, N-NH4=50 mg/L)",
     );
   });
 

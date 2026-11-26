@@ -8,6 +8,9 @@ import type { S3 } from '@infra/s3/s3';
 import type { TransferClient } from '@infra/transferClient/transferClient';
 import type { Queue, QueueJob, QueueOptions } from '@infra/queue/queue';
 import type { UserEntity } from '@user/user.entity';
+import type { Agent } from '@masa/masa.dto';
+import type { MasaProvider } from '@masa/masa.provider';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { createHash } from 'node:crypto';
 // ============= Infrastructure Mocks =============
 
@@ -244,11 +247,9 @@ export class RoseauGatewayTestMock {
  */
 export class LanceleauGatewayTestMock {
   findIntervenantById = jest.fn().mockResolvedValue(null);
-  findOrionContactByEmail = jest.fn().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
 
   reset(): void {
     this.findIntervenantById.mockClear().mockResolvedValue(null);
-    this.findOrionContactByEmail.mockClear().mockResolvedValue({ nom: 'Doe', prenom: 'John' });
   }
 }
 
@@ -492,10 +493,21 @@ export class AgenceEauClientTestMock {
  * Mock for MasaProvider.
  */
 export class MasaProviderTestMock {
+  private readonly agContact: Agent = {
+    principalIdentifiant: 1000,
+    intervenantId: 100,
+    nom: 'Doe',
+    prenom: 'John',
+    mail: 'contact-ag@example.com',
+  };
+
+  findAgentByOrionLogin: DeepMocked<MasaProvider>['findAgentByOrionLogin'] =
+    createMock<MasaProvider>().findAgentByOrionLogin.mockResolvedValue(this.agContact);
   findAgenceEauSiretBySteuCode = jest.fn().mockResolvedValue('11111111111111');
   findAgenceEauNomBySteuCode = jest.fn().mockResolvedValue('11111111111111');
 
   reset(): void {
+    this.findAgentByOrionLogin.mockClear().mockResolvedValue(this.agContact);
     this.findAgenceEauSiretBySteuCode.mockClear().mockResolvedValue('11111111111111');
     this.findAgenceEauNomBySteuCode.mockClear().mockResolvedValue('11111111111111');
   }

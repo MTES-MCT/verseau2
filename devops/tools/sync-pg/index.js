@@ -96,7 +96,8 @@ async function main() {
   }
 
   if (errorMessage !== undefined) {
-    process.exit(1);
+    // Report failure on exit without stopping the health server.
+    process.exitCode = 1;
   }
 }
 

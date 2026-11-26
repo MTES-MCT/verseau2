@@ -4,6 +4,10 @@ import { seedOrionCredentials, seedAg, seedItv, clearLanceleauData } from './cre
 export interface UserWithDroitsData {
   sub: string;
   email: string;
+  orionMail?: string;
+  agMail?: string | null;
+  agNom?: string | null;
+  agPrenom?: string | null;
   nom?: string;
   prenom?: string;
   itvCdn: number;
@@ -12,17 +16,25 @@ export interface UserWithDroitsData {
   itvRfa?: string;
 }
 
+function agContact(data: UserWithDroitsData) {
+  return {
+    mail: data.agMail === undefined ? data.email : data.agMail,
+    nom: data.agNom === undefined ? (data.nom ?? 'Test') : data.agNom,
+    prenom: data.agPrenom === undefined ? (data.prenom ?? 'User') : data.agPrenom,
+  };
+}
+
 /**
  * Seeds a complete user with lanceleau linking for authentication flow.
  * Creates:
  * - UserEntity with given sub and email
- * - OrionCredentialsEntity linking email to prCdn
+ * - OrionCredentialsEntity linking email (login_lb) to prCdn
  * - AgEntity linking prCdn to itvCdn
  * - If itvRfa is provided:
  *   - ItvEntity with itvCdn and itvRfa (SIRET)
  *   - OrionRoleForPrincipal with role 301 (required for depot)
  *
- * This establishes the chain: User.email → OrionCredentials.mail → AgEntity.prCdn → AgEntity.itvCdn
+ * This establishes the chain: User.email → OrionCredentials.loginLb → AgEntity.prCdn → AgEntity.itvCdn
  * which is used by DroitsUserService.resolveItvCdn()
  *
  * For DroitsDepotService.validateDroits(), you also need:
@@ -41,11 +53,18 @@ export async function seedUserWithDroits(dataSource: DataSource, data: UserWithD
     [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  // Create orion credentials linking email to prCdn
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub, data.nom ?? 'Test', data.prenom ?? 'User');
+  // Create orion credentials linking the Cerbère email to prCdn through login_lb
+  await seedOrionCredentials(
+    dataSource,
+    prCdn,
+    data.orionMail ?? data.email,
+    data.email,
+    data.nom ?? 'Test',
+    data.prenom ?? 'User',
+  );
 
   // Create ag linking prCdn to itvCdn
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedAg(dataSource, prCdn, data.itvCdn, agContact(data));
 
   // If itvRfa is provided, create the ItvEntity and role 301
   if (data.itvRfa) {
@@ -109,8 +128,15 @@ export async function seedUserExpertBassin(dataSource: DataSource, data: UserWit
     [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub, data.nom ?? 'Test', data.prenom ?? 'User');
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedOrionCredentials(
+    dataSource,
+    prCdn,
+    data.orionMail ?? data.email,
+    data.email,
+    data.nom ?? 'Test',
+    data.prenom ?? 'User',
+  );
+  await seedAg(dataSource, prCdn, data.itvCdn, agContact(data));
 
   if (data.itvRfa) {
     await seedItv(dataSource, data.itvCdn, data.itvRfa);
@@ -138,8 +164,8 @@ export async function seedUserRole308(dataSource: DataSource, data: UserWithDroi
     [userId, data.sub, data.email, data.nom ?? 'Test', data.prenom ?? 'User'],
   );
 
-  await seedOrionCredentials(dataSource, prCdn, data.email, data.sub);
-  await seedAg(dataSource, prCdn, data.itvCdn);
+  await seedOrionCredentials(dataSource, prCdn, data.orionMail ?? data.email, data.email);
+  await seedAg(dataSource, prCdn, data.itvCdn, agContact(data));
 
   if (data.itvRfa) {
     await seedItv(dataSource, data.itvCdn, data.itvRfa);

@@ -64,19 +64,22 @@ Then("le dépôt est envoyé au SFTP de l'Agent Verseau", () => {
 });
 
 function sendMasaReturn(statut: 'Intégré' | 'Rejeté') {
-  cy.request({
-    method: 'POST',
-    url: 'http://localhost:3000/api/webhook/masa/agent-verseau',
-    headers: { 'x-api-key': Cypress.env('MASA_API_KEY') as string },
-    body: {
-      verseau2DepotId: depotId,
-      numeroDepotVerseau1: `V1-${depotId}`,
-      statut,
-      rapport: `${masaReport} : ${statut}`,
-    },
-  })
-    .its('status')
-    .should('eq', 200);
+  return cy.env<{ MASA_API_KEY: string }>(['MASA_API_KEY']).then(({ MASA_API_KEY: apiKey }) =>
+    cy.request({
+      method: 'POST',
+      url: 'http://localhost:3000/api/webhook/masa/agent-verseau',
+      headers: { 'x-api-key': apiKey },
+      log: false,
+      body: {
+        verseau2DepotId: depotId,
+        numeroDepotVerseau1: `V1-${depotId}`,
+        statut,
+        rapport: `${masaReport} : ${statut}`,
+      },
+    })
+      .its('status')
+      .should('eq', 200),
+  );
 }
 
 When("MASA confirme l'intégration du dépôt", () => sendMasaReturn('Intégré'));

@@ -154,11 +154,7 @@ describe('ConformiteService', () => {
   });
 
   describe('listConformiteSteu', () => {
-    it('calls findSteuBatchBySandreCdas then findConformiteSteu with resolved CDNs', async () => {
-      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
-        { ouvrageDepollutionCode: 'STEU002', ouvrageDepollutionId: 202 },
-      ]);
+    it('passes authorized codes directly without resolving CDNs', async () => {
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 1 });
 
       const result = await service.listConformiteSteu({
@@ -168,10 +164,13 @@ describe('ConformiteService', () => {
         pageSize: 20,
       });
 
-      expect(masaProvider.findSteuBatchBySandreCdas).toHaveBeenCalledWith(['STEU001', 'STEU002']);
-      expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
-        expect.objectContaining({ ouvrageDepollutionIds: [101, 202], year: 2024, page: 1, pageSize: 20 }),
-      );
+      expect(masaProvider.findSteuBatchBySandreCdas).not.toHaveBeenCalled();
+      expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith({
+        ouvrageDepollutionCodes: ['STEU001', 'STEU002'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
       expect(result).toEqual({ data: [makeConformiteSteuRow()], total: 1, page: 1, pageSize: 20 });
     });
 
@@ -188,24 +187,56 @@ describe('ConformiteService', () => {
       expect(masaProvider.findConformiteSteu).not.toHaveBeenCalled();
     });
 
-    it('returns empty result when no CDN is resolved', async () => {
-      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([]);
-
+    it('returns empty result without querying when the requested code is unauthorized', async () => {
       const result = await service.listConformiteSteu({
         authorizedSteuCdas: ['STEU001'],
+        ouvrageDepollutionCode: 'STEU002',
         year: 2024,
         page: 2,
         pageSize: 10,
       });
 
       expect(result).toEqual({ data: [], total: 0, page: 2, pageSize: 10 });
+      expect(masaProvider.findSteuBatchBySandreCdas).not.toHaveBeenCalled();
       expect(masaProvider.findConformiteSteu).not.toHaveBeenCalled();
     });
 
+    it('intersects the requested code with authorized codes before querying', async () => {
+      masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 1 });
+
+      await service.listConformiteSteu({
+        authorizedSteuCdas: ['STEU001', 'STEU002'],
+        ouvrageDepollutionCode: 'STEU001',
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith({
+        ouvrageDepollutionCodes: ['STEU001'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+      expect(masaProvider.findSteuBatchBySandreCdas).not.toHaveBeenCalled();
+    });
+
+    it('deduplicates authorized codes', async () => {
+      masaProvider.findConformiteSteu.mockResolvedValue({ data: [], total: 0 });
+
+      await service.listConformiteSteu({
+        authorizedSteuCdas: ['STEU001', 'STEU001', 'STEU002'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001', 'STEU002'] }),
+      );
+    });
+
     it('passes optional filters and pagination to masaProvider', async () => {
-      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
-      ]);
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [], total: 0 });
 
       await service.listConformiteSteu({
@@ -221,7 +252,7 @@ describe('ConformiteService', () => {
 
       expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
         expect.objectContaining({
-          ouvrageDepollutionIds: [101],
+          ouvrageDepollutionCodes: ['STEU001'],
           year: 2023,
           trancheObligationRfa: '30',
           impact: 'avec',
@@ -234,9 +265,6 @@ describe('ConformiteService', () => {
     });
 
     it('returns pagination metadata from list response', async () => {
-      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
-      ]);
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 42 });
 
       const result = await service.listConformiteSteu({
@@ -253,24 +281,24 @@ describe('ConformiteService', () => {
   });
 
   describe('listConformiteScl', () => {
-    it('uses authorized SCL CDNs to filter SCL results', async () => {
-      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
-      ]);
+    it('passes authorized SCL codes directly without resolving CDNs', async () => {
       masaProvider.findConformiteScl.mockResolvedValue({ data: [makeConformiteSclRow()], total: 1 });
 
       const result = await service.listConformiteScl({
-        authorizedSclCdas: ['SCL001'],
+        authorizedSclCdas: ['SCL001', 'SCL002'],
         year: 2024,
         page: 1,
         pageSize: 20,
       });
 
-      expect(masaProvider.findSclBatchBySandreCdas).toHaveBeenCalledWith(['SCL001']);
+      expect(masaProvider.findSclBatchBySandreCdas).not.toHaveBeenCalled();
       expect(masaProvider.findSteuBatchBySandreCdas).not.toHaveBeenCalled();
-      expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
-        expect.objectContaining({ systemeCollecteIds: [201], year: 2024, page: 1, pageSize: 20 }),
-      );
+      expect(masaProvider.findConformiteScl).toHaveBeenCalledWith({
+        systemeCollecteCodes: ['SCL001', 'SCL002'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
       expect(result).toEqual({ data: [makeConformiteSclRow()], total: 1, page: 1, pageSize: 20 });
     });
 
@@ -287,24 +315,56 @@ describe('ConformiteService', () => {
       expect(masaProvider.findConformiteScl).not.toHaveBeenCalled();
     });
 
-    it('returns empty result when no SCL CDN is resolved', async () => {
-      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([]);
-
+    it('returns empty result without querying when the requested SCL code is unauthorized', async () => {
       const result = await service.listConformiteScl({
         authorizedSclCdas: ['SCL001'],
+        systemeCollecteCode: 'SCL002',
         year: 2024,
         page: 2,
         pageSize: 25,
       });
 
       expect(result).toEqual({ data: [], total: 0, page: 2, pageSize: 25 });
+      expect(masaProvider.findSclBatchBySandreCdas).not.toHaveBeenCalled();
       expect(masaProvider.findConformiteScl).not.toHaveBeenCalled();
     });
 
+    it('intersects the requested SCL code with authorized codes before querying', async () => {
+      masaProvider.findConformiteScl.mockResolvedValue({ data: [makeConformiteSclRow()], total: 1 });
+
+      await service.listConformiteScl({
+        authorizedSclCdas: ['SCL001', 'SCL002'],
+        systemeCollecteCode: 'SCL001',
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findConformiteScl).toHaveBeenCalledWith({
+        systemeCollecteCodes: ['SCL001'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+      expect(masaProvider.findSclBatchBySandreCdas).not.toHaveBeenCalled();
+    });
+
+    it('deduplicates authorized SCL codes', async () => {
+      masaProvider.findConformiteScl.mockResolvedValue({ data: [], total: 0 });
+
+      await service.listConformiteScl({
+        authorizedSclCdas: ['SCL001', 'SCL001', 'SCL002'],
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
+        expect.objectContaining({ systemeCollecteCodes: ['SCL001', 'SCL002'] }),
+      );
+    });
+
     it('passes optional filters to masaProvider for SCL listing', async () => {
-      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
-      ]);
       masaProvider.findConformiteScl.mockResolvedValue({ data: [], total: 0 });
 
       await service.listConformiteScl({
@@ -320,7 +380,7 @@ describe('ConformiteService', () => {
 
       expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
         expect.objectContaining({
-          systemeCollecteIds: [201],
+          systemeCollecteCodes: ['SCL001'],
           year: 2021,
           trancheObligationRfa: '30',
           impact: 'sans',
@@ -375,19 +435,21 @@ describe('ConformiteService', () => {
 
   describe('exportConformiteSteuCsv', () => {
     it('formats STEU rows before generating csv', async () => {
-      masaProvider.findSteuBatchBySandreCdas.mockResolvedValue([
-        { ouvrageDepollutionCode: 'STEU001', ouvrageDepollutionId: 101 },
-      ]);
       masaProvider.findConformiteSteu.mockResolvedValue({ data: [makeConformiteSteuRow()], total: 1 });
 
       const result = await service.exportConformiteSteuCsv({
-        authorizedSteuCdas: ['STEU001'],
+        authorizedSteuCdas: ['STEU001', 'STEU002'],
+        ouvrageDepollutionCode: 'STEU001',
         year: 2024,
         page: 1,
         pageSize: 20,
       });
 
       expect(result).toBe('csv-content');
+      expect(masaProvider.findConformiteSteu).toHaveBeenCalledWith(
+        expect.objectContaining({ ouvrageDepollutionCodes: ['STEU001'] }),
+      );
+      expect(masaProvider.findSteuBatchBySandreCdas).not.toHaveBeenCalled();
       expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
         {
           ouvrageDepollutionCode: 'STEU001',
@@ -405,13 +467,11 @@ describe('ConformiteService', () => {
 
   describe('exportConformiteSclCsv', () => {
     it('formats SCL rows before generating csv', async () => {
-      masaProvider.findSclBatchBySandreCdas.mockResolvedValue([
-        { systemeCollecteCode: 'SCL001', systemeCollecteId: 201 },
-      ]);
       masaProvider.findConformiteScl.mockResolvedValue({ data: [makeConformiteSclRow()], total: 1 });
 
       const result = await service.exportConformiteSclCsv({
-        authorizedSclCdas: ['SCL001'],
+        authorizedSclCdas: ['SCL001', 'SCL002'],
+        systemeCollecteCode: 'SCL001',
         year: 2024,
         page: 1,
         pageSize: 20,
@@ -419,8 +479,9 @@ describe('ConformiteService', () => {
 
       expect(result).toBe('csv-content');
       expect(masaProvider.findConformiteScl).toHaveBeenCalledWith(
-        expect.objectContaining({ systemeCollecteIds: [201] }),
+        expect.objectContaining({ systemeCollecteCodes: ['SCL001'] }),
       );
+      expect(masaProvider.findSclBatchBySandreCdas).not.toHaveBeenCalled();
       expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), [
         {
           systemeCollecteCode: 'SCL001',
@@ -433,6 +494,22 @@ describe('ConformiteService', () => {
           impactConformite: 'Sans impact',
         },
       ]);
+    });
+  });
+
+  describe('exportConformiteSclCsv authorization', () => {
+    it('does not query when the requested SCL code is unauthorized', async () => {
+      await service.exportConformiteSclCsv({
+        authorizedSclCdas: ['SCL001'],
+        systemeCollecteCode: 'SCL002',
+        year: 2024,
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(masaProvider.findConformiteScl).not.toHaveBeenCalled();
+      expect(masaProvider.findSclBatchBySandreCdas).not.toHaveBeenCalled();
+      expect(csvGenerator.generate).toHaveBeenCalledWith(expect.any(Array), []);
     });
   });
 

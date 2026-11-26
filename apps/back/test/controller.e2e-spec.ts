@@ -27,6 +27,7 @@ import { DataSource } from 'typeorm';
 import { DepotStatus, MasaStatus } from '@lib/dossier';
 import { DroitsDepotService } from '@dossier/depot/droitsDepot.service';
 import { DepotError, DepotRightsException } from '@dossier/depot/depotError';
+import { DepotGateway } from '@dossier/depot/depot.gateway';
 import {
   createLanceleauTables,
   createReferentielSchemas,
@@ -39,6 +40,7 @@ import {
 import { MasaService } from '@dossier/masa/masa.service';
 import { MasaWebhookStatus } from '@dossier/masa/masa.model';
 import { MasaIpGuard } from '@dossier/masa/masaIp.guard';
+import { IndicateursGateway } from '../src/indicateurs/indicateurs.gateway';
 
 describe('Controller (e2e) - Access control', () => {
   let app: INestApplication<App>;
@@ -254,6 +256,23 @@ describe('Controller (e2e) - Access control', () => {
         .expect(403);
     });
 
+    it('/webhook/masa/agent-verseau (POST) - Should return 404 when the depot is missing', async () => {
+      jest.spyOn(app.get<DepotGateway>(DepotGateway), 'findDepotById').mockResolvedValueOnce(null);
+
+      await request(app.getHttpServer())
+        .post('/webhook/masa/agent-verseau')
+        .set('x-api-key', 'private-token')
+        .send({
+          verseau2DepotId: 'dep_missing',
+          numeroDepotVerseau1: null,
+          statut: MasaWebhookStatus.INTEGRE,
+          rapport: 'test',
+        })
+        .expect('X-Source', 'Verseau2')
+        .expect(404)
+        .expect({ statusCode: 404, message: 'Depot with id dep_missing not found', error: 'Not Found' });
+    });
+
     it('/webhook/masa/agent-verseau (POST) - Should return 200 OK', async () => {
       jest.spyOn(masaService, 'processRetourAgentVerseau').mockResolvedValue({
         id: 'masa-id-123',
@@ -392,18 +411,35 @@ describe('Controller (e2e) - Access control', () => {
     it('/indicateurs/steu (GET) - Should return 401 Unauthorized when no token is provided', async () => {
       return request(app.getHttpServer()).get('/indicateurs/steu').expect(401);
     });
-    it('/indicateurs/steu (GET) - Should return 200 when a token is provided', async () => {
-      jest.spyOn(authService, 'validateToken').mockResolvedValue({
-        cerbereId: 'test-user-id',
-        mel: 'dev@example.com',
-        itvCdn: 100,
-        isExpertNational: false,
-      });
 
-      return request(app.getHttpServer())
+    it('/indicateurs/steu (GET) - Should return 200 for a user with STEU access', async () => {
+      const itvCdn = 100;
+      const siret = '12345678900001';
+      const steuCode = 'STEU001';
+      jest.spyOn(authService, 'validateToken').mockResolvedValue(mockAuthenticatedUser({ itvCdn }));
+      jest.spyOn(masaProvider, 'findIntervenantById').mockResolvedValue({
+        intervenantId: itvCdn,
+        intervenantSiret: siret,
+      });
+      jest.spyOn(masaProvider, 'findVSteuSclItvByItvRfa').mockResolvedValue([
+        {
+          ouvrageDepollutionCode: steuCode,
+          systemeCollecteCode: 'SCL001',
+          maitreOuvrageSiret: siret,
+          prestataireAutosurveillanceSiret: null,
+          agenceEauSiret: null,
+        },
+      ]);
+      const findIndicateursSteu = jest
+        .spyOn(app.get<IndicateursGateway>(IndicateursGateway), 'findIndicateursSteu')
+        .mockResolvedValue({ data: [], total: 0 });
+
+      await request(app.getHttpServer())
         .get('/indicateurs/steu')
         .set('Cookie', ['access_token=token-user-1'])
-        .expect(200);
+        .expect(200, { data: [], total: 0, page: 1, pageSize: 50 });
+
+      expect(findIndicateursSteu).toHaveBeenCalledWith([steuCode], 1, 50);
     });
   });
 });

@@ -43,7 +43,7 @@ export class DroitsDepotService {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);
     }
 
-    const ag = await this.masaProvider.findAgByEmail(user.email);
+    const ag = await this.masaProvider.findAgentByOrionLogin(user.email);
     this.logger.debug('Ag entity lookup completed', { found: Boolean(ag) });
     if (!ag) {
       throw new DepotRightsException(DepotError.DROITS_INSUFFISANTS);

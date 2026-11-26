@@ -120,6 +120,9 @@ describe('Dossier E2E - Real Queue Processing', () => {
     email: 'dev@example.com',
     nom: 'Test',
     prenom: 'User',
+    agMail: 'contact-ag@example.com',
+    agNom: 'Agent',
+    agPrenom: 'Verseau',
     itvCdn: 100,
     itvRfa: '12345678901234', // SIRET for the intervenant
   };
@@ -343,7 +346,7 @@ describe('Dossier E2E - Real Queue Processing', () => {
       { format: 'tabs and LF', fixture: 'tabs-lf.xml', indent: '\t', lineEnding: '\n', seedId: 1102 },
       { format: 'tabs and CRLF', fixture: 'tabs-crlf.xml', indent: '\t', lineEnding: '\r\n', seedId: 1103 },
     ])(
-      'should add NomContact to the dispatched XML while preserving $format',
+      'should add AG NomContact and MelContact to the dispatched XML while preserving $format',
       async ({ fixture, indent, lineEnding, seedId }) => {
         const steuCode = `TEST_STEU_CONTACT_${seedId}`;
         const sclCode = `TEST_SCL_CONTACT_${seedId}`;
@@ -382,6 +385,39 @@ describe('Dossier E2E - Real Queue Processing', () => {
 
         // Compare raw XML, not parsed nodes: every original whitespace character must survive.
         expect(sentFile?.file.toString('utf-8')).toBe(expectedXml);
+      },
+      15000,
+    );
+
+    it.each(['contact-ag@example.com', null])(
+      'overwrites the dispatched contact with AG values even when the AG email is %j',
+      async (agMail) => {
+        await clearUserWithDroits(dataSource);
+        testUserId = await seedUserWithDroits(dataSource, { ...TEST_USER, agMail });
+        const seedId = agMail === null ? 1105 : 1104;
+        const steuCode = `TEST_STEU_CONTACT_${seedId}`;
+        const sclCode = `TEST_SCL_CONTACT_${seedId}`;
+        await seedVSteuSclItv(dataSource, steuCode, sclCode, TEST_USER.itvRfa);
+        await seedSteu(dataSource, seedId, steuCode, { steuEncoursAn: 2024 });
+        await seedScl(dataSource, seedId, sclCode);
+        await seedTlref(dataSource, seedId, 'LREF_01', '4', 'Type ouvrage test');
+
+        const xmlContent = buildValidXmlWithCodes(steuCode, sclCode);
+        const filename = `contact-${seedId}.xml`;
+        const depotId = await uploadXmlDepot(xmlContent, filename);
+        const result = await waitForJobCompletion(dataSource, QueueName.send_to_sftp, depotId, {
+          timeoutMs: 10000,
+          pollIntervalMs: 200,
+        });
+
+        expect(result.status).toBe('completed');
+        const sentFile = agentVerseauClientMock.calls.find((call) => call.fileName === `${depotId}_${filename}`);
+        expect(sentFile?.file.toString('utf-8')).toBe(
+          xmlContent
+            .replace('<NomContact>Test Contact</NomContact>', '<NomContact>AGENT Verseau</NomContact>')
+            .replace('<MelContact>test@example.com</MelContact>', `<MelContact>${agMail ?? ''}</MelContact>`),
+        );
+        expect((await findDepotOrFail(depotId)).step).toBe(DepotStep.SFTP_COMPLETED);
       },
       15000,
     );

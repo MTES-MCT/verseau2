@@ -11,7 +11,8 @@
 			<CdIntervenant schemeAgencyID="SIRET">12345678901234</CdIntervenant>
 			<NomIntervenant>Test Emetteur</NomIntervenant>
 			<Contact>
-				<NomContact>TEST User</NomContact>
+				<NomContact>AGENT Verseau</NomContact>
+				<MelContact>contact-ag@example.com</MelContact>
 			</Contact>
 		</Emetteur>
 		<Destinataire>

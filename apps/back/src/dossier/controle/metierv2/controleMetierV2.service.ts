@@ -4,7 +4,6 @@ import { ControleModel } from '../controle.model';
 import { EntityManager } from 'typeorm';
 import {
   CodeParametre,
-  CodeUniteMesure,
   ControleError,
   ControleName,
   ControleType,
@@ -17,12 +16,7 @@ import { ControleGateway } from '../controle.gateway';
 import { RoseauGateway } from '@referentiel/roseau/roseau.gateway';
 import { MasaProvider } from '@masa/masa.provider';
 import { filterFctAssainissementForMetierV2 } from '@dossier/controle/metierv2/filterFctAssainissementForMetierV2';
-import {
-  CapaciteNominaleBySandreCda,
-  CmaBySandreCdaAndParam,
-  MaxDebitBySandreCda,
-  ProductionBoueZero,
-} from '@masa/masa.dto';
+import { CapaciteNominaleBySandreCda, CmaBySandreCdaAndParam, ProductionBoueZero } from '@masa/masa.dto';
 import { ControleMetierV2Pfas } from './controleMetierV2Pfas';
 
 @Injectable()
@@ -67,27 +61,17 @@ export class ControleMetierV2Service {
       allowedCdSupport: ['3', '4', '5'],
     });
 
-    const { cmas, maxDebits: _maxDebits, productionsBoueZero } = await this.preloadMasaData(xmlObj);
+    const { cmas, productionsBoueZero } = await this.preloadMasaData(xmlObj);
 
     const [standardControls, pfasControls] = await Promise.all([
       Promise.all([
-        // Promise.resolve(this.verifyRatioDcoDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-        // Promise.resolve(this.verifyRatioMesDbo5(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
         Promise.resolve(this.verifyDcoRange(dataWithLocGlobalePointMesureA3AndCdSupport3)),
         Promise.resolve(this.verifyDbo5Range(dataWithLocGlobalePointMesureA3AndCdSupport3)),
         Promise.resolve(this.verifyDcoGreaterThanDbo5(dataWithLocGlobalePointMesureA3AndCdSupport3)),
-        // Promise.resolve(this.verifyMesRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-        // Promise.resolve(this.verifyNtkRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-        // Promise.resolve(this.verifyPtotRange(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
         Promise.resolve(this.verifyPhRange(dataWithLocGlobalePointMesureA4AndCdSupport3)),
-        // Promise.resolve(this.verifyNtkGreaterThanNnh4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-        // Promise.resolve(this.verifyNglGreaterThanNtk(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
-        // Promise.resolve(this.verifyPGreaterThanPO4(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
         this.verifyVolumeA3A4VsCapaciteEH(xmlObj),
         Promise.resolve(this.verifyCmaComparisonForDcoDbo5(xmlObj, cmas)),
-        // this.verifyDebitEntrantVsChargeMax(xmlObj, maxDebits),
         this.verifyChargeEntranteVsTranche(xmlObj),
-        // TODO: réactiver le contrôle verifyProductionBoue quand les tables file et filiere seront disponible
         Promise.resolve(this.verifyProductionBoue(xmlObj, productionsBoueZero)),
         Promise.resolve(this.verifyTemperatureA4Range(dataWithLocGlobalePointMesureA3A4AndCdSupport3)),
         Promise.resolve(this.verifyPluviometrieRange(dataWithLocGlobalePointMesureA1R1AndCdSupport3)),
@@ -115,7 +99,6 @@ export class ControleMetierV2Service {
 
   private async preloadMasaData(xmlObj: FctAssainissement): Promise<{
     cmas: CmaBySandreCdaAndParam[];
-    maxDebits: MaxDebitBySandreCda[];
     productionsBoueZero: ProductionBoueZero[];
   }> {
     const dateDebutReference = xmlObj.scenario?.dateDebutReference;
@@ -131,44 +114,13 @@ export class ControleMetierV2Service {
         ])
       : Promise.resolve([] as CmaBySandreCdaAndParam[]);
 
-    // // TODO : remove comments when file and filere table are available
     const productionsBoueZeroPromise = !isNaN(currentYear)
       ? this.masaProvider.findProductionBoueZeroBatch(allSteuCdas, currentYear)
       : Promise.resolve([] as ProductionBoueZero[]);
 
-    // const productionsBoueZeroPromise = Promise.resolve([] as ProductionBoueZero[]);
+    const [cmas, productionsBoueZero] = await Promise.all([cmasPromise, productionsBoueZeroPromise]);
 
-    const [cmas, maxDebits, productionsBoueZero] = await Promise.all([
-      cmasPromise,
-      this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas),
-      productionsBoueZeroPromise,
-    ]);
-
-    return { cmas, maxDebits, productionsBoueZero };
-  }
-
-  // CTL039: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio DCO/DBO5
-  verifyRatioDcoDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterRatio(fctAssainissement, {
-      name: ControleName.CTL039,
-      errorCode: ErrorCode.E2_039,
-      paramCode1: CodeParametre.DCO,
-      paramCode2: CodeParametre.DBO5,
-      min: 1.5,
-      max: 3.5,
-    });
-  }
-
-  // CTL040: Vérification que chaque groupe de valeurs est compris entre les bornes pour le ratio MES/DBO5
-  verifyRatioMesDbo5(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterRatio(fctAssainissement, {
-      name: ControleName.CTL040,
-      errorCode: ErrorCode.E2_040,
-      paramCode1: CodeParametre.MES,
-      paramCode2: CodeParametre.DBO5,
-      min: 0.7,
-      max: 1.5,
-    });
+    return { cmas, productionsBoueZero };
   }
 
   // CTL041: Analyse des concentrations en DCO hors fourchette (300 < DCO < 1700)
@@ -190,41 +142,6 @@ export class ControleMetierV2Service {
       paramCode: CodeParametre.DBO5,
       min: 150,
       max: 800,
-    });
-  }
-
-  // CTL043: Analyse des concentrations en MES hors fourchette (100 < MES < 1200)
-  verifyMesRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterRange(fctAssainissement, {
-      name: ControleName.CTL043,
-      errorCode: ErrorCode.E2_043,
-      paramCode: CodeParametre.MES,
-      min: 100,
-      max: 1200,
-    });
-  }
-
-  // CTL044: Analyse des concentrations en NTK hors fourchette (20 < NTK < 160)
-  verifyNtkRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterRange(fctAssainissement, {
-      name: ControleName.CTL044,
-      errorCode: ErrorCode.E2_044,
-      paramCode: CodeParametre.NTK,
-      min: 20,
-      uniteMesureCode: CodeUniteMesure.MG_N_L,
-      max: 160,
-    });
-  }
-
-  // CTL045: Analyse des concentrations en Ptot hors fourchette (4 < Ptot < 25)
-  verifyPtotRange(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterRange(fctAssainissement, {
-      name: ControleName.CTL045,
-      errorCode: ErrorCode.E2_045,
-      paramCode: CodeParametre.Ptot,
-      min: 4,
-      uniteMesureCode: CodeUniteMesure.MG_L,
-      max: 25,
     });
   }
 
@@ -284,39 +201,6 @@ export class ControleMetierV2Service {
     });
   }
 
-  // CTL048: Vérification que la concentration NTK > N-NH4
-  verifyNtkGreaterThanNnh4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterComparison(fctAssainissement, {
-      name: ControleName.CTL048,
-      errorCode: ErrorCode.E2_048,
-      paramCode1: CodeParametre.NTK,
-      paramCode2: CodeParametre.N_NH4,
-      compare: (val1, val2) => val1 > val2,
-    });
-  }
-
-  // CTL049: Vérification que la concentration NGL > NTK
-  verifyNglGreaterThanNtk(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterComparison(fctAssainissement, {
-      name: ControleName.CTL049,
-      errorCode: ErrorCode.E2_049,
-      paramCode1: CodeParametre.NGL,
-      paramCode2: CodeParametre.NTK,
-      compare: (val1, val2) => val1 > val2,
-    });
-  }
-
-  // CTL050: Vérification que la concentration Ptot > PO4
-  verifyPGreaterThanPO4(fctAssainissement: FctAssainissement): ControleIndividuelWithoutSuccess | null {
-    return this.verifyParameterComparison(fctAssainissement, {
-      name: ControleName.CTL050,
-      errorCode: ErrorCode.E2_050,
-      paramCode1: CodeParametre.Ptot,
-      paramCode2: CodeParametre.PO4,
-      compare: (val1, val2) => val1 > val2,
-    });
-  }
-
   // Helper for parameter range verification
   private verifyParameterRange(
     fctAssainissement: FctAssainissement,
@@ -326,7 +210,6 @@ export class ControleMetierV2Service {
       paramCode: CodeParametre;
       min: number;
       max: number;
-      uniteMesureCode?: CodeUniteMesure;
     },
   ): ControleIndividuelWithoutSuccess | null {
     const errors: ControleError[] = [];
@@ -334,7 +217,7 @@ export class ControleMetierV2Service {
     const paramCodeStr = config.paramCode.toString();
 
     this.forEachPrelevement(fctAssainissement, (context, analyses) => {
-      const paramValue = this.extractAnalyseValue(analyses, paramCodeStr, config.uniteMesureCode);
+      const paramValue = this.extractAnalyseValue(analyses, paramCodeStr);
       const hasParamAnalyse = analyses.some((a) => a.cdParametre === paramCodeStr);
 
       if (hasParamAnalyse && paramValue !== undefined) {
@@ -356,48 +239,6 @@ export class ControleMetierV2Service {
     });
 
     return hasValue ? { name: config.name, errors } : null;
-  }
-
-  // Helper for parameter ratio verification
-  private verifyParameterRatio(
-    fctAssainissement: FctAssainissement,
-    config: {
-      name: ControleName;
-      errorCode: ErrorCode;
-      paramCode1: CodeParametre;
-      paramCode2: CodeParametre;
-      min: number;
-      max: number;
-    },
-  ): ControleIndividuelWithoutSuccess | null {
-    const errors: ControleError[] = [];
-    let isApplicable = false;
-    const groups = this.groupAnalysesByTwoParams(fctAssainissement, config.paramCode1, config.paramCode2);
-
-    for (const group of groups.values()) {
-      if (group.val1 !== undefined && group.val2 !== undefined && group.val2 > 0) {
-        isApplicable = true;
-        const ratio = group.val1 / group.val2;
-
-        if (ratio <= config.min || ratio >= config.max) {
-          errors.push({
-            code: config.errorCode,
-            params: [
-              group.context.cdOuvrageDepollution,
-              group.context.locGlobalePointMesure,
-              group.context.datePrlvt,
-              group.context.cdSupport,
-              group.val1.toString(),
-              group.val2.toString(),
-              ratio.toFixed(2),
-            ],
-            evenementType: EvenementType.AVERTISSEMENT,
-          });
-        }
-      }
-    }
-
-    return isApplicable ? { name: config.name, errors } : null;
   }
 
   // Helper for parameter comparison (e.g., DCO > DBO5)
@@ -469,13 +310,9 @@ export class ControleMetierV2Service {
   private extractAnalyseValue(
     analyses: { cdParametre?: string; rsAnalyse?: string; cdUniteMesure?: string }[],
     paramCode: string,
-    uniteMesureCode?: CodeUniteMesure,
   ): number | undefined {
     for (const analyse of analyses) {
       if (analyse.cdParametre === paramCode && analyse.rsAnalyse) {
-        if (uniteMesureCode && analyse.cdUniteMesure !== uniteMesureCode.toString()) {
-          continue;
-        }
         const val = parseFloat(analyse.rsAnalyse);
         if (!isNaN(val)) {
           return val;
@@ -708,94 +545,6 @@ export class ControleMetierV2Service {
     }
 
     return isApplicable ? { name: ControleName.CTL052, errors } : null;
-  }
-
-  // CTL053: Vérification du débit entrant (paramètre 1552) vs max(PC95, Dref)
-  async verifyDebitEntrantVsChargeMax(
-    fctAssainissement: FctAssainissement,
-    maxDebits?: MaxDebitBySandreCda[],
-  ): Promise<ControleIndividuelWithoutSuccess | null> {
-    const errors: ControleError[] = [];
-    let isApplicable = false;
-    const volumeCode = String(CodeParametre.Volume); // Paramètre 1552
-
-    // Si les données ne sont pas préchargées (appel direct, hors execute()), on les récupère ici
-    if (!maxDebits) {
-      const allSteuCdas = fctAssainissement.ouvrages
-        .map((o) => o.cdOuvrageDepollution)
-        .filter((cda): cda is string => !!cda);
-      maxDebits = await this.masaProvider.findMaxDebitsReferenceBatch(allSteuCdas);
-    }
-
-    for (const ouvrage of fctAssainissement.ouvrages) {
-      const cdOuvrageDepollution = ouvrage.cdOuvrageDepollution;
-      if (!cdOuvrageDepollution) {
-        continue;
-      }
-
-      // Récupérer max(PC95, Dref) depuis les données préchargées
-      const maxDebitRef = findMaxDebit(maxDebits, cdOuvrageDepollution);
-
-      if (maxDebitRef === undefined) {
-        // Pas de données de référence, on saute la vérification
-        continue;
-      }
-
-      // Collecter les débits entrants (1552) par date d'analyse pour support 3 et localisations A3, A2, A7
-      const debitsByDate = new Map<string, number>();
-
-      for (const pointMesure of ouvrage.pointMesure) {
-        const locGlobale = pointMesure.locGlobalePointMesure ?? '';
-
-        // Vérifier que la localisation est dans les bonnes zones (A3, A2, A7)
-        if (!['A3', 'A2', 'A7'].includes(locGlobale)) {
-          continue;
-        }
-
-        for (const prelevement of pointMesure.prelevement) {
-          // Vérifier que le support est 3
-          if (prelevement.cdSupport !== '3') {
-            continue;
-          }
-
-          const datePrlvt = prelevement.datePrlvt ?? '';
-
-          for (const analyse of prelevement.analyse) {
-            // Chercher le paramètre 1552 (Volume/Débit entrant)
-            if (analyse.cdParametre === volumeCode) {
-              const debitValue = this.extractAnalyseValue([analyse], volumeCode);
-
-              if (debitValue !== undefined) {
-                const currentSum = debitsByDate.get(datePrlvt) ?? 0;
-                debitsByDate.set(datePrlvt, currentSum + debitValue);
-              }
-            }
-          }
-        }
-      }
-
-      // Vérifier que chaque somme n'excède pas 2 fois max(PC95, Dref)
-      const threshold = 2 * maxDebitRef;
-      for (const [datePrlvt, totalDebit] of debitsByDate.entries()) {
-        isApplicable = true;
-        if (totalDebit > threshold) {
-          const error: ControleError = {
-            code: ErrorCode.E2_053,
-            params: [
-              cdOuvrageDepollution,
-              datePrlvt,
-              totalDebit.toFixed(2),
-              maxDebitRef.toFixed(2),
-              threshold.toFixed(2),
-            ],
-            evenementType: EvenementType.AVERTISSEMENT,
-          };
-          errors.push(error);
-        }
-      }
-    }
-
-    return isApplicable ? { name: ControleName.CTL053, errors } : null;
   }
 
   private static readonly SEUIL_VARIATION_CHARGE_ENTRANTE = 0.2;
@@ -1225,10 +974,6 @@ export class ControleMetierV2Service {
 function findCmaValue(cmas: CmaBySandreCdaAndParam[], sandreCda: string, paramCode: string): number | undefined {
   return cmas.find((c) => c.ouvrageDepollutionCode === sandreCda && c.parametreAnalyseCode === paramCode)
     ?.resultatAnnuelConcentrationMoyenne;
-}
-
-function findMaxDebit(maxDebits: MaxDebitBySandreCda[], sandreCda: string): number | undefined {
-  return maxDebits.find((d) => d.ouvrageDepollutionCode === sandreCda)?.ouvrageDepollutionDebitMaximalReference;
 }
 
 function findCapaciteNominale(
